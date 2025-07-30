@@ -1,0 +1,10 @@
+{
+  "name": "3lens-extension",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
