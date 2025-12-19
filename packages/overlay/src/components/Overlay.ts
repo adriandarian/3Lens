@@ -5,167 +5,422 @@ import { OVERLAY_STYLES } from '../styles/styles';
 
 export interface OverlayOptions {
   probe: DevtoolProbe;
-  position?: 'left' | 'right';
-  collapsed?: boolean;
 }
 
+interface PanelConfig {
+  id: string;
+  title: string;
+  icon: string;
+  iconClass: string;
+  defaultWidth: number;
+  defaultHeight: number;
+}
+
+interface PanelState {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  minimized: boolean;
+  zIndex: number;
+}
+
+const PANELS: PanelConfig[] = [
+  { id: 'scene', title: 'Scene Graph', icon: 'S', iconClass: 'scene', defaultWidth: 300, defaultHeight: 400 },
+  { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 320, defaultHeight: 300 },
+  { id: 'inspector', title: 'Inspector', icon: 'I', iconClass: 'inspector', defaultWidth: 300, defaultHeight: 350 },
+];
+
 /**
- * Main 3Lens Overlay component
+ * 3Lens Floating Panel Overlay
  */
 export class ThreeLensOverlay {
-  private container: HTMLDivElement;
+  private root: HTMLDivElement;
   private probe: DevtoolProbe;
-  private collapsed: boolean;
-  private activeTab: 'scene' | 'stats' | 'inspector' = 'scene';
+  private menuVisible = false;
+  private openPanels: Map<string, PanelState> = new Map();
   private selectedNodeId: string | null = null;
   private expandedNodes: Set<string> = new Set();
   private latestStats: FrameStats | null = null;
   private frameHistory: number[] = [];
+  private topZIndex = 999997;
+  private dragState: { panelId: string; startX: number; startY: number; startPanelX: number; startPanelY: number } | null = null;
+  private resizeState: { panelId: string; startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
+  private lastStatsUpdate = 0;
+  private statsUpdateInterval = 500; // Update stats UI every 500ms (2x per second)
 
   constructor(options: OverlayOptions) {
     this.probe = options.probe;
-    this.collapsed = options.collapsed ?? false;
 
     // Inject styles
     this.injectStyles();
 
-    // Create container
-    this.container = this.createContainer(options.position ?? 'right');
+    // Create root
+    this.root = document.createElement('div');
+    this.root.className = 'three-lens-root';
+    document.body.appendChild(this.root);
 
-    // Subscribe to probe events
+    // Subscribe to probe events (throttled updates)
     this.probe.onFrameStats((stats) => {
       this.latestStats = stats;
       this.frameHistory.push(stats.cpuTimeMs);
       if (this.frameHistory.length > 60) this.frameHistory.shift();
-      if (this.activeTab === 'stats') this.renderStats();
+      
+      // Throttle UI updates to prevent flickering
+      const now = performance.now();
+      if (now - this.lastStatsUpdate >= this.statsUpdateInterval) {
+        this.lastStatsUpdate = now;
+        this.updateStatsPanel();
+      }
     });
 
-    this.probe.onSelectionChanged((obj, meta) => {
+    this.probe.onSelectionChanged((_obj, meta) => {
       this.selectedNodeId = meta?.debugId ?? null;
-      if (this.activeTab === 'scene') this.renderTree();
-      if (this.activeTab === 'inspector') this.renderInspector();
+      this.updateScenePanel();
+      this.updateInspectorPanel();
     });
 
     // Initial render
     this.render();
+
+    // Global event listeners
+    document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    document.addEventListener('mouseup', this.handleMouseUp.bind(this));
+    document.addEventListener('keydown', this.handleKeyDown.bind(this));
   }
 
   private injectStyles(): void {
     if (document.getElementById('three-lens-styles')) return;
-
     const style = document.createElement('style');
     style.id = 'three-lens-styles';
     style.textContent = OVERLAY_STYLES;
     document.head.appendChild(style);
   }
 
-  private createContainer(position: 'left' | 'right'): HTMLDivElement {
-    const container = document.createElement('div');
-    container.className = `three-lens-overlay ${this.collapsed ? 'collapsed' : ''}`;
-    container.style[position] = '0';
-    if (position === 'left') {
-      container.style.right = 'auto';
-      container.style.borderLeft = 'none';
-      container.style.borderRight = '1px solid var(--3lens-border)';
-    }
-    document.body.appendChild(container);
-    return container;
-  }
-
   private render(): void {
-    this.container.innerHTML = `
-      ${this.renderToggle()}
-      ${this.renderHeader()}
-      ${this.renderTabs()}
-      <div class="three-lens-content">
-        ${this.renderActivePanel()}
-      </div>
+    this.root.innerHTML = `
+      ${this.renderFAB()}
+      ${this.renderMenu()}
     `;
-    this.attachEvents();
+    this.attachFABEvents();
   }
 
-  private renderToggle(): string {
+  // ═══════════════════════════════════════════════════════════════
+  // FAB & MENU
+  // ═══════════════════════════════════════════════════════════════
+
+  private renderFAB(): string {
     return `
-      <button class="three-lens-toggle" title="Toggle panel">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
+      <button class="three-lens-fab ${this.menuVisible ? 'active' : ''}" id="three-lens-fab" title="3Lens DevTools">
+        3L
       </button>
     `;
   }
 
-  private renderHeader(): string {
-    const connected = this.probe.isConnected();
+  private renderMenu(): string {
     return `
-      <div class="three-lens-header">
-        <div class="three-lens-logo">
-          <div class="three-lens-logo-icon">3L</div>
-          <span>3Lens</span>
-        </div>
-        <div class="three-lens-connection">
-          <div class="three-lens-connection-dot ${connected ? '' : 'disconnected'}"></div>
-          <span>${connected ? 'Connected' : 'Active'}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderTabs(): string {
-    const tabs = [
-      { id: 'scene', label: 'Scene' },
-      { id: 'stats', label: 'Stats' },
-      { id: 'inspector', label: 'Inspector' },
-    ];
-
-    return `
-      <div class="three-lens-tabs">
-        ${tabs
-          .map(
-            (tab) => `
-          <button 
-            class="three-lens-tab ${this.activeTab === tab.id ? 'active' : ''}"
-            data-tab="${tab.id}"
-          >
-            ${tab.label}
+      <div class="three-lens-menu ${this.menuVisible ? 'visible' : ''}" id="three-lens-menu">
+        <div class="three-lens-menu-header">Panels</div>
+        ${PANELS.map(panel => `
+          <button class="three-lens-menu-item ${this.openPanels.has(panel.id) ? 'active' : ''}" data-panel="${panel.id}">
+            <span class="three-lens-menu-icon ${panel.iconClass}">${panel.icon}</span>
+            <span>${panel.title}</span>
           </button>
-        `
-          )
-          .join('')}
+        `).join('')}
       </div>
     `;
   }
 
-  private renderActivePanel(): string {
-    switch (this.activeTab) {
-      case 'scene':
-        return this.renderScenePanel();
-      case 'stats':
-        return this.renderStatsPanel();
-      case 'inspector':
-        return this.renderInspectorPanel();
+  private attachFABEvents(): void {
+    const fab = document.getElementById('three-lens-fab');
+    fab?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.menuVisible = !this.menuVisible;
+      this.updateMenu();
+    });
+
+    // Menu items
+    document.querySelectorAll('.three-lens-menu-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const panelId = (e.currentTarget as HTMLElement).dataset.panel;
+        if (panelId) {
+          this.togglePanel(panelId);
+          this.menuVisible = false;
+          this.updateMenu();
+        }
+      });
+    });
+
+    // Close menu on outside click
+    document.addEventListener('click', (e) => {
+      if (this.menuVisible && !(e.target as HTMLElement).closest('.three-lens-menu, .three-lens-fab')) {
+        this.menuVisible = false;
+        this.updateMenu();
+      }
+    });
+  }
+
+  private updateMenu(): void {
+    const fab = document.getElementById('three-lens-fab');
+    const menu = document.getElementById('three-lens-menu');
+    if (fab) fab.className = `three-lens-fab ${this.menuVisible ? 'active' : ''}`;
+    if (menu) menu.className = `three-lens-menu ${this.menuVisible ? 'visible' : ''}`;
+
+    // Update active states
+    document.querySelectorAll('.three-lens-menu-item').forEach(item => {
+      const panelId = (item as HTMLElement).dataset.panel;
+      if (panelId) {
+        item.classList.toggle('active', this.openPanels.has(panelId));
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PANEL MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════
+
+  private togglePanel(panelId: string): void {
+    if (this.openPanels.has(panelId)) {
+      this.closePanel(panelId);
+    } else {
+      this.openPanel(panelId);
     }
   }
 
-  private renderScenePanel(): string {
-    return `
-      <div class="three-lens-tree" id="three-lens-tree">
-        ${this.renderTree()}
-      </div>
-    `;
+  private openPanel(panelId: string): void {
+    const config = PANELS.find(p => p.id === panelId);
+    if (!config) return;
+
+    // Calculate position (cascade)
+    const offset = this.openPanels.size * 30;
+    const state: PanelState = {
+      id: panelId,
+      x: 100 + offset,
+      y: 100 + offset,
+      width: config.defaultWidth,
+      height: config.defaultHeight,
+      minimized: false,
+      zIndex: ++this.topZIndex,
+    };
+
+    this.openPanels.set(panelId, state);
+    this.createPanelElement(config, state);
   }
 
-  private renderTree(): string {
+  private closePanel(panelId: string): void {
+    const el = document.getElementById(`three-lens-panel-${panelId}`);
+    if (el) el.remove();
+    this.openPanels.delete(panelId);
+  }
+
+  private createPanelElement(config: PanelConfig, state: PanelState): void {
+    const panel = document.createElement('div');
+    panel.id = `three-lens-panel-${config.id}`;
+    panel.className = 'three-lens-panel';
+    panel.style.cssText = `
+      left: ${state.x}px;
+      top: ${state.y}px;
+      width: ${state.width}px;
+      height: ${state.height}px;
+      z-index: ${state.zIndex};
+    `;
+
+    panel.innerHTML = `
+      <div class="three-lens-panel-header" data-panel="${config.id}">
+        <span class="three-lens-panel-icon ${config.iconClass}">${config.icon}</span>
+        <span class="three-lens-panel-title">${config.title}</span>
+        <div class="three-lens-panel-controls">
+          <button class="three-lens-panel-btn minimize" data-action="minimize" title="Minimize">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="2" y1="6" x2="10" y2="6"/>
+            </svg>
+          </button>
+          <button class="three-lens-panel-btn close" data-action="close" title="Close">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="2" y1="2" x2="10" y2="10"/>
+              <line x1="10" y1="2" x2="2" y2="10"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="three-lens-panel-content" id="three-lens-content-${config.id}">
+        ${this.renderPanelContent(config.id)}
+      </div>
+      <div class="three-lens-panel-resize" data-panel="${config.id}"></div>
+    `;
+
+    this.root.appendChild(panel);
+    this.attachPanelEvents(panel, config.id);
+  }
+
+  private attachPanelEvents(panel: HTMLElement, panelId: string): void {
+    // Header drag
+    const header = panel.querySelector('.three-lens-panel-header') as HTMLElement;
+    header?.addEventListener('mousedown', (e) => {
+      if ((e.target as HTMLElement).closest('.three-lens-panel-btn')) return;
+      this.startDrag(panelId, e);
+    });
+
+    // Focus on click
+    panel.addEventListener('mousedown', () => {
+      this.focusPanel(panelId);
+    });
+
+    // Control buttons
+    panel.querySelectorAll('.three-lens-panel-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const action = (e.currentTarget as HTMLElement).dataset.action;
+        if (action === 'close') this.closePanel(panelId);
+        if (action === 'minimize') this.toggleMinimize(panelId);
+      });
+    });
+
+    // Resize handle
+    const resize = panel.querySelector('.three-lens-panel-resize') as HTMLElement;
+    resize?.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      this.startResize(panelId, e);
+    });
+
+    // Tree node events for scene panel
+    if (panelId === 'scene') {
+      this.attachTreeEvents(panel);
+    }
+  }
+
+  private focusPanel(panelId: string): void {
+    const state = this.openPanels.get(panelId);
+    if (!state) return;
+
+    state.zIndex = ++this.topZIndex;
+    const el = document.getElementById(`three-lens-panel-${panelId}`);
+    if (el) {
+      el.style.zIndex = String(state.zIndex);
+      document.querySelectorAll('.three-lens-panel').forEach(p => p.classList.remove('focused'));
+      el.classList.add('focused');
+    }
+  }
+
+  private toggleMinimize(panelId: string): void {
+    const state = this.openPanels.get(panelId);
+    if (!state) return;
+
+    state.minimized = !state.minimized;
+    const el = document.getElementById(`three-lens-panel-${panelId}`);
+    if (el) {
+      el.classList.toggle('minimized', state.minimized);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // DRAG & RESIZE
+  // ═══════════════════════════════════════════════════════════════
+
+  private startDrag(panelId: string, e: MouseEvent): void {
+    const state = this.openPanels.get(panelId);
+    if (!state) return;
+
+    this.dragState = {
+      panelId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPanelX: state.x,
+      startPanelY: state.y,
+    };
+
+    this.focusPanel(panelId);
+  }
+
+  private startResize(panelId: string, e: MouseEvent): void {
+    const state = this.openPanels.get(panelId);
+    if (!state) return;
+
+    this.resizeState = {
+      panelId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: state.width,
+      startHeight: state.height,
+    };
+
+    this.focusPanel(panelId);
+  }
+
+  private handleMouseMove(e: MouseEvent): void {
+    if (this.dragState) {
+      const state = this.openPanels.get(this.dragState.panelId);
+      if (!state) return;
+
+      const dx = e.clientX - this.dragState.startX;
+      const dy = e.clientY - this.dragState.startY;
+
+      state.x = Math.max(0, this.dragState.startPanelX + dx);
+      state.y = Math.max(0, this.dragState.startPanelY + dy);
+
+      const el = document.getElementById(`three-lens-panel-${this.dragState.panelId}`);
+      if (el) {
+        el.style.left = `${state.x}px`;
+        el.style.top = `${state.y}px`;
+      }
+    }
+
+    if (this.resizeState) {
+      const state = this.openPanels.get(this.resizeState.panelId);
+      if (!state) return;
+
+      const dx = e.clientX - this.resizeState.startX;
+      const dy = e.clientY - this.resizeState.startY;
+
+      state.width = Math.max(280, this.resizeState.startWidth + dx);
+      state.height = Math.max(200, this.resizeState.startHeight + dy);
+
+      const el = document.getElementById(`three-lens-panel-${this.resizeState.panelId}`);
+      if (el) {
+        el.style.width = `${state.width}px`;
+        el.style.height = `${state.height}px`;
+      }
+    }
+  }
+
+  private handleMouseUp(): void {
+    this.dragState = null;
+    this.resizeState = null;
+  }
+
+  private handleKeyDown(e: KeyboardEvent): void {
+    // Ctrl+Shift+D to toggle menu
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      this.menuVisible = !this.menuVisible;
+      this.updateMenu();
+      e.preventDefault();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PANEL CONTENT RENDERING
+  // ═══════════════════════════════════════════════════════════════
+
+  private renderPanelContent(panelId: string): string {
+    switch (panelId) {
+      case 'scene': return this.renderSceneContent();
+      case 'stats': return this.renderStatsContent();
+      case 'inspector': return this.renderInspectorContent();
+      default: return '<div class="three-lens-inspector-empty">Panel content</div>';
+    }
+  }
+
+  private renderSceneContent(): string {
     const scenes = this.probe.getObservedScenes();
     if (scenes.length === 0) {
       return `<div class="three-lens-inspector-empty">No scenes observed</div>`;
     }
 
-    // Get latest snapshot
     const snapshot = this.probe.takeSnapshot();
-    return snapshot.scenes.map((scene) => this.renderNode(scene, 0)).join('');
+    return `<div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>`;
   }
 
-  private renderNode(node: SceneNode, depth: number): string {
+  private renderNode(node: SceneNode): string {
     const hasChildren = node.children.length > 0;
     const isExpanded = this.expandedNodes.has(node.ref.debugId);
     const isSelected = this.selectedNodeId === node.ref.debugId;
@@ -174,190 +429,167 @@ export class ThreeLensOverlay {
       <div class="three-lens-node" data-id="${node.ref.debugId}">
         <div class="three-lens-node-header ${isSelected ? 'selected' : ''}">
           <span class="three-lens-node-toggle ${hasChildren ? (isExpanded ? 'expanded' : '') : 'hidden'}">
-            <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
-              <path d="M2 1L6 4L2 7z"/>
-            </svg>
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1L6 4L2 7z"/></svg>
           </span>
-          <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">
-            ${getObjectIcon(node.ref.type)}
-          </span>
+          <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${getObjectIcon(node.ref.type)}</span>
           <span class="three-lens-node-name">${node.ref.name || `<${node.ref.type}>`}</span>
           <span class="three-lens-node-type">${node.ref.type}</span>
         </div>
-        ${
-          hasChildren && isExpanded
-            ? `<div class="three-lens-node-children">
-            ${node.children.map((child) => this.renderNode(child, depth + 1)).join('')}
-          </div>`
-            : ''
-        }
+        ${hasChildren && isExpanded ? `<div class="three-lens-node-children">${node.children.map(c => this.renderNode(c)).join('')}</div>` : ''}
       </div>
     `;
   }
 
-  private renderStatsPanel(): string {
+  private renderStatsContent(): string {
     const stats = this.latestStats;
     if (!stats) {
-      return `<div class="three-lens-inspector-empty">No frame data yet</div>`;
+      return `<div class="three-lens-inspector-empty">Waiting for frame data...</div>`;
     }
 
     const fps = stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0;
-    const drawCallsClass = stats.drawCalls > 1000 ? 'warning' : stats.drawCalls > 2000 ? 'error' : '';
-    const trianglesClass = stats.triangles > 500000 ? 'warning' : stats.triangles > 1000000 ? 'error' : '';
 
     return `
-      <div class="three-lens-stats">
-        <div class="three-lens-stats-grid">
-          <div class="three-lens-stat-card">
-            <div class="three-lens-stat-label">FPS</div>
-            <div class="three-lens-stat-value">${fps}</div>
-          </div>
-          <div class="three-lens-stat-card">
-            <div class="three-lens-stat-label">Frame Time</div>
-            <div class="three-lens-stat-value">
-              ${stats.cpuTimeMs.toFixed(1)}<span class="three-lens-stat-unit">ms</span>
-            </div>
-          </div>
-          <div class="three-lens-stat-card">
-            <div class="three-lens-stat-label">Draw Calls</div>
-            <div class="three-lens-stat-value ${drawCallsClass}">${formatNumber(stats.drawCalls)}</div>
-          </div>
-          <div class="three-lens-stat-card">
-            <div class="three-lens-stat-label">Triangles</div>
-            <div class="three-lens-stat-value ${trianglesClass}">${formatNumber(stats.triangles)}</div>
-          </div>
+      <div class="three-lens-stats-grid">
+        <div class="three-lens-stat-card">
+          <div class="three-lens-stat-label">FPS</div>
+          <div class="three-lens-stat-value">${fps}</div>
         </div>
-        
-        <div class="three-lens-chart">
-          <div class="three-lens-chart-header">
-            <span class="three-lens-chart-title">Frame Time (ms)</span>
-            <span class="three-lens-chart-value">${stats.cpuTimeMs.toFixed(2)}ms</span>
-          </div>
-          <canvas class="three-lens-chart-canvas" id="three-lens-chart"></canvas>
+        <div class="three-lens-stat-card">
+          <div class="three-lens-stat-label">Frame Time</div>
+          <div class="three-lens-stat-value">${stats.cpuTimeMs.toFixed(1)}<span class="three-lens-stat-unit">ms</span></div>
         </div>
-
-        ${this.renderViolations(stats)}
+        <div class="three-lens-stat-card">
+          <div class="three-lens-stat-label">Draw Calls</div>
+          <div class="three-lens-stat-value ${stats.drawCalls > 1000 ? 'warning' : ''}">${formatNumber(stats.drawCalls)}</div>
+        </div>
+        <div class="three-lens-stat-card">
+          <div class="three-lens-stat-label">Triangles</div>
+          <div class="three-lens-stat-value ${stats.triangles > 500000 ? 'warning' : ''}">${formatNumber(stats.triangles)}</div>
+        </div>
+      </div>
+      <div class="three-lens-chart">
+        <div class="three-lens-chart-header">
+          <span class="three-lens-chart-title">Frame Time</span>
+          <span class="three-lens-chart-value">${stats.cpuTimeMs.toFixed(2)}ms</span>
+        </div>
+        <canvas class="three-lens-chart-canvas" id="three-lens-stats-chart"></canvas>
       </div>
     `;
   }
 
-  private renderViolations(stats: FrameStats): string {
-    if (!stats.violations?.length) return '';
-
-    return `
-      <div class="three-lens-violations">
-        ${stats.violations
-          .map(
-            (v) => `
-          <div class="three-lens-violation ${v.severity}">
-            <svg class="three-lens-violation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-            <span class="three-lens-violation-text">${v.message}</span>
-          </div>
-        `
-          )
-          .join('')}
-      </div>
-    `;
-  }
-
-  private renderInspectorPanel(): string {
+  private renderInspectorContent(): string {
     const selected = this.probe.getSelectedObject();
     if (!selected) {
-      return `<div class="three-lens-inspector-empty">Select an object to inspect</div>`;
+      return `<div class="three-lens-inspector-empty">Select an object in the Scene panel</div>`;
     }
 
     return `
-      <div class="three-lens-inspector">
-        <div class="three-lens-inspector-section">
-          <div class="three-lens-section-header">Transform</div>
-          <div class="three-lens-section-content">
-            ${this.renderVectorProperty('Position', selected.position)}
-            ${this.renderVectorProperty('Rotation', selected.rotation, true)}
-            ${this.renderVectorProperty('Scale', selected.scale)}
-          </div>
-        </div>
-        
-        <div class="three-lens-inspector-section">
-          <div class="three-lens-section-header">Properties</div>
-          <div class="three-lens-section-content">
-            ${this.renderProperty('Visible', selected.visible)}
-            ${this.renderProperty('Frustum Culled', selected.frustumCulled)}
-            ${this.renderProperty('Render Order', selected.renderOrder)}
-          </div>
-        </div>
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Transform</div>
+        ${this.renderVectorProp('Position', selected.position)}
+        ${this.renderVectorProp('Rotation', selected.rotation, true)}
+        ${this.renderVectorProp('Scale', selected.scale)}
+      </div>
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Properties</div>
+        ${this.renderProp('Visible', selected.visible)}
+        ${this.renderProp('Frustum Culled', selected.frustumCulled)}
+        ${this.renderProp('Render Order', selected.renderOrder)}
+        ${this.renderProp('Type', selected.type)}
       </div>
     `;
   }
 
-  private renderProperty(name: string, value: unknown): string {
-    return `
-      <div class="three-lens-property-row">
-        <span class="three-lens-property-name">${name}</span>
-        <span class="three-lens-property-value">${String(value)}</span>
-      </div>
-    `;
+  private renderProp(name: string, value: unknown): string {
+    return `<div class="three-lens-property-row"><span class="three-lens-property-name">${name}</span><span class="three-lens-property-value">${String(value)}</span></div>`;
   }
 
-  private renderVectorProperty(
-    name: string,
-    vec: { x: number; y: number; z: number },
-    isRotation = false
-  ): string {
-    const multiplier = isRotation ? 180 / Math.PI : 1;
+  private renderVectorProp(name: string, vec: { x: number; y: number; z: number }, isRotation = false): string {
+    const m = isRotation ? 180 / Math.PI : 1;
     return `
       <div class="three-lens-property-row">
         <span class="three-lens-property-name">${name}</span>
         <div class="three-lens-vector-inputs">
-          <div class="three-lens-vector-input">
-            <input type="number" class="three-lens-property-input" value="${(vec.x * multiplier).toFixed(2)}" step="0.1">
-            <div class="three-lens-vector-label">X</div>
-          </div>
-          <div class="three-lens-vector-input">
-            <input type="number" class="three-lens-property-input" value="${(vec.y * multiplier).toFixed(2)}" step="0.1">
-            <div class="three-lens-vector-label">Y</div>
-          </div>
-          <div class="three-lens-vector-input">
-            <input type="number" class="three-lens-property-input" value="${(vec.z * multiplier).toFixed(2)}" step="0.1">
-            <div class="three-lens-vector-label">Z</div>
-          </div>
+          <div class="three-lens-vector-input"><input type="number" value="${(vec.x * m).toFixed(2)}" step="0.1"><div class="three-lens-vector-label">X</div></div>
+          <div class="three-lens-vector-input"><input type="number" value="${(vec.y * m).toFixed(2)}" step="0.1"><div class="three-lens-vector-label">Y</div></div>
+          <div class="three-lens-vector-input"><input type="number" value="${(vec.z * m).toFixed(2)}" step="0.1"><div class="three-lens-vector-label">Z</div></div>
         </div>
       </div>
     `;
   }
 
-  private renderStats(): void {
-    const content = this.container.querySelector('.three-lens-content');
-    if (content && this.activeTab === 'stats') {
-      content.innerHTML = this.renderStatsPanel();
+  // ═══════════════════════════════════════════════════════════════
+  // PANEL UPDATES
+  // ═══════════════════════════════════════════════════════════════
+
+  private updateStatsPanel(): void {
+    const content = document.getElementById('three-lens-content-stats');
+    if (content) {
+      content.innerHTML = this.renderStatsContent();
       this.renderChart();
     }
   }
 
+  private updateScenePanel(): void {
+    const content = document.getElementById('three-lens-content-scene');
+    if (content) {
+      content.innerHTML = this.renderSceneContent();
+      const panel = document.getElementById('three-lens-panel-scene');
+      if (panel) this.attachTreeEvents(panel);
+    }
+  }
+
+  private updateInspectorPanel(): void {
+    const content = document.getElementById('three-lens-content-inspector');
+    if (content) {
+      content.innerHTML = this.renderInspectorContent();
+    }
+  }
+
+  private attachTreeEvents(panel: HTMLElement): void {
+    panel.querySelectorAll('.three-lens-node-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        const node = (header as HTMLElement).parentElement;
+        const id = node?.dataset.id;
+        if (!id) return;
+
+        const toggle = (e.target as HTMLElement).closest('.three-lens-node-toggle');
+        if (toggle && !toggle.classList.contains('hidden')) {
+          if (this.expandedNodes.has(id)) {
+            this.expandedNodes.delete(id);
+          } else {
+            this.expandedNodes.add(id);
+          }
+          this.updateScenePanel();
+          return;
+        }
+
+        this.selectedNodeId = id;
+        this.updateScenePanel();
+        this.updateInspectorPanel();
+      });
+    });
+  }
+
   private renderChart(): void {
-    const canvas = document.getElementById('three-lens-chart') as HTMLCanvasElement;
-    if (!canvas) return;
+    const canvas = document.getElementById('three-lens-stats-chart') as HTMLCanvasElement;
+    if (!canvas || this.frameHistory.length < 2) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * window.devicePixelRatio;
     canvas.height = rect.height * window.devicePixelRatio;
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    // Draw chart
     const { width, height } = rect;
     ctx.clearRect(0, 0, width, height);
-
-    if (this.frameHistory.length < 2) return;
 
     const maxValue = Math.max(...this.frameHistory, 16.67);
     const barWidth = width / 60;
 
-    // Draw 16.67ms line (60fps target)
+    // 60fps target line
     ctx.strokeStyle = 'rgba(52, 211, 153, 0.3)';
     ctx.setLineDash([2, 2]);
     const targetY = height - (16.67 / maxValue) * height;
@@ -367,104 +599,39 @@ export class ThreeLensOverlay {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Draw bars
+    // Bars
     const gradient = ctx.createLinearGradient(0, height, 0, 0);
     gradient.addColorStop(0, 'rgba(96, 165, 250, 0.8)');
     gradient.addColorStop(1, 'rgba(34, 211, 238, 0.8)');
-
     ctx.fillStyle = gradient;
+
     this.frameHistory.forEach((value, i) => {
       const barHeight = (value / maxValue) * height;
-      const x = i * barWidth;
-      ctx.fillRect(x, height - barHeight, barWidth - 1, barHeight);
+      ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
     });
   }
 
-  private renderInspector(): void {
-    const content = this.container.querySelector('.three-lens-content');
-    if (content && this.activeTab === 'inspector') {
-      content.innerHTML = this.renderInspectorPanel();
-    }
-  }
+  // ═══════════════════════════════════════════════════════════════
+  // PUBLIC API
+  // ═══════════════════════════════════════════════════════════════
 
-  private attachEvents(): void {
-    // Toggle
-    this.container.querySelector('.three-lens-toggle')?.addEventListener('click', () => {
-      this.collapsed = !this.collapsed;
-      this.container.classList.toggle('collapsed', this.collapsed);
-    });
-
-    // Tabs
-    this.container.querySelectorAll('.three-lens-tab').forEach((tab) => {
-      tab.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        this.activeTab = target.dataset.tab as 'scene' | 'stats' | 'inspector';
-        this.render();
-      });
-    });
-
-    // Tree interaction
-    this.container.querySelectorAll('.three-lens-node-header').forEach((header) => {
-      header.addEventListener('click', (e) => {
-        const node = (e.currentTarget as HTMLElement).parentElement;
-        const id = node?.dataset.id;
-        if (!id) return;
-
-        // Toggle expand
-        const toggle = (e.target as HTMLElement).closest('.three-lens-node-toggle');
-        if (toggle && !toggle.classList.contains('hidden')) {
-          if (this.expandedNodes.has(id)) {
-            this.expandedNodes.delete(id);
-          } else {
-            this.expandedNodes.add(id);
-          }
-          this.render();
-          return;
-        }
-
-        // Select
-        this.selectedNodeId = id;
-        this.render();
-      });
-    });
-
-    // Render chart if on stats tab
-    if (this.activeTab === 'stats') {
-      requestAnimationFrame(() => this.renderChart());
-    }
-  }
-
-  /**
-   * Destroy the overlay
-   */
   destroy(): void {
-    this.container.remove();
+    this.root.remove();
+    document.getElementById('three-lens-styles')?.remove();
   }
 
-  /**
-   * Show the overlay
-   */
-  show(): void {
-    this.collapsed = false;
-    this.container.classList.remove('collapsed');
-  }
-
-  /**
-   * Hide the overlay
-   */
-  hide(): void {
-    this.collapsed = true;
-    this.container.classList.add('collapsed');
-  }
-
-  /**
-   * Toggle the overlay
-   */
-  toggle(): void {
-    if (this.collapsed) {
-      this.show();
-    } else {
-      this.hide();
+  showPanel(panelId: string): void {
+    if (!this.openPanels.has(panelId)) {
+      this.openPanel(panelId);
     }
+  }
+
+  hidePanel(panelId: string): void {
+    this.closePanel(panelId);
+  }
+
+  toggle(): void {
+    this.menuVisible = !this.menuVisible;
+    this.updateMenu();
   }
 }
