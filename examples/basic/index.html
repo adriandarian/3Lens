@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3Lens Basic Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow: hidden;
+      background: #0a0e14;
+    }
+    
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    canvas {
+      display: block;
+    }
+
+    .info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      color: #e4e7eb;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.8);
+      padding: 16px 20px;
+      border-radius: 8px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(8px);
+      max-width: 300px;
+    }
+
+    .info h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #22d3ee;
+      margin-bottom: 8px;
+    }
+
+    .info p {
+      color: #9ca3af;
+      line-height: 1.5;
+    }
+
+    .info kbd {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #60a5fa;
+    }
+  </style>
+</head>
+<body>
+  <div class="info">
+    <h1>🔍 3Lens Demo</h1>
+    <p>
+      The 3Lens devtool panel is on the right.<br><br>
+      Click objects in the <strong>Scene</strong> tab to select them, 
+      view stats in the <strong>Stats</strong> tab, and inspect properties 
+      in the <strong>Inspector</strong> tab.
+    </p>
+  </div>
+  <div id="canvas-container"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
+

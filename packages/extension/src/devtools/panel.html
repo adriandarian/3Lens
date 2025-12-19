@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3Lens</title>
+  <link rel="stylesheet" href="./panel.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">3L</div>
+        <span class="logo-text">3Lens</span>
+      </div>
+      <div class="connection-status" id="connection-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Detecting...</span>
+      </div>
+    </header>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="scene">Scene</button>
+      <button class="tab" data-tab="stats">Stats</button>
+      <button class="tab" data-tab="inspector">Inspector</button>
+      <button class="tab" data-tab="textures">Textures</button>
+      <button class="tab" data-tab="materials">Materials</button>
+    </div>
+
+    <main class="content" id="content">
+      <!-- Content will be rendered dynamically -->
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h2>Waiting for three.js</h2>
+        <p>Navigate to a page with three.js to begin inspecting.</p>
+        <p class="hint">Make sure the page has @3lens/core installed, or wait for auto-detection.</p>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="./panel.ts"></script>
+</body>
+</html>
+
