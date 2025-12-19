@@ -194,14 +194,14 @@ export const OVERLAY_STYLES = `
   box-shadow: var(--3lens-shadow-lg);
   z-index: 999997;
   min-width: 280px;
-  min-height: 200px;
+  min-height: 100px;
   display: flex;
   flex-direction: column;
   font-family: var(--3lens-font-sans);
   font-size: 13px;
   color: var(--3lens-text-primary);
   overflow: hidden;
-  transition: box-shadow 150ms ease;
+  transition: box-shadow 150ms ease, width 150ms ease;
 }
 
 .three-lens-panel:hover {
@@ -393,6 +393,7 @@ export const OVERLAY_STYLES = `
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  gap: 8px;
 }
 
 .three-lens-chart-title {
@@ -402,6 +403,46 @@ export const OVERLAY_STYLES = `
   color: var(--3lens-text-tertiary);
 }
 
+.three-lens-chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+}
+
+.three-lens-chart-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--3lens-bg-secondary);
+  border: 1px solid var(--3lens-border);
+  border-radius: var(--3lens-radius-sm);
+  color: var(--3lens-text-tertiary);
+  cursor: pointer;
+  transition: all 100ms ease;
+}
+
+.three-lens-chart-btn:hover {
+  background: var(--3lens-bg-hover);
+  color: var(--3lens-text-primary);
+  border-color: var(--3lens-accent-blue);
+}
+
+.three-lens-chart-btn:active {
+  transform: scale(0.95);
+}
+
+.three-lens-chart-zoom-label {
+  font-size: 9px;
+  font-family: var(--3lens-font-mono);
+  color: var(--3lens-text-secondary);
+  min-width: 24px;
+  text-align: center;
+}
+
 .three-lens-chart-value {
   font-family: var(--3lens-font-mono);
   font-size: 13px;
@@ -409,11 +450,76 @@ export const OVERLAY_STYLES = `
   color: var(--3lens-accent-emerald);
 }
 
+.three-lens-chart-container {
+  position: relative;
+  cursor: grab;
+}
+
+.three-lens-chart-container:active {
+  cursor: grabbing;
+}
+
 .three-lens-chart-canvas {
   width: 100%;
-  height: 50px;
+  height: 80px;
   background: var(--3lens-bg-primary);
   border-radius: var(--3lens-radius-sm);
+}
+
+.three-lens-chart-tooltip {
+  position: absolute;
+  background: var(--3lens-bg-elevated);
+  border: 1px solid var(--3lens-border-focus);
+  border-radius: var(--3lens-radius-sm);
+  padding: 6px 10px;
+  font-size: 10px;
+  font-family: var(--3lens-font-mono);
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: var(--3lens-shadow-md);
+}
+
+.three-lens-tooltip-time {
+  color: var(--3lens-accent-cyan);
+  font-weight: 600;
+}
+
+.three-lens-tooltip-fps {
+  color: var(--3lens-text-secondary);
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.three-lens-chart-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--3lens-border-subtle);
+}
+
+.three-lens-chart-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.three-lens-chart-stat-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--3lens-text-disabled);
+}
+
+.three-lens-chart-stat-value {
+  font-size: 11px;
+  font-family: var(--3lens-font-mono);
+  color: var(--3lens-text-secondary);
+}
+
+.three-lens-chart-stat-value.warning {
+  color: var(--3lens-warning);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -422,13 +528,15 @@ export const OVERLAY_STYLES = `
 
 .three-lens-split-view {
   display: flex;
-  height: 100%;
   gap: 0;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .three-lens-tree-pane {
   flex: 1;
   min-width: 180px;
+  max-height: 400px;
   overflow: auto;
   border-right: 1px solid var(--3lens-border);
   padding: 8px;
@@ -451,6 +559,7 @@ export const OVERLAY_STYLES = `
   width: 240px;
   min-width: 200px;
   max-width: 300px;
+  max-height: 400px;
   overflow: auto;
   background: var(--3lens-bg-secondary);
   padding: 12px;
@@ -492,9 +601,36 @@ export const OVERLAY_STYLES = `
   line-height: 1.4;
 }
 
-/* Remove padding from panel content for split view */
-.three-lens-panel-content:has(.three-lens-split-view) {
+/* Remove padding from panel content for split view and full tree */
+.three-lens-panel-content:has(.three-lens-split-view),
+.three-lens-panel-content:has(.three-lens-tree-full) {
   padding: 0;
+}
+
+/* Auto-height scene panel */
+.three-lens-panel:has(.three-lens-tree-full),
+.three-lens-panel:has(.three-lens-split-view) {
+  height: auto;
+}
+
+/* Full width tree (no selection) */
+.three-lens-tree-full {
+  overflow: auto;
+  padding: 8px;
+  max-height: calc(100% - 44px); /* Account for header */
+}
+
+.three-lens-tree-full::-webkit-scrollbar {
+  width: 6px;
+}
+
+.three-lens-tree-full::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.three-lens-tree-full::-webkit-scrollbar-thumb {
+  background: var(--3lens-border);
+  border-radius: 3px;
 }
 
 /* ═══════════════════════════════════════════════════════════════

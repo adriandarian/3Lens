@@ -33,6 +33,7 @@ export class DevtoolProbe {
   private _transport: Transport | null = null;
   private _sceneObservers: Map<THREE.Scene, SceneObserver> = new Map();
   private _selectedObject: THREE.Object3D | null = null;
+  private _hoveredObject: THREE.Object3D | null = null;
   private _logicalEntities: Map<string, LogicalEntity> = new Map();
   private _frameStatsHistory: FrameStats[] = [];
   private _maxHistorySize = 300;
@@ -529,6 +530,9 @@ export class DevtoolProbe {
       case 'select-object':
         this.handleSelectObject(message);
         break;
+      case 'hover-object':
+        this.handleHoverObject(message);
+        break;
       case 'request-snapshot':
         this.takeSnapshot();
         break;
@@ -572,6 +576,25 @@ export class DevtoolProbe {
       const obj = observer.findObjectByDebugId(message.debugId);
       if (obj) {
         this.selectObject(obj);
+        return;
+      }
+    }
+  }
+
+  private handleHoverObject(message: DebugMessage & { debugId: string | null }): void {
+    if (!message.debugId) {
+      // Clear hover highlight
+      this._hoveredObject = null;
+      this._selectionHelper.highlightHover(null);
+      return;
+    }
+
+    // Find object by debugId and apply hover highlight
+    for (const observer of this._sceneObservers.values()) {
+      const obj = observer.findObjectByDebugId(message.debugId);
+      if (obj) {
+        this._hoveredObject = obj;
+        this._selectionHelper.highlightHover(obj);
         return;
       }
     }

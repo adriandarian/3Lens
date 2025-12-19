@@ -223,6 +223,15 @@ body {
   background: var(--bg-hover);
 }
 
+.node-header.hovered {
+  background: rgba(34, 211, 238, 0.1);
+  outline: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+.node-header.hovered .node-name {
+  color: var(--accent-cyan);
+}
+
 .node-header.selected {
   background: rgba(96, 165, 250, 0.25);
   outline: 1px solid var(--accent-blue);
@@ -387,6 +396,16 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+}
+
+.inspector-uuid {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
 .inspector-section {
@@ -450,6 +469,16 @@ body {
 
 .property-value.value-false {
   color: var(--text-tertiary);
+}
+
+.property-value.layers-value {
+  color: var(--accent-amber);
+  font-size: 10px;
+}
+
+.property-value.material-refs {
+  color: var(--accent-rose);
+  font-size: 10px;
 }
 
 .color-swatch {

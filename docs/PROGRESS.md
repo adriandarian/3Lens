@@ -110,7 +110,7 @@
 | Expand/collapse nodes | ✅ | Toggle with arrow |
 | Object type icons | ✅ | Color-coded by type |
 | Object name display | ✅ | Name or type fallback |
-| Hover highlighting | ⬜ | |
+| Hover highlighting | ✅ | Blue box helper + CSS highlight |
 | Click to select | ✅ | Updates selection state |
 
 ### Object Inspector Panel
@@ -118,11 +118,11 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | Selected object display | ✅ | Basic info shown |
-| Transform properties (position/rotation/scale) | ⬜ | |
+| Transform properties (position/rotation/scale) | ✅ | Position, rotation (degrees), scale displayed |
 | Visibility property | ✅ | Displayed |
-| Layers property | ⬜ | |
-| frustumCulled property | ⬜ | |
-| Material reference display | ⬜ | |
+| Layers property | ✅ | Shows layer mask with friendly names |
+| frustumCulled property | ✅ | Displayed in Rendering section |
+| Material reference display | ✅ | Shows UUID(s) with multi-material support |
 
 ### Stats Panel
 
@@ -131,8 +131,8 @@
 | FPS display | ✅ | Computed from frame time |
 | Draw calls display | ✅ | With warning colors |
 | Triangle count display | ✅ | With warning colors |
-| Frame time chart | ⬜ | |
-| Chart zoom/pan | ⬜ | |
+| Frame time chart | ✅ | Line + bar hybrid chart with gridlines, hover tooltips, min/max/avg/jitter stats |
+| Chart zoom/pan | ✅ | Mouse wheel zoom, drag to pan, zoom controls with reset button |
 
 ## 1.4 In-App Overlay (`@3lens/overlay`)
 
@@ -144,15 +144,14 @@
 | Dockable panel (right side) | ✅ | Left/right position option |
 | Toggle button | ✅ | Chevron icon w/ animation |
 | Collapse/expand animation | ✅ | CSS transforms |
-| Resize handle | ⬜ | |
+| Resize handle | ✅ | Corner resize handle with drag support, min size constraints |
 | Keyboard shortcut (Ctrl+Shift+D) | ✅ | In example app |
 
 ### Panels (Same as Extension)
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Scene Explorer panel | ✅ | Tree view with expand/collapse |
-| Object Inspector panel | ✅ | Transform + properties |
+| Scene panel | ✅ | Tree view with expand/collapse + inspector |
 | Stats panel | ✅ | Grid + chart |
 
 ## 1.5 Documentation & Examples
