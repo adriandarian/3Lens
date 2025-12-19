@@ -46,6 +46,7 @@ export type DebugMessage =
   | SelectionChangedMessage
   // Command messages
   | SelectObjectCommand
+  | HoverObjectCommand
   | RequestSnapshotCommand
   | PingCommand
   | PongMessage;
@@ -114,6 +115,14 @@ export interface SelectionChangedMessage extends BaseMessage {
  */
 export interface SelectObjectCommand extends BaseMessage {
   type: 'select-object';
+  debugId: string | null;
+}
+
+/**
+ * Hover object command (for highlighting on hover)
+ */
+export interface HoverObjectCommand extends BaseMessage {
+  type: 'hover-object';
   debugId: string | null;
 }
 

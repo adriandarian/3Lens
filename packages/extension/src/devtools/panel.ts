@@ -180,28 +180,7 @@ function renderInspectorContent(node: SceneNode): string {
     <div class="inspector-header">
       <span class="inspector-icon ${getIconClass(node.ref.type)}">${getIcon(node.ref.type)}</span>
       <span class="inspector-title">${node.ref.name || `<${node.ref.type}>`}</span>
-    </div>
-    
-    <div class="inspector-section">
-      <div class="section-title">Identity</div>
-      <div class="property-grid">
-        <div class="property-row">
-          <span class="property-label">Type</span>
-          <span class="property-value type-badge">${node.ref.type}</span>
-        </div>
-        <div class="property-row">
-          <span class="property-label">Name</span>
-          <span class="property-value">${node.ref.name || '(unnamed)'}</span>
-        </div>
-        <div class="property-row">
-          <span class="property-label">UUID</span>
-          <span class="property-value uuid">${node.ref.threeUuid.substring(0, 8)}...</span>
-        </div>
-        <div class="property-row">
-          <span class="property-label">Visible</span>
-          <span class="property-value ${node.visible ? 'value-true' : 'value-false'}">${node.visible ? 'Yes' : 'No'}</span>
-        </div>
-      </div>
+      <span class="inspector-uuid">${node.ref.threeUuid.substring(0, 8)}</span>
     </div>
 
     <div class="inspector-section">
@@ -230,6 +209,10 @@ function renderInspectorContent(node: SceneNode): string {
       <div class="section-title">Rendering</div>
       <div class="property-grid">
         <div class="property-row">
+          <span class="property-label">Layers</span>
+          <span class="property-value layers-value">${formatLayers(node.layers)}</span>
+        </div>
+        <div class="property-row">
           <span class="property-label">Render Order</span>
           <span class="property-value">${node.renderOrder}</span>
         </div>
@@ -247,6 +230,9 @@ function renderInspectorContent(node: SceneNode): string {
 }
 
 function renderMeshSection(meshData: NonNullable<SceneNode['meshData']>): string {
+  const materialCount = meshData.materialRefs.length;
+  const materialLabel = materialCount === 1 ? 'Material' : `Materials (${materialCount})`;
+  
   return `
     <div class="inspector-section">
       <div class="section-title">Mesh</div>
@@ -260,6 +246,14 @@ function renderMeshSection(meshData: NonNullable<SceneNode['meshData']>): string
           <span class="property-value">${formatNumber(meshData.faceCount)}</span>
         </div>
         <div class="property-row">
+          <span class="property-label">Geometry</span>
+          <span class="property-value uuid">${meshData.geometryRef ? meshData.geometryRef.substring(0, 8) + '...' : '(none)'}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">${materialLabel}</span>
+          <span class="property-value material-refs">${formatMaterialRefs(meshData.materialRefs)}</span>
+        </div>
+        <div class="property-row">
           <span class="property-label">Cast Shadow</span>
           <span class="property-value ${meshData.castShadow ? 'value-true' : 'value-false'}">${meshData.castShadow ? 'Yes' : 'No'}</span>
         </div>
@@ -270,6 +264,16 @@ function renderMeshSection(meshData: NonNullable<SceneNode['meshData']>): string
       </div>
     </div>
   `;
+}
+
+function formatMaterialRefs(refs: string[]): string {
+  if (refs.length === 0) return '(none)';
+  if (refs.length === 1) {
+    return refs[0] ? refs[0].substring(0, 8) + '...' : '(none)';
+  }
+  // For multiple materials, show count with first UUID
+  const first = refs[0] ? refs[0].substring(0, 8) : '???';
+  return `${first}... +${refs.length - 1}`;
 }
 
 function renderLightSection(lightData: NonNullable<SceneNode['lightData']>): string {
@@ -345,6 +349,25 @@ function formatVector(v: { x: number; y: number; z: number }): string {
 function formatEuler(e: { x: number; y: number; z: number; order: string }): string {
   const toDeg = (r: number) => (r * 180 / Math.PI).toFixed(1);
   return `(${toDeg(e.x)}°, ${toDeg(e.y)}°, ${toDeg(e.z)}°)`;
+}
+
+function formatLayers(layerMask: number): string {
+  if (layerMask === 0) return 'None';
+  if (layerMask === 1) return '0 (default)';
+  
+  // Find which layers are enabled
+  const enabledLayers: number[] = [];
+  for (let i = 0; i < 32; i++) {
+    if (layerMask & (1 << i)) {
+      enabledLayers.push(i);
+    }
+  }
+  
+  if (enabledLayers.length === 1) {
+    return enabledLayers[0] === 0 ? '0 (default)' : String(enabledLayers[0]);
+  }
+  
+  return enabledLayers.join(', ');
 }
 
 function renderNode(node: SceneNode): string {
@@ -435,9 +458,25 @@ function renderPlaceholder(): void {
 
 function attachTreeEvents(): void {
   document.querySelectorAll('.node-header').forEach((header) => {
-    header.addEventListener('click', (e) => {
-      const node = (header as HTMLElement).parentElement;
-      const id = node?.dataset.id;
+    const headerEl = header as HTMLElement;
+    const node = headerEl.parentElement;
+    const id = node?.dataset.id;
+
+    // Hover highlighting
+    headerEl.addEventListener('mouseenter', () => {
+      if (id) {
+        headerEl.classList.add('hovered');
+        port.postMessage({ type: 'hover-object', debugId: id });
+      }
+    });
+
+    headerEl.addEventListener('mouseleave', () => {
+      headerEl.classList.remove('hovered');
+      port.postMessage({ type: 'hover-object', debugId: null });
+    });
+
+    // Click handling
+    headerEl.addEventListener('click', (e) => {
       if (!id) return;
 
       // Check if clicking toggle

@@ -27,8 +27,12 @@ interface PanelState {
   zIndex: number;
 }
 
+const SCENE_PANEL_WIDTH_COLLAPSED = 320; // Tree only (no selection)
+const SCENE_PANEL_WIDTH_EXPANDED = 560;  // Tree + Inspector (with selection)
+const SCENE_PANEL_MAX_HEIGHT = 450;      // Max auto-height before scrolling
+
 const PANELS: PanelConfig[] = [
-  { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: 560, defaultHeight: 450 },
+  { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: SCENE_PANEL_WIDTH_COLLAPSED, defaultHeight: 0 }, // 0 = auto height
   { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 360, defaultHeight: 480 },
 ];
 
@@ -52,6 +56,15 @@ export class ThreeLensOverlay {
   private lastStatsUpdate = 0;
   private statsUpdateInterval = 500; // Update stats UI every 500ms (2x per second)
   private statsTab: 'overview' | 'memory' | 'rendering' = 'overview';
+  
+  // Chart state
+  private chartZoom = 1; // 1 = show all 60 frames, 2 = show 30, etc.
+  private chartOffset = 0; // Pan offset (0 = showing latest frames)
+  private chartHoverIndex: number | null = null;
+  private chartDragging = false;
+  private chartDragStartX = 0;
+  private chartDragStartOffset = 0;
+  private maxHistoryLength = 120; // Store more history for zoom
 
   constructor(options: OverlayOptions) {
     this.probe = options.probe;
@@ -68,12 +81,12 @@ export class ThreeLensOverlay {
     this.probe.onFrameStats((stats) => {
       this.latestStats = stats;
       this.frameHistory.push(stats.cpuTimeMs);
-      if (this.frameHistory.length > 60) this.frameHistory.shift();
+      if (this.frameHistory.length > this.maxHistoryLength) this.frameHistory.shift();
       
       // Track FPS history
       const fps = stats.cpuTimeMs > 0 ? 1000 / stats.cpuTimeMs : 0;
       this.fpsHistory.push(fps);
-      if (this.fpsHistory.length > 60) this.fpsHistory.shift();
+      if (this.fpsHistory.length > this.maxHistoryLength) this.fpsHistory.shift();
       
       // Calculate benchmark score
       this.latestBenchmark = calculateBenchmarkScore(stats);
@@ -235,11 +248,18 @@ export class ThreeLensOverlay {
     const panel = document.createElement('div');
     panel.id = `three-lens-panel-${config.id}`;
     panel.className = 'three-lens-panel';
+    
+    // Scene panel uses auto height with max-height constraint
+    const isAutoHeight = config.id === 'scene';
+    const heightStyle = isAutoHeight 
+      ? `max-height: ${SCENE_PANEL_MAX_HEIGHT}px` 
+      : `height: ${state.height}px`;
+    
     panel.style.cssText = `
       left: ${state.x}px;
       top: ${state.y}px;
       width: ${state.width}px;
-      height: ${state.height}px;
+      ${heightStyle};
       z-index: ${state.zIndex};
     `;
 
@@ -449,54 +469,30 @@ export class ThreeLensOverlay {
         }
       }
     }
-    
-    // Auto-select first meaningful object if nothing is selected
-    if (!this.selectedNodeId && snapshot.scenes.length > 0) {
-      const firstSelectable = this.findFirstSelectableNode(snapshot.scenes);
-      if (firstSelectable) {
-        this.selectedNodeId = firstSelectable.ref.debugId;
-        // Trigger probe selection for 3D highlight
-        this.probe.selectByDebugId(firstSelectable.ref.debugId);
-      }
-    }
 
     // Find selected node for inspector
     const selectedNode = this.selectedNodeId 
       ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
       : null;
 
-    return `
-      <div class="three-lens-split-view">
-        <div class="three-lens-tree-pane">
-          <div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>
+    // Only show split view with inspector when something is selected
+    if (selectedNode) {
+      return `
+        <div class="three-lens-split-view">
+          <div class="three-lens-tree-pane">
+            <div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>
+          </div>
+          <div class="three-lens-inspector-pane">
+            ${this.renderNodeInspector(selectedNode)}
+          </div>
         </div>
-        <div class="three-lens-inspector-pane">
-          ${selectedNode ? this.renderNodeInspector(selectedNode) : this.renderNoSelectionHint()}
-        </div>
-      </div>
-    `;
-  }
-  
-  private findFirstSelectableNode(nodes: SceneNode[]): SceneNode | null {
-    for (const node of nodes) {
-      // Prefer mesh, light, or camera over groups/scenes
-      const type = node.ref.type.toLowerCase();
-      if (type.includes('mesh') || type.includes('light') || type.includes('camera')) {
-        return node;
-      }
-      // Recurse into children
-      const found = this.findFirstSelectableNode(node.children);
-      if (found) return found;
+      `;
     }
-    // Fallback to first node with children (group) or first node
-    return nodes[0] || null;
-  }
-  
-  private renderNoSelectionHint(): string {
+
+    // No selection - show tree only (full width)
     return `
-      <div class="three-lens-no-selection">
-        <div class="three-lens-no-selection-icon">👆</div>
-        <div class="three-lens-no-selection-text">Select an object from the tree</div>
+      <div class="three-lens-tree-full">
+        <div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>
       </div>
     `;
   }
@@ -591,9 +587,53 @@ export class ThreeLensOverlay {
       <div class="three-lens-chart">
         <div class="three-lens-chart-header">
           <span class="three-lens-chart-title">Frame Time</span>
+          <div class="three-lens-chart-controls">
+            <button class="three-lens-chart-btn" id="three-lens-chart-zoom-out" title="Zoom Out">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="2" y1="6" x2="10" y2="6"/>
+              </svg>
+            </button>
+            <span class="three-lens-chart-zoom-label" id="three-lens-chart-zoom-label">${this.getVisibleFrameCount()}f</span>
+            <button class="three-lens-chart-btn" id="three-lens-chart-zoom-in" title="Zoom In">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="2" y1="6" x2="10" y2="6"/>
+                <line x1="6" y1="2" x2="6" y2="10"/>
+              </svg>
+            </button>
+            <button class="three-lens-chart-btn" id="three-lens-chart-reset" title="Reset View">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M1 4.5a5 5 0 1 1 0 3"/>
+                <path d="M1 1v4h4"/>
+              </svg>
+            </button>
+          </div>
           <span class="three-lens-chart-value">${stats.cpuTimeMs.toFixed(2)}ms</span>
         </div>
-        <canvas class="three-lens-chart-canvas" id="three-lens-stats-chart"></canvas>
+        <div class="three-lens-chart-container" id="three-lens-chart-container">
+          <canvas class="three-lens-chart-canvas" id="three-lens-stats-chart"></canvas>
+          <div class="three-lens-chart-tooltip" id="three-lens-chart-tooltip" style="display: none;">
+            <div class="three-lens-tooltip-time"></div>
+            <div class="three-lens-tooltip-fps"></div>
+          </div>
+        </div>
+        <div class="three-lens-chart-stats">
+          <div class="three-lens-chart-stat">
+            <span class="three-lens-chart-stat-label">Min</span>
+            <span class="three-lens-chart-stat-value" id="three-lens-chart-min">${this.getFrameTimeMin().toFixed(1)}ms</span>
+          </div>
+          <div class="three-lens-chart-stat">
+            <span class="three-lens-chart-stat-label">Avg</span>
+            <span class="three-lens-chart-stat-value" id="three-lens-chart-avg">${this.getFrameTimeAvg().toFixed(1)}ms</span>
+          </div>
+          <div class="three-lens-chart-stat">
+            <span class="three-lens-chart-stat-label">Max</span>
+            <span class="three-lens-chart-stat-value warning" id="three-lens-chart-max">${this.getFrameTimeMax().toFixed(1)}ms</span>
+          </div>
+          <div class="three-lens-chart-stat">
+            <span class="three-lens-chart-stat-label">Jitter</span>
+            <span class="three-lens-chart-stat-value" id="three-lens-chart-jitter">${this.getFrameTimeJitter().toFixed(1)}ms</span>
+          </div>
+        </div>
         <div class="three-lens-percentiles">
           <div class="three-lens-percentile">
             <span class="three-lens-percentile-label">Avg FPS:</span>
@@ -929,16 +969,85 @@ export class ThreeLensOverlay {
           </div>
         </div>
       </div>
+      ${node.meshData ? this.renderMeshInfo(node.meshData) : ''}
+      ${node.lightData ? this.renderLightInfo(node.lightData) : ''}
+      ${node.cameraData ? this.renderCameraInfo(node.cameraData) : ''}
       <div class="three-lens-section">
-        <div class="three-lens-section-header">Properties</div>
-        ${this.renderProp('Name', node.ref.name || '(unnamed)')}
-        ${this.renderProp('Type', node.ref.type)}
-        ${this.renderProp('Visible', node.visible)}
-        ${this.renderProp('Frustum Culled', node.frustumCulled)}
+        <div class="three-lens-section-header">Rendering</div>
+        ${this.renderProp('Layers', this.formatLayers(node.layers))}
         ${this.renderProp('Render Order', node.renderOrder)}
+        ${this.renderProp('Frustum Culled', node.frustumCulled)}
         ${this.renderProp('Children', node.children.length)}
       </div>
     `;
+  }
+
+  private renderMeshInfo(meshData: NonNullable<SceneNode['meshData']>): string {
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Mesh</div>
+        ${this.renderProp('Vertices', formatNumber(meshData.vertexCount))}
+        ${this.renderProp('Triangles', formatNumber(meshData.faceCount))}
+        ${this.renderProp('Geometry', meshData.geometryRef ? meshData.geometryRef.substring(0, 8) + '...' : '(none)')}
+        ${this.renderProp('Material', this.formatMaterialRefs(meshData.materialRefs))}
+        ${this.renderProp('Cast Shadow', meshData.castShadow)}
+        ${this.renderProp('Receive Shadow', meshData.receiveShadow)}
+      </div>
+    `;
+  }
+
+  private renderLightInfo(lightData: NonNullable<SceneNode['lightData']>): string {
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Light</div>
+        ${this.renderProp('Light Type', lightData.lightType)}
+        ${this.renderProp('Color', '#' + lightData.color.toString(16).padStart(6, '0').toUpperCase())}
+        ${this.renderProp('Intensity', lightData.intensity.toFixed(2))}
+        ${this.renderProp('Cast Shadow', lightData.castShadow)}
+        ${lightData.distance !== undefined ? this.renderProp('Distance', lightData.distance) : ''}
+        ${lightData.angle !== undefined ? this.renderProp('Angle', (lightData.angle * 180 / Math.PI).toFixed(1) + '°') : ''}
+      </div>
+    `;
+  }
+
+  private renderCameraInfo(cameraData: NonNullable<SceneNode['cameraData']>): string {
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Camera</div>
+        ${this.renderProp('Camera Type', cameraData.cameraType)}
+        ${this.renderProp('Near', cameraData.near)}
+        ${this.renderProp('Far', cameraData.far)}
+        ${cameraData.fov !== undefined ? this.renderProp('FOV', cameraData.fov + '°') : ''}
+        ${cameraData.aspect !== undefined ? this.renderProp('Aspect', cameraData.aspect.toFixed(2)) : ''}
+      </div>
+    `;
+  }
+
+  private formatLayers(layerMask: number): string {
+    if (layerMask === 0) return 'None';
+    if (layerMask === 1) return '0 (default)';
+    
+    const enabledLayers: number[] = [];
+    for (let i = 0; i < 32; i++) {
+      if (layerMask & (1 << i)) {
+        enabledLayers.push(i);
+      }
+    }
+    
+    if (enabledLayers.length === 1) {
+      return enabledLayers[0] === 0 ? '0 (default)' : String(enabledLayers[0]);
+    }
+    
+    return enabledLayers.join(', ');
+  }
+
+  private formatMaterialRefs(refs: string[]): string {
+    if (refs.length === 0) return '(none)';
+    if (refs.length === 1) {
+      return refs[0] ? refs[0].substring(0, 8) + '...' : '(none)';
+    }
+    const first = refs[0] ? refs[0].substring(0, 8) : '???';
+    return `${first}... +${refs.length - 1}`;
   }
 
   private renderProp(name: string, value: unknown): string {
@@ -975,6 +1084,7 @@ export class ThreeLensOverlay {
       // Only update the tab content, not the tabs themselves
       tabContent.innerHTML = this.renderCurrentTabContent();
       if (this.statsTab === 'overview') {
+        this.attachChartEvents();
         this.renderChart();
       }
     } else {
@@ -986,6 +1096,7 @@ export class ThreeLensOverlay {
         this.attachStatsTabEvents(content);
       }
       if (this.statsTab === 'overview') {
+        this.attachChartEvents();
         this.renderChart();
       }
     }
@@ -1029,6 +1140,7 @@ export class ThreeLensOverlay {
           if (tabContent) {
             tabContent.innerHTML = this.renderCurrentTabContent();
             if (this.statsTab === 'overview') {
+              this.attachChartEvents();
               this.renderChart();
             }
           }
@@ -1047,14 +1159,27 @@ export class ThreeLensOverlay {
   }
 
   private updateInspectorPanel(): void {
-    // Inspector is now part of the scene panel, update inspector pane directly
-    const inspectorPane = document.querySelector('.three-lens-inspector-pane');
-    if (inspectorPane) {
-      const snapshot = this.probe.takeSnapshot();
-      const selectedNode = this.selectedNodeId 
-        ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
-        : null;
-      inspectorPane.innerHTML = selectedNode ? this.renderNodeInspector(selectedNode) : this.renderNoSelectionHint();
+    // Since the layout changes between full-width tree and split view,
+    // we need to re-render the entire scene panel when selection changes
+    this.updateScenePanel();
+    
+    // Dynamically resize the scene panel based on selection
+    this.updateScenePanelSize();
+  }
+
+  private updateScenePanelSize(): void {
+    const panel = document.getElementById('three-lens-panel-scene');
+    const state = this.openPanels.get('scene');
+    if (!panel || !state) return;
+
+    const targetWidth = this.selectedNodeId 
+      ? SCENE_PANEL_WIDTH_EXPANDED 
+      : SCENE_PANEL_WIDTH_COLLAPSED;
+
+    // Only update if width is different
+    if (state.width !== targetWidth) {
+      state.width = targetWidth;
+      panel.style.width = `${targetWidth}px`;
     }
   }
 
@@ -1093,9 +1218,15 @@ export class ThreeLensOverlay {
           return;
         }
 
-        // Select the object in the probe (this triggers onSelectionChanged callback
-        // which updates the scene panel, inspector panel, and shows 3D bounding box)
-        this.probe.selectByDebugId(id);
+        // Toggle selection - if already selected, deselect; otherwise select
+        if (this.selectedNodeId === id) {
+          // Deselect
+          this.probe.selectObject(null);
+        } else {
+          // Select the object in the probe (this triggers onSelectionChanged callback
+          // which updates the scene panel, inspector panel, and shows 3D bounding box)
+          this.probe.selectByDebugId(id);
+        }
       });
     });
   }
@@ -1125,9 +1256,172 @@ export class ThreeLensOverlay {
     this.updateInspectorPanel();
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // CHART HELPERS
+  // ═══════════════════════════════════════════════════════════════
+
+  private getVisibleFrameCount(): number {
+    return Math.max(10, Math.floor(60 / this.chartZoom));
+  }
+
+  private getVisibleFrameData(): number[] {
+    const visibleCount = this.getVisibleFrameCount();
+    const endIndex = this.frameHistory.length - this.chartOffset;
+    const startIndex = Math.max(0, endIndex - visibleCount);
+    return this.frameHistory.slice(startIndex, endIndex);
+  }
+
+  private getFrameTimeMin(): number {
+    const data = this.getVisibleFrameData();
+    return data.length > 0 ? Math.min(...data) : 0;
+  }
+
+  private getFrameTimeMax(): number {
+    const data = this.getVisibleFrameData();
+    return data.length > 0 ? Math.max(...data) : 0;
+  }
+
+  private getFrameTimeAvg(): number {
+    const data = this.getVisibleFrameData();
+    if (data.length === 0) return 0;
+    return data.reduce((a, b) => a + b, 0) / data.length;
+  }
+
+  private getFrameTimeJitter(): number {
+    const data = this.getVisibleFrameData();
+    if (data.length < 2) return 0;
+    const avg = this.getFrameTimeAvg();
+    const variance = data.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / data.length;
+    return Math.sqrt(variance);
+  }
+
+  private handleChartZoomIn(): void {
+    if (this.chartZoom < 4) {
+      this.chartZoom *= 1.5;
+      this.updateChartView();
+    }
+  }
+
+  private handleChartZoomOut(): void {
+    if (this.chartZoom > 0.5) {
+      this.chartZoom /= 1.5;
+      this.chartOffset = Math.max(0, Math.min(this.chartOffset, this.frameHistory.length - this.getVisibleFrameCount()));
+      this.updateChartView();
+    }
+  }
+
+  private handleChartReset(): void {
+    this.chartZoom = 1;
+    this.chartOffset = 0;
+    this.updateChartView();
+  }
+
+  private updateChartView(): void {
+    this.renderChart();
+    // Update zoom label
+    const zoomLabel = document.getElementById('three-lens-chart-zoom-label');
+    if (zoomLabel) {
+      zoomLabel.textContent = `${this.getVisibleFrameCount()}f`;
+    }
+    // Update stats
+    const minEl = document.getElementById('three-lens-chart-min');
+    const avgEl = document.getElementById('three-lens-chart-avg');
+    const maxEl = document.getElementById('three-lens-chart-max');
+    const jitterEl = document.getElementById('three-lens-chart-jitter');
+    if (minEl) minEl.textContent = `${this.getFrameTimeMin().toFixed(1)}ms`;
+    if (avgEl) avgEl.textContent = `${this.getFrameTimeAvg().toFixed(1)}ms`;
+    if (maxEl) maxEl.textContent = `${this.getFrameTimeMax().toFixed(1)}ms`;
+    if (jitterEl) jitterEl.textContent = `${this.getFrameTimeJitter().toFixed(1)}ms`;
+  }
+
+  private attachChartEvents(): void {
+    const container = document.getElementById('three-lens-chart-container');
+    const canvas = document.getElementById('three-lens-stats-chart') as HTMLCanvasElement;
+    const tooltip = document.getElementById('three-lens-chart-tooltip');
+    
+    if (!container || !canvas) return;
+
+    // Zoom controls
+    document.getElementById('three-lens-chart-zoom-in')?.addEventListener('click', () => this.handleChartZoomIn());
+    document.getElementById('three-lens-chart-zoom-out')?.addEventListener('click', () => this.handleChartZoomOut());
+    document.getElementById('three-lens-chart-reset')?.addEventListener('click', () => this.handleChartReset());
+
+    // Mouse wheel zoom
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        this.handleChartZoomIn();
+      } else {
+        this.handleChartZoomOut();
+      }
+    });
+
+    // Pan with drag
+    container.addEventListener('mousedown', (e) => {
+      this.chartDragging = true;
+      this.chartDragStartX = e.clientX;
+      this.chartDragStartOffset = this.chartOffset;
+      container.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (this.chartDragging) {
+        const dx = e.clientX - this.chartDragStartX;
+        const visibleCount = this.getVisibleFrameCount();
+        const framesPerPixel = visibleCount / (canvas.getBoundingClientRect().width);
+        const offsetDelta = Math.round(dx * framesPerPixel);
+        const maxOffset = Math.max(0, this.frameHistory.length - visibleCount);
+        this.chartOffset = Math.max(0, Math.min(maxOffset, this.chartDragStartOffset - offsetDelta));
+        this.updateChartView();
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (this.chartDragging) {
+        this.chartDragging = false;
+        if (container) container.style.cursor = 'grab';
+      }
+    });
+
+    // Hover tooltip
+    canvas.addEventListener('mousemove', (e) => {
+      if (this.chartDragging || !tooltip) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const data = this.getVisibleFrameData();
+      const barWidth = rect.width / data.length;
+      const index = Math.floor(x / barWidth);
+      
+      if (index >= 0 && index < data.length) {
+        this.chartHoverIndex = index;
+        const frameTime = data[index];
+        const fps = frameTime > 0 ? Math.round(1000 / frameTime) : 0;
+        
+        tooltip.style.display = 'block';
+        tooltip.style.left = `${Math.min(x, rect.width - 80)}px`;
+        tooltip.style.top = '-40px';
+        
+        const timeEl = tooltip.querySelector('.three-lens-tooltip-time');
+        const fpsEl = tooltip.querySelector('.three-lens-tooltip-fps');
+        if (timeEl) timeEl.textContent = `${frameTime.toFixed(2)}ms`;
+        if (fpsEl) fpsEl.textContent = `${fps} FPS`;
+        
+        this.renderChart(); // Re-render to highlight bar
+      }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      if (tooltip) tooltip.style.display = 'none';
+      this.chartHoverIndex = null;
+      this.renderChart();
+    });
+  }
+
   private renderChart(): void {
     const canvas = document.getElementById('three-lens-stats-chart') as HTMLCanvasElement;
-    if (!canvas || this.frameHistory.length < 2) return;
+    const data = this.getVisibleFrameData();
+    if (!canvas || data.length < 2) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -1138,30 +1432,147 @@ export class ThreeLensOverlay {
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
     const { width, height } = rect;
+    const padding = { top: 4, bottom: 4, left: 0, right: 0 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    
     ctx.clearRect(0, 0, width, height);
 
-    const maxValue = Math.max(...this.frameHistory, 16.67);
-    const barWidth = width / 60;
+    // Calculate max value for scale (at least 16.67ms for 60fps reference)
+    const dataMax = Math.max(...data, 16.67);
+    const maxValue = Math.ceil(dataMax / 8.33) * 8.33; // Round up to nearest ~8ms
+    
+    const barWidth = chartWidth / data.length;
+    const barGap = Math.max(1, barWidth * 0.15);
 
-    // 60fps target line
-    ctx.strokeStyle = 'rgba(52, 211, 153, 0.3)';
-    ctx.setLineDash([2, 2]);
-    const targetY = height - (16.67 / maxValue) * height;
+    // Draw gridlines
+    ctx.strokeStyle = 'rgba(45, 55, 72, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    
+    const gridValues = [16.67, 33.33]; // 60fps and 30fps lines
+    gridValues.forEach(value => {
+      if (value <= maxValue) {
+        const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+      }
+    });
+
+    // Draw 60fps target line (green)
+    ctx.strokeStyle = 'rgba(52, 211, 153, 0.6)';
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1.5;
+    const target60Y = padding.top + chartHeight - (16.67 / maxValue) * chartHeight;
     ctx.beginPath();
-    ctx.moveTo(0, targetY);
-    ctx.lineTo(width, targetY);
+    ctx.moveTo(padding.left, target60Y);
+    ctx.lineTo(width - padding.right, target60Y);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Bars
-    const gradient = ctx.createLinearGradient(0, height, 0, 0);
-    gradient.addColorStop(0, 'rgba(96, 165, 250, 0.8)');
-    gradient.addColorStop(1, 'rgba(34, 211, 238, 0.8)');
-    ctx.fillStyle = gradient;
+    // Draw average line
+    const avg = this.getFrameTimeAvg();
+    if (avg > 0) {
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+      ctx.setLineDash([2, 4]);
+      ctx.lineWidth = 1;
+      const avgY = padding.top + chartHeight - (avg / maxValue) * chartHeight;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, avgY);
+      ctx.lineTo(width - padding.right, avgY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
-    this.frameHistory.forEach((value, i) => {
-      const barHeight = (value / maxValue) * height;
-      ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
+    // Create gradient for bars
+    const gradientGood = ctx.createLinearGradient(0, height, 0, 0);
+    gradientGood.addColorStop(0, 'rgba(52, 211, 153, 0.9)');
+    gradientGood.addColorStop(1, 'rgba(34, 211, 238, 0.9)');
+    
+    const gradientWarn = ctx.createLinearGradient(0, height, 0, 0);
+    gradientWarn.addColorStop(0, 'rgba(251, 191, 36, 0.9)');
+    gradientWarn.addColorStop(1, 'rgba(245, 158, 11, 0.9)');
+    
+    const gradientBad = ctx.createLinearGradient(0, height, 0, 0);
+    gradientBad.addColorStop(0, 'rgba(239, 68, 68, 0.9)');
+    gradientBad.addColorStop(1, 'rgba(248, 113, 113, 0.9)');
+
+    // Draw bars with color based on frame time
+    data.forEach((value, i) => {
+      const x = padding.left + i * barWidth + barGap / 2;
+      const barHeight = (value / maxValue) * chartHeight;
+      const y = padding.top + chartHeight - barHeight;
+      const actualBarWidth = barWidth - barGap;
+      
+      // Color based on performance
+      if (value <= 16.67) {
+        ctx.fillStyle = gradientGood;
+      } else if (value <= 33.33) {
+        ctx.fillStyle = gradientWarn;
+      } else {
+        ctx.fillStyle = gradientBad;
+      }
+      
+      // Highlight hovered bar
+      if (this.chartHoverIndex === i) {
+        ctx.fillStyle = 'rgba(96, 165, 250, 1)';
+        ctx.shadowColor = 'rgba(96, 165, 250, 0.5)';
+        ctx.shadowBlur = 8;
+      }
+      
+      // Draw rounded bar
+      const radius = Math.min(3, actualBarWidth / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + actualBarWidth - radius, y);
+      ctx.quadraticCurveTo(x + actualBarWidth, y, x + actualBarWidth, y + radius);
+      ctx.lineTo(x + actualBarWidth, y + barHeight);
+      ctx.lineTo(x, y + barHeight);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+    });
+
+    // Draw line graph on top
+    ctx.strokeStyle = 'rgba(96, 165, 250, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    
+    data.forEach((value, i) => {
+      const x = padding.left + i * barWidth + barWidth / 2;
+      const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
+      
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    
+    ctx.stroke();
+
+    // Draw data points
+    data.forEach((value, i) => {
+      const x = padding.left + i * barWidth + barWidth / 2;
+      const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
+      
+      // Only draw point for hovered bar
+      if (this.chartHoverIndex === i) {
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#60a5fa';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     });
   }
 
