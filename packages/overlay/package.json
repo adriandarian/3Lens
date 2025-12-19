@@ -1,0 +1,43 @@
+{
+  "name": "@3lens/overlay",
+  "version": "0.1.0-alpha.1",
+  "description": "In-app overlay UI for 3Lens devtool",
+  "keywords": [
+    "three.js",
+    "threejs",
+    "devtools",
+    "overlay"
+  ],
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@3lens/core": "workspace:*"
+  },
+  "devDependencies": {
+    "three": "^0.160.0"
+  },
+  "peerDependencies": {
+    "three": ">=0.150.0"
+  }
+}
+

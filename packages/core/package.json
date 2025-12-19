@@ -1,0 +1,42 @@
+{
+  "name": "@3lens/core",
+  "version": "0.1.0-alpha.1",
+  "description": "Core probe SDK for 3Lens - the three.js devtool",
+  "keywords": [
+    "three.js",
+    "threejs",
+    "webgl",
+    "webgpu",
+    "devtools",
+    "debugging"
+  ],
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "three": "^0.160.0"
+  },
+  "peerDependencies": {
+    "three": ">=0.150.0"
+  }
+}
+

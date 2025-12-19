@@ -1,0 +1,21 @@
+{
+  "name": "@3lens/extension",
+  "version": "0.1.0-alpha.1",
+  "description": "3Lens browser extension for Chrome/Firefox DevTools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@3lens/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.260",
+    "three": "^0.160.0"
+  }
+}
+
