@@ -132,6 +132,9 @@ const probe = createProbe({
   },
 });
 
+// Enable selection highlighting in the 3D scene
+probe.setThreeReference(THREE);
+
 // Attach renderer and scene
 probe.observeRenderer(renderer);
 probe.observeScene(scene);

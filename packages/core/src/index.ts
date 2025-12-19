@@ -50,6 +50,9 @@ export type { Unsubscribe } from './types/common';
 export { DevtoolProbe } from './probe/DevtoolProbe';
 export { createProbe } from './probe/createProbe';
 
+// Helpers
+export { SelectionHelper } from './helpers/SelectionHelper';
+
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
 

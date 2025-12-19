@@ -10,7 +10,7 @@ import type { DebugMessage, FrameStats, SceneSnapshot, SceneNode } from '@3lens/
 
 interface PanelState {
   connected: boolean;
-  activeTab: 'scene' | 'stats' | 'inspector' | 'textures' | 'materials';
+  activeTab: 'scene' | 'stats' | 'textures' | 'materials';
   snapshot: SceneSnapshot | null;
   latestStats: FrameStats | null;
   selectedNodeId: string | null;
@@ -34,6 +34,7 @@ const state: PanelState = {
 
 // Set up port connection to background script
 const port = chrome.runtime.connect({ name: 'panel' });
+const tabId = chrome.devtools.inspectedWindow.tabId;
 
 port.onMessage.addListener((message: DebugMessage) => {
   handleMessage(message);
@@ -43,8 +44,8 @@ port.onDisconnect.addListener(() => {
   updateConnectionStatus(false);
 });
 
-// Request initial state
-port.postMessage({ type: 'handshake-request', uiVersion: '0.1.0', capabilities: [] });
+// Request initial state - include tabId so background can route messages
+port.postMessage({ type: 'handshake-request', uiVersion: '0.1.0', capabilities: [], tabId });
 
 function handleMessage(message: DebugMessage): void {
   switch (message.type) {
@@ -130,9 +131,6 @@ function renderContent(): void {
     case 'stats':
       renderStats();
       break;
-    case 'inspector':
-      renderInspector();
-      break;
     default:
       renderPlaceholder();
   }
@@ -153,14 +151,200 @@ function renderScene(): void {
     return;
   }
 
+  // Find selected node for the inspector panel
+  const selectedNode = state.selectedNodeId 
+    ? findNode(state.snapshot.scenes, state.selectedNodeId) 
+    : null;
+
   const html = `
-    <div class="scene-tree">
-      ${state.snapshot.scenes.map((scene) => renderNode(scene)).join('')}
+    <div class="scene-split-view">
+      <div class="scene-tree-panel">
+        <div class="scene-tree">
+          ${state.snapshot.scenes.map((scene) => renderNode(scene)).join('')}
+        </div>
+      </div>
+      <div class="scene-inspector-panel">
+        ${selectedNode ? renderInspectorContent(selectedNode) : renderNoSelectionHint()}
+      </div>
     </div>
   `;
 
   content.innerHTML = html;
   attachTreeEvents();
+}
+
+function renderInspectorContent(node: SceneNode): string {
+  const transform = node.transform;
+  
+  return `
+    <div class="inspector-header">
+      <span class="inspector-icon ${getIconClass(node.ref.type)}">${getIcon(node.ref.type)}</span>
+      <span class="inspector-title">${node.ref.name || `<${node.ref.type}>`}</span>
+    </div>
+    
+    <div class="inspector-section">
+      <div class="section-title">Identity</div>
+      <div class="property-grid">
+        <div class="property-row">
+          <span class="property-label">Type</span>
+          <span class="property-value type-badge">${node.ref.type}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Name</span>
+          <span class="property-value">${node.ref.name || '(unnamed)'}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">UUID</span>
+          <span class="property-value uuid">${node.ref.threeUuid.substring(0, 8)}...</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Visible</span>
+          <span class="property-value ${node.visible ? 'value-true' : 'value-false'}">${node.visible ? 'Yes' : 'No'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="inspector-section">
+      <div class="section-title">Transform</div>
+      <div class="property-grid">
+        <div class="property-row">
+          <span class="property-label">Position</span>
+          <span class="property-value vector">${formatVector(transform.position)}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Rotation</span>
+          <span class="property-value vector">${formatEuler(transform.rotation)}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Scale</span>
+          <span class="property-value vector">${formatVector(transform.scale)}</span>
+        </div>
+      </div>
+    </div>
+
+    ${node.meshData ? renderMeshSection(node.meshData) : ''}
+    ${node.lightData ? renderLightSection(node.lightData) : ''}
+    ${node.cameraData ? renderCameraSection(node.cameraData) : ''}
+
+    <div class="inspector-section">
+      <div class="section-title">Rendering</div>
+      <div class="property-grid">
+        <div class="property-row">
+          <span class="property-label">Render Order</span>
+          <span class="property-value">${node.renderOrder}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Frustum Culled</span>
+          <span class="property-value ${node.frustumCulled ? 'value-true' : 'value-false'}">${node.frustumCulled ? 'Yes' : 'No'}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Children</span>
+          <span class="property-value">${node.children.length}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMeshSection(meshData: NonNullable<SceneNode['meshData']>): string {
+  return `
+    <div class="inspector-section">
+      <div class="section-title">Mesh</div>
+      <div class="property-grid">
+        <div class="property-row">
+          <span class="property-label">Vertices</span>
+          <span class="property-value">${formatNumber(meshData.vertexCount)}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Triangles</span>
+          <span class="property-value">${formatNumber(meshData.faceCount)}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Cast Shadow</span>
+          <span class="property-value ${meshData.castShadow ? 'value-true' : 'value-false'}">${meshData.castShadow ? 'Yes' : 'No'}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Receive Shadow</span>
+          <span class="property-value ${meshData.receiveShadow ? 'value-true' : 'value-false'}">${meshData.receiveShadow ? 'Yes' : 'No'}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderLightSection(lightData: NonNullable<SceneNode['lightData']>): string {
+  return `
+    <div class="inspector-section">
+      <div class="section-title">Light</div>
+      <div class="property-grid">
+        <div class="property-row">
+          <span class="property-label">Type</span>
+          <span class="property-value type-badge">${lightData.lightType}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Color</span>
+          <span class="property-value">
+            <span class="color-swatch" style="background: #${lightData.color.toString(16).padStart(6, '0')};"></span>
+            #${lightData.color.toString(16).padStart(6, '0').toUpperCase()}
+          </span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Intensity</span>
+          <span class="property-value">${lightData.intensity.toFixed(2)}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Cast Shadow</span>
+          <span class="property-value ${lightData.castShadow ? 'value-true' : 'value-false'}">${lightData.castShadow ? 'Yes' : 'No'}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCameraSection(cameraData: NonNullable<SceneNode['cameraData']>): string {
+  return `
+    <div class="inspector-section">
+      <div class="section-title">Camera</div>
+      <div class="property-grid">
+        <div class="property-row">
+          <span class="property-label">Type</span>
+          <span class="property-value type-badge">${cameraData.cameraType}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Near</span>
+          <span class="property-value">${cameraData.near}</span>
+        </div>
+        <div class="property-row">
+          <span class="property-label">Far</span>
+          <span class="property-value">${cameraData.far}</span>
+        </div>
+        ${cameraData.fov ? `
+        <div class="property-row">
+          <span class="property-label">FOV</span>
+          <span class="property-value">${cameraData.fov}°</span>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderNoSelectionHint(): string {
+  return `
+    <div class="no-selection">
+      <div class="no-selection-icon">👆</div>
+      <div class="no-selection-text">Select an object to inspect</div>
+    </div>
+  `;
+}
+
+function formatVector(v: { x: number; y: number; z: number }): string {
+  return `(${v.x.toFixed(2)}, ${v.y.toFixed(2)}, ${v.z.toFixed(2)})`;
+}
+
+function formatEuler(e: { x: number; y: number; z: number; order: string }): string {
+  const toDeg = (r: number) => (r * 180 / Math.PI).toFixed(1);
+  return `(${toDeg(e.x)}°, ${toDeg(e.y)}°, ${toDeg(e.z)}°)`;
 }
 
 function renderNode(node: SceneNode): string {
@@ -226,51 +410,6 @@ function renderStats(): void {
         <div class="stat-card">
           <div class="stat-label">Triangles</div>
           <div class="stat-value ${stats.triangles > 500000 ? 'warning' : ''}">${formatNumber(stats.triangles)}</div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderInspector(): void {
-  const content = document.getElementById('content');
-  if (!content) return;
-
-  if (!state.selectedNodeId) {
-    content.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">🔎</div>
-        <h2>No Selection</h2>
-        <p>Select an object in the Scene tab to inspect its properties.</p>
-      </div>
-    `;
-    return;
-  }
-
-  // Find the selected node in the snapshot
-  const node = findNode(state.snapshot?.scenes ?? [], state.selectedNodeId);
-  if (!node) {
-    content.innerHTML = `<div class="empty-state"><p>Object not found</p></div>`;
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="inspector-panel" style="padding: 12px;">
-      <h3 style="margin-bottom: 12px; font-size: 14px; color: var(--accent-cyan);">
-        ${node.ref.name || node.ref.type}
-      </h3>
-      <div class="property-section">
-        <div class="property-row">
-          <span class="property-name" style="color: var(--text-tertiary); width: 80px; display: inline-block;">Type</span>
-          <span class="property-value" style="font-family: var(--font-mono);">${node.ref.type}</span>
-        </div>
-        <div class="property-row">
-          <span class="property-name" style="color: var(--text-tertiary); width: 80px; display: inline-block;">UUID</span>
-          <span class="property-value" style="font-family: var(--font-mono); font-size: 10px;">${node.ref.threeUuid}</span>
-        </div>
-        <div class="property-row">
-          <span class="property-name" style="color: var(--text-tertiary); width: 80px; display: inline-block;">Visible</span>
-          <span class="property-value">${node.visible ? '✓' : '✗'}</span>
         </div>
       </div>
     </div>

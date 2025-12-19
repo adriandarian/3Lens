@@ -424,20 +424,38 @@ export class ThreeLensOverlay {
     const hasChildren = node.children.length > 0;
     const isExpanded = this.expandedNodes.has(node.ref.debugId);
     const isSelected = this.selectedNodeId === node.ref.debugId;
+    const isVisible = node.visible;
 
     return `
       <div class="three-lens-node" data-id="${node.ref.debugId}">
-        <div class="three-lens-node-header ${isSelected ? 'selected' : ''}">
+        <div class="three-lens-node-header ${isSelected ? 'selected' : ''} ${!isVisible ? 'hidden-object' : ''}">
           <span class="three-lens-node-toggle ${hasChildren ? (isExpanded ? 'expanded' : '') : 'hidden'}">
             <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1L6 4L2 7z"/></svg>
           </span>
           <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${getObjectIcon(node.ref.type)}</span>
           <span class="three-lens-node-name">${node.ref.name || `<${node.ref.type}>`}</span>
           <span class="three-lens-node-type">${node.ref.type}</span>
+          <button class="three-lens-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">
+            ${isVisible ? this.getEyeOpenIcon() : this.getEyeClosedIcon()}
+          </button>
         </div>
         ${hasChildren && isExpanded ? `<div class="three-lens-node-children">${node.children.map(c => this.renderNode(c)).join('')}</div>` : ''}
       </div>
     `;
+  }
+
+  private getEyeOpenIcon(): string {
+    return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>`;
+  }
+
+  private getEyeClosedIcon(): string {
+    return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>`;
   }
 
   private renderStatsContent(): string {
@@ -478,7 +496,19 @@ export class ThreeLensOverlay {
   }
 
   private renderInspectorContent(): string {
-    const selected = this.probe.getSelectedObject();
+    // Try to get from probe first, fall back to finding by debugId
+    let selected = this.probe.getSelectedObject();
+    
+    // If highlight is disabled, we might have a local selection that's not in the probe
+    if (!selected && this.selectedNodeId) {
+      // Find the object from the snapshot data instead
+      const snapshot = this.probe.takeSnapshot();
+      const nodeData = this.findNodeById(snapshot.scenes, this.selectedNodeId);
+      if (nodeData) {
+        return this.renderNodeInspector(nodeData);
+      }
+    }
+    
     if (!selected) {
       return `<div class="three-lens-inspector-empty">Select an object in the Scene panel</div>`;
     }
@@ -496,6 +526,59 @@ export class ThreeLensOverlay {
         ${this.renderProp('Frustum Culled', selected.frustumCulled)}
         ${this.renderProp('Render Order', selected.renderOrder)}
         ${this.renderProp('Type', selected.type)}
+      </div>
+    `;
+  }
+
+  private findNodeById(nodes: SceneNode[], id: string): SceneNode | null {
+    for (const node of nodes) {
+      if (node.ref.debugId === id) return node;
+      const found = this.findNodeById(node.children, id);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  private renderNodeInspector(node: SceneNode): string {
+    const t = node.transform;
+    const toDeg = (r: number) => (r * 180 / Math.PI).toFixed(2);
+    
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Transform</div>
+        <div class="three-lens-property-row">
+          <span class="three-lens-property-name">Position</span>
+          <div class="three-lens-vector-inputs">
+            <div class="three-lens-vector-input"><input type="number" value="${t.position.x.toFixed(2)}" step="0.1" readonly><div class="three-lens-vector-label">X</div></div>
+            <div class="three-lens-vector-input"><input type="number" value="${t.position.y.toFixed(2)}" step="0.1" readonly><div class="three-lens-vector-label">Y</div></div>
+            <div class="three-lens-vector-input"><input type="number" value="${t.position.z.toFixed(2)}" step="0.1" readonly><div class="three-lens-vector-label">Z</div></div>
+          </div>
+        </div>
+        <div class="three-lens-property-row">
+          <span class="three-lens-property-name">Rotation</span>
+          <div class="three-lens-vector-inputs">
+            <div class="three-lens-vector-input"><input type="number" value="${toDeg(t.rotation.x)}" step="0.1" readonly><div class="three-lens-vector-label">X</div></div>
+            <div class="three-lens-vector-input"><input type="number" value="${toDeg(t.rotation.y)}" step="0.1" readonly><div class="three-lens-vector-label">Y</div></div>
+            <div class="three-lens-vector-input"><input type="number" value="${toDeg(t.rotation.z)}" step="0.1" readonly><div class="three-lens-vector-label">Z</div></div>
+          </div>
+        </div>
+        <div class="three-lens-property-row">
+          <span class="three-lens-property-name">Scale</span>
+          <div class="three-lens-vector-inputs">
+            <div class="three-lens-vector-input"><input type="number" value="${t.scale.x.toFixed(2)}" step="0.1" readonly><div class="three-lens-vector-label">X</div></div>
+            <div class="three-lens-vector-input"><input type="number" value="${t.scale.y.toFixed(2)}" step="0.1" readonly><div class="three-lens-vector-label">Y</div></div>
+            <div class="three-lens-vector-input"><input type="number" value="${t.scale.z.toFixed(2)}" step="0.1" readonly><div class="three-lens-vector-label">Z</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Properties</div>
+        ${this.renderProp('Name', node.ref.name || '(unnamed)')}
+        ${this.renderProp('Type', node.ref.type)}
+        ${this.renderProp('Visible', node.visible)}
+        ${this.renderProp('Frustum Culled', node.frustumCulled)}
+        ${this.renderProp('Render Order', node.renderOrder)}
+        ${this.renderProp('Children', node.children.length)}
       </div>
     `;
   }
@@ -547,8 +630,25 @@ export class ThreeLensOverlay {
   }
 
   private attachTreeEvents(panel: HTMLElement): void {
+    // Visibility toggle buttons (eye icons)
+    panel.querySelectorAll('.three-lens-visibility-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Don't trigger node selection
+        const id = (btn as HTMLElement).dataset.id;
+        if (id) {
+          this.toggleObjectVisibility(id);
+        }
+      });
+    });
+
+    // Tree node events
     panel.querySelectorAll('.three-lens-node-header').forEach(header => {
       header.addEventListener('click', (e) => {
+        // Ignore if clicking visibility button
+        if ((e.target as HTMLElement).closest('.three-lens-visibility-btn')) {
+          return;
+        }
+
         const node = (header as HTMLElement).parentElement;
         const id = node?.dataset.id;
         if (!id) return;
@@ -564,11 +664,36 @@ export class ThreeLensOverlay {
           return;
         }
 
-        this.selectedNodeId = id;
-        this.updateScenePanel();
-        this.updateInspectorPanel();
+        // Select the object in the probe (this triggers onSelectionChanged callback
+        // which updates the scene panel, inspector panel, and shows 3D bounding box)
+        this.probe.selectByDebugId(id);
       });
     });
+  }
+
+  private toggleObjectVisibility(debugId: string): void {
+    // Save current selection state
+    const prevSelectedId = this.selectedNodeId;
+    
+    // Find the object by selecting it temporarily
+    if (this.probe.selectByDebugId(debugId)) {
+      const obj = this.probe.getSelectedObject();
+      if (obj) {
+        obj.visible = !obj.visible;
+      }
+    }
+    
+    // Restore previous selection
+    if (prevSelectedId) {
+      this.probe.selectByDebugId(prevSelectedId);
+    } else {
+      this.probe.selectObject(null);
+    }
+    this.selectedNodeId = prevSelectedId;
+    
+    // Update UI
+    this.updateScenePanel();
+    this.updateInspectorPanel();
   }
 
   private renderChart(): void {
