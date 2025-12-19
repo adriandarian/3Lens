@@ -378,12 +378,26 @@ export class ThreeLensOverlay {
     const state = this.openPanels.get(panelId);
     if (!state) return;
 
+    const el = document.getElementById(`three-lens-panel-${panelId}`);
+    if (!el) return;
+
+    // Get actual computed dimensions (important for auto-height panels)
+    const rect = el.getBoundingClientRect();
+    
+    // Add resizing class to disable transitions
+    el.classList.add('resizing');
+    
+    // For auto-height panels, switch to explicit height mode
+    el.style.height = `${rect.height}px`;
+    el.style.maxHeight = 'none';
+    state.height = rect.height;
+
     this.resizeState = {
       panelId,
       startX: e.clientX,
       startY: e.clientY,
-      startWidth: state.width,
-      startHeight: state.height,
+      startWidth: rect.width,
+      startHeight: rect.height,
     };
 
     this.focusPanel(panelId);
@@ -415,7 +429,7 @@ export class ThreeLensOverlay {
       const dy = e.clientY - this.resizeState.startY;
 
       state.width = Math.max(280, this.resizeState.startWidth + dx);
-      state.height = Math.max(200, this.resizeState.startHeight + dy);
+      state.height = Math.max(100, this.resizeState.startHeight + dy);
 
       const el = document.getElementById(`three-lens-panel-${this.resizeState.panelId}`);
       if (el) {
@@ -426,6 +440,14 @@ export class ThreeLensOverlay {
   }
 
   private handleMouseUp(): void {
+    // Remove resizing class when done
+    if (this.resizeState) {
+      const el = document.getElementById(`three-lens-panel-${this.resizeState.panelId}`);
+      if (el) {
+        el.classList.remove('resizing');
+      }
+    }
+    
     this.dragState = null;
     this.resizeState = null;
   }

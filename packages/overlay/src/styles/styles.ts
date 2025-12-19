@@ -201,6 +201,16 @@ export const OVERLAY_STYLES = `
   font-size: 13px;
   color: var(--3lens-text-primary);
   overflow: hidden;
+  transition: box-shadow 150ms ease;
+}
+
+/* Disable transitions during resize */
+.three-lens-panel.resizing {
+  transition: none !important;
+}
+
+/* Smooth width animation only when not resizing */
+.three-lens-panel:not(.resizing) {
   transition: box-shadow 150ms ease, width 150ms ease;
 }
 
