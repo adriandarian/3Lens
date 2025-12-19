@@ -21,10 +21,18 @@ export type {
 
 export type {
   FrameStats,
+  MemoryStats,
+  PerformanceMetrics,
+  RenderingStats,
   WebGLFrameExtras,
   WebGPUFrameExtras,
   RuleViolation,
+  BenchmarkScore,
+  BenchmarkConfig,
+  PerformanceHistory,
 } from './types/stats';
+
+export { DEFAULT_BENCHMARK_CONFIG } from './types/stats';
 
 export type {
   SceneSnapshot,
@@ -59,4 +67,15 @@ export { createWebGLAdapter } from './adapters/webgl-adapter';
 // Transport
 export { createPostMessageTransport } from './transport/postmessage-transport';
 export { createDirectTransport } from './transport/direct-transport';
+
+// Utilities
+export {
+  PerformanceTracker,
+  calculateBenchmarkScore,
+  estimateTextureMemory,
+  estimateGeometryMemory,
+  createEmptyMemoryStats,
+  createEmptyRenderingStats,
+  createEmptyPerformanceMetrics,
+} from './utils/performance-calculator';
 

@@ -99,6 +99,66 @@ export interface RulesConfig {
   maxTextureMemory?: number;
 
   /**
+   * Maximum geometry memory (bytes)
+   */
+  maxGeometryMemory?: number;
+
+  /**
+   * Maximum total GPU memory (bytes)
+   */
+  maxGpuMemory?: number;
+
+  /**
+   * Maximum vertices before warning
+   */
+  maxVertices?: number;
+
+  /**
+   * Maximum skinned meshes before warning
+   */
+  maxSkinnedMeshes?: number;
+
+  /**
+   * Maximum bones before warning
+   */
+  maxBones?: number;
+
+  /**
+   * Maximum lights before warning
+   */
+  maxLights?: number;
+
+  /**
+   * Maximum shadow-casting lights before warning
+   */
+  maxShadowLights?: number;
+
+  /**
+   * Maximum transparent objects before warning
+   */
+  maxTransparentObjects?: number;
+
+  /**
+   * Maximum shader/program switches per frame
+   */
+  maxProgramSwitches?: number;
+
+  /**
+   * Minimum acceptable FPS
+   */
+  minFps?: number;
+
+  /**
+   * Minimum 1% low FPS
+   */
+  min1PercentLowFps?: number;
+
+  /**
+   * Maximum frame time variance (jitter) in ms
+   */
+  maxFrameTimeVariance?: number;
+
+  /**
    * Custom rules
    */
   custom?: CustomRule[];
