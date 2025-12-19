@@ -28,9 +28,8 @@ interface PanelState {
 }
 
 const PANELS: PanelConfig[] = [
-  { id: 'scene', title: 'Scene Graph', icon: 'S', iconClass: 'scene', defaultWidth: 300, defaultHeight: 400 },
+  { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: 560, defaultHeight: 450 },
   { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 360, defaultHeight: 480 },
-  { id: 'inspector', title: 'Inspector', icon: 'I', iconClass: 'inspector', defaultWidth: 300, defaultHeight: 350 },
 ];
 
 /**
@@ -428,7 +427,6 @@ export class ThreeLensOverlay {
     switch (panelId) {
       case 'scene': return this.renderSceneContent();
       case 'stats': return this.renderStatsContent();
-      case 'inspector': return this.renderInspectorContent();
       default: return '<div class="three-lens-inspector-empty">Panel content</div>';
     }
   }
@@ -440,7 +438,67 @@ export class ThreeLensOverlay {
     }
 
     const snapshot = this.probe.takeSnapshot();
-    return `<div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>`;
+    
+    // Auto-expand root scenes and their direct children for immediate visibility
+    for (const scene of snapshot.scenes) {
+      this.expandedNodes.add(scene.ref.debugId);
+      // Also expand first few children to show content immediately
+      for (const child of scene.children.slice(0, 3)) {
+        if (child.children.length > 0) {
+          this.expandedNodes.add(child.ref.debugId);
+        }
+      }
+    }
+    
+    // Auto-select first meaningful object if nothing is selected
+    if (!this.selectedNodeId && snapshot.scenes.length > 0) {
+      const firstSelectable = this.findFirstSelectableNode(snapshot.scenes);
+      if (firstSelectable) {
+        this.selectedNodeId = firstSelectable.ref.debugId;
+        // Trigger probe selection for 3D highlight
+        this.probe.selectByDebugId(firstSelectable.ref.debugId);
+      }
+    }
+
+    // Find selected node for inspector
+    const selectedNode = this.selectedNodeId 
+      ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
+      : null;
+
+    return `
+      <div class="three-lens-split-view">
+        <div class="three-lens-tree-pane">
+          <div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>
+        </div>
+        <div class="three-lens-inspector-pane">
+          ${selectedNode ? this.renderNodeInspector(selectedNode) : this.renderNoSelectionHint()}
+        </div>
+      </div>
+    `;
+  }
+  
+  private findFirstSelectableNode(nodes: SceneNode[]): SceneNode | null {
+    for (const node of nodes) {
+      // Prefer mesh, light, or camera over groups/scenes
+      const type = node.ref.type.toLowerCase();
+      if (type.includes('mesh') || type.includes('light') || type.includes('camera')) {
+        return node;
+      }
+      // Recurse into children
+      const found = this.findFirstSelectableNode(node.children);
+      if (found) return found;
+    }
+    // Fallback to first node with children (group) or first node
+    return nodes[0] || null;
+  }
+  
+  private renderNoSelectionHint(): string {
+    return `
+      <div class="three-lens-no-selection">
+        <div class="three-lens-no-selection-icon">👆</div>
+        <div class="three-lens-no-selection-text">Select an object from the tree</div>
+      </div>
+    `;
   }
 
   private renderNode(node: SceneNode): string {
@@ -830,41 +888,6 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderInspectorContent(): string {
-    // Try to get from probe first, fall back to finding by debugId
-    let selected = this.probe.getSelectedObject();
-    
-    // If highlight is disabled, we might have a local selection that's not in the probe
-    if (!selected && this.selectedNodeId) {
-      // Find the object from the snapshot data instead
-      const snapshot = this.probe.takeSnapshot();
-      const nodeData = this.findNodeById(snapshot.scenes, this.selectedNodeId);
-      if (nodeData) {
-        return this.renderNodeInspector(nodeData);
-      }
-    }
-    
-    if (!selected) {
-      return `<div class="three-lens-inspector-empty">Select an object in the Scene panel</div>`;
-    }
-
-    return `
-      <div class="three-lens-section">
-        <div class="three-lens-section-header">Transform</div>
-        ${this.renderVectorProp('Position', selected.position)}
-        ${this.renderVectorProp('Rotation', selected.rotation, true)}
-        ${this.renderVectorProp('Scale', selected.scale)}
-      </div>
-      <div class="three-lens-section">
-        <div class="three-lens-section-header">Properties</div>
-        ${this.renderProp('Visible', selected.visible)}
-        ${this.renderProp('Frustum Culled', selected.frustumCulled)}
-        ${this.renderProp('Render Order', selected.renderOrder)}
-        ${this.renderProp('Type', selected.type)}
-      </div>
-    `;
-  }
-
   private findNodeById(nodes: SceneNode[], id: string): SceneNode | null {
     for (const node of nodes) {
       if (node.ref.debugId === id) return node;
@@ -1024,9 +1047,14 @@ export class ThreeLensOverlay {
   }
 
   private updateInspectorPanel(): void {
-    const content = document.getElementById('three-lens-content-inspector');
-    if (content) {
-      content.innerHTML = this.renderInspectorContent();
+    // Inspector is now part of the scene panel, update inspector pane directly
+    const inspectorPane = document.querySelector('.three-lens-inspector-pane');
+    if (inspectorPane) {
+      const snapshot = this.probe.takeSnapshot();
+      const selectedNode = this.selectedNodeId 
+        ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
+        : null;
+      inspectorPane.innerHTML = selectedNode ? this.renderNodeInspector(selectedNode) : this.renderNoSelectionHint();
     }
   }
 

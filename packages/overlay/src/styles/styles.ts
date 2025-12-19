@@ -417,6 +417,87 @@ export const OVERLAY_STYLES = `
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   SCENE SPLIT VIEW (Tree + Inspector integrated)
+   ═══════════════════════════════════════════════════════════════ */
+
+.three-lens-split-view {
+  display: flex;
+  height: 100%;
+  gap: 0;
+}
+
+.three-lens-tree-pane {
+  flex: 1;
+  min-width: 180px;
+  overflow: auto;
+  border-right: 1px solid var(--3lens-border);
+  padding: 8px;
+}
+
+.three-lens-tree-pane::-webkit-scrollbar {
+  width: 6px;
+}
+
+.three-lens-tree-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.three-lens-tree-pane::-webkit-scrollbar-thumb {
+  background: var(--3lens-border);
+  border-radius: 3px;
+}
+
+.three-lens-inspector-pane {
+  width: 240px;
+  min-width: 200px;
+  max-width: 300px;
+  overflow: auto;
+  background: var(--3lens-bg-secondary);
+  padding: 12px;
+}
+
+.three-lens-inspector-pane::-webkit-scrollbar {
+  width: 6px;
+}
+
+.three-lens-inspector-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.three-lens-inspector-pane::-webkit-scrollbar-thumb {
+  background: var(--3lens-border);
+  border-radius: 3px;
+}
+
+/* No Selection State */
+.three-lens-no-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--3lens-text-tertiary);
+  text-align: center;
+  padding: 24px;
+}
+
+.three-lens-no-selection-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+
+.three-lens-no-selection-text {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Remove padding from panel content for split view */
+.three-lens-panel-content:has(.three-lens-split-view) {
+  padding: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    SCENE TREE
    ═══════════════════════════════════════════════════════════════ */
 
