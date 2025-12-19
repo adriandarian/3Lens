@@ -417,6 +417,69 @@ export const OVERLAY_STYLES = `
    SCENE TREE
    ═══════════════════════════════════════════════════════════════ */
 
+.three-lens-scene-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--3lens-border-subtle);
+}
+
+.three-lens-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--3lens-text-secondary);
+  user-select: none;
+}
+
+.three-lens-toggle input {
+  display: none;
+}
+
+.three-lens-toggle-slider {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background: var(--3lens-bg-tertiary);
+  border: 1px solid var(--3lens-border);
+  border-radius: 9px;
+  transition: all 150ms ease;
+}
+
+.three-lens-toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--3lens-text-tertiary);
+  border-radius: 50%;
+  transition: all 150ms ease;
+}
+
+.three-lens-toggle input:checked + .three-lens-toggle-slider {
+  background: var(--3lens-accent-cyan);
+  border-color: var(--3lens-accent-cyan);
+}
+
+.three-lens-toggle input:checked + .three-lens-toggle-slider::after {
+  left: 16px;
+  background: var(--3lens-bg-primary);
+}
+
+.three-lens-toggle-label {
+  font-weight: 500;
+}
+
+.three-lens-toggle:hover .three-lens-toggle-slider {
+  border-color: var(--3lens-accent-blue);
+}
+
 .three-lens-tree {
   font-size: 12px;
 }
@@ -440,8 +503,18 @@ export const OVERLAY_STYLES = `
 }
 
 .three-lens-node-header.selected {
-  background: rgba(96, 165, 250, 0.15);
+  background: rgba(96, 165, 250, 0.25);
   outline: 1px solid var(--3lens-accent-blue);
+  box-shadow: inset 3px 0 0 var(--3lens-accent-cyan);
+}
+
+.three-lens-node-header.selected .three-lens-node-name {
+  color: var(--3lens-accent-cyan);
+  font-weight: 600;
+}
+
+.three-lens-node-header.selected .three-lens-node-type {
+  color: var(--3lens-accent-blue);
 }
 
 .three-lens-node-toggle {
@@ -492,6 +565,51 @@ export const OVERLAY_STYLES = `
   font-size: 9px;
   color: var(--3lens-text-tertiary);
   font-family: var(--3lens-font-mono);
+}
+
+.three-lens-visibility-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--3lens-text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 100ms ease;
+  flex-shrink: 0;
+}
+
+.three-lens-node-header:hover .three-lens-visibility-btn {
+  opacity: 1;
+}
+
+.three-lens-visibility-btn:hover {
+  background: var(--3lens-bg-hover);
+  color: var(--3lens-text-primary);
+}
+
+.three-lens-visibility-btn.visible {
+  color: var(--3lens-accent-cyan);
+}
+
+.three-lens-visibility-btn.hidden {
+  color: var(--3lens-text-disabled);
+  opacity: 1;
+}
+
+.three-lens-node-header.hidden-object {
+  opacity: 0.5;
+}
+
+.three-lens-node-header.hidden-object .three-lens-node-name {
+  text-decoration: line-through;
+  color: var(--3lens-text-disabled);
 }
 
 .three-lens-node-children {

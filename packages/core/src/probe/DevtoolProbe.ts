@@ -15,6 +15,7 @@ import type {
 } from '../types';
 import { createWebGLAdapter } from '../adapters/webgl-adapter';
 import { SceneObserver } from '../observers/SceneObserver';
+import { SelectionHelper } from '../helpers/SelectionHelper';
 
 /**
  * Version of the probe
@@ -35,6 +36,8 @@ export class DevtoolProbe {
   private _logicalEntities: Map<string, LogicalEntity> = new Map();
   private _frameStatsHistory: FrameStats[] = [];
   private _maxHistorySize = 300;
+  private _selectionHelper: SelectionHelper = new SelectionHelper();
+  private _threeRef: typeof import('three') | null = null;
 
   // Event callbacks
   private _selectionCallbacks: Array<
@@ -150,6 +153,30 @@ export class DevtoolProbe {
   }
 
   /**
+   * Set the THREE.js library reference for selection highlighting
+   * This enables visual bounding box highlights around selected objects
+   * 
+   * @example
+   * ```typescript
+   * import * as THREE from 'three';
+   * const probe = createProbe({ appName: 'My App' });
+   * probe.setThreeReference(THREE);
+   * ```
+   */
+  setThreeReference(three: typeof import('three')): void {
+    this._threeRef = three;
+    this._selectionHelper.initialize(three);
+    this.log('THREE.js reference set for selection highlighting');
+  }
+
+  /**
+   * Update selection highlight (call this in your animation loop for moving objects)
+   */
+  updateSelectionHighlight(): void {
+    this._selectionHelper.update();
+  }
+
+  /**
    * Take a manual snapshot of all observed scenes
    */
   takeSnapshot(): SceneSnapshot {
@@ -192,6 +219,9 @@ export class DevtoolProbe {
       : null;
     const selectedMeta = obj ? this.getObjectMeta(obj) : null;
 
+    // Update visual highlight in the 3D scene
+    this._selectionHelper.highlight(obj);
+
     // Notify callbacks
     for (const callback of this._selectionCallbacks) {
       callback(obj, selectedMeta ?? undefined);
@@ -204,6 +234,27 @@ export class DevtoolProbe {
       selectedObject: selectedMeta,
       previousObject: previousMeta,
     });
+  }
+
+  /**
+   * Select an object by its debug ID (used by UI components)
+   */
+  selectByDebugId(debugId: string | null): boolean {
+    if (!debugId) {
+      this.selectObject(null);
+      return true;
+    }
+
+    // Find object across all scene observers
+    for (const observer of this._sceneObservers.values()) {
+      const obj = observer.findObjectByDebugId(debugId);
+      if (obj) {
+        this.selectObject(obj);
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -402,6 +453,9 @@ export class DevtoolProbe {
    * Dispose of the probe and clean up
    */
   dispose(): void {
+    // Dispose selection helper
+    this._selectionHelper.dispose();
+
     // Dispose renderer adapter
     if (this._rendererAdapter) {
       this._rendererAdapter.dispose();
@@ -444,6 +498,9 @@ export class DevtoolProbe {
     if (this._frameStatsHistory.length > this._maxHistorySize) {
       this._frameStatsHistory.shift();
     }
+
+    // Update selection highlight for moving objects
+    this._selectionHelper.update();
 
     // Notify callbacks
     for (const callback of this._frameStatsCallbacks) {
