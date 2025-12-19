@@ -136,11 +136,8 @@ const probe = createProbe({
 probe.observeRenderer(renderer);
 probe.observeScene(scene);
 
-// Create the overlay UI
-const overlay = createOverlay(probe, {
-  position: 'right',
-  collapsed: false,
-});
+// Create the floating panel overlay UI
+const overlay = createOverlay(probe);
 
 // ───────────────────────────────────────────────────────────────
 // Animation Loop
