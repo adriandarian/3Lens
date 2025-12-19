@@ -4,8 +4,6 @@
  * In-app overlay UI for 3Lens devtool
  */
 
-import './styles/overlay.css';
-
 export { ThreeLensOverlay } from './components/Overlay';
 export type { OverlayOptions } from './components/Overlay';
 

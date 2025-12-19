@@ -1,6 +1,7 @@
 import type { DevtoolProbe, SceneNode, FrameStats } from '@3lens/core';
 
 import { formatNumber, getObjectIcon, getObjectClass } from '../utils/format';
+import { OVERLAY_STYLES } from '../styles/styles';
 
 export interface OverlayOptions {
   probe: DevtoolProbe;
@@ -24,6 +25,11 @@ export class ThreeLensOverlay {
   constructor(options: OverlayOptions) {
     this.probe = options.probe;
     this.collapsed = options.collapsed ?? false;
+
+    // Inject styles
+    this.injectStyles();
+
+    // Create container
     this.container = this.createContainer(options.position ?? 'right');
 
     // Subscribe to probe events
@@ -42,6 +48,15 @@ export class ThreeLensOverlay {
 
     // Initial render
     this.render();
+  }
+
+  private injectStyles(): void {
+    if (document.getElementById('three-lens-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'three-lens-styles';
+    style.textContent = OVERLAY_STYLES;
+    document.head.appendChild(style);
   }
 
   private createContainer(position: 'left' | 'right'): HTMLDivElement {
@@ -89,7 +104,7 @@ export class ThreeLensOverlay {
         </div>
         <div class="three-lens-connection">
           <div class="three-lens-connection-dot ${connected ? '' : 'disconnected'}"></div>
-          <span>${connected ? 'Connected' : 'Disconnected'}</span>
+          <span>${connected ? 'Connected' : 'Active'}</span>
         </div>
       </div>
     `;
@@ -409,16 +424,6 @@ export class ThreeLensOverlay {
 
         // Select
         this.selectedNodeId = id;
-        const scenes = this.probe.getObservedScenes();
-        for (const scene of scenes) {
-          scene.traverse((obj) => {
-            const ref = this.probe
-              .getObservedScenes()
-              .map((s) => s.getObjectByProperty('uuid', obj.uuid))
-              .find(Boolean);
-            // Simplified - would need SceneObserver access in real impl
-          });
-        }
         this.render();
       });
     });
@@ -463,4 +468,3 @@ export class ThreeLensOverlay {
     }
   }
 }
-
