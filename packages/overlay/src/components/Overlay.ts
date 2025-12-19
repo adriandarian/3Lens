@@ -1,6 +1,7 @@
-import type { DevtoolProbe, SceneNode, FrameStats } from '@3lens/core';
+import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore } from '@3lens/core';
+import { calculateBenchmarkScore } from '@3lens/core';
 
-import { formatNumber, getObjectIcon, getObjectClass } from '../utils/format';
+import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
 import { OVERLAY_STYLES } from '../styles/styles';
 
 export interface OverlayOptions {
@@ -28,7 +29,7 @@ interface PanelState {
 
 const PANELS: PanelConfig[] = [
   { id: 'scene', title: 'Scene Graph', icon: 'S', iconClass: 'scene', defaultWidth: 300, defaultHeight: 400 },
-  { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 320, defaultHeight: 300 },
+  { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 360, defaultHeight: 480 },
   { id: 'inspector', title: 'Inspector', icon: 'I', iconClass: 'inspector', defaultWidth: 300, defaultHeight: 350 },
 ];
 
@@ -43,12 +44,15 @@ export class ThreeLensOverlay {
   private selectedNodeId: string | null = null;
   private expandedNodes: Set<string> = new Set();
   private latestStats: FrameStats | null = null;
+  private latestBenchmark: BenchmarkScore | null = null;
   private frameHistory: number[] = [];
+  private fpsHistory: number[] = [];
   private topZIndex = 999997;
   private dragState: { panelId: string; startX: number; startY: number; startPanelX: number; startPanelY: number } | null = null;
   private resizeState: { panelId: string; startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
   private lastStatsUpdate = 0;
   private statsUpdateInterval = 500; // Update stats UI every 500ms (2x per second)
+  private statsTab: 'overview' | 'memory' | 'rendering' = 'overview';
 
   constructor(options: OverlayOptions) {
     this.probe = options.probe;
@@ -66,6 +70,14 @@ export class ThreeLensOverlay {
       this.latestStats = stats;
       this.frameHistory.push(stats.cpuTimeMs);
       if (this.frameHistory.length > 60) this.frameHistory.shift();
+      
+      // Track FPS history
+      const fps = stats.cpuTimeMs > 0 ? 1000 / stats.cpuTimeMs : 0;
+      this.fpsHistory.push(fps);
+      if (this.fpsHistory.length > 60) this.fpsHistory.shift();
+      
+      // Calculate benchmark score
+      this.latestBenchmark = calculateBenchmarkScore(stats);
       
       // Throttle UI updates to prevent flickering
       const now = performance.now();
@@ -113,7 +125,13 @@ export class ThreeLensOverlay {
   private renderFAB(): string {
     return `
       <button class="three-lens-fab ${this.menuVisible ? 'active' : ''}" id="three-lens-fab" title="3Lens DevTools">
-        3L
+        <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Penrose Triangle - 3Lens Logo -->
+          <path d="M50 10L85 70H70L50 35L30 70H15L50 10Z" fill="#EF6B6B"/>
+          <path d="M15 70L50 10L35 10L10 55L25 55L15 70Z" fill="#60A5FA"/>
+          <path d="M85 70L50 10L65 10L90 55L75 55L85 70Z" fill="#34D399"/>
+          <path d="M15 70H35L50 45L65 70H85L50 10L15 70Z" fill="none" stroke="currentColor" stroke-width="2" stroke-opacity="0.2"/>
+        </svg>
       </button>
     `;
   }
@@ -286,6 +304,11 @@ export class ThreeLensOverlay {
     // Tree node events for scene panel
     if (panelId === 'scene') {
       this.attachTreeEvents(panel);
+    }
+
+    // Tab events for stats panel
+    if (panelId === 'stats') {
+      this.attachStatsTabEvents(panel);
     }
   }
 
@@ -464,17 +487,39 @@ export class ThreeLensOverlay {
       return `<div class="three-lens-inspector-empty">Waiting for frame data...</div>`;
     }
 
-    const fps = stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0;
+    const benchmark = this.latestBenchmark;
+    const fps = stats.performance?.fps ?? (stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0);
+    const fpsSmoothed = stats.performance?.fpsSmoothed ?? fps;
+    const fps1Low = stats.performance?.fps1PercentLow ?? 0;
 
     return `
+      <div class="three-lens-tabs" id="three-lens-stats-tabs">
+        <button class="three-lens-tab ${this.statsTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
+        <button class="three-lens-tab ${this.statsTab === 'memory' ? 'active' : ''}" data-tab="memory">Memory</button>
+        <button class="three-lens-tab ${this.statsTab === 'rendering' ? 'active' : ''}" data-tab="rendering">Rendering</button>
+      </div>
+      <div class="three-lens-stats-tab-content" id="three-lens-stats-tab-content">
+        ${this.statsTab === 'overview' ? this.renderOverviewTab(stats, benchmark, fps, fpsSmoothed, fps1Low) : ''}
+        ${this.statsTab === 'memory' ? this.renderMemoryTab(stats) : ''}
+        ${this.statsTab === 'rendering' ? this.renderRenderingTab(stats) : ''}
+      </div>
+    `;
+  }
+
+  private renderOverviewTab(stats: FrameStats, benchmark: BenchmarkScore | null, fps: number, fpsSmoothed: number, fps1Low: number): string {
+    const budgetUsed = stats.performance?.frameBudgetUsed ?? (stats.cpuTimeMs / 16.67) * 100;
+    const isSmooth = stats.performance?.isSmooth ?? (stats.cpuTimeMs <= 18);
+
+    return `
+      ${benchmark ? this.renderBenchmarkScore(benchmark) : ''}
       <div class="three-lens-stats-grid">
         <div class="three-lens-stat-card">
           <div class="three-lens-stat-label">FPS</div>
-          <div class="three-lens-stat-value">${fps}</div>
+          <div class="three-lens-stat-value ${fps < 30 ? 'error' : fps < 55 ? 'warning' : ''}">${fps}</div>
         </div>
         <div class="three-lens-stat-card">
           <div class="three-lens-stat-label">Frame Time</div>
-          <div class="three-lens-stat-value">${stats.cpuTimeMs.toFixed(1)}<span class="three-lens-stat-unit">ms</span></div>
+          <div class="three-lens-stat-value ${stats.cpuTimeMs > 16.67 ? 'warning' : ''}">${stats.cpuTimeMs.toFixed(1)}<span class="three-lens-stat-unit">ms</span></div>
         </div>
         <div class="three-lens-stat-card">
           <div class="three-lens-stat-label">Draw Calls</div>
@@ -491,7 +536,297 @@ export class ThreeLensOverlay {
           <span class="three-lens-chart-value">${stats.cpuTimeMs.toFixed(2)}ms</span>
         </div>
         <canvas class="three-lens-chart-canvas" id="three-lens-stats-chart"></canvas>
+        <div class="three-lens-percentiles">
+          <div class="three-lens-percentile">
+            <span class="three-lens-percentile-label">Avg FPS:</span>
+            <span class="three-lens-percentile-value">${fpsSmoothed}</span>
+          </div>
+          <div class="three-lens-percentile">
+            <span class="three-lens-percentile-label">1% Low:</span>
+            <span class="three-lens-percentile-value">${Math.round(fps1Low)}</span>
+          </div>
+          <div class="three-lens-percentile">
+            <span class="three-lens-percentile-label">Budget:</span>
+            <span class="three-lens-percentile-value ${budgetUsed > 100 ? 'warning' : ''}">${budgetUsed.toFixed(0)}%</span>
+          </div>
+        </div>
       </div>
+      ${benchmark && benchmark.topIssues.length > 0 ? this.renderIssues(benchmark) : ''}
+    `;
+  }
+
+  private renderBenchmarkScore(benchmark: BenchmarkScore): string {
+    const getBarClass = (score: number) => score >= 80 ? 'good' : score >= 50 ? 'ok' : 'bad';
+
+    return `
+      <div class="three-lens-benchmark">
+        <div class="three-lens-benchmark-header">
+          <div class="three-lens-benchmark-score">
+            <span class="three-lens-benchmark-value grade-${benchmark.grade}">${benchmark.overall}</span>
+            <span class="three-lens-benchmark-label">/ 100</span>
+          </div>
+          <div class="three-lens-benchmark-grade ${benchmark.grade}">${benchmark.grade}</div>
+        </div>
+        <div class="three-lens-benchmark-bars">
+          <div class="three-lens-benchmark-bar">
+            <span class="three-lens-benchmark-bar-label">Timing</span>
+            <div class="three-lens-benchmark-bar-track">
+              <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.timing)}" style="width: ${benchmark.breakdown.timing}%"></div>
+            </div>
+            <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.timing}</span>
+          </div>
+          <div class="three-lens-benchmark-bar">
+            <span class="three-lens-benchmark-bar-label">Draw Calls</span>
+            <div class="three-lens-benchmark-bar-track">
+              <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.drawCalls)}" style="width: ${benchmark.breakdown.drawCalls}%"></div>
+            </div>
+            <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.drawCalls}</span>
+          </div>
+          <div class="three-lens-benchmark-bar">
+            <span class="three-lens-benchmark-bar-label">Geometry</span>
+            <div class="three-lens-benchmark-bar-track">
+              <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.geometry)}" style="width: ${benchmark.breakdown.geometry}%"></div>
+            </div>
+            <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.geometry}</span>
+          </div>
+          <div class="three-lens-benchmark-bar">
+            <span class="three-lens-benchmark-bar-label">Memory</span>
+            <div class="three-lens-benchmark-bar-track">
+              <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.memory)}" style="width: ${benchmark.breakdown.memory}%"></div>
+            </div>
+            <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.memory}</span>
+          </div>
+          <div class="three-lens-benchmark-bar">
+            <span class="three-lens-benchmark-bar-label">State Chg</span>
+            <div class="three-lens-benchmark-bar-track">
+              <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.stateChanges)}" style="width: ${benchmark.breakdown.stateChanges}%"></div>
+            </div>
+            <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.stateChanges}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderIssues(benchmark: BenchmarkScore): string {
+    if (benchmark.topIssues.length === 0 && benchmark.suggestions.length === 0) {
+      return '';
+    }
+
+    return `
+      <div class="three-lens-issues">
+        ${benchmark.topIssues.map(issue => `
+          <div class="three-lens-issue warning">
+            <span class="three-lens-issue-icon">⚠️</span>
+            <span class="three-lens-issue-text">${issue}</span>
+          </div>
+        `).join('')}
+        ${benchmark.suggestions.slice(0, 2).map(suggestion => `
+          <div class="three-lens-suggestion">
+            <span class="three-lens-issue-icon">💡</span>
+            <span class="three-lens-suggestion-text">${suggestion}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  private renderMemoryTab(stats: FrameStats): string {
+    const memory = stats.memory;
+    if (!memory) {
+      return `<div class="three-lens-inspector-empty">Memory stats not available</div>`;
+    }
+
+    return `
+      <div class="three-lens-metrics-section">
+        <div class="three-lens-metrics-title">GPU Memory</div>
+        <div class="three-lens-memory-grid">
+          <div class="three-lens-memory-item">
+            <div class="three-lens-memory-label">Total GPU</div>
+            <div class="three-lens-memory-value">${formatBytes(memory.totalGpuMemory)}</div>
+          </div>
+          <div class="three-lens-memory-item">
+            <div class="three-lens-memory-label">Textures</div>
+            <div class="three-lens-memory-value">${formatBytes(memory.textureMemory)}</div>
+          </div>
+          <div class="three-lens-memory-item">
+            <div class="three-lens-memory-label">Geometry</div>
+            <div class="three-lens-memory-value">${formatBytes(memory.geometryMemory)}</div>
+          </div>
+          <div class="three-lens-memory-item">
+            <div class="three-lens-memory-label">Render Targets</div>
+            <div class="three-lens-memory-value">${formatBytes(memory.renderTargetMemory)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="three-lens-metrics-section">
+        <div class="three-lens-metrics-title">Resource Counts</div>
+        <div class="three-lens-metrics-grid">
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${memory.geometries}</div>
+            <div class="three-lens-metric-label">Geometries</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${memory.textures}</div>
+            <div class="three-lens-metric-label">Textures</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${memory.programs}</div>
+            <div class="three-lens-metric-label">Programs</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${memory.renderTargets}</div>
+            <div class="three-lens-metric-label">RT</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.objectsTotal}</div>
+            <div class="three-lens-metric-label">Objects</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.materialsUsed}</div>
+            <div class="three-lens-metric-label">Materials</div>
+          </div>
+        </div>
+      </div>
+      ${memory.jsHeapSize ? `
+        <div class="three-lens-metrics-section">
+          <div class="three-lens-metrics-title">JS Heap</div>
+          <div class="three-lens-memory-grid">
+            <div class="three-lens-memory-item">
+              <div class="three-lens-memory-label">Used</div>
+              <div class="three-lens-memory-value">${formatBytes(memory.jsHeapSize)}</div>
+            </div>
+            <div class="three-lens-memory-item">
+              <div class="three-lens-memory-label">Limit</div>
+              <div class="three-lens-memory-value">${formatBytes(memory.jsHeapLimit ?? 0)}</div>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+    `;
+  }
+
+  private renderRenderingTab(stats: FrameStats): string {
+    const rendering = stats.rendering;
+    const perf = stats.performance;
+    
+    if (!rendering) {
+      return `<div class="three-lens-inspector-empty">Rendering stats not available</div>`;
+    }
+
+    return `
+      <div class="three-lens-metrics-section">
+        <div class="three-lens-metrics-title">Geometry Stats</div>
+        <div class="three-lens-metrics-grid">
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${formatNumber(stats.triangles)}</div>
+            <div class="three-lens-metric-label">Triangles</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${formatNumber(stats.vertices)}</div>
+            <div class="three-lens-metric-label">Vertices</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.drawCalls}</div>
+            <div class="three-lens-metric-label">Draw Calls</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${perf?.trianglesPerDrawCall ?? 0}</div>
+            <div class="three-lens-metric-label">Tri/Call</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.points}</div>
+            <div class="three-lens-metric-label">Points</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.lines}</div>
+            <div class="three-lens-metric-label">Lines</div>
+          </div>
+        </div>
+      </div>
+      <div class="three-lens-metrics-section">
+        <div class="three-lens-metrics-title">Objects</div>
+        <div class="three-lens-metrics-grid">
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.objectsVisible}</div>
+            <div class="three-lens-metric-label">Visible</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.objectsCulled}</div>
+            <div class="three-lens-metric-label">Culled</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.transparentObjects}</div>
+            <div class="three-lens-metric-label">Transparent</div>
+          </div>
+        </div>
+      </div>
+      <div class="three-lens-metrics-section">
+        <div class="three-lens-metrics-title">Lighting & Shadows</div>
+        <div class="three-lens-metrics-grid">
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.totalLights}</div>
+            <div class="three-lens-metric-label">Lights</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.shadowCastingLights}</div>
+            <div class="three-lens-metric-label">Shadows</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.shadowMapUpdates}</div>
+            <div class="three-lens-metric-label">Updates</div>
+          </div>
+        </div>
+      </div>
+      <div class="three-lens-metrics-section">
+        <div class="three-lens-metrics-title">Animation</div>
+        <div class="three-lens-metrics-grid">
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.skinnedMeshes}</div>
+            <div class="three-lens-metric-label">Skinned</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.totalBones}</div>
+            <div class="three-lens-metric-label">Bones</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.totalInstances}</div>
+            <div class="three-lens-metric-label">Instances</div>
+          </div>
+        </div>
+      </div>
+      <div class="three-lens-metrics-section">
+        <div class="three-lens-metrics-title">State Changes</div>
+        <div class="three-lens-metrics-grid">
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.programSwitches}</div>
+            <div class="three-lens-metric-label">Programs</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.textureBinds}</div>
+            <div class="three-lens-metric-label">Textures</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${rendering.renderTargetSwitches}</div>
+            <div class="three-lens-metric-label">RT Switch</div>
+          </div>
+        </div>
+      </div>
+      ${rendering.xrActive ? `
+        <div class="three-lens-metrics-section">
+          <div class="three-lens-metrics-title">XR Mode</div>
+          <div class="three-lens-metrics-grid">
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">✓</div>
+              <div class="three-lens-metric-label">Active</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${rendering.viewports}</div>
+              <div class="three-lens-metric-label">Viewports</div>
+            </div>
+          </div>
+        </div>
+      ` : ''}
     `;
   }
 
@@ -607,10 +942,76 @@ export class ThreeLensOverlay {
 
   private updateStatsPanel(): void {
     const content = document.getElementById('three-lens-content-stats');
-    if (content) {
+    if (!content) return;
+
+    // Check if tabs already exist - if so, only update the tab content
+    const existingTabs = document.getElementById('three-lens-stats-tabs');
+    const tabContent = document.getElementById('three-lens-stats-tab-content');
+
+    if (existingTabs && tabContent) {
+      // Only update the tab content, not the tabs themselves
+      tabContent.innerHTML = this.renderCurrentTabContent();
+      if (this.statsTab === 'overview') {
+        this.renderChart();
+      }
+    } else {
+      // Initial render or transitioning from "Waiting for data..." state
+      // Render everything and attach events
       content.innerHTML = this.renderStatsContent();
-      this.renderChart();
+      // Only attach events if tabs were actually rendered (stats exist)
+      if (document.getElementById('three-lens-stats-tabs')) {
+        this.attachStatsTabEvents(content);
+      }
+      if (this.statsTab === 'overview') {
+        this.renderChart();
+      }
     }
+  }
+
+  private renderCurrentTabContent(): string {
+    const stats = this.latestStats;
+    if (!stats) {
+      return `<div class="three-lens-inspector-empty">Waiting for frame data...</div>`;
+    }
+
+    const benchmark = this.latestBenchmark;
+    const fps = stats.performance?.fps ?? (stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0);
+    const fpsSmoothed = stats.performance?.fpsSmoothed ?? fps;
+    const fps1Low = stats.performance?.fps1PercentLow ?? 0;
+
+    switch (this.statsTab) {
+      case 'overview':
+        return this.renderOverviewTab(stats, benchmark, fps, fpsSmoothed, fps1Low);
+      case 'memory':
+        return this.renderMemoryTab(stats);
+      case 'rendering':
+        return this.renderRenderingTab(stats);
+      default:
+        return '';
+    }
+  }
+
+  private attachStatsTabEvents(container: HTMLElement): void {
+    container.querySelectorAll('.three-lens-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const tabName = (e.currentTarget as HTMLElement).dataset.tab as 'overview' | 'memory' | 'rendering';
+        if (tabName && tabName !== this.statsTab) {
+          this.statsTab = tabName;
+          // Update tab active states
+          container.querySelectorAll('.three-lens-tab').forEach(t => {
+            t.classList.toggle('active', (t as HTMLElement).dataset.tab === tabName);
+          });
+          // Update content
+          const tabContent = document.getElementById('three-lens-stats-tab-content');
+          if (tabContent) {
+            tabContent.innerHTML = this.renderCurrentTabContent();
+            if (this.statsTab === 'overview') {
+              this.renderChart();
+            }
+          }
+        }
+      });
+    });
   }
 
   private updateScenePanel(): void {

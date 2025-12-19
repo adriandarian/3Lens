@@ -583,6 +583,7 @@ export class DevtoolProbe {
 
     if (!rules) return violations;
 
+    // Frame timing rules
     if (rules.maxDrawCalls && stats.drawCalls > rules.maxDrawCalls) {
       violations.push({
         ruleId: 'maxDrawCalls',
@@ -590,6 +591,7 @@ export class DevtoolProbe {
         severity: 'warning',
         value: stats.drawCalls,
         threshold: rules.maxDrawCalls,
+        suggestion: 'Consider using instancing or merging geometries',
       });
     }
 
@@ -600,6 +602,7 @@ export class DevtoolProbe {
         severity: 'warning',
         value: stats.triangles,
         threshold: rules.maxTriangles,
+        suggestion: 'Use LOD or reduce polygon count',
       });
     }
 
@@ -610,6 +613,131 @@ export class DevtoolProbe {
         severity: 'warning',
         value: stats.cpuTimeMs,
         threshold: rules.maxFrameTimeMs,
+        suggestion: 'Profile and optimize the most expensive operations',
+      });
+    }
+
+    // Memory rules
+    if (rules.maxTextureMemory && stats.memory?.textureMemory > rules.maxTextureMemory) {
+      violations.push({
+        ruleId: 'maxTextureMemory',
+        message: `Texture memory (${this.formatBytes(stats.memory.textureMemory)}) exceeded threshold`,
+        severity: 'warning',
+        value: stats.memory.textureMemory,
+        threshold: rules.maxTextureMemory,
+        suggestion: 'Compress textures or reduce resolution',
+      });
+    }
+
+    if (rules.maxGeometryMemory && stats.memory?.geometryMemory > rules.maxGeometryMemory) {
+      violations.push({
+        ruleId: 'maxGeometryMemory',
+        message: `Geometry memory (${this.formatBytes(stats.memory.geometryMemory)}) exceeded threshold`,
+        severity: 'warning',
+        value: stats.memory.geometryMemory,
+        threshold: rules.maxGeometryMemory,
+        suggestion: 'Reduce vertex count or use compression',
+      });
+    }
+
+    if (rules.maxGpuMemory && stats.memory?.totalGpuMemory > rules.maxGpuMemory) {
+      violations.push({
+        ruleId: 'maxGpuMemory',
+        message: `Total GPU memory (${this.formatBytes(stats.memory.totalGpuMemory)}) exceeded threshold`,
+        severity: 'error',
+        value: stats.memory.totalGpuMemory,
+        threshold: rules.maxGpuMemory,
+        suggestion: 'Reduce texture and geometry memory usage',
+      });
+    }
+
+    // Rendering rules
+    if (rules.maxLights && stats.rendering?.totalLights > rules.maxLights) {
+      violations.push({
+        ruleId: 'maxLights',
+        message: `Lights (${stats.rendering.totalLights}) exceeded threshold (${rules.maxLights})`,
+        severity: 'warning',
+        value: stats.rendering.totalLights,
+        threshold: rules.maxLights,
+        suggestion: 'Use light probes or baked lighting',
+      });
+    }
+
+    if (rules.maxShadowLights && stats.rendering?.shadowCastingLights > rules.maxShadowLights) {
+      violations.push({
+        ruleId: 'maxShadowLights',
+        message: `Shadow-casting lights (${stats.rendering.shadowCastingLights}) exceeded threshold`,
+        severity: 'warning',
+        value: stats.rendering.shadowCastingLights,
+        threshold: rules.maxShadowLights,
+        suggestion: 'Reduce shadow-casting lights or use baked shadows',
+      });
+    }
+
+    if (rules.maxSkinnedMeshes && stats.rendering?.skinnedMeshes > rules.maxSkinnedMeshes) {
+      violations.push({
+        ruleId: 'maxSkinnedMeshes',
+        message: `Skinned meshes (${stats.rendering.skinnedMeshes}) exceeded threshold`,
+        severity: 'warning',
+        value: stats.rendering.skinnedMeshes,
+        threshold: rules.maxSkinnedMeshes,
+        suggestion: 'Reduce animated character count or use LOD',
+      });
+    }
+
+    if (rules.maxBones && stats.rendering?.totalBones > rules.maxBones) {
+      violations.push({
+        ruleId: 'maxBones',
+        message: `Total bones (${stats.rendering.totalBones}) exceeded threshold (${rules.maxBones})`,
+        severity: 'warning',
+        value: stats.rendering.totalBones,
+        threshold: rules.maxBones,
+        suggestion: 'Reduce bone count in character rigs',
+      });
+    }
+
+    if (rules.maxTransparentObjects && stats.rendering?.transparentObjects > rules.maxTransparentObjects) {
+      violations.push({
+        ruleId: 'maxTransparentObjects',
+        message: `Transparent objects (${stats.rendering.transparentObjects}) exceeded threshold`,
+        severity: 'warning',
+        value: stats.rendering.transparentObjects,
+        threshold: rules.maxTransparentObjects,
+        suggestion: 'Reduce transparent objects or use alpha testing',
+      });
+    }
+
+    // Performance rules
+    if (rules.minFps && stats.performance?.fps < rules.minFps) {
+      violations.push({
+        ruleId: 'minFps',
+        message: `FPS (${stats.performance.fps}) below minimum (${rules.minFps})`,
+        severity: 'error',
+        value: stats.performance.fps,
+        threshold: rules.minFps,
+        suggestion: 'Reduce scene complexity or optimize shaders',
+      });
+    }
+
+    if (rules.min1PercentLowFps && stats.performance?.fps1PercentLow < rules.min1PercentLowFps) {
+      violations.push({
+        ruleId: 'min1PercentLowFps',
+        message: `1% low FPS (${Math.round(stats.performance.fps1PercentLow)}) below minimum`,
+        severity: 'warning',
+        value: stats.performance.fps1PercentLow,
+        threshold: rules.min1PercentLowFps,
+        suggestion: 'Investigate frame time spikes',
+      });
+    }
+
+    if (rules.maxFrameTimeVariance && stats.performance?.frameTimeVariance > rules.maxFrameTimeVariance) {
+      violations.push({
+        ruleId: 'maxFrameTimeVariance',
+        message: `Frame time variance (${stats.performance.frameTimeVariance.toFixed(2)}ms) too high`,
+        severity: 'info',
+        value: stats.performance.frameTimeVariance,
+        threshold: rules.maxFrameTimeVariance,
+        suggestion: 'Look for inconsistent workloads or GC pauses',
       });
     }
 
@@ -626,6 +754,19 @@ export class DevtoolProbe {
     }
 
     return violations;
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes >= 1073741824) {
+      return (bytes / 1073741824).toFixed(2) + ' GB';
+    }
+    if (bytes >= 1048576) {
+      return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+    if (bytes >= 1024) {
+      return (bytes / 1024).toFixed(2) + ' KB';
+    }
+    return bytes + ' B';
   }
 
   private getObjectMeta(obj: THREE.Object3D): ObjectMeta | null {
