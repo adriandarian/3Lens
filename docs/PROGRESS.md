@@ -166,11 +166,11 @@
 
 | Criteria | Status | Notes |
 |----------|--------|-------|
-| Can inspect scene graph of any three.js app | ⬜ | |
-| Shows real-time performance stats | ⬜ | |
-| Works in extension mode | ⬜ | |
-| Works in npm/overlay mode | ⬜ | |
-| Performance overhead < 5% | ⬜ | |
+| Can inspect scene graph of any three.js app | ✅ | Auto-injected probe streams full snapshots |
+| Shows real-time performance stats | ✅ | Frame metrics mirrored in extension + overlay |
+| Works in extension mode | ✅ | MV3 build ships injected probe + devtools panel |
+| Works in npm/overlay mode | ✅ | One-call overlay bootstrap helper |
+| Performance overhead < 5% | 🔄 | Benchmark helper added; needs validation run |
 
 ---
 
@@ -637,4 +637,3 @@ Phase 4  [                              ] Nov 2026 - Jan 2027
 ---
 
 *This document is updated as development progresses. Check the commit history for changes.*
-

@@ -78,4 +78,4 @@ export {
   createEmptyRenderingStats,
   createEmptyPerformanceMetrics,
 } from './utils/performance-calculator';
-
+export { measureProbeOverhead } from './utils/overhead-benchmark';
