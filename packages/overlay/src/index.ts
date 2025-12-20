@@ -13,7 +13,11 @@ export type {
 } from './components/Overlay';
 
 // Convenience function
-import type { DevtoolProbe } from '@3lens/core';
+import type { DevtoolProbe, ProbeConfig } from '@3lens/core';
+import { createProbe } from '@3lens/core';
+import type { Scene, WebGLRenderer } from 'three';
+
+import type { OverlayOptions } from './components/Overlay';
 import { ThreeLensOverlay } from './components/Overlay';
 
 /**
@@ -33,7 +37,44 @@ import { ThreeLensOverlay } from './components/Overlay';
  */
 export function createOverlay(
   probe: DevtoolProbe,
-  options: Partial<Omit<import('./components/Overlay').OverlayOptions, 'probe'>> = {}
+  options: Partial<Omit<OverlayOptions, 'probe'>> = {}
 ): ThreeLensOverlay {
   return new ThreeLensOverlay({ probe, ...options });
+}
+
+export interface OverlayBootstrapOptions {
+  renderer: WebGLRenderer;
+  scene: Scene;
+  appName?: string;
+  probeConfig?: Partial<ProbeConfig>;
+  overlay?: Partial<Omit<OverlayOptions, 'probe'>>;
+  three?: typeof import('three');
+}
+
+/**
+ * One-call bootstrap for npm/overlay mode.
+ * Creates a probe, wires it to the renderer + scene, and mounts the overlay UI.
+ */
+export function bootstrapOverlay(options: OverlayBootstrapOptions): {
+  probe: DevtoolProbe;
+  overlay: ThreeLensOverlay;
+} {
+  const probe = createProbe({
+    appName: options.appName ?? document.title ?? '3Lens App',
+    ...options.probeConfig,
+  });
+
+  if (options.three) {
+    probe.setThreeReference(options.three);
+  }
+
+  probe.observeRenderer(options.renderer);
+  probe.observeScene(options.scene);
+
+  const overlay = new ThreeLensOverlay({
+    probe,
+    ...(options.overlay ?? {}),
+  });
+
+  return { probe, overlay };
 }
