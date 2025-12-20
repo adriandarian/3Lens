@@ -5,13 +5,19 @@
  */
 
 export { ThreeLensOverlay } from './components/Overlay';
-export type { OverlayOptions } from './components/Overlay';
+export type {
+  OverlayOptions,
+  OverlayPanelContext,
+  OverlayPanelDefinition,
+  OverlayPanelState,
+} from './components/Overlay';
 
 // Convenience function
 import type { DevtoolProbe, ProbeConfig } from '@3lens/core';
 import { createProbe } from '@3lens/core';
 import type { Scene, WebGLRenderer } from 'three';
 
+import type { OverlayOptions } from './components/Overlay';
 import { ThreeLensOverlay } from './components/Overlay';
 
 /**
@@ -31,7 +37,7 @@ import { ThreeLensOverlay } from './components/Overlay';
  */
 export function createOverlay(
   probe: DevtoolProbe,
-  options: Partial<Omit<import('./components/Overlay').OverlayOptions, 'probe'>> = {}
+  options: Partial<Omit<OverlayOptions, 'probe'>> = {}
 ): ThreeLensOverlay {
   return new ThreeLensOverlay({ probe, ...options });
 }
