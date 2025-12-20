@@ -1,8 +1,8 @@
 # 3Lens Development Progress
 
-> **Last Updated:** December 18, 2025  
+> **Last Updated:** December 20, 2025  
 > **Current Phase:** Phase 1 - Foundation (MVP)  
-> **Overall Progress:** ███░░░░░░░░░░░░░░░░░ 18%
+> **Overall Progress:** ████░░░░░░░░░░░░░░░░ 20%
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1: Foundation (MVP) | 🔵 In Progress | ██████░░░░ 60% |
+| Phase 1: Foundation (MVP) | 🔵 In Progress | █████████░ 87% |
 | Phase 2: Core Features | ⚪ Not Started | ░░░░░░░░░░ 0% |
 | Phase 3: Enterprise Features | ⚪ Not Started | ░░░░░░░░░░ 0% |
 | Phase 4: Ecosystem & Polish | ⚪ Not Started | ░░░░░░░░░░ 0% |
@@ -41,7 +41,7 @@
 | Set up TypeScript configuration | ✅ | `tsconfig.json` with strict mode |
 | Configure Vite/Rollup for builds | ✅ | Vite configured for ES modules |
 | Set up ESLint + Prettier | ✅ | `.eslintrc.cjs` + `.prettierrc` |
-| Set up Vitest for testing | ⬜ | |
+| Set up Vitest for testing | ✅ | `vitest.config.ts` + workspace config |
 | Create package structure | ✅ | `@3lens/core` ready |
 
 ## 1.2 Core Package (`@3lens/core`)
@@ -158,9 +158,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Basic README with installation | ⬜ | |
+| Basic README with installation | ✅ | Enhanced with quickstart, config, examples |
 | Simple vanilla three.js example | ✅ | `examples/basic` created |
-| API documentation (partial) | ⬜ | |
+| API documentation (partial) | ✅ | `docs/API.md` with full usage guide |
+| Package READMEs | ✅ | Added to `@3lens/core` and `@3lens/overlay` |
 
 ## 1.6 Phase 1 Validation
 
@@ -619,11 +620,11 @@
 
 | Phase | Total Tasks | Completed | In Progress | Remaining |
 |-------|-------------|-----------|-------------|-----------|
-| Phase 1 | 54 | 44 | 0 | 10 |
+| Phase 1 | 55 | 48 | 0 | 7 |
 | Phase 2 | 72 | 0 | 0 | 72 |
 | Phase 3 | 68 | 0 | 0 | 68 |
 | Phase 4 | 42 | 0 | 0 | 42 |
-| **Total** | **236** | **44** | **0** | **192** |
+| **Total** | **237** | **48** | **0** | **189** |
 
 ## Timeline
 
