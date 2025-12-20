@@ -108,6 +108,11 @@ body {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
+.connection-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
 .status-dot.connected {
   background: var(--success);
   box-shadow: 0 0 8px var(--success);
@@ -336,6 +341,74 @@ body {
   color: var(--text-secondary);
 }
 
+.stat-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.stats-connection {
+  margin-bottom: 12px;
+}
+
+.stat-connection-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.stat-connection-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.stats-section {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+.stats-section.two-column {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-top: 6px;
+}
+
+.stat-row span:last-child {
+  color: var(--text-secondary);
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 80px;
+  margin-bottom: 8px;
+}
+
+.chart .bar {
+  width: 4px;
+  background: var(--accent-blue);
+  border-radius: 2px 2px 0 0;
+}
+
+.chart .bar.over-budget {
+  background: var(--accent-rose);
+}
+
+.hidden {
+  display: none;
+}
+
 /* Split View Layout */
 .scene-split-view {
   display: flex;
@@ -531,4 +604,3 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
 }
-
