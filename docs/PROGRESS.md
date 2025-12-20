@@ -2,7 +2,7 @@
 
 > **Last Updated:** December 20, 2025  
 > **Current Phase:** Phase 1 - Foundation (MVP)  
-> **Overall Progress:** █████░░░░░░░░░░░░░░░ 27%
+> **Overall Progress:** ██████░░░░░░░░░░░░░░ 30%
 
 ---
 
@@ -11,7 +11,7 @@
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: Foundation (MVP) | ✅ Complete | ██████████ 100% |
-| Phase 2: Core Features | 🔵 In Progress | █░░░░░░░░░ 5% |
+| Phase 2: Core Features | 🔵 In Progress | ██░░░░░░░░ 14% |
 | Phase 3: Enterprise Features | ⚪ Not Started | ░░░░░░░░░░ 0% |
 | Phase 4: Ecosystem & Polish | ⚪ Not Started | ░░░░░░░░░░ 0% |
 
@@ -199,13 +199,13 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Vertex count display | ⬜ | |
-| Index count display | ⬜ | |
-| Attribute list | ⬜ | |
-| Memory estimate | ⬜ | |
-| Bounding box visualization | ⬜ | |
-| Wireframe toggle | ⬜ | |
-| Normals visualization | ⬜ | |
+| Vertex count display | ✅ | Shown in geometry list and inspector |
+| Index count display | ✅ | Shows indexed status and count |
+| Attribute list | ✅ | Full table with name, size, type, and memory |
+| Memory estimate | ✅ | Per-attribute and total GPU memory estimate |
+| Bounding box visualization | ✅ | Toggle button creates BoxHelper |
+| Wireframe toggle | ✅ | Toggle button enables wireframe on materials |
+| Normals visualization | ✅ | Toggle button shows vertex normals as lines |
 
 ### Textures Panel
 
@@ -621,10 +621,10 @@
 | Phase | Total Tasks | Completed | In Progress | Remaining |
 |-------|-------------|-----------|-------------|-----------|
 | Phase 1 | 69 | 69 | 0 | 0 |
-| Phase 2 | 78 | 4 | 0 | 74 |
+| Phase 2 | 78 | 11 | 0 | 67 |
 | Phase 3 | 72 | 0 | 0 | 72 |
 | Phase 4 | 47 | 0 | 0 | 47 |
-| **Total** | **266** | **73** | **0** | **193** |
+| **Total** | **266** | **80** | **0** | **186** |
 
 ## Timeline
 

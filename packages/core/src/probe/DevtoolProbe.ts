@@ -40,6 +40,7 @@ export class DevtoolProbe {
   private _maxHistorySize = 300;
   private _selectionHelper: SelectionHelper = new SelectionHelper();
   private _threeRef: typeof import('three') | null = null;
+  private _visualizationHelpers: Map<string, THREE.Object3D> = new Map();
 
   // Event callbacks
   private _selectionCallbacks: Array<
@@ -184,34 +185,67 @@ export class DevtoolProbe {
   takeSnapshot(): SceneSnapshot {
     const scenes: SceneNode[] = [];
     let allMaterials: import('../types').MaterialData[] = [];
-    let combinedSummary: import('../types').MaterialsSummary = {
+    let combinedMaterialSummary: import('../types').MaterialsSummary = {
       totalCount: 0,
       byType: {},
       shaderMaterialCount: 0,
       transparentCount: 0,
+    };
+    let allGeometries: import('../types').GeometryData[] = [];
+    let combinedGeometrySummary: import('../types').GeometrySummary = {
+      totalCount: 0,
+      totalVertices: 0,
+      totalTriangles: 0,
+      totalMemoryBytes: 0,
+      byType: {},
+      indexedCount: 0,
+      morphedCount: 0,
     };
 
     for (const [scene, observer] of this._sceneObservers) {
       scenes.push(observer.createSceneNode(scene));
 
       // Collect materials from each scene
-      const { materials, summary } = observer.collectMaterials();
+      const { materials, summary: matSummary } = observer.collectMaterials();
       
       // Merge materials (deduplicate by UUID)
-      const existingUuids = new Set(allMaterials.map(m => m.uuid));
+      const existingMatUuids = new Set(allMaterials.map(m => m.uuid));
       for (const mat of materials) {
-        if (!existingUuids.has(mat.uuid)) {
+        if (!existingMatUuids.has(mat.uuid)) {
           allMaterials.push(mat);
-          existingUuids.add(mat.uuid);
+          existingMatUuids.add(mat.uuid);
         }
       }
 
-      // Merge summary
-      combinedSummary.totalCount = allMaterials.length;
-      combinedSummary.shaderMaterialCount += summary.shaderMaterialCount;
-      combinedSummary.transparentCount += summary.transparentCount;
-      for (const [type, count] of Object.entries(summary.byType)) {
-        combinedSummary.byType[type] = (combinedSummary.byType[type] || 0) + count;
+      // Merge material summary
+      combinedMaterialSummary.totalCount = allMaterials.length;
+      combinedMaterialSummary.shaderMaterialCount += matSummary.shaderMaterialCount;
+      combinedMaterialSummary.transparentCount += matSummary.transparentCount;
+      for (const [type, count] of Object.entries(matSummary.byType)) {
+        combinedMaterialSummary.byType[type] = (combinedMaterialSummary.byType[type] || 0) + count;
+      }
+
+      // Collect geometries from each scene
+      const { geometries, summary: geoSummary } = observer.collectGeometries();
+      
+      // Merge geometries (deduplicate by UUID)
+      const existingGeoUuids = new Set(allGeometries.map(g => g.uuid));
+      for (const geo of geometries) {
+        if (!existingGeoUuids.has(geo.uuid)) {
+          allGeometries.push(geo);
+          existingGeoUuids.add(geo.uuid);
+        }
+      }
+
+      // Merge geometry summary
+      combinedGeometrySummary.totalCount = allGeometries.length;
+      combinedGeometrySummary.totalVertices += geoSummary.totalVertices;
+      combinedGeometrySummary.totalTriangles += geoSummary.totalTriangles;
+      combinedGeometrySummary.totalMemoryBytes += geoSummary.totalMemoryBytes;
+      combinedGeometrySummary.indexedCount += geoSummary.indexedCount;
+      combinedGeometrySummary.morphedCount += geoSummary.morphedCount;
+      for (const [type, count] of Object.entries(geoSummary.byType)) {
+        combinedGeometrySummary.byType[type] = (combinedGeometrySummary.byType[type] || 0) + count;
       }
     }
 
@@ -220,7 +254,9 @@ export class DevtoolProbe {
       timestamp: performance.now(),
       scenes,
       materials: allMaterials,
-      materialsSummary: combinedSummary,
+      materialsSummary: combinedMaterialSummary,
+      geometries: allGeometries,
+      geometriesSummary: combinedGeometrySummary,
     };
 
     this.sendMessage({
@@ -487,6 +523,23 @@ export class DevtoolProbe {
     // Dispose selection helper
     this._selectionHelper.dispose();
 
+    // Dispose visualization helpers
+    for (const [, helper] of this._visualizationHelpers) {
+      helper.parent?.remove(helper);
+      if ('geometry' in helper && (helper as THREE.Mesh).geometry) {
+        ((helper as THREE.Mesh).geometry as THREE.BufferGeometry).dispose();
+      }
+      if ('material' in helper && (helper as THREE.Mesh).material) {
+        const mat = (helper as THREE.Mesh).material;
+        if (Array.isArray(mat)) {
+          mat.forEach((m) => m.dispose());
+        } else {
+          mat.dispose();
+        }
+      }
+    }
+    this._visualizationHelpers.clear();
+
     // Dispose renderer adapter
     if (this._rendererAdapter) {
       this._rendererAdapter.dispose();
@@ -585,6 +638,9 @@ export class DevtoolProbe {
       case 'update-material-property':
         this.handleUpdateMaterialProperty(message);
         break;
+      case 'geometry-visualization':
+        this.handleGeometryVisualization(message);
+        break;
       case 'ping':
         this.sendMessage({
           type: 'pong',
@@ -662,6 +718,180 @@ export class DevtoolProbe {
     }
 
     this.log('Material not found for property update', { uuid: message.materialUuid });
+  }
+
+  private handleGeometryVisualization(
+    message: DebugMessage & {
+      geometryUuid: string;
+      visualization: 'wireframe' | 'boundingBox' | 'normals';
+      enabled: boolean;
+    }
+  ): void {
+    const { geometryUuid, visualization, enabled } = message;
+
+    // Find geometry and its associated mesh(es) across all observers
+    for (const observer of this._sceneObservers.values()) {
+      const geometry = observer.findGeometryByUuid(geometryUuid);
+      if (!geometry) continue;
+
+      // Find meshes using this geometry
+      this._sceneObservers.forEach((obs, scene) => {
+        scene.traverse((obj) => {
+          if ('isMesh' in obj && (obj as THREE.Mesh).isMesh) {
+            const mesh = obj as THREE.Mesh;
+            if (mesh.geometry?.uuid === geometryUuid) {
+              this.applyGeometryVisualization(mesh, visualization, enabled);
+            }
+          }
+        });
+      });
+      return;
+    }
+
+    this.log('Geometry not found for visualization', { uuid: geometryUuid });
+  }
+
+  private applyGeometryVisualization(
+    mesh: THREE.Mesh,
+    visualization: 'wireframe' | 'boundingBox' | 'normals',
+    enabled: boolean
+  ): void {
+    const THREE = this._threeRef;
+    if (!THREE) {
+      this.log('THREE.js reference not set - cannot create visualization helpers');
+      return;
+    }
+
+    const helperKey = `${mesh.uuid}_${visualization}`;
+
+    if (enabled) {
+      // Remove existing helper if any
+      const existingHelper = this._visualizationHelpers.get(helperKey);
+      if (existingHelper) {
+        existingHelper.parent?.remove(existingHelper);
+        this._visualizationHelpers.delete(helperKey);
+      }
+
+      switch (visualization) {
+        case 'wireframe': {
+          // Toggle wireframe on the material(s)
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const mat of materials) {
+            if (mat && 'wireframe' in mat) {
+              (mat as THREE.MeshBasicMaterial).wireframe = true;
+              mat.needsUpdate = true;
+            }
+          }
+          // Store a marker so we can disable it later
+          this._visualizationHelpers.set(helperKey, mesh);
+          break;
+        }
+
+        case 'boundingBox': {
+          // Compute bounding box if not already done
+          if (!mesh.geometry.boundingBox) {
+            mesh.geometry.computeBoundingBox();
+          }
+          // Create a BoxHelper
+          const boxHelper = new THREE.BoxHelper(mesh, 0x22d3ee); // cyan color
+          boxHelper.name = `3lens_bbox_${mesh.uuid}`;
+          mesh.parent?.add(boxHelper);
+          this._visualizationHelpers.set(helperKey, boxHelper);
+          break;
+        }
+
+        case 'normals': {
+          // Create a VertexNormalsHelper-like visualization
+          // Since VertexNormalsHelper is in examples, we'll create a simple version
+          const normalHelper = this.createNormalsHelper(mesh, THREE);
+          if (normalHelper) {
+            normalHelper.name = `3lens_normals_${mesh.uuid}`;
+            mesh.parent?.add(normalHelper);
+            this._visualizationHelpers.set(helperKey, normalHelper);
+          }
+          break;
+        }
+      }
+    } else {
+      // Disable visualization
+      const helper = this._visualizationHelpers.get(helperKey);
+      if (helper) {
+        if (visualization === 'wireframe') {
+          // Restore wireframe state
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const mat of materials) {
+            if (mat && 'wireframe' in mat) {
+              (mat as THREE.MeshBasicMaterial).wireframe = false;
+              mat.needsUpdate = true;
+            }
+          }
+        } else {
+          // Remove helper from scene
+          helper.parent?.remove(helper);
+          // Dispose geometry and material if present
+          if ('geometry' in helper && (helper as THREE.Mesh).geometry) {
+            ((helper as THREE.Mesh).geometry as THREE.BufferGeometry).dispose();
+          }
+          if ('material' in helper && (helper as THREE.Mesh).material) {
+            const mat = (helper as THREE.Mesh).material;
+            if (Array.isArray(mat)) {
+              mat.forEach((m) => m.dispose());
+            } else {
+              mat.dispose();
+            }
+          }
+        }
+        this._visualizationHelpers.delete(helperKey);
+      }
+    }
+  }
+
+  private createNormalsHelper(mesh: THREE.Mesh, THREE: typeof import('three')): THREE.LineSegments | null {
+    const geometry = mesh.geometry;
+    const normalAttribute = geometry.attributes.normal;
+    
+    if (!normalAttribute) {
+      this.log('No normal attribute found on geometry');
+      return null;
+    }
+
+    const positionAttribute = geometry.attributes.position;
+    if (!positionAttribute) {
+      return null;
+    }
+
+    const normalLength = 0.1;
+    const color = 0x34d399; // emerald
+
+    const vertices: number[] = [];
+    const count = positionAttribute.count;
+
+    for (let i = 0; i < count; i++) {
+      const x = positionAttribute.getX(i);
+      const y = positionAttribute.getY(i);
+      const z = positionAttribute.getZ(i);
+
+      const nx = normalAttribute.getX(i);
+      const ny = normalAttribute.getY(i);
+      const nz = normalAttribute.getZ(i);
+
+      // Start point (vertex position)
+      vertices.push(x, y, z);
+      // End point (vertex + normal * length)
+      vertices.push(x + nx * normalLength, y + ny * normalLength, z + nz * normalLength);
+    }
+
+    const lineGeometry = new THREE.BufferGeometry();
+    lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+    const lineMaterial = new THREE.LineBasicMaterial({ color });
+    const lineSegments = new THREE.LineSegments(lineGeometry, lineMaterial);
+
+    // Copy the mesh's world transform
+    lineSegments.matrixAutoUpdate = false;
+    lineSegments.matrix.copy(mesh.matrixWorld);
+
+    return lineSegments;
   }
 
   private applyMaterialPropertyChange(

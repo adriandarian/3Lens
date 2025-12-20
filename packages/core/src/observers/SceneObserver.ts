@@ -13,6 +13,10 @@ import type {
   MaterialTextureRef,
   UniformData,
   MaterialsSummary,
+  GeometryData,
+  GeometryAttributeData,
+  GeometryGroupData,
+  GeometrySummary,
 } from '../types';
 
 export interface SceneObserverOptions {
@@ -28,6 +32,7 @@ export class SceneObserver {
   private objectRefs: Map<THREE.Object3D, TrackedObjectRef> = new Map();
   private debugIdToObject: Map<string, THREE.Object3D> = new Map();
   private materialsByUuid: Map<string, THREE.Material> = new Map();
+  private geometriesByUuid: Map<string, THREE.BufferGeometry> = new Map();
   private originalAdd: typeof THREE.Object3D.prototype.add;
   private originalRemove: typeof THREE.Object3D.prototype.remove;
 
@@ -101,6 +106,13 @@ export class SceneObserver {
   }
 
   /**
+   * Find a geometry by its UUID
+   */
+  findGeometryByUuid(uuid: string): THREE.BufferGeometry | null {
+    return this.geometriesByUuid.get(uuid) ?? null;
+  }
+
+  /**
    * Collect all materials from the scene
    */
   collectMaterials(): { materials: MaterialData[]; summary: MaterialsSummary } {
@@ -164,6 +176,255 @@ export class SceneObserver {
     };
 
     return { materials, summary };
+  }
+
+  /**
+   * Collect all geometries from the scene
+   */
+  collectGeometries(): { geometries: GeometryData[]; summary: GeometrySummary } {
+    const geometryMap = new Map<string, { geometry: THREE.BufferGeometry; meshDebugIds: string[] }>();
+
+    // Clear and rebuild geometry tracking
+    this.geometriesByUuid.clear();
+
+    // Traverse scene and collect all geometries
+    this.scene.traverse((obj) => {
+      if (this.isMesh(obj)) {
+        const geometry = obj.geometry;
+        if (!geometry) return;
+
+        const meshRef = this.getOrCreateRef(obj);
+
+        // Track geometry by UUID for later lookup
+        this.geometriesByUuid.set(geometry.uuid, geometry);
+
+        const existing = geometryMap.get(geometry.uuid);
+        if (existing) {
+          existing.meshDebugIds.push(meshRef.debugId);
+        } else {
+          geometryMap.set(geometry.uuid, {
+            geometry,
+            meshDebugIds: [meshRef.debugId],
+          });
+        }
+      }
+    });
+
+    // Convert to GeometryData array
+    const geometries: GeometryData[] = [];
+    const byType: Record<string, number> = {};
+    let totalVertices = 0;
+    let totalTriangles = 0;
+    let totalMemoryBytes = 0;
+    let indexedCount = 0;
+    let morphedCount = 0;
+
+    for (const [, { geometry, meshDebugIds }] of geometryMap) {
+      const data = this.createGeometryData(geometry, meshDebugIds);
+      geometries.push(data);
+
+      // Update summary stats
+      byType[data.type] = (byType[data.type] || 0) + 1;
+      totalVertices += data.vertexCount;
+      totalTriangles += data.faceCount;
+      totalMemoryBytes += data.memoryBytes;
+      if (data.isIndexed) indexedCount++;
+      if (data.morphAttributes && data.morphAttributes.length > 0) morphedCount++;
+    }
+
+    // Sort geometries by memory usage (largest first), then by name
+    geometries.sort((a, b) => {
+      if (a.memoryBytes !== b.memoryBytes) return b.memoryBytes - a.memoryBytes;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    const summary: GeometrySummary = {
+      totalCount: geometries.length,
+      totalVertices,
+      totalTriangles,
+      totalMemoryBytes,
+      byType,
+      indexedCount,
+      morphedCount,
+    };
+
+    return { geometries, summary };
+  }
+
+  /**
+   * Create GeometryData from a three.js BufferGeometry
+   */
+  private createGeometryData(geometry: THREE.BufferGeometry, usedByMeshes: string[]): GeometryData {
+    const attributes = this.collectGeometryAttributes(geometry);
+    const memoryBytes = attributes.reduce((sum, attr) => sum + attr.memoryBytes, 0);
+
+    // Calculate index memory if present
+    let indexMemory = 0;
+    let indexCount = 0;
+    if (geometry.index) {
+      indexCount = geometry.index.count;
+      indexMemory = this.calculateBufferMemory(geometry.index);
+    }
+
+    // Get vertex count from position attribute
+    const positionAttr = geometry.attributes.position;
+    const vertexCount = positionAttr ? positionAttr.count : 0;
+
+    // Calculate face count
+    let faceCount = 0;
+    if (geometry.index) {
+      faceCount = geometry.index.count / 3;
+    } else if (positionAttr) {
+      faceCount = positionAttr.count / 3;
+    }
+
+    // Collect morph attributes
+    const morphAttributes: GeometryData['morphAttributes'] = [];
+    if (geometry.morphAttributes) {
+      for (const [name, attrs] of Object.entries(geometry.morphAttributes)) {
+        if (Array.isArray(attrs) && attrs.length > 0) {
+          morphAttributes.push({
+            name,
+            count: attrs.length,
+          });
+        }
+      }
+    }
+
+    // Collect groups
+    const groups: GeometryGroupData[] = geometry.groups.map((g) => ({
+      start: g.start,
+      count: g.count,
+      materialIndex: g.materialIndex ?? 0,
+    }));
+
+    const data: GeometryData = {
+      uuid: geometry.uuid,
+      name: geometry.name || '',
+      type: geometry.type || 'BufferGeometry',
+      vertexCount,
+      indexCount,
+      faceCount,
+      isIndexed: geometry.index !== null,
+      attributes,
+      memoryBytes: memoryBytes + indexMemory,
+      drawRange: {
+        start: geometry.drawRange.start,
+        count: geometry.drawRange.count,
+      },
+      groups,
+      usageCount: usedByMeshes.length,
+      usedByMeshes,
+    };
+
+    // Add bounding box if computed
+    if (geometry.boundingBox) {
+      data.boundingBox = {
+        min: { x: geometry.boundingBox.min.x, y: geometry.boundingBox.min.y, z: geometry.boundingBox.min.z },
+        max: { x: geometry.boundingBox.max.x, y: geometry.boundingBox.max.y, z: geometry.boundingBox.max.z },
+      };
+    }
+
+    // Add bounding sphere if computed
+    if (geometry.boundingSphere) {
+      data.boundingSphere = {
+        center: {
+          x: geometry.boundingSphere.center.x,
+          y: geometry.boundingSphere.center.y,
+          z: geometry.boundingSphere.center.z,
+        },
+        radius: geometry.boundingSphere.radius,
+      };
+    }
+
+    // Add morph attributes if present
+    if (morphAttributes.length > 0) {
+      data.morphAttributes = morphAttributes;
+    }
+
+    return data;
+  }
+
+  /**
+   * Collect all attributes from a BufferGeometry
+   */
+  private collectGeometryAttributes(geometry: THREE.BufferGeometry): GeometryAttributeData[] {
+    const attributes: GeometryAttributeData[] = [];
+
+    for (const [name, attr] of Object.entries(geometry.attributes)) {
+      if (!attr) continue;
+      attributes.push(this.createAttributeData(name, attr as THREE.BufferAttribute));
+    }
+
+    // Sort by importance: position, normal, uv first, then others
+    const priority = ['position', 'normal', 'uv', 'uv2', 'color', 'tangent'];
+    attributes.sort((a, b) => {
+      const aPriority = priority.indexOf(a.name);
+      const bPriority = priority.indexOf(b.name);
+      if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
+      if (aPriority !== -1) return -1;
+      if (bPriority !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return attributes;
+  }
+
+  /**
+   * Create attribute data from a BufferAttribute
+   */
+  private createAttributeData(name: string, attr: THREE.BufferAttribute): GeometryAttributeData {
+    const isInstanced = 'isInstancedBufferAttribute' in attr;
+    const memoryBytes = this.calculateBufferMemory(attr);
+
+    const data: GeometryAttributeData = {
+      name,
+      count: attr.count,
+      itemSize: attr.itemSize,
+      normalized: attr.normalized,
+      arrayType: attr.array.constructor.name,
+      memoryBytes,
+      isInstancedAttribute: isInstanced,
+    };
+
+    // Add usage hint if available
+    if ('usage' in attr) {
+      data.usage = this.getUsageName((attr as { usage: number }).usage);
+    }
+
+    // Add mesh per attribute for instanced attributes
+    if (isInstanced && 'meshPerAttribute' in attr) {
+      data.meshPerAttribute = (attr as { meshPerAttribute: number }).meshPerAttribute;
+    }
+
+    return data;
+  }
+
+  /**
+   * Calculate memory usage of a buffer attribute
+   */
+  private calculateBufferMemory(attr: THREE.BufferAttribute): number {
+    const bytesPerElement = attr.array.BYTES_PER_ELEMENT || 4;
+    return attr.count * attr.itemSize * bytesPerElement;
+  }
+
+  /**
+   * Get human-readable name for buffer usage
+   */
+  private getUsageName(usage: number): string {
+    // WebGL usage constants
+    const usageNames: Record<number, string> = {
+      35044: 'StaticDraw',
+      35048: 'DynamicDraw',
+      35040: 'StreamDraw',
+      35045: 'StaticRead',
+      35049: 'DynamicRead',
+      35041: 'StreamRead',
+      35046: 'StaticCopy',
+      35050: 'DynamicCopy',
+      35042: 'StreamCopy',
+    };
+    return usageNames[usage] || `Usage(${usage})`;
   }
 
   /**

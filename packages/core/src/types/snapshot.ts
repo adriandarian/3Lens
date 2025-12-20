@@ -1,5 +1,6 @@
 import type { TrackedObjectRef } from './objects';
 import type { MaterialData, MaterialsSummary } from './materials';
+import type { GeometryData, GeometrySummary } from './geometry';
 
 /**
  * Complete scene snapshot
@@ -29,6 +30,16 @@ export interface SceneSnapshot {
    * Summary of materials
    */
   materialsSummary?: MaterialsSummary;
+
+  /**
+   * All geometries in the observed scenes
+   */
+  geometries?: GeometryData[];
+
+  /**
+   * Summary of geometries
+   */
+  geometriesSummary?: GeometrySummary;
 }
 
 /**
