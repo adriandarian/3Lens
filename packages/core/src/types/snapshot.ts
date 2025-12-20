@@ -1,4 +1,5 @@
 import type { TrackedObjectRef } from './objects';
+import type { MaterialData, MaterialsSummary } from './materials';
 
 /**
  * Complete scene snapshot
@@ -18,6 +19,16 @@ export interface SceneSnapshot {
    * All observed scenes
    */
   scenes: SceneNode[];
+
+  /**
+   * All materials in the observed scenes
+   */
+  materials?: MaterialData[];
+
+  /**
+   * Summary of materials
+   */
+  materialsSummary?: MaterialsSummary;
 }
 
 /**

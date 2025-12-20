@@ -48,6 +48,7 @@ export type DebugMessage =
   | SelectObjectCommand
   | HoverObjectCommand
   | RequestSnapshotCommand
+  | UpdateMaterialPropertyCommand
   | PingCommand
   | PongMessage;
 
@@ -131,6 +132,25 @@ export interface HoverObjectCommand extends BaseMessage {
  */
 export interface RequestSnapshotCommand extends BaseMessage {
   type: 'request-snapshot';
+}
+
+/**
+ * Update a material property command
+ */
+export interface UpdateMaterialPropertyCommand extends BaseMessage {
+  type: 'update-material-property';
+  /**
+   * Material UUID to update
+   */
+  materialUuid: string;
+  /**
+   * Property path (e.g., 'color', 'opacity', 'roughness')
+   */
+  property: string;
+  /**
+   * New value for the property
+   */
+  value: unknown;
 }
 
 /**
