@@ -5,7 +5,12 @@
  */
 
 export { ThreeLensOverlay } from './components/Overlay';
-export type { OverlayOptions } from './components/Overlay';
+export type {
+  OverlayOptions,
+  OverlayPanelContext,
+  OverlayPanelDefinition,
+  OverlayPanelState,
+} from './components/Overlay';
 
 // Convenience function
 import type { DevtoolProbe } from '@3lens/core';
@@ -32,4 +37,3 @@ export function createOverlay(
 ): ThreeLensOverlay {
   return new ThreeLensOverlay({ probe, ...options });
 }
-
