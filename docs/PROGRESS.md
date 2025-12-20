@@ -179,7 +179,7 @@
 
 **Goal:** Complete inspection capabilities and add interactive debugging.  
 **Target Duration:** 3-4 months  
-**Status:** ⚪ Not Started
+**Status:** 🟡 In Progress
 
 ## 2.1 Enhanced Inspection
 
@@ -187,13 +187,13 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| List all materials with types | ⬜ | |
-| Property editor (color, opacity, roughness) | ⬜ | |
-| Shader source viewer | ⬜ | |
-| Syntax highlighting for GLSL | ⬜ | |
-| Live property editing | ⬜ | |
-| Uniforms display | ⬜ | |
-| Defines display | ⬜ | |
+| List all materials with types | ✅ | Full material list with type icons, color swatches, and usage counts |
+| Property editor (color, opacity, roughness) | ✅ | Read-only display of all material properties including PBR values |
+| Shader source viewer | ✅ | Vertex/fragment shader display with truncation for long shaders |
+| Syntax highlighting for GLSL | ✅ | Custom tokenizer with keyword/builtin/comment highlighting |
+| Live property editing | ✅ | Color pickers, sliders, toggles, dropdowns with real-time updates |
+| Uniforms display | ✅ | Full uniform list with types and values |
+| Defines display | ✅ | Shader defines shown as labeled chips |
 
 ### Geometry Inspector
 

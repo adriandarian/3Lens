@@ -183,15 +183,44 @@ export class DevtoolProbe {
    */
   takeSnapshot(): SceneSnapshot {
     const scenes: SceneNode[] = [];
+    let allMaterials: import('../types').MaterialData[] = [];
+    let combinedSummary: import('../types').MaterialsSummary = {
+      totalCount: 0,
+      byType: {},
+      shaderMaterialCount: 0,
+      transparentCount: 0,
+    };
 
     for (const [scene, observer] of this._sceneObservers) {
       scenes.push(observer.createSceneNode(scene));
+
+      // Collect materials from each scene
+      const { materials, summary } = observer.collectMaterials();
+      
+      // Merge materials (deduplicate by UUID)
+      const existingUuids = new Set(allMaterials.map(m => m.uuid));
+      for (const mat of materials) {
+        if (!existingUuids.has(mat.uuid)) {
+          allMaterials.push(mat);
+          existingUuids.add(mat.uuid);
+        }
+      }
+
+      // Merge summary
+      combinedSummary.totalCount = allMaterials.length;
+      combinedSummary.shaderMaterialCount += summary.shaderMaterialCount;
+      combinedSummary.transparentCount += summary.transparentCount;
+      for (const [type, count] of Object.entries(summary.byType)) {
+        combinedSummary.byType[type] = (combinedSummary.byType[type] || 0) + count;
+      }
     }
 
     const snapshot: SceneSnapshot = {
       snapshotId: this.generateId(),
       timestamp: performance.now(),
       scenes,
+      materials: allMaterials,
+      materialsSummary: combinedSummary,
     };
 
     this.sendMessage({
@@ -553,6 +582,9 @@ export class DevtoolProbe {
       case 'request-snapshot':
         this.takeSnapshot();
         break;
+      case 'update-material-property':
+        this.handleUpdateMaterialProperty(message);
+        break;
       case 'ping':
         this.sendMessage({
           type: 'pong',
@@ -615,6 +647,85 @@ export class DevtoolProbe {
         return;
       }
     }
+  }
+
+  private handleUpdateMaterialProperty(
+    message: DebugMessage & { materialUuid: string; property: string; value: unknown }
+  ): void {
+    // Find material by UUID across all observers
+    for (const observer of this._sceneObservers.values()) {
+      const material = observer.findMaterialByUuid(message.materialUuid);
+      if (material) {
+        this.applyMaterialPropertyChange(material, message.property, message.value);
+        return;
+      }
+    }
+
+    this.log('Material not found for property update', { uuid: message.materialUuid });
+  }
+
+  private applyMaterialPropertyChange(
+    material: THREE.Material,
+    property: string,
+    value: unknown
+  ): void {
+    const mat = material as Record<string, unknown>;
+
+    switch (property) {
+      case 'color':
+      case 'emissive': {
+        // Value is a hex number
+        if (typeof value === 'number' && mat[property] && typeof (mat[property] as { setHex?: (v: number) => void }).setHex === 'function') {
+          (mat[property] as { setHex: (v: number) => void }).setHex(value);
+        }
+        break;
+      }
+
+      case 'opacity':
+      case 'roughness':
+      case 'metalness':
+      case 'reflectivity':
+      case 'clearcoat':
+      case 'clearcoatRoughness':
+      case 'sheen':
+      case 'sheenRoughness':
+      case 'transmission':
+      case 'thickness':
+      case 'ior': {
+        // Numeric properties
+        if (typeof value === 'number' && property in mat) {
+          mat[property] = value;
+        }
+        break;
+      }
+
+      case 'transparent':
+      case 'visible':
+      case 'wireframe':
+      case 'depthTest':
+      case 'depthWrite':
+      case 'flatShading': {
+        // Boolean properties
+        if (typeof value === 'boolean' && property in mat) {
+          mat[property] = value;
+        }
+        break;
+      }
+
+      case 'side': {
+        // Side enum (0, 1, 2)
+        if (typeof value === 'number' && property in mat) {
+          mat[property] = value;
+        }
+        break;
+      }
+
+      default:
+        this.log('Unknown material property', { property, value });
+    }
+
+    // Mark material as needing update
+    material.needsUpdate = true;
   }
 
   private checkRules(stats: FrameStats): FrameStats['violations'] {

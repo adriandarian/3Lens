@@ -5,4 +5,5 @@ export * from './stats';
 export * from './snapshot';
 export * from './adapter';
 export * from './transport';
+export * from './materials';
 

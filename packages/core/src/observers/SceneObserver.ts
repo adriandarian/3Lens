@@ -9,6 +9,10 @@ import type {
   MeshNodeData,
   LightNodeData,
   CameraNodeData,
+  MaterialData,
+  MaterialTextureRef,
+  UniformData,
+  MaterialsSummary,
 } from '../types';
 
 export interface SceneObserverOptions {
@@ -23,6 +27,7 @@ export class SceneObserver {
   private options: SceneObserverOptions;
   private objectRefs: Map<THREE.Object3D, TrackedObjectRef> = new Map();
   private debugIdToObject: Map<string, THREE.Object3D> = new Map();
+  private materialsByUuid: Map<string, THREE.Material> = new Map();
   private originalAdd: typeof THREE.Object3D.prototype.add;
   private originalRemove: typeof THREE.Object3D.prototype.remove;
 
@@ -86,6 +91,271 @@ export class SceneObserver {
     }
 
     return node;
+  }
+
+  /**
+   * Find a material by its UUID
+   */
+  findMaterialByUuid(uuid: string): THREE.Material | null {
+    return this.materialsByUuid.get(uuid) ?? null;
+  }
+
+  /**
+   * Collect all materials from the scene
+   */
+  collectMaterials(): { materials: MaterialData[]; summary: MaterialsSummary } {
+    const materialMap = new Map<string, { material: THREE.Material; meshDebugIds: string[] }>();
+
+    // Clear and rebuild material tracking
+    this.materialsByUuid.clear();
+
+    // Traverse scene and collect all materials
+    this.scene.traverse((obj) => {
+      if (this.isMesh(obj)) {
+        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const meshRef = this.getOrCreateRef(obj);
+
+        for (const material of materials) {
+          if (!material) continue;
+
+          // Track material by UUID for later lookup
+          this.materialsByUuid.set(material.uuid, material);
+
+          const existing = materialMap.get(material.uuid);
+          if (existing) {
+            existing.meshDebugIds.push(meshRef.debugId);
+          } else {
+            materialMap.set(material.uuid, {
+              material,
+              meshDebugIds: [meshRef.debugId],
+            });
+          }
+        }
+      }
+    });
+
+    // Convert to MaterialData array
+    const materials: MaterialData[] = [];
+    const byType: Record<string, number> = {};
+    let shaderMaterialCount = 0;
+    let transparentCount = 0;
+
+    for (const [, { material, meshDebugIds }] of materialMap) {
+      const data = this.createMaterialData(material, meshDebugIds);
+      materials.push(data);
+
+      // Update summary stats
+      byType[data.type] = (byType[data.type] || 0) + 1;
+      if (data.isShaderMaterial) shaderMaterialCount++;
+      if (data.transparent) transparentCount++;
+    }
+
+    // Sort materials by type, then by name
+    materials.sort((a, b) => {
+      if (a.type !== b.type) return a.type.localeCompare(b.type);
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    const summary: MaterialsSummary = {
+      totalCount: materials.length,
+      byType,
+      shaderMaterialCount,
+      transparentCount,
+    };
+
+    return { materials, summary };
+  }
+
+  /**
+   * Create MaterialData from a three.js material
+   */
+  private createMaterialData(material: THREE.Material, usedByMeshes: string[]): MaterialData {
+    const isShaderMat = this.isShaderMaterial(material);
+
+    const data: MaterialData = {
+      uuid: material.uuid,
+      name: material.name || '',
+      type: material.type || material.constructor.name,
+      isShaderMaterial: isShaderMat,
+      opacity: material.opacity,
+      transparent: material.transparent,
+      visible: material.visible,
+      side: material.side,
+      depthTest: material.depthTest,
+      depthWrite: material.depthWrite,
+      wireframe: 'wireframe' in material ? (material as THREE.MeshBasicMaterial).wireframe : false,
+      textures: this.collectMaterialTextures(material),
+      usageCount: usedByMeshes.length,
+      usedByMeshes,
+    };
+
+    // Extract color if present
+    if ('color' in material && material.color) {
+      data.color = (material.color as THREE.Color).getHex();
+    }
+
+    // Extract emissive if present
+    if ('emissive' in material && material.emissive) {
+      data.emissive = (material.emissive as THREE.Color).getHex();
+    }
+
+    // Extract PBR properties
+    if (this.isPBRMaterial(material)) {
+      data.pbr = this.extractPBRProperties(material);
+    }
+
+    // Extract shader info for ShaderMaterial
+    if (isShaderMat) {
+      data.shader = this.extractShaderInfo(material as THREE.ShaderMaterial);
+    }
+
+    return data;
+  }
+
+  /**
+   * Collect texture references from a material
+   */
+  private collectMaterialTextures(material: THREE.Material): MaterialTextureRef[] {
+    const textures: MaterialTextureRef[] = [];
+    const textureSlots = [
+      'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
+      'emissiveMap', 'bumpMap', 'displacementMap', 'alphaMap',
+      'envMap', 'lightMap', 'specularMap', 'gradientMap',
+      'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap',
+      'sheenColorMap', 'sheenRoughnessMap', 'transmissionMap', 'thicknessMap',
+    ];
+
+    for (const slot of textureSlots) {
+      if (slot in material) {
+        const texture = (material as Record<string, unknown>)[slot] as THREE.Texture | null;
+        if (texture) {
+          textures.push({
+            slot,
+            uuid: texture.uuid,
+            name: texture.name || undefined,
+          });
+        }
+      }
+    }
+
+    return textures;
+  }
+
+  /**
+   * Check if material is a ShaderMaterial or RawShaderMaterial
+   */
+  private isShaderMaterial(material: THREE.Material): boolean {
+    return 'isShaderMaterial' in material || 'isRawShaderMaterial' in material;
+  }
+
+  /**
+   * Check if material is a PBR material (MeshStandardMaterial or MeshPhysicalMaterial)
+   */
+  private isPBRMaterial(material: THREE.Material): material is THREE.MeshStandardMaterial {
+    return 'isMeshStandardMaterial' in material || 'isMeshPhysicalMaterial' in material;
+  }
+
+  /**
+   * Extract PBR properties from a standard/physical material
+   */
+  private extractPBRProperties(material: THREE.MeshStandardMaterial): MaterialData['pbr'] {
+    const pbr: MaterialData['pbr'] = {
+      roughness: material.roughness,
+      metalness: material.metalness,
+    };
+
+    // Physical material specific properties
+    if ('isMeshPhysicalMaterial' in material) {
+      const phys = material as THREE.MeshPhysicalMaterial;
+      pbr.reflectivity = phys.reflectivity;
+      pbr.clearcoat = phys.clearcoat;
+      pbr.clearcoatRoughness = phys.clearcoatRoughness;
+      pbr.sheen = phys.sheen;
+      pbr.sheenRoughness = phys.sheenRoughness;
+      pbr.transmission = phys.transmission;
+      pbr.thickness = phys.thickness;
+      pbr.ior = phys.ior;
+    }
+
+    return pbr;
+  }
+
+  /**
+   * Extract shader information from a ShaderMaterial
+   */
+  private extractShaderInfo(material: THREE.ShaderMaterial): MaterialData['shader'] {
+    const uniforms: UniformData[] = [];
+
+    if (material.uniforms) {
+      for (const [name, uniform] of Object.entries(material.uniforms)) {
+        uniforms.push(this.serializeUniform(name, uniform));
+      }
+    }
+
+    return {
+      vertexShader: material.vertexShader || '',
+      fragmentShader: material.fragmentShader || '',
+      uniforms,
+      defines: (material.defines as Record<string, string | number | boolean>) || {},
+    };
+  }
+
+  /**
+   * Serialize a uniform value
+   */
+  private serializeUniform(name: string, uniform: THREE.IUniform): UniformData {
+    const value = uniform.value;
+    let type: UniformData['type'] = 'unknown';
+    let serializedValue: unknown = null;
+
+    if (value === null || value === undefined) {
+      type = 'float';
+      serializedValue = null;
+    } else if (typeof value === 'number') {
+      type = 'float';
+      serializedValue = value;
+    } else if (typeof value === 'boolean') {
+      type = 'int';
+      serializedValue = value ? 1 : 0;
+    } else if (value.isVector2) {
+      type = 'vec2';
+      serializedValue = { x: value.x, y: value.y };
+    } else if (value.isVector3) {
+      type = 'vec3';
+      serializedValue = { x: value.x, y: value.y, z: value.z };
+    } else if (value.isVector4) {
+      type = 'vec4';
+      serializedValue = { x: value.x, y: value.y, z: value.z, w: value.w };
+    } else if (value.isColor) {
+      type = 'vec3';
+      serializedValue = { r: value.r, g: value.g, b: value.b };
+    } else if (value.isMatrix3) {
+      type = 'mat3';
+      serializedValue = Array.from(value.elements);
+    } else if (value.isMatrix4) {
+      type = 'mat4';
+      serializedValue = Array.from(value.elements);
+    } else if (value.isTexture) {
+      type = 'sampler2D';
+      serializedValue = { uuid: value.uuid, name: value.name };
+    } else if (value.isCubeTexture) {
+      type = 'samplerCube';
+      serializedValue = { uuid: value.uuid, name: value.name };
+    } else if (Array.isArray(value)) {
+      // Could be an array of numbers or vectors
+      if (value.length > 0 && typeof value[0] === 'number') {
+        type = 'float';
+        serializedValue = value;
+      } else {
+        type = 'struct';
+        serializedValue = `Array[${value.length}]`;
+      }
+    } else if (typeof value === 'object') {
+      type = 'struct';
+      serializedValue = Object.keys(value).join(', ');
+    }
+
+    return { name, type, value: serializedValue };
   }
 
   /**
