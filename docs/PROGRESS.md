@@ -10,7 +10,7 @@
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1: Foundation (MVP) | 🔵 In Progress | ██████████ 99% |
+| Phase 1: Foundation (MVP) | ✅ Complete | ██████████ 100% |
 | Phase 2: Core Features | 🔵 In Progress | █░░░░░░░░░ 5% |
 | Phase 3: Enterprise Features | ⚪ Not Started | ░░░░░░░░░░ 0% |
 | Phase 4: Ecosystem & Polish | ⚪ Not Started | ░░░░░░░░░░ 0% |
@@ -31,7 +31,7 @@
 
 **Goal:** Prove the concept with a working scene inspector and basic stats.  
 **Target Duration:** 2-3 months  
-**Status:** 🔵 In Progress
+**Status:** ✅ Complete
 
 ## 1.1 Project Setup
 
@@ -171,7 +171,7 @@
 | Shows real-time performance stats | ✅ | Frame metrics mirrored in extension + overlay |
 | Works in extension mode | ✅ | MV3 build ships injected probe + devtools panel |
 | Works in npm/overlay mode | ✅ | One-call overlay bootstrap helper |
-| Performance overhead < 5% | 🔄 | Benchmark helper added; needs validation run |
+| Performance overhead < 5% | ✅ | Validated via benchmark page at `/benchmark.html` |
 
 ---
 
@@ -620,11 +620,11 @@
 
 | Phase | Total Tasks | Completed | In Progress | Remaining |
 |-------|-------------|-----------|-------------|-----------|
-| Phase 1 | 69 | 68 | 1 | 0 |
+| Phase 1 | 69 | 69 | 0 | 0 |
 | Phase 2 | 78 | 4 | 0 | 74 |
 | Phase 3 | 72 | 0 | 0 | 72 |
 | Phase 4 | 47 | 0 | 0 | 47 |
-| **Total** | **266** | **72** | **1** | **193** |
+| **Total** | **266** | **73** | **0** | **193** |
 
 ## Timeline
 
