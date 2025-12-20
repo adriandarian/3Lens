@@ -36,6 +36,7 @@ export class DevtoolProbe {
   private _hoveredObject: THREE.Object3D | null = null;
   private _logicalEntities: Map<string, LogicalEntity> = new Map();
   private _frameStatsHistory: FrameStats[] = [];
+  private _frameStatsHistoryIndex = 0;
   private _maxHistorySize = 300;
   private _selectionHelper: SelectionHelper = new SelectionHelper();
   private _threeRef: typeof import('three') | null = null;
@@ -488,32 +489,48 @@ export class DevtoolProbe {
   // ─────────────────────────────────────────────────────────────────
 
   private handleFrameStats(stats: FrameStats): void {
-    // Check rules
-    const violations = this.checkRules(stats);
-    if (violations.length > 0) {
-      stats.violations = violations;
+    // Store in history using circular buffer (O(1) instead of O(n) with shift)
+    if (this._frameStatsHistory.length < this._maxHistorySize) {
+      this._frameStatsHistory.push(stats);
+    } else {
+      this._frameStatsHistory[this._frameStatsHistoryIndex] = stats;
+      this._frameStatsHistoryIndex = (this._frameStatsHistoryIndex + 1) % this._maxHistorySize;
     }
 
-    // Store in history
-    this._frameStatsHistory.push(stats);
-    if (this._frameStatsHistory.length > this._maxHistorySize) {
-      this._frameStatsHistory.shift();
+    // Skip expensive operations if nothing is listening
+    const hasListeners = this._frameStatsCallbacks.length > 0 || this._transport?.isConnected();
+    if (!hasListeners && !this.config.rules && !this._selectedObject) {
+      return; // Fast path - nothing to do
     }
 
-    // Update selection highlight for moving objects
-    this._selectionHelper.update();
-
-    // Notify callbacks
-    for (const callback of this._frameStatsCallbacks) {
-      callback(stats);
+    // Only check rules if rules are configured
+    if (this.config.rules) {
+      const violations = this.checkRules(stats);
+      if (violations.length > 0) {
+        stats.violations = violations;
+      }
     }
 
-    // Send message
-    this.sendMessage({
-      type: 'frame-stats',
-      timestamp: stats.timestamp,
-      stats,
-    });
+    // Only update selection highlight if there's a selected object
+    if (this._selectedObject) {
+      this._selectionHelper.update();
+    }
+
+    // Notify callbacks only if there are any
+    if (this._frameStatsCallbacks.length > 0) {
+      for (const callback of this._frameStatsCallbacks) {
+        callback(stats);
+      }
+    }
+
+    // Only send message if transport is connected
+    if (this._transport?.isConnected()) {
+      this.sendMessage({
+        type: 'frame-stats',
+        timestamp: stats.timestamp,
+        stats,
+      });
+    }
   }
 
   private handleSceneChange(): void {

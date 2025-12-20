@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "benchmark": "echo 'Open http://localhost:3000/benchmark.html in your browser to run the performance benchmark'"
   },
   "dependencies": {
     "@3lens/core": "workspace:*",
