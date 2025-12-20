@@ -16,6 +16,12 @@ interface PanelState {
   selectedNodeId: string | null;
   expandedNodes: Set<string>;
   frameHistory: number[];
+  connectionInfo: {
+    appName: string;
+    backend: string;
+    threeVersion: string;
+    probeVersion: string;
+  } | null;
 }
 
 const state: PanelState = {
@@ -26,6 +32,7 @@ const state: PanelState = {
   selectedNodeId: null,
   expandedNodes: new Set(),
   frameHistory: [],
+  connectionInfo: null,
 };
 
 // ───────────────────────────────────────────────────────────────
@@ -50,6 +57,12 @@ port.postMessage({ type: 'handshake-request', uiVersion: '0.1.0', capabilities: 
 function handleMessage(message: DebugMessage): void {
   switch (message.type) {
     case 'handshake-response':
+      state.connectionInfo = {
+        appName: (message as { appName?: string }).appName ?? 'Unknown app',
+        backend: (message as { backend?: string }).backend ?? 'webgl',
+        threeVersion: (message as { threeVersion?: string }).threeVersion ?? 'unknown',
+        probeVersion: (message as { probeVersion?: string }).probeVersion ?? 'unknown',
+      };
       updateConnectionStatus(true);
       requestSnapshot();
       break;
@@ -57,7 +70,7 @@ function handleMessage(message: DebugMessage): void {
     case 'frame-stats':
       state.latestStats = message.stats;
       state.frameHistory.push(message.stats.cpuTimeMs);
-      if (state.frameHistory.length > 60) state.frameHistory.shift();
+      if (state.frameHistory.length > 90) state.frameHistory.shift();
       if (state.activeTab === 'stats') renderStats();
       break;
 
@@ -81,6 +94,7 @@ function updateConnectionStatus(connected: boolean): void {
   const statusEl = document.getElementById('connection-status');
   const dotEl = statusEl?.querySelector('.status-dot');
   const textEl = statusEl?.querySelector('.status-text');
+  const metaEl = document.getElementById('connection-meta');
 
   if (dotEl) {
     dotEl.classList.toggle('connected', connected);
@@ -89,6 +103,16 @@ function updateConnectionStatus(connected: boolean): void {
 
   if (textEl) {
     textEl.textContent = connected ? 'Connected' : 'Disconnected';
+  }
+
+  if (metaEl) {
+    if (connected && state.connectionInfo) {
+      metaEl.textContent = `${state.connectionInfo.appName} · ${state.connectionInfo.backend.toUpperCase()} · three.js ${state.connectionInfo.threeVersion}`;
+      metaEl.classList.remove('hidden');
+    } else {
+      metaEl.textContent = 'Waiting for three.js...';
+      metaEl.classList.add('hidden');
+    }
   }
 
   if (connected) {
@@ -146,6 +170,7 @@ function renderScene(): void {
         <div class="empty-icon">🌲</div>
         <h2>No Scenes</h2>
         <p>No scenes are being observed.</p>
+        <p class="hint">Open a three.js app or wait for the injected probe to attach.</p>
       </div>
     `;
     return;
@@ -413,26 +438,117 @@ function renderStats(): void {
     return;
   }
 
-  const fps = stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0;
+  const fps = stats.performance?.fps ?? (stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0);
+  const fps1p = stats.performance?.fps1PercentLow ?? 0;
+  const fpsMin = stats.performance?.fpsMin ?? fps;
+  const fpsMax = stats.performance?.fpsMax ?? fps;
+  const frameBudget = stats.performance?.frameBudgetUsed ?? 0;
+  const gpuTime = stats.gpuTimeMs ? `${stats.gpuTimeMs.toFixed(2)}ms` : 'n/a';
+
+  const history = [...state.frameHistory].slice(-90);
+  state.frameHistory = history;
+  const maxFrame = Math.max(...history, 16.67);
+
+  const memory = stats.memory;
+  const rendering = stats.rendering;
 
   content.innerHTML = `
     <div class="stats-panel">
+      ${
+        state.connectionInfo
+          ? `<div class="stats-connection">
+              <div class="stat-connection-name">${state.connectionInfo.appName}</div>
+              <div class="stat-connection-meta">${state.connectionInfo.backend.toUpperCase()} · three.js ${state.connectionInfo.threeVersion} · probe ${state.connectionInfo.probeVersion}</div>
+            </div>`
+          : ''
+      }
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-label">FPS</div>
           <div class="stat-value">${fps}</div>
+          <div class="stat-sub">1% low ${fps1p}</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Frame Time</div>
           <div class="stat-value">${stats.cpuTimeMs.toFixed(1)}<span class="stat-unit">ms</span></div>
+          <div class="stat-sub">GPU ${gpuTime}</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Draw Calls</div>
           <div class="stat-value ${stats.drawCalls > 1000 ? 'warning' : ''}">${formatNumber(stats.drawCalls)}</div>
+          <div class="stat-sub">${rendering.instancedDrawCalls ?? 0} instanced</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Triangles</div>
           <div class="stat-value ${stats.triangles > 500000 ? 'warning' : ''}">${formatNumber(stats.triangles)}</div>
+          <div class="stat-sub">${formatNumber(stats.vertices)} vertices</div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="section-title">Frame Stability</div>
+        <div class="chart">
+          ${history
+            .map((value) => {
+              const height = Math.min(100, (value / maxFrame) * 100);
+              const className = value > stats.performance.targetFrameTimeMs ? 'bar over-budget' : 'bar';
+              return `<span class="${className}" style="height:${height}%;" title="${value.toFixed(2)}ms"></span>`;
+            })
+            .join('')}
+        </div>
+        <div class="stat-row">
+          <span>Frame budget used</span>
+          <span class="${frameBudget > 100 ? 'warning' : ''}">${frameBudget.toFixed(1)}%</span>
+        </div>
+        <div class="stat-row">
+          <span>FPS range</span>
+          <span>${fpsMin} – ${fpsMax}</span>
+        </div>
+      </div>
+
+      <div class="stats-section two-column">
+        <div>
+          <div class="section-title">Memory</div>
+          <div class="stat-row">
+            <span>GPU memory (est.)</span>
+            <span>${formatBytes(memory.totalGpuMemory)}</span>
+          </div>
+          <div class="stat-row">
+            <span>Geometry</span>
+            <span>${formatBytes(memory.geometryMemory)} (${memory.geometries} geos)</span>
+          </div>
+          <div class="stat-row">
+            <span>Textures</span>
+            <span>${formatBytes(memory.textureMemory)} (${memory.textures} textures)</span>
+          </div>
+          <div class="stat-row">
+            <span>Programs</span>
+            <span>${memory.programs}</span>
+          </div>
+          ${
+            memory.jsHeapSize
+              ? `<div class="stat-row"><span>JS Heap</span><span>${formatBytes(memory.jsHeapSize)} / ${formatBytes(memory.jsHeapLimit ?? 0)}</span></div>`
+              : ''
+          }
+        </div>
+        <div>
+          <div class="section-title">Rendering</div>
+          <div class="stat-row">
+            <span>Visible / Total Objects</span>
+            <span>${stats.objectsVisible} / ${stats.objectsTotal}</span>
+          </div>
+          <div class="stat-row">
+            <span>Lights (shadow)</span>
+            <span>${rendering.totalLights} (${rendering.shadowCastingLights} casting)</span>
+          </div>
+          <div class="stat-row">
+            <span>Transparent Objects</span>
+            <span>${rendering.transparentObjects}</span>
+          </div>
+          <div class="stat-row">
+            <span>Skinned Meshes</span>
+            <span>${rendering.skinnedMeshes} (${rendering.totalBones} bones)</span>
+          </div>
         </div>
       </div>
     </div>
@@ -534,6 +650,13 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes <= 0 || Number.isNaN(bytes)) return '0 B';
+  if (bytes < 1024) return `${bytes.toFixed(0)} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 // Initial render
 renderContent();
-
