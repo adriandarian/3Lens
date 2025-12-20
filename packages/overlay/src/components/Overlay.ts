@@ -6,18 +6,16 @@ import { OVERLAY_STYLES } from '../styles/styles';
 
 export interface OverlayOptions {
   probe: DevtoolProbe;
+  /**
+   * Optional custom panel definitions to register at startup.
+   *
+   * Panels registered here will appear alongside the built-in Scene and
+   * Performance panels in the overlay menu.
+   */
+  panels?: OverlayPanelDefinition[];
 }
 
-interface PanelConfig {
-  id: string;
-  title: string;
-  icon: string;
-  iconClass: string;
-  defaultWidth: number;
-  defaultHeight: number;
-}
-
-interface PanelState {
+export interface OverlayPanelState {
   id: string;
   x: number;
   y: number;
@@ -27,11 +25,34 @@ interface PanelState {
   zIndex: number;
 }
 
+type PanelState = OverlayPanelState;
+
+export interface OverlayPanelContext {
+  panelId: string;
+  container: HTMLElement;
+  panelElement: HTMLElement;
+  probe: DevtoolProbe;
+  overlay: ThreeLensOverlay;
+  state: Readonly<PanelState>;
+}
+
+export interface OverlayPanelDefinition {
+  id: string;
+  title: string;
+  icon: string;
+  iconClass: string;
+  defaultWidth: number;
+  defaultHeight: number;
+  render?: (context: OverlayPanelContext) => string | HTMLElement | void;
+  onMount?: (context: OverlayPanelContext) => void;
+  onDestroy?: (context: OverlayPanelContext) => void;
+}
+
 const SCENE_PANEL_WIDTH_COLLAPSED = 320; // Tree only (no selection)
 const SCENE_PANEL_WIDTH_EXPANDED = 560;  // Tree + Inspector (with selection)
 const SCENE_PANEL_MAX_HEIGHT = 450;      // Max auto-height before scrolling
 
-const PANELS: PanelConfig[] = [
+const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: SCENE_PANEL_WIDTH_COLLAPSED, defaultHeight: 0 }, // 0 = auto height
   { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 360, defaultHeight: 480 },
 ];
@@ -56,6 +77,8 @@ export class ThreeLensOverlay {
   private lastStatsUpdate = 0;
   private statsUpdateInterval = 500; // Update stats UI every 500ms (2x per second)
   private statsTab: 'overview' | 'memory' | 'rendering' = 'overview';
+  private panelDefinitions: Map<string, OverlayPanelDefinition> = new Map();
+  private panelContexts: Map<string, OverlayPanelContext> = new Map();
   
   // Chart state
   private chartZoom = 1; // 1 = show all 60 frames, 2 = show 30, etc.
@@ -76,6 +99,9 @@ export class ThreeLensOverlay {
     this.root = document.createElement('div');
     this.root.className = 'three-lens-root';
     document.body.appendChild(this.root);
+
+    // Register panel definitions (built-in + custom)
+    this.initializePanelDefinitions(options.panels);
 
     // Subscribe to probe events (throttled updates)
     this.probe.onFrameStats((stats) => {
@@ -152,14 +178,18 @@ export class ThreeLensOverlay {
     return `
       <div class="three-lens-menu ${this.menuVisible ? 'visible' : ''}" id="three-lens-menu">
         <div class="three-lens-menu-header">Panels</div>
-        ${PANELS.map(panel => `
+        ${this.renderMenuItems()}
+      </div>
+    `;
+  }
+
+  private renderMenuItems(): string {
+    return this.getPanelDefinitions().map(panel => `
           <button class="three-lens-menu-item ${this.openPanels.has(panel.id) ? 'active' : ''}" data-panel="${panel.id}">
             <span class="three-lens-menu-icon ${panel.iconClass}">${panel.icon}</span>
             <span>${panel.title}</span>
           </button>
-        `).join('')}
-      </div>
-    `;
+        `).join('');
   }
 
   private attachFABEvents(): void {
@@ -171,7 +201,19 @@ export class ThreeLensOverlay {
     });
 
     // Menu items
-    document.querySelectorAll('.three-lens-menu-item').forEach(item => {
+    this.attachMenuItemEvents();
+
+    // Close menu on outside click
+    document.addEventListener('click', (e) => {
+      if (this.menuVisible && !(e.target as HTMLElement).closest('.three-lens-menu, .three-lens-fab')) {
+        this.menuVisible = false;
+        this.updateMenu();
+      }
+    });
+  }
+
+  private attachMenuItemEvents(container: ParentNode = document): void {
+    container.querySelectorAll('.three-lens-menu-item').forEach(item => {
       item.addEventListener('click', (e) => {
         const panelId = (e.currentTarget as HTMLElement).dataset.panel;
         if (panelId) {
@@ -180,14 +222,6 @@ export class ThreeLensOverlay {
           this.updateMenu();
         }
       });
-    });
-
-    // Close menu on outside click
-    document.addEventListener('click', (e) => {
-      if (this.menuVisible && !(e.target as HTMLElement).closest('.three-lens-menu, .three-lens-fab')) {
-        this.menuVisible = false;
-        this.updateMenu();
-      }
     });
   }
 
@@ -206,6 +240,50 @@ export class ThreeLensOverlay {
     });
   }
 
+  private initializePanelDefinitions(customPanels?: OverlayPanelDefinition[]): void {
+    [...DEFAULT_PANELS, ...(customPanels ?? [])].forEach((panel) => this.registerPanelDefinition(panel));
+  }
+
+  private registerPanelDefinition(panel: OverlayPanelDefinition): void {
+    if (this.panelDefinitions.has(panel.id)) return;
+    this.panelDefinitions.set(panel.id, panel);
+  }
+
+  /**
+   * Register a new panel at runtime.
+   * Returns an unregister function to remove the panel and close it if open.
+   */
+  public registerPanel(panel: OverlayPanelDefinition): () => void {
+    this.registerPanelDefinition(panel);
+    this.refreshMenuItems();
+    return () => this.unregisterPanel(panel.id);
+  }
+
+  public unregisterPanel(panelId: string): void {
+    if (this.openPanels.has(panelId)) {
+      this.closePanel(panelId);
+    } else {
+      this.updateMenu();
+    }
+    this.panelDefinitions.delete(panelId);
+    this.refreshMenuItems();
+  }
+
+  private getPanelDefinitions(): OverlayPanelDefinition[] {
+    return Array.from(this.panelDefinitions.values());
+  }
+
+  private refreshMenuItems(): void {
+    const menu = document.getElementById('three-lens-menu');
+    if (!menu) return;
+    menu.innerHTML = `
+        <div class="three-lens-menu-header">Panels</div>
+        ${this.renderMenuItems()}
+      `;
+    this.attachMenuItemEvents(menu);
+    this.updateMenu();
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // PANEL MANAGEMENT
   // ═══════════════════════════════════════════════════════════════
@@ -219,7 +297,7 @@ export class ThreeLensOverlay {
   }
 
   private openPanel(panelId: string): void {
-    const config = PANELS.find(p => p.id === panelId);
+    const config = this.panelDefinitions.get(panelId);
     if (!config) return;
 
     // Calculate position (cascade)
@@ -236,15 +314,15 @@ export class ThreeLensOverlay {
 
     this.openPanels.set(panelId, state);
     this.createPanelElement(config, state);
+    this.updateMenu();
   }
 
   private closePanel(panelId: string): void {
-    const el = document.getElementById(`three-lens-panel-${panelId}`);
-    if (el) el.remove();
-    this.openPanels.delete(panelId);
+    this.destroyPanel(panelId);
+    this.updateMenu();
   }
 
-  private createPanelElement(config: PanelConfig, state: PanelState): void {
+  private createPanelElement(config: OverlayPanelDefinition, state: PanelState): void {
     const panel = document.createElement('div');
     panel.id = `three-lens-panel-${config.id}`;
     panel.className = 'three-lens-panel';
@@ -282,13 +360,82 @@ export class ThreeLensOverlay {
         </div>
       </div>
       <div class="three-lens-panel-content" id="three-lens-content-${config.id}">
-        ${this.renderPanelContent(config.id)}
+        ${this.getInitialPanelMarkup(config.id)}
       </div>
       <div class="three-lens-panel-resize" data-panel="${config.id}"></div>
     `;
 
     this.root.appendChild(panel);
+    this.mountPanel(config.id, panel);
     this.attachPanelEvents(panel, config.id);
+  }
+
+  private getInitialPanelMarkup(panelId: string): string {
+    switch (panelId) {
+      case 'scene':
+        return this.renderSceneContent();
+      case 'stats':
+        return this.renderStatsContent();
+      default:
+        return '<div class="three-lens-inspector-empty">Panel content</div>';
+    }
+  }
+
+  private mountPanel(panelId: string, panelElement: HTMLElement): void {
+    const definition = this.panelDefinitions.get(panelId);
+    const container = panelElement.querySelector(`#three-lens-content-${panelId}`) as HTMLElement | null;
+    if (!definition || !container) return;
+
+    const state = this.openPanels.get(panelId);
+    const context = this.buildPanelContext(panelId, container, panelElement, state);
+    this.panelContexts.set(panelId, context);
+
+    const content = this.renderPanelContent(panelId, context);
+    this.applyPanelContent(container, content);
+    definition.onMount?.(context);
+  }
+
+  private applyPanelContent(container: HTMLElement, content: string | HTMLElement | void): void {
+    if (typeof content === 'string') {
+      container.innerHTML = content;
+      return;
+    }
+    if (content instanceof HTMLElement) {
+      container.innerHTML = '';
+      container.appendChild(content);
+      return;
+    }
+    // If content is void, clear the container so onMount handlers can render freely
+    container.innerHTML = '';
+  }
+
+  private buildPanelContext(
+    panelId: string,
+    container: HTMLElement,
+    panelElement: HTMLElement,
+    state?: PanelState | undefined
+  ): OverlayPanelContext {
+    return {
+      panelId,
+      container,
+      panelElement,
+      probe: this.probe,
+      overlay: this,
+      state: state ?? (this.openPanels.get(panelId) as PanelState),
+    };
+  }
+
+  private destroyPanel(panelId: string): void {
+    const definition = this.panelDefinitions.get(panelId);
+    const context = this.panelContexts.get(panelId);
+    if (definition?.onDestroy && context) {
+      definition.onDestroy(context);
+    }
+    this.panelContexts.delete(panelId);
+
+    const el = document.getElementById(`three-lens-panel-${panelId}`);
+    if (el) el.remove();
+    this.openPanels.delete(panelId);
   }
 
   private attachPanelEvents(panel: HTMLElement, panelId: string): void {
@@ -465,11 +612,18 @@ export class ThreeLensOverlay {
   // PANEL CONTENT RENDERING
   // ═══════════════════════════════════════════════════════════════
 
-  private renderPanelContent(panelId: string): string {
+  private renderPanelContent(panelId: string, context?: OverlayPanelContext): string | HTMLElement | void {
     switch (panelId) {
       case 'scene': return this.renderSceneContent();
       case 'stats': return this.renderStatsContent();
-      default: return '<div class="three-lens-inspector-empty">Panel content</div>';
+      default: {
+        const definition = this.panelDefinitions.get(panelId);
+        if (definition?.render) {
+          if (!context) return '<div class="three-lens-inspector-empty">Panel content</div>';
+          return definition.render(context);
+        }
+        return '<div class="three-lens-inspector-empty">Panel content</div>';
+      }
     }
   }
 
