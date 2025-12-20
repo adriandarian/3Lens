@@ -11,6 +11,7 @@ export default defineConfig({
         panel: resolve(__dirname, 'src/devtools/panel.html'),
         background: resolve(__dirname, 'src/background/index.ts'),
         content: resolve(__dirname, 'src/content/index.ts'),
+        injected: resolve(__dirname, 'src/content/injected.ts'),
       },
       output: {
         entryFileNames: '[name].js',
@@ -23,4 +24,3 @@ export default defineConfig({
   },
   publicDir: 'public',
 });
-
