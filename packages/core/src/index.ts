@@ -43,6 +43,13 @@ export type {
 } from './types/snapshot';
 
 export type {
+  GeometryData,
+  GeometryAttributeData,
+  GeometryGroupData,
+  GeometrySummary,
+} from './types/geometry';
+
+export type {
   RendererAdapter,
   RendererKind,
 } from './types/adapter';
