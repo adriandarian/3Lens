@@ -2,7 +2,7 @@
 
 > **Last Updated:** December 20, 2025  
 > **Current Phase:** Phase 1 - Foundation (MVP)  
-> **Overall Progress:** ████░░░░░░░░░░░░░░░░ 20%
+> **Overall Progress:** █████░░░░░░░░░░░░░░░ 27%
 
 ---
 
@@ -10,8 +10,8 @@
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1: Foundation (MVP) | 🔵 In Progress | █████████░ 87% |
-| Phase 2: Core Features | ⚪ Not Started | ░░░░░░░░░░ 0% |
+| Phase 1: Foundation (MVP) | 🔵 In Progress | ██████████ 99% |
+| Phase 2: Core Features | 🔵 In Progress | █░░░░░░░░░ 5% |
 | Phase 3: Enterprise Features | ⚪ Not Started | ░░░░░░░░░░ 0% |
 | Phase 4: Ecosystem & Polish | ⚪ Not Started | ░░░░░░░░░░ 0% |
 
@@ -75,7 +75,7 @@
 | Hook into `renderer.render()` | ✅ | render() wrapped |
 | Capture `renderer.info` data | ✅ | triangles, calls, etc |
 | Calculate CPU frame time | ✅ | performance.now() delta |
-| Calculate FPS | 🔄 | Derived in UI |
+| Calculate FPS | ✅ | Computed in PerformanceTracker.getMetrics() |
 | Create `FrameStats` structure | ✅ | Full interface defined |
 | Frame stats history buffer | ✅ | 300 frame history |
 
@@ -276,10 +276,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `EXT_disjoint_timer_query` detection | ⬜ | |
-| Query creation/management | ⬜ | |
-| Per-frame GPU time | ⬜ | |
-| Graceful fallback when unavailable | ⬜ | |
+| `EXT_disjoint_timer_query` detection | ✅ | webgl-adapter.ts detects EXT_disjoint_timer_query_webgl2 |
+| Query creation/management | ✅ | gl.createQuery/beginQuery/endQuery/deleteQuery |
+| Per-frame GPU time | ✅ | Stored in FrameStats.gpuTimeMs |
+| Graceful fallback when unavailable | ✅ | try/catch blocks, returns undefined when unavailable |
 
 ### Performance Timeline
 
@@ -620,11 +620,11 @@
 
 | Phase | Total Tasks | Completed | In Progress | Remaining |
 |-------|-------------|-----------|-------------|-----------|
-| Phase 1 | 55 | 48 | 0 | 7 |
-| Phase 2 | 72 | 0 | 0 | 72 |
-| Phase 3 | 68 | 0 | 0 | 68 |
-| Phase 4 | 42 | 0 | 0 | 42 |
-| **Total** | **237** | **48** | **0** | **189** |
+| Phase 1 | 69 | 68 | 1 | 0 |
+| Phase 2 | 78 | 4 | 0 | 74 |
+| Phase 3 | 72 | 0 | 0 | 72 |
+| Phase 4 | 47 | 0 | 0 | 47 |
+| **Total** | **266** | **72** | **1** | **193** |
 
 ## Timeline
 
