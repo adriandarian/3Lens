@@ -54,6 +54,11 @@ export interface UIState {
   // Expansion state
   expandedNodes: Set<string>;
   
+  // Search filters
+  materialsSearch: string;
+  geometrySearch: string;
+  texturesSearch: string;
+  
   // Visualization state
   geometryVisualization: {
     wireframe: Set<string>;
@@ -79,6 +84,9 @@ export function createDefaultUIState(): UIState {
     selectedGeometryId: null,
     selectedTextureId: null,
     expandedNodes: new Set(),
+    materialsSearch: '',
+    geometrySearch: '',
+    texturesSearch: '',
     geometryVisualization: {
       wireframe: new Set(),
       boundingBox: new Set(),

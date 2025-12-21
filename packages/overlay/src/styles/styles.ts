@@ -266,10 +266,43 @@ export const OVERLAY_STYLES = `
 }
 
 .three-lens-panel-title {
-  flex: 1;
   font-weight: 600;
   font-size: 12px;
   color: var(--3lens-text-primary);
+  white-space: nowrap;
+}
+
+/* When no search bar, title pushes controls right */
+.three-lens-panel-header:not(:has(.three-lens-header-search)) .three-lens-panel-title {
+  flex: 1;
+}
+
+.three-lens-header-search {
+  flex: 1;
+  margin: 0 12px;
+  min-width: 120px;
+}
+
+.header-search-input {
+  width: 100%;
+  padding: 5px 10px;
+  background: var(--3lens-bg-primary);
+  border: 1px solid var(--3lens-border);
+  border-radius: var(--3lens-radius-sm);
+  color: var(--3lens-text-primary);
+  font-size: 11px;
+  font-family: var(--3lens-font-sans);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.header-search-input:focus {
+  border-color: var(--3lens-accent-blue);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.15);
+}
+
+.header-search-input::placeholder {
+  color: var(--3lens-text-tertiary);
 }
 
 .three-lens-panel-controls {

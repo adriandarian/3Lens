@@ -56,6 +56,19 @@ export function renderMaterialsPanel(
   // Build a map of debugId -> name from the scene tree
   const meshNames = buildMeshNameMap(context.snapshot);
 
+  // Filter materials by search query
+  const searchQuery = state.materialsSearch.toLowerCase().trim();
+  const filteredMaterials = searchQuery
+    ? materials.filter((mat: MaterialData) => {
+        const matName = (mat.name || mat.type).toLowerCase();
+        const meshNamesList = mat.usedByMeshes
+          .map(id => meshNames.get(id) || '')
+          .join(' ')
+          .toLowerCase();
+        return matName.includes(searchQuery) || meshNamesList.includes(searchQuery);
+      })
+    : materials;
+
   const selectedMaterial = state.selectedMaterialId
     ? materials.find((m: MaterialData) => m.uuid === state.selectedMaterialId)
     : null;
@@ -65,7 +78,10 @@ export function renderMaterialsPanel(
       <div class="panel-list materials-list-panel">
         ${renderMaterialsSummary(summary)}
         <div class="materials-list">
-          ${materials.map((mat: MaterialData) => renderMaterialListItem(mat, state, meshNames)).join('')}
+          ${filteredMaterials.length > 0 
+            ? filteredMaterials.map((mat: MaterialData) => renderMaterialListItem(mat, state, meshNames)).join('')
+            : `<div class="no-results">No materials match "${escapeHtml(state.materialsSearch)}"</div>`
+          }
         </div>
       </div>
       <div class="panel-inspector materials-inspector-panel">
