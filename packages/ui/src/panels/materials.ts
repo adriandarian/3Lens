@@ -2,9 +2,35 @@
  * Materials Panel - Shared renderer for materials inspection
  */
 
-import type { PanelContext, UIState, MaterialData, SceneSnapshot } from '../types';
+import type { PanelContext, UIState, MaterialData, SceneSnapshot, SceneNode } from '../types';
 import { escapeHtml, getMaterialTypeIcon } from '../utils/format';
 import { highlightGLSL, truncateShader } from '../utils/glsl-highlight';
+
+/**
+ * Build a map of debug ID -> mesh name from the scene tree
+ */
+function buildMeshNameMap(snapshot: SceneSnapshot | null): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!snapshot?.scenes) return map;
+
+  function traverse(node: SceneNode) {
+    // Use the object's name, or fallback to type
+    const name = node.ref.name || node.ref.objectType;
+    map.set(node.ref.debugId, name);
+    
+    if (node.children) {
+      for (const child of node.children) {
+        traverse(child);
+      }
+    }
+  }
+
+  for (const scene of snapshot.scenes) {
+    traverse(scene);
+  }
+
+  return map;
+}
 
 /**
  * Render the materials panel content
@@ -15,11 +41,6 @@ export function renderMaterialsPanel(
 ): string {
   const materials = context.snapshot?.materials;
   const summary = context.snapshot?.materialsSummary;
-
-  // Debug logging
-  console.log('[3Lens Materials] snapshot:', context.snapshot);
-  console.log('[3Lens Materials] materials:', materials);
-  console.log('[3Lens Materials] materials count:', materials?.length);
 
   if (!materials?.length) {
     return `
@@ -32,6 +53,9 @@ export function renderMaterialsPanel(
     `;
   }
 
+  // Build a map of debugId -> name from the scene tree
+  const meshNames = buildMeshNameMap(context.snapshot);
+
   const selectedMaterial = state.selectedMaterialId
     ? materials.find((m: MaterialData) => m.uuid === state.selectedMaterialId)
     : null;
@@ -41,11 +65,11 @@ export function renderMaterialsPanel(
       <div class="panel-list materials-list-panel">
         ${renderMaterialsSummary(summary)}
         <div class="materials-list">
-          ${materials.map((mat: MaterialData) => renderMaterialListItem(mat, state)).join('')}
+          ${materials.map((mat: MaterialData) => renderMaterialListItem(mat, state, meshNames)).join('')}
         </div>
       </div>
       <div class="panel-inspector materials-inspector-panel">
-        ${selectedMaterial ? renderMaterialInspector(selectedMaterial) : renderNoMaterialSelected()}
+        ${selectedMaterial ? renderMaterialInspector(selectedMaterial, meshNames) : renderNoMaterialSelected()}
       </div>
     </div>
   `;
@@ -72,11 +96,22 @@ function renderMaterialsSummary(summary: SceneSnapshot['materialsSummary']): str
   `;
 }
 
-function renderMaterialListItem(mat: MaterialData, state: UIState): string {
+function renderMaterialListItem(mat: MaterialData, state: UIState, meshNames: Map<string, string>): string {
   const isSelected = state.selectedMaterialId === mat.uuid;
   const colorHex = mat.color !== undefined ? mat.color.toString(16).padStart(6, '0') : null;
-  const displayName = mat.name || `<${mat.type}>`;
   const typeIcon = getMaterialTypeIcon(mat.type);
+  
+  // Get mesh names that use this material
+  const usedByNames = mat.usedByMeshes
+    .map(debugId => meshNames.get(debugId) || debugId.substring(0, 8))
+    .slice(0, 3); // Show max 3 names
+  const moreCount = mat.usedByMeshes.length - usedByNames.length;
+  
+  // Title: material name or type
+  const displayName = mat.name || mat.type;
+  
+  // Subtitle: object names that use this material
+  const subtitle = usedByNames.join(', ') + (moreCount > 0 ? ` +${moreCount}` : '');
   
   return `
     <div class="list-item material-item ${isSelected ? 'selected' : ''}" data-uuid="${mat.uuid}" data-action="select-material">
@@ -87,7 +122,7 @@ function renderMaterialListItem(mat: MaterialData, state: UIState): string {
         <div class="material-item-name">${escapeHtml(displayName)}</div>
         <div class="material-item-type">
           <span class="type-icon">${typeIcon}</span>
-          ${mat.type}
+          ${escapeHtml(subtitle)}
         </div>
       </div>
       <div class="material-item-badges">
@@ -109,18 +144,39 @@ function renderNoMaterialSelected(): string {
   `;
 }
 
-function renderMaterialInspector(mat: MaterialData): string {
+function renderMaterialInspector(mat: MaterialData, meshNames: Map<string, string>): string {
   const colorHex = mat.color !== undefined ? mat.color.toString(16).padStart(6, '0') : null;
   const emissiveHex = mat.emissive !== undefined ? mat.emissive.toString(16).padStart(6, '0') : null;
+
+  // Get mesh names that use this material
+  const usedByList = mat.usedByMeshes.map(debugId => ({
+    debugId,
+    name: meshNames.get(debugId) || debugId.substring(0, 8),
+  }));
+
+  // Title: material name or type
+  const displayName = mat.name || mat.type;
 
   return `
     <div class="inspector-header material-header">
       ${colorHex ? `<span class="color-swatch large" style="background: #${colorHex};"></span>` : ''}
       <div class="inspector-header-text">
-        <span class="inspector-title">${escapeHtml(mat.name || `<${mat.type}>`)}</span>
+        <span class="inspector-title">${escapeHtml(displayName)}</span>
         <span class="inspector-subtitle">${mat.type}</span>
       </div>
       <span class="inspector-uuid">${mat.uuid.substring(0, 8)}</span>
+    </div>
+
+    <div class="inspector-section used-by-section">
+      <div class="section-title">Used By (${usedByList.length})</div>
+      <div class="used-by-list">
+        ${usedByList.map(item => `
+          <div class="used-by-item" data-debug-id="${item.debugId}">
+            <span class="mesh-icon">M</span>
+            <span class="mesh-name">${escapeHtml(item.name)}</span>
+          </div>
+        `).join('')}
+      </div>
     </div>
 
     <div class="inspector-section">
