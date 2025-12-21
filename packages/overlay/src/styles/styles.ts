@@ -304,6 +304,7 @@ export const OVERLAY_STYLES = `
 /* Panel Content */
 .three-lens-panel-content {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 12px;
 }
@@ -539,14 +540,14 @@ export const OVERLAY_STYLES = `
 .three-lens-split-view {
   display: flex;
   gap: 0;
-  max-height: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
 .three-lens-tree-pane {
   flex: 1;
   min-width: 180px;
-  max-height: 400px;
+  height: 100%;
   overflow: auto;
   border-right: 1px solid var(--3lens-border);
   padding: 8px;
@@ -569,7 +570,7 @@ export const OVERLAY_STYLES = `
   width: 240px;
   min-width: 200px;
   max-width: 300px;
-  max-height: 400px;
+  height: 100%;
   overflow: auto;
   background: var(--3lens-bg-secondary);
   padding: 12px;
@@ -627,7 +628,7 @@ export const OVERLAY_STYLES = `
 .three-lens-tree-full {
   overflow: auto;
   padding: 8px;
-  max-height: calc(100% - 44px); /* Account for header */
+  height: 100%;
 }
 
 .three-lens-tree-full::-webkit-scrollbar {
