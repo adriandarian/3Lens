@@ -201,6 +201,16 @@ export class DevtoolProbe {
       indexedCount: 0,
       morphedCount: 0,
     };
+    let allTextures: import('../types').TextureData[] = [];
+    let combinedTextureSummary: import('../types').TexturesSummary = {
+      totalCount: 0,
+      totalMemoryBytes: 0,
+      byType: {},
+      cubeTextureCount: 0,
+      compressedCount: 0,
+      videoTextureCount: 0,
+      renderTargetCount: 0,
+    };
 
     for (const [scene, observer] of this._sceneObservers) {
       scenes.push(observer.createSceneNode(scene));
@@ -247,6 +257,29 @@ export class DevtoolProbe {
       for (const [type, count] of Object.entries(geoSummary.byType)) {
         combinedGeometrySummary.byType[type] = (combinedGeometrySummary.byType[type] || 0) + count;
       }
+
+      // Collect textures from each scene
+      const { textures, summary: texSummary } = observer.collectTextures();
+      
+      // Merge textures (deduplicate by UUID)
+      const existingTexUuids = new Set(allTextures.map(t => t.uuid));
+      for (const tex of textures) {
+        if (!existingTexUuids.has(tex.uuid)) {
+          allTextures.push(tex);
+          existingTexUuids.add(tex.uuid);
+        }
+      }
+
+      // Merge texture summary
+      combinedTextureSummary.totalCount = allTextures.length;
+      combinedTextureSummary.totalMemoryBytes += texSummary.totalMemoryBytes;
+      combinedTextureSummary.cubeTextureCount += texSummary.cubeTextureCount;
+      combinedTextureSummary.compressedCount += texSummary.compressedCount;
+      combinedTextureSummary.videoTextureCount += texSummary.videoTextureCount;
+      combinedTextureSummary.renderTargetCount += texSummary.renderTargetCount;
+      for (const [type, count] of Object.entries(texSummary.byType)) {
+        combinedTextureSummary.byType[type] = (combinedTextureSummary.byType[type] || 0) + count;
+      }
     }
 
     const snapshot: SceneSnapshot = {
@@ -257,6 +290,8 @@ export class DevtoolProbe {
       materialsSummary: combinedMaterialSummary,
       geometries: allGeometries,
       geometriesSummary: combinedGeometrySummary,
+      textures: allTextures,
+      texturesSummary: combinedTextureSummary,
     };
 
     this.sendMessage({

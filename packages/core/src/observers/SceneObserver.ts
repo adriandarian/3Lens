@@ -17,6 +17,10 @@ import type {
   GeometryAttributeData,
   GeometryGroupData,
   GeometrySummary,
+  TextureData,
+  TextureSourceInfo,
+  TextureMaterialUsage,
+  TexturesSummary,
 } from '../types';
 
 export interface SceneObserverOptions {
@@ -33,6 +37,7 @@ export class SceneObserver {
   private debugIdToObject: Map<string, THREE.Object3D> = new Map();
   private materialsByUuid: Map<string, THREE.Material> = new Map();
   private geometriesByUuid: Map<string, THREE.BufferGeometry> = new Map();
+  private texturesByUuid: Map<string, THREE.Texture> = new Map();
   private originalAdd: typeof THREE.Object3D.prototype.add;
   private originalRemove: typeof THREE.Object3D.prototype.remove;
 
@@ -249,6 +254,544 @@ export class SceneObserver {
     };
 
     return { geometries, summary };
+  }
+
+  /**
+   * Collect all textures from the scene
+   */
+  collectTextures(): { textures: TextureData[]; summary: TexturesSummary } {
+    // Build a map of texture UUID -> { texture, material usages }
+    const textureMap = new Map<string, {
+      texture: THREE.Texture;
+      usages: TextureMaterialUsage[];
+    }>();
+
+    // Clear and rebuild texture tracking
+    this.texturesByUuid.clear();
+
+    // Collect materials first to get texture references
+    const { materials } = this.collectMaterials();
+
+    // Build texture usage map from materials
+    for (const matData of materials) {
+      const material = this.materialsByUuid.get(matData.uuid);
+      if (!material) continue;
+
+      // Check all texture slots
+      const textureSlots = this.getTextureSlots();
+      for (const slot of textureSlots) {
+        if (slot in material) {
+          const texture = (material as Record<string, unknown>)[slot] as THREE.Texture | null;
+          if (texture && texture.uuid) {
+            // Track texture by UUID
+            this.texturesByUuid.set(texture.uuid, texture);
+
+            const existing = textureMap.get(texture.uuid);
+            const usage: TextureMaterialUsage = {
+              materialUuid: matData.uuid,
+              materialName: matData.name || `<${matData.type}>`,
+              slot,
+            };
+
+            if (existing) {
+              existing.usages.push(usage);
+            } else {
+              textureMap.set(texture.uuid, {
+                texture,
+                usages: [usage],
+              });
+            }
+          }
+        }
+      }
+
+      // Also check shader material uniforms for textures
+      if (matData.shader?.uniforms) {
+        for (const uniform of matData.shader.uniforms) {
+          if (uniform.type === 'sampler2D' || uniform.type === 'samplerCube') {
+            const uniformValue = uniform.value as { uuid?: string } | null;
+            if (uniformValue?.uuid) {
+              const texture = this.findTextureInMaterial(material, uniform.name);
+              if (texture) {
+                this.texturesByUuid.set(texture.uuid, texture);
+
+                const existing = textureMap.get(texture.uuid);
+                const usage: TextureMaterialUsage = {
+                  materialUuid: matData.uuid,
+                  materialName: matData.name || `<${matData.type}>`,
+                  slot: uniform.name,
+                };
+
+                if (existing) {
+                  existing.usages.push(usage);
+                } else {
+                  textureMap.set(texture.uuid, {
+                    texture,
+                    usages: [usage],
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Convert to TextureData array
+    const textures: TextureData[] = [];
+    const byType: Record<string, number> = {};
+    let totalMemoryBytes = 0;
+    let cubeTextureCount = 0;
+    let compressedCount = 0;
+    let videoTextureCount = 0;
+    let renderTargetCount = 0;
+
+    for (const [, { texture, usages }] of textureMap) {
+      const data = this.createTextureData(texture, usages);
+      textures.push(data);
+
+      // Update summary stats
+      byType[data.type] = (byType[data.type] || 0) + 1;
+      totalMemoryBytes += data.memoryBytes;
+      if (data.isCubeTexture) cubeTextureCount++;
+      if (data.isCompressed) compressedCount++;
+      if (data.isVideoTexture) videoTextureCount++;
+      if (data.isRenderTarget) renderTargetCount++;
+    }
+
+    // Sort textures by memory usage (largest first), then by name
+    textures.sort((a, b) => {
+      if (a.memoryBytes !== b.memoryBytes) return b.memoryBytes - a.memoryBytes;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    const summary: TexturesSummary = {
+      totalCount: textures.length,
+      totalMemoryBytes,
+      byType,
+      cubeTextureCount,
+      compressedCount,
+      videoTextureCount,
+      renderTargetCount,
+    };
+
+    return { textures, summary };
+  }
+
+  /**
+   * Get all texture slot names to check in materials
+   */
+  private getTextureSlots(): string[] {
+    return [
+      'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
+      'emissiveMap', 'bumpMap', 'displacementMap', 'alphaMap',
+      'envMap', 'lightMap', 'specularMap', 'gradientMap',
+      'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap',
+      'sheenColorMap', 'sheenRoughnessMap', 'transmissionMap', 'thicknessMap',
+      'iridescenceMap', 'iridescenceThicknessMap', 'anisotropyMap',
+      'specularIntensityMap', 'specularColorMap',
+    ];
+  }
+
+  /**
+   * Find a texture in a material by uniform name
+   */
+  private findTextureInMaterial(material: THREE.Material, uniformName: string): THREE.Texture | null {
+    if ('uniforms' in material) {
+      const shaderMat = material as THREE.ShaderMaterial;
+      const uniform = shaderMat.uniforms?.[uniformName];
+      if (uniform?.value?.isTexture) {
+        return uniform.value as THREE.Texture;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find a texture by its UUID
+   */
+  findTextureByUuid(uuid: string): THREE.Texture | null {
+    return this.texturesByUuid.get(uuid) ?? null;
+  }
+
+  /**
+   * Create TextureData from a three.js Texture
+   */
+  private createTextureData(texture: THREE.Texture, usages: TextureMaterialUsage[]): TextureData {
+    const isCubeTexture = 'isCubeTexture' in texture && (texture as THREE.CubeTexture).isCubeTexture === true;
+    const isDataTexture = 'isDataTexture' in texture && (texture as THREE.DataTexture).isDataTexture === true;
+    const isCompressedTexture = 'isCompressedTexture' in texture;
+    const isVideoTexture = 'isVideoTexture' in texture;
+    const isCanvasTexture = 'isCanvasTexture' in texture;
+    const isRenderTargetTexture = 'isRenderTargetTexture' in texture;
+
+    // Get dimensions
+    const image = texture.image;
+    let width = 0;
+    let height = 0;
+    if (image) {
+      if (isCubeTexture && Array.isArray(image) && image.length > 0) {
+        width = image[0]?.width || image[0]?.naturalWidth || 0;
+        height = image[0]?.height || image[0]?.naturalHeight || 0;
+      } else {
+        width = image.width || image.naturalWidth || image.videoWidth || 0;
+        height = image.height || image.naturalHeight || image.videoHeight || 0;
+      }
+    }
+
+    // Estimate memory usage
+    const memoryBytes = this.estimateTextureMemory(texture, width, height, isCubeTexture);
+
+    // Get source info
+    const source = this.getTextureSourceInfo(texture);
+
+    // Generate thumbnail for 2D textures (if possible and small enough)
+    let thumbnail: string | undefined;
+    if (!isCubeTexture && !isVideoTexture && image && width > 0 && height > 0) {
+      thumbnail = this.generateTextureThumbnail(texture, width, height);
+    }
+
+    const data: TextureData = {
+      uuid: texture.uuid,
+      name: texture.name || '',
+      type: texture.type || texture.constructor.name || 'Texture',
+      source,
+      dimensions: { width, height },
+      format: texture.format,
+      formatName: this.getFormatName(texture.format),
+      dataType: texture.type as number,
+      dataTypeName: this.getDataTypeName(texture.type as number),
+      mipmaps: {
+        enabled: texture.generateMipmaps || (texture.mipmaps && texture.mipmaps.length > 0),
+        count: texture.mipmaps?.length || 0,
+        generateMipmaps: texture.generateMipmaps,
+      },
+      wrap: {
+        s: texture.wrapS,
+        t: texture.wrapT,
+        sName: this.getWrapName(texture.wrapS),
+        tName: this.getWrapName(texture.wrapT),
+      },
+      filtering: {
+        mag: texture.magFilter,
+        min: texture.minFilter,
+        magName: this.getFilterName(texture.magFilter),
+        minName: this.getFilterName(texture.minFilter),
+      },
+      anisotropy: texture.anisotropy,
+      colorSpace: texture.colorSpace || 'srgb',
+      flipY: texture.flipY,
+      premultiplyAlpha: texture.premultiplyAlpha,
+      memoryBytes,
+      isCompressed: isCompressedTexture,
+      isRenderTarget: isRenderTargetTexture,
+      isCubeTexture,
+      isDataTexture,
+      isVideoTexture,
+      isCanvasTexture,
+      thumbnail,
+      usedByMaterials: usages,
+      usageCount: usages.length,
+    };
+
+    // Add encoding if present (legacy)
+    if ('encoding' in texture) {
+      data.encoding = (texture as { encoding: number }).encoding;
+    }
+
+    // Add compression format if compressed
+    if (isCompressedTexture && texture.mipmaps && texture.mipmaps.length > 0) {
+      data.compressionFormat = this.getCompressionFormat(texture.format);
+    }
+
+    return data;
+  }
+
+  /**
+   * Get texture source information
+   */
+  private getTextureSourceInfo(texture: THREE.Texture): TextureSourceInfo {
+    const image = texture.image;
+    let type: TextureSourceInfo['type'] = 'unknown';
+    let url: string | undefined;
+    let isLoaded = false;
+    let isReady = false;
+
+    if ('isCompressedTexture' in texture) {
+      type = 'compressed';
+      isLoaded = texture.mipmaps && texture.mipmaps.length > 0;
+      isReady = isLoaded;
+    } else if ('isDataTexture' in texture) {
+      type = 'data';
+      isLoaded = !!image;
+      isReady = isLoaded;
+    } else if ('isVideoTexture' in texture) {
+      type = 'video';
+      if (image instanceof HTMLVideoElement) {
+        url = image.src || image.currentSrc;
+        isLoaded = image.readyState >= 2;
+        isReady = !image.paused;
+      }
+    } else if ('isCanvasTexture' in texture) {
+      type = 'canvas';
+      isLoaded = !!image;
+      isReady = isLoaded;
+    } else if (image) {
+      if (image instanceof HTMLImageElement) {
+        type = 'image';
+        url = image.src;
+        isLoaded = image.complete;
+        isReady = image.complete && image.naturalWidth > 0;
+      } else if (image instanceof HTMLCanvasElement) {
+        type = 'canvas';
+        isLoaded = true;
+        isReady = true;
+      } else if (image instanceof ImageBitmap) {
+        type = 'image';
+        isLoaded = true;
+        isReady = true;
+      } else if (typeof image === 'object' && 'data' in image) {
+        type = 'data';
+        isLoaded = true;
+        isReady = true;
+      }
+    }
+
+    // Try to get URL from texture source
+    if (!url && 'source' in texture && texture.source) {
+      const source = texture.source as { data?: { src?: string } };
+      if (source.data?.src) {
+        url = source.data.src;
+      }
+    }
+
+    return { type, url, isLoaded, isReady };
+  }
+
+  /**
+   * Estimate texture memory usage in bytes
+   */
+  private estimateTextureMemory(texture: THREE.Texture, width: number, height: number, isCube: boolean): number {
+    if (width === 0 || height === 0) return 0;
+
+    // Get bytes per pixel based on format and type
+    const bytesPerPixel = this.getBytesPerPixel(texture.format, texture.type as number);
+    
+    // Base memory
+    let memory = width * height * bytesPerPixel;
+    
+    // Cube textures have 6 faces
+    if (isCube) {
+      memory *= 6;
+    }
+    
+    // Add mipmap memory (roughly 1.33x for full mipchain)
+    if (texture.generateMipmaps || (texture.mipmaps && texture.mipmaps.length > 0)) {
+      memory = Math.floor(memory * 1.33);
+    }
+
+    return memory;
+  }
+
+  /**
+   * Get bytes per pixel for a format and type combination
+   */
+  private getBytesPerPixel(format: number, type: number): number {
+    // Common format constants (THREE.js uses WebGL constants)
+    const ALPHA = 6406;
+    const RGB = 6407;
+    const RGBA = 6408;
+    const LUMINANCE = 6409;
+    const LUMINANCE_ALPHA = 6410;
+    const RED = 6403;
+    const RG = 33319;
+    const DEPTH_COMPONENT = 6402;
+    const DEPTH_STENCIL = 34041;
+
+    // Type constants
+    const UNSIGNED_BYTE = 5121;
+    const UNSIGNED_SHORT = 5123;
+    const UNSIGNED_INT = 5125;
+    const FLOAT = 5126;
+    const HALF_FLOAT = 36193;
+
+    let channels = 4; // Default RGBA
+    switch (format) {
+      case ALPHA:
+      case LUMINANCE:
+      case RED:
+      case DEPTH_COMPONENT:
+        channels = 1;
+        break;
+      case LUMINANCE_ALPHA:
+      case RG:
+      case DEPTH_STENCIL:
+        channels = 2;
+        break;
+      case RGB:
+        channels = 3;
+        break;
+      case RGBA:
+      default:
+        channels = 4;
+        break;
+    }
+
+    let bytesPerChannel = 1;
+    switch (type) {
+      case UNSIGNED_BYTE:
+        bytesPerChannel = 1;
+        break;
+      case UNSIGNED_SHORT:
+      case HALF_FLOAT:
+        bytesPerChannel = 2;
+        break;
+      case UNSIGNED_INT:
+      case FLOAT:
+        bytesPerChannel = 4;
+        break;
+      default:
+        bytesPerChannel = 1;
+    }
+
+    return channels * bytesPerChannel;
+  }
+
+  /**
+   * Generate a small thumbnail for a texture
+   */
+  private generateTextureThumbnail(texture: THREE.Texture, width: number, height: number): string | undefined {
+    try {
+      const image = texture.image;
+      if (!image) return undefined;
+
+      // Skip if image is too large or not a valid source
+      if (width > 4096 || height > 4096) return undefined;
+
+      const maxSize = 64;
+      const scale = Math.min(maxSize / width, maxSize / height, 1);
+      const thumbWidth = Math.floor(width * scale);
+      const thumbHeight = Math.floor(height * scale);
+
+      // Create canvas for thumbnail
+      const canvas = document.createElement('canvas');
+      canvas.width = thumbWidth;
+      canvas.height = thumbHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return undefined;
+
+      // Try to draw the image
+      if (image instanceof HTMLImageElement || image instanceof HTMLCanvasElement || image instanceof ImageBitmap) {
+        ctx.drawImage(image, 0, 0, thumbWidth, thumbHeight);
+        return canvas.toDataURL('image/png');
+      }
+
+      // For data textures, we'd need special handling
+      if (image.data && image.width && image.height) {
+        // Skip complex data texture rendering for now
+        return undefined;
+      }
+
+      return undefined;
+    } catch {
+      // Silently fail if we can't generate thumbnail
+      return undefined;
+    }
+  }
+
+  /**
+   * Get human-readable format name
+   */
+  private getFormatName(format: number): string {
+    const formatNames: Record<number, string> = {
+      6406: 'Alpha',
+      6407: 'RGB',
+      6408: 'RGBA',
+      6409: 'Luminance',
+      6410: 'LuminanceAlpha',
+      6402: 'Depth',
+      34041: 'DepthStencil',
+      6403: 'Red',
+      33319: 'RG',
+      33320: 'RedInteger',
+      33321: 'RGInteger',
+      36244: 'RGBInteger',
+      36249: 'RGBAInteger',
+      // Compressed formats
+      33776: 'RGB_S3TC_DXT1',
+      33777: 'RGBA_S3TC_DXT1',
+      33778: 'RGBA_S3TC_DXT3',
+      33779: 'RGBA_S3TC_DXT5',
+    };
+    return formatNames[format] || `Format(${format})`;
+  }
+
+  /**
+   * Get human-readable data type name
+   */
+  private getDataTypeName(type: number): string {
+    const typeNames: Record<number, string> = {
+      5121: 'UnsignedByte',
+      5120: 'Byte',
+      5122: 'Short',
+      5123: 'UnsignedShort',
+      5124: 'Int',
+      5125: 'UnsignedInt',
+      5126: 'Float',
+      36193: 'HalfFloat',
+      33635: 'UnsignedShort_4_4_4_4',
+      32819: 'UnsignedShort_5_5_5_1',
+      32820: 'UnsignedShort_5_6_5',
+    };
+    return typeNames[type] || `Type(${type})`;
+  }
+
+  /**
+   * Get human-readable wrap mode name
+   */
+  private getWrapName(wrap: number): string {
+    const wrapNames: Record<number, string> = {
+      10497: 'Repeat',
+      33071: 'ClampToEdge',
+      33648: 'MirroredRepeat',
+    };
+    return wrapNames[wrap] || `Wrap(${wrap})`;
+  }
+
+  /**
+   * Get human-readable filter name
+   */
+  private getFilterName(filter: number): string {
+    const filterNames: Record<number, string> = {
+      9728: 'Nearest',
+      9729: 'Linear',
+      9984: 'NearestMipmapNearest',
+      9985: 'LinearMipmapNearest',
+      9986: 'NearestMipmapLinear',
+      9987: 'LinearMipmapLinear',
+    };
+    return filterNames[filter] || `Filter(${filter})`;
+  }
+
+  /**
+   * Get compression format name
+   */
+  private getCompressionFormat(format: number): string {
+    const compressionNames: Record<number, string> = {
+      33776: 'DXT1 (RGB)',
+      33777: 'DXT1 (RGBA)',
+      33778: 'DXT3',
+      33779: 'DXT5',
+      35916: 'ETC1',
+      36196: 'PVRTC_4bpp_RGB',
+      35840: 'PVRTC_4bpp_RGBA',
+      35841: 'PVRTC_2bpp_RGB',
+      35842: 'PVRTC_2bpp_RGBA',
+      37492: 'ASTC_4x4',
+      37496: 'ASTC_5x5',
+      37808: 'BPTC',
+    };
+    return compressionNames[format] || `Compressed(${format})`;
   }
 
   /**
