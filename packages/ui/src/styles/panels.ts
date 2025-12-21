@@ -882,6 +882,7 @@ export const PANEL_STYLES = `
 .geometry-item-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .geometry-item-name {
@@ -896,17 +897,21 @@ export const PANEL_STYLES = `
 .geometry-item-meta {
   font-size: 10px;
   color: var(--3lens-text-tertiary);
-  font-family: var(--3lens-font-mono);
   margin-top: 2px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.geometry-used-by {
+  color: var(--3lens-text-secondary);
 }
 
 .geometry-item-stats {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .geo-stat-pill {
