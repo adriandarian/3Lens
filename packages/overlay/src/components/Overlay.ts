@@ -7,6 +7,7 @@ import {
   renderMaterialsPanel, attachMaterialsEvents,
   renderGeometryPanel, attachGeometryEvents,
   renderTexturesPanel, attachTexturesEvents,
+  renderRenderTargetsPanel, attachRenderTargetsEvents,
   getSharedStyles,
   createDefaultUIState,
   type UIState,
@@ -68,6 +69,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   { id: 'materials', title: 'Materials', icon: '🎨', iconClass: 'materials', defaultWidth: 700, defaultHeight: 500 },
   { id: 'geometry', title: 'Geometry', icon: '📐', iconClass: 'inspector', defaultWidth: 750, defaultHeight: 500 },
   { id: 'textures', title: 'Textures', icon: '🖼️', iconClass: 'textures', defaultWidth: 800, defaultHeight: 520 },
+  { id: 'render-targets', title: 'Render Targets', icon: '🎯', iconClass: 'render-targets', defaultWidth: 850, defaultHeight: 550 },
 ];
 
 /**
@@ -415,6 +417,8 @@ export class ThreeLensOverlay {
         return this.renderGeometryContent();
       case 'textures':
         return this.renderTexturesContent();
+      case 'render-targets':
+        return this.renderRenderTargetsContent();
       default:
         return '<div class="three-lens-inspector-empty">Panel content</div>';
     }
@@ -474,6 +478,11 @@ export class ThreeLensOverlay {
   private renderTexturesContent(): string {
     this.refreshSnapshot();
     return renderTexturesPanel(this.buildSharedPanelContext(), this.uiState);
+  }
+  
+  private renderRenderTargetsContent(): string {
+    this.refreshSnapshot();
+    return renderRenderTargetsPanel(this.buildSharedPanelContext(), this.uiState);
   }
 
   private mountPanel(panelId: string, panelElement: HTMLElement): void {
@@ -598,6 +607,10 @@ export class ThreeLensOverlay {
     if (panelId === 'textures') {
       this.attachTexturesPanelEvents(panel);
     }
+    
+    if (panelId === 'render-targets') {
+      this.attachRenderTargetsPanelEvents(panel);
+    }
   }
   
   private attachMaterialsPanelEvents(panel: HTMLElement): void {
@@ -639,6 +652,19 @@ export class ThreeLensOverlay {
     );
   }
   
+  private attachRenderTargetsPanelEvents(panel: HTMLElement): void {
+    const container = panel.querySelector(`#three-lens-content-render-targets`) as HTMLElement;
+    if (!container) return;
+    
+    attachRenderTargetsEvents(
+      container,
+      this.buildSharedPanelContext(),
+      this.uiState,
+      (updates) => this.updateUIState(updates),
+      () => this.updateRenderTargetsPanel()
+    );
+  }
+  
   private updateMaterialsPanel(): void {
     const content = document.getElementById('three-lens-content-materials');
     if (!content) return;
@@ -666,11 +692,21 @@ export class ThreeLensOverlay {
     if (panel) this.attachTexturesPanelEvents(panel);
   }
   
+  private updateRenderTargetsPanel(): void {
+    const content = document.getElementById('three-lens-content-render-targets');
+    if (!content) return;
+    
+    content.innerHTML = this.renderRenderTargetsContent();
+    const panel = document.getElementById('three-lens-panel-render-targets');
+    if (panel) this.attachRenderTargetsPanelEvents(panel);
+  }
+  
   private updatePanelById(panelId: string): void {
     switch (panelId) {
       case 'materials': this.updateMaterialsPanel(); break;
       case 'geometry': this.updateGeometryPanel(); break;
       case 'textures': this.updateTexturesPanel(); break;
+      case 'render-targets': this.updateRenderTargetsPanel(); break;
     }
   }
 
@@ -815,6 +851,7 @@ export class ThreeLensOverlay {
       case 'materials': return this.renderMaterialsContent();
       case 'geometry': return this.renderGeometryContent();
       case 'textures': return this.renderTexturesContent();
+      case 'render-targets': return this.renderRenderTargetsContent();
       default: {
         const definition = this.panelDefinitions.get(panelId);
         if (definition?.render) {

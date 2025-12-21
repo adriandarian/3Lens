@@ -459,6 +459,16 @@ export class SceneObserver {
   }
 
   /**
+   * Create RenderTargetData from a three.js WebGLRenderTarget (public version)
+   * Used by DevtoolProbe for registered render targets
+   */
+  createRenderTargetDataPublic(rt: THREE.WebGLRenderTarget, usage: RenderTargetUsage = 'custom'): RenderTargetData {
+    // Set usage marker before creating data
+    (rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage = usage;
+    return this.createRenderTargetData(rt);
+  }
+
+  /**
    * Create RenderTargetData from a three.js WebGLRenderTarget
    */
   private createRenderTargetData(rt: THREE.WebGLRenderTarget): RenderTargetData {

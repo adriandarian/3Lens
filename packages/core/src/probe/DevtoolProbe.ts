@@ -32,6 +32,7 @@ export class DevtoolProbe {
   private _rendererAdapter: RendererAdapter | null = null;
   private _transport: Transport | null = null;
   private _sceneObservers: Map<THREE.Scene, SceneObserver> = new Map();
+  private _registeredRenderTargets: Map<string, { rt: THREE.WebGLRenderTarget; usage: import('../types').RenderTargetUsage }> = new Map();
   private _selectedObject: THREE.Object3D | null = null;
   private _hoveredObject: THREE.Object3D | null = null;
   private _logicalEntities: Map<string, LogicalEntity> = new Map();
@@ -153,6 +154,49 @@ export class DevtoolProbe {
    */
   getObservedScenes(): THREE.Scene[] {
     return Array.from(this._sceneObservers.keys());
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // RENDER TARGET MANAGEMENT
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Register a render target for observation
+   * @param renderTarget The WebGLRenderTarget to observe
+   * @param usage The usage type for this render target (helps with categorization)
+   */
+  observeRenderTarget(
+    renderTarget: THREE.WebGLRenderTarget,
+    usage: import('../types').RenderTargetUsage = 'custom'
+  ): void {
+    if (this._registeredRenderTargets.has(renderTarget.uuid)) {
+      this.log('Render target already being observed', { uuid: renderTarget.uuid });
+      return;
+    }
+
+    this._registeredRenderTargets.set(renderTarget.uuid, { rt: renderTarget, usage });
+    this.log('Observing render target', { 
+      uuid: renderTarget.uuid,
+      name: renderTarget.texture?.name || '<unnamed>',
+      size: `${renderTarget.width}x${renderTarget.height}`,
+      usage
+    });
+  }
+
+  /**
+   * Stop observing a render target
+   */
+  unobserveRenderTarget(renderTarget: THREE.WebGLRenderTarget): void {
+    if (this._registeredRenderTargets.delete(renderTarget.uuid)) {
+      this.log('Stopped observing render target', { uuid: renderTarget.uuid });
+    }
+  }
+
+  /**
+   * Get all registered render targets
+   */
+  getRegisteredRenderTargets(): Map<string, { rt: THREE.WebGLRenderTarget; usage: import('../types').RenderTargetUsage }> {
+    return this._registeredRenderTargets;
   }
 
   /**
@@ -312,6 +356,30 @@ export class DevtoolProbe {
       combinedRenderTargetsSummary.mrtCount += rtSummary.mrtCount;
       combinedRenderTargetsSummary.msaaCount += rtSummary.msaaCount;
     }
+
+    // Add registered render targets (from observeRenderTarget calls)
+    const existingRtUuids = new Set(allRenderTargets.map(rt => rt.uuid));
+    const firstObserver = this._sceneObservers.values().next().value as SceneObserver | undefined;
+    
+    for (const [uuid, { rt, usage }] of this._registeredRenderTargets) {
+      if (existingRtUuids.has(uuid)) continue;
+      
+      // Use the first observer to create the render target data
+      if (firstObserver) {
+        const rtData = firstObserver.createRenderTargetDataPublic(rt, usage);
+        allRenderTargets.push(rtData);
+        existingRtUuids.add(uuid);
+        
+        // Update summary
+        combinedRenderTargetsSummary.totalMemoryBytes += rtData.memoryBytes;
+        if (usage === 'shadow-map') combinedRenderTargetsSummary.shadowMapCount++;
+        if (usage === 'post-process') combinedRenderTargetsSummary.postProcessCount++;
+        if (rtData.isCubeTarget) combinedRenderTargetsSummary.cubeTargetCount++;
+        if (rtData.colorAttachmentCount > 1) combinedRenderTargetsSummary.mrtCount++;
+        if (rtData.samples > 0) combinedRenderTargetsSummary.msaaCount++;
+      }
+    }
+    combinedRenderTargetsSummary.totalCount = allRenderTargets.length;
 
     const snapshot: SceneSnapshot = {
       snapshotId: this.generateId(),
