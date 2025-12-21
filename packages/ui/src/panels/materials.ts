@@ -467,7 +467,7 @@ function formatUniformValue(uniform: { type: string; name: string; value: unknow
 export function attachMaterialsEvents(
   container: HTMLElement,
   context: PanelContext,
-  _state: UIState,
+  state: UIState,
   updateState: (updates: Partial<UIState>) => void,
   rerender: () => void
 ): void {
@@ -478,7 +478,9 @@ export function attachMaterialsEvents(
 
     itemEl.addEventListener('click', () => {
       if (!uuid) return;
-      updateState({ selectedMaterialId: uuid });
+      // Toggle selection - clicking selected item deselects it
+      const newSelection = state.selectedMaterialId === uuid ? null : uuid;
+      updateState({ selectedMaterialId: newSelection });
       rerender();
     });
   });

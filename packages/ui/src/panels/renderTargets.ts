@@ -414,7 +414,9 @@ export function attachRenderTargetsEvents(
     itemEl.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!uuid) return;
-      updateState({ selectedRenderTargetId: uuid });
+      // Toggle selection - clicking selected item deselects it
+      const newSelection = state.selectedRenderTargetId === uuid ? null : uuid;
+      updateState({ selectedRenderTargetId: newSelection });
       rerender();
     });
   });
