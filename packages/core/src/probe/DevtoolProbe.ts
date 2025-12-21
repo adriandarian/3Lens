@@ -183,6 +183,7 @@ export class DevtoolProbe {
    * Take a manual snapshot of all observed scenes
    */
   takeSnapshot(): SceneSnapshot {
+    console.log('[3Lens Probe] Taking snapshot, observers:', this._sceneObservers.size);
     const scenes: SceneNode[] = [];
     let allMaterials: import('../types').MaterialData[] = [];
     let combinedMaterialSummary: import('../types').MaterialsSummary = {
@@ -364,6 +365,21 @@ export class DevtoolProbe {
    */
   getSelectedObject(): THREE.Object3D | null {
     return this._selectedObject;
+  }
+
+  /**
+   * Update a material property by UUID
+   * Used by the overlay and extension to live-edit materials
+   */
+  updateMaterialProperty(materialUuid: string, property: string, value: unknown): void {
+    for (const observer of this._sceneObservers.values()) {
+      const material = observer.findMaterialByUuid(materialUuid);
+      if (material) {
+        this.applyMaterialPropertyChange(material, property, value);
+        return;
+      }
+    }
+    this.log('Material not found for property update', { uuid: materialUuid });
   }
 
   /**

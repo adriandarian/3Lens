@@ -307,6 +307,8 @@ export const OVERLAY_STYLES = `
   min-height: 0;
   overflow: auto;
   padding: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .three-lens-panel-content::-webkit-scrollbar {
@@ -614,7 +616,9 @@ export const OVERLAY_STYLES = `
 
 /* Remove padding from panel content for split view and full tree */
 .three-lens-panel-content:has(.three-lens-split-view),
-.three-lens-panel-content:has(.three-lens-tree-full) {
+.three-lens-panel-content:has(.three-lens-tree-full),
+.three-lens-panel-content:has(.panel-split-view),
+.three-lens-panel-content:has(.panel-empty-state) {
   padding: 0;
 }
 

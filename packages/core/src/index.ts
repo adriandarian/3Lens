@@ -62,7 +62,7 @@ export type {
 export type { Unsubscribe } from './types/common';
 
 // Core
-export { DevtoolProbe } from './probe/DevtoolProbe';
+export { DevtoolProbe, PROBE_VERSION } from './probe/DevtoolProbe';
 export { createProbe } from './probe/createProbe';
 
 // Helpers

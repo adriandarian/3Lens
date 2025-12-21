@@ -81,6 +81,9 @@ importers:
       '@3lens/core':
         specifier: workspace:*
         version: link:../core
+      '@3lens/ui':
+        specifier: workspace:*
+        version: link:../ui
     devDependencies:
       '@types/chrome':
         specifier: ^0.0.260
@@ -90,6 +93,19 @@ importers:
         version: 0.160.1
 
   packages/overlay:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../core
+      '@3lens/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+
+  packages/ui:
     dependencies:
       '@3lens/core':
         specifier: workspace:*
