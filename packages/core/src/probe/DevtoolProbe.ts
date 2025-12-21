@@ -211,6 +211,16 @@ export class DevtoolProbe {
       videoTextureCount: 0,
       renderTargetCount: 0,
     };
+    let allRenderTargets: import('../types').RenderTargetData[] = [];
+    let combinedRenderTargetsSummary: import('../types').RenderTargetsSummary = {
+      totalCount: 0,
+      totalMemoryBytes: 0,
+      shadowMapCount: 0,
+      postProcessCount: 0,
+      cubeTargetCount: 0,
+      mrtCount: 0,
+      msaaCount: 0,
+    };
 
     for (const [scene, observer] of this._sceneObservers) {
       scenes.push(observer.createSceneNode(scene));
@@ -280,6 +290,27 @@ export class DevtoolProbe {
       for (const [type, count] of Object.entries(texSummary.byType)) {
         combinedTextureSummary.byType[type] = (combinedTextureSummary.byType[type] || 0) + count;
       }
+
+      // Collect render targets from each scene
+      const { renderTargets, summary: rtSummary } = observer.collectRenderTargets();
+      
+      // Merge render targets (deduplicate by UUID)
+      const existingRtUuids = new Set(allRenderTargets.map(rt => rt.uuid));
+      for (const rt of renderTargets) {
+        if (!existingRtUuids.has(rt.uuid)) {
+          allRenderTargets.push(rt);
+          existingRtUuids.add(rt.uuid);
+        }
+      }
+
+      // Merge render targets summary
+      combinedRenderTargetsSummary.totalCount = allRenderTargets.length;
+      combinedRenderTargetsSummary.totalMemoryBytes += rtSummary.totalMemoryBytes;
+      combinedRenderTargetsSummary.shadowMapCount += rtSummary.shadowMapCount;
+      combinedRenderTargetsSummary.postProcessCount += rtSummary.postProcessCount;
+      combinedRenderTargetsSummary.cubeTargetCount += rtSummary.cubeTargetCount;
+      combinedRenderTargetsSummary.mrtCount += rtSummary.mrtCount;
+      combinedRenderTargetsSummary.msaaCount += rtSummary.msaaCount;
     }
 
     const snapshot: SceneSnapshot = {
@@ -292,6 +323,8 @@ export class DevtoolProbe {
       geometriesSummary: combinedGeometrySummary,
       textures: allTextures,
       texturesSummary: combinedTextureSummary,
+      renderTargets: allRenderTargets,
+      renderTargetsSummary: combinedRenderTargetsSummary,
     };
 
     this.sendMessage({

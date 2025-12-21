@@ -10,6 +10,7 @@ import type {
   MaterialData,
   GeometryData,
   TextureData,
+  RenderTargetData,
   BenchmarkScore,
 } from '@3lens/core';
 
@@ -50,6 +51,7 @@ export interface UIState {
   selectedMaterialId: string | null;
   selectedGeometryId: string | null;
   selectedTextureId: string | null;
+  selectedRenderTargetId: string | null;
   
   // Expansion state
   expandedNodes: Set<string>;
@@ -58,6 +60,7 @@ export interface UIState {
   materialsSearch: string;
   geometrySearch: string;
   texturesSearch: string;
+  renderTargetsSearch: string;
   
   // Visualization state
   geometryVisualization: {
@@ -68,6 +71,10 @@ export interface UIState {
   
   // Texture preview
   texturePreviewChannel: 'rgb' | 'r' | 'g' | 'b' | 'a';
+  
+  // Render target preview
+  renderTargetPreviewMode: 'color' | 'depth' | 'r' | 'g' | 'b' | 'a' | 'heatmap';
+  renderTargetZoom: number;
   
   // Stats history
   frameHistory: number[];
@@ -83,16 +90,20 @@ export function createDefaultUIState(): UIState {
     selectedMaterialId: null,
     selectedGeometryId: null,
     selectedTextureId: null,
+    selectedRenderTargetId: null,
     expandedNodes: new Set(),
     materialsSearch: '',
     geometrySearch: '',
     texturesSearch: '',
+    renderTargetsSearch: '',
     geometryVisualization: {
       wireframe: new Set(),
       boundingBox: new Set(),
       normals: new Set(),
     },
     texturePreviewChannel: 'rgb',
+    renderTargetPreviewMode: 'color',
+    renderTargetZoom: 1,
     frameHistory: [],
     fpsHistory: [],
   };
@@ -119,5 +130,5 @@ export type PanelEventAttacher = (
 ) => void;
 
 // Re-export types from core for convenience
-export type { SceneSnapshot, SceneNode, FrameStats, MaterialData, GeometryData, TextureData, BenchmarkScore };
+export type { SceneSnapshot, SceneNode, FrameStats, MaterialData, GeometryData, TextureData, RenderTargetData, BenchmarkScore };
 
