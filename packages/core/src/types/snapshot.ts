@@ -2,6 +2,7 @@ import type { TrackedObjectRef } from './objects';
 import type { MaterialData, MaterialsSummary } from './materials';
 import type { GeometryData, GeometrySummary } from './geometry';
 import type { TextureData, TexturesSummary } from './textures';
+import type { RenderTargetData, RenderTargetsSummary } from './renderTargets';
 
 /**
  * Complete scene snapshot
@@ -51,6 +52,16 @@ export interface SceneSnapshot {
    * Summary of textures
    */
   texturesSummary?: TexturesSummary;
+
+  /**
+   * All render targets in the observed scenes
+   */
+  renderTargets?: RenderTargetData[];
+
+  /**
+   * Summary of render targets
+   */
+  renderTargetsSummary?: RenderTargetsSummary;
 }
 
 /**

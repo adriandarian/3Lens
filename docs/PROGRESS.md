@@ -222,12 +222,15 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Render target thumbnail grid | ⬜ | |
-| Click to inspect | ⬜ | |
-| Pixel value display | ⬜ | |
-| Channel toggles (RGB/A/Depth) | ⬜ | |
-| Heatmap visualization | ⬜ | |
-| Save as image | ⬜ | |
+| Render target thumbnail grid | ✅ | Grid layout with 16:9 aspect thumbnails, icons for empty RT |
+| Click to inspect | ✅ | Selection with full inspector panel |
+| Pixel value display | ✅ | Coordinate tracking on hover (value readback pending) |
+| Channel toggles (RGB/A/Depth) | ✅ | RGB, R, G, B, A, Depth, Heatmap mode buttons |
+| Heatmap visualization | ✅ | CSS filter-based depth heatmap |
+| Save as image | ✅ | Download color and depth as PNG |
+| Zoom controls | ✅ | In/out/fit zoom for preview |
+| Buffer info display | ✅ | Depth, stencil, depth texture, MSAA indicators |
+| MRT support | ✅ | Multiple Render Target attachment display |
 
 ## 2.2 Interactive Debugging
 

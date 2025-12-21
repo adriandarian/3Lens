@@ -21,6 +21,9 @@ import type {
   TextureSourceInfo,
   TextureMaterialUsage,
   TexturesSummary,
+  RenderTargetData,
+  RenderTargetsSummary,
+  RenderTargetUsage,
 } from '../types';
 
 export interface SceneObserverOptions {
@@ -376,6 +379,191 @@ export class SceneObserver {
     };
 
     return { textures, summary };
+  }
+
+  /**
+   * Collect all render targets from the scene
+   */
+  collectRenderTargets(): { renderTargets: RenderTargetData[]; summary: RenderTargetsSummary } {
+    const renderTargetMap = new Map<string, THREE.WebGLRenderTarget>();
+
+    // Traverse scene to find render targets used by lights (shadow maps)
+    this.scene.traverse((obj) => {
+      // Check for shadow-casting lights with shadow maps
+      if (this.isLight(obj) && obj.castShadow && 'shadow' in obj) {
+        const shadow = (obj as THREE.DirectionalLight | THREE.SpotLight | THREE.PointLight).shadow;
+        if (shadow?.map) {
+          const rt = shadow.map as THREE.WebGLRenderTarget;
+          if (rt.uuid && !renderTargetMap.has(rt.uuid)) {
+            // Mark as shadow map
+            (rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage = 'shadow-map';
+            renderTargetMap.set(rt.uuid, rt);
+          }
+        }
+      }
+
+      // Check for meshes with materials that use render targets (env maps, reflection probes, etc.)
+      if (this.isMesh(obj)) {
+        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        for (const material of materials) {
+          if (!material) continue;
+          
+          // Check for envMap that might be from a render target
+          if ('envMap' in material && material.envMap) {
+            const tex = material.envMap as THREE.Texture;
+            if ('isRenderTargetTexture' in tex && tex.isRenderTargetTexture) {
+              // Try to find the parent render target
+              // (Note: This is tricky since the texture doesn't have a direct reference to its RT)
+            }
+          }
+        }
+      }
+    });
+
+    // Convert to RenderTargetData array
+    const renderTargets: RenderTargetData[] = [];
+    let totalMemoryBytes = 0;
+    let shadowMapCount = 0;
+    let postProcessCount = 0;
+    let cubeTargetCount = 0;
+    let mrtCount = 0;
+    let msaaCount = 0;
+
+    for (const [, rt] of renderTargetMap) {
+      const data = this.createRenderTargetData(rt);
+      renderTargets.push(data);
+
+      // Update summary stats
+      totalMemoryBytes += data.memoryBytes;
+      if (data.usage === 'shadow-map') shadowMapCount++;
+      if (data.usage === 'post-process') postProcessCount++;
+      if (data.isCubeTarget) cubeTargetCount++;
+      if (data.colorAttachmentCount > 1) mrtCount++;
+      if (data.samples > 0) msaaCount++;
+    }
+
+    // Sort by memory usage (largest first)
+    renderTargets.sort((a, b) => b.memoryBytes - a.memoryBytes);
+
+    const summary: RenderTargetsSummary = {
+      totalCount: renderTargets.length,
+      totalMemoryBytes,
+      shadowMapCount,
+      postProcessCount,
+      cubeTargetCount,
+      mrtCount,
+      msaaCount,
+    };
+
+    return { renderTargets, summary };
+  }
+
+  /**
+   * Create RenderTargetData from a three.js WebGLRenderTarget
+   */
+  private createRenderTargetData(rt: THREE.WebGLRenderTarget): RenderTargetData {
+    const texture = rt.texture;
+    const isCube = 'isWebGLCubeRenderTarget' in rt;
+    const isMultiple = 'isWebGLMultipleRenderTargets' in rt;
+    const colorAttachmentCount = isMultiple ? (rt as unknown as { count: number }).count || 1 : 1;
+    
+    // Get usage from our marker or try to detect
+    const usage = ((rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage) || 'unknown';
+
+    // Estimate memory
+    const bytesPerPixel = this.getBytesPerPixel(texture.format, texture.type as number);
+    let memoryBytes = rt.width * rt.height * bytesPerPixel * colorAttachmentCount;
+    
+    // Add depth buffer memory
+    if (rt.depthBuffer) {
+      memoryBytes += rt.width * rt.height * 4; // Assume 32-bit depth
+    }
+    if (rt.stencilBuffer) {
+      memoryBytes += rt.width * rt.height * 1; // 8-bit stencil
+    }
+    
+    // MSAA multiplier
+    if (rt.samples > 0) {
+      memoryBytes *= rt.samples;
+    }
+    
+    // Cube faces
+    if (isCube) {
+      memoryBytes *= 6;
+    }
+
+    // Generate thumbnail
+    let thumbnail: string | undefined;
+    // Note: Generating thumbnails from render targets requires reading back from GPU
+    // which is expensive. For now, we skip this - thumbnails would need to be
+    // generated during the render pass when the RT is active.
+
+    const data: RenderTargetData = {
+      uuid: rt.uuid,
+      name: texture.name || '',
+      type: rt.constructor.name || 'WebGLRenderTarget',
+      dimensions: {
+        width: rt.width,
+        height: rt.height,
+      },
+      scissorTest: rt.scissorTest,
+      depthBuffer: rt.depthBuffer,
+      stencilBuffer: rt.stencilBuffer,
+      isCubeTarget: isCube,
+      samples: rt.samples || 0,
+      colorAttachmentCount,
+      textureFormat: texture.format,
+      textureFormatName: this.getFormatName(texture.format),
+      textureType: texture.type as number,
+      textureTypeName: this.getDataTypeName(texture.type as number),
+      hasDepthTexture: rt.depthTexture !== null && rt.depthTexture !== undefined,
+      colorSpace: texture.colorSpace || 'srgb',
+      filtering: {
+        mag: texture.magFilter,
+        min: texture.minFilter,
+        magName: this.getFilterName(texture.magFilter),
+        minName: this.getFilterName(texture.minFilter),
+      },
+      wrap: {
+        s: texture.wrapS,
+        t: texture.wrapT,
+        sName: this.getWrapName(texture.wrapS),
+        tName: this.getWrapName(texture.wrapT),
+      },
+      generateMipmaps: texture.generateMipmaps,
+      memoryBytes,
+      thumbnail,
+      usage,
+      renderCount: 0, // Would need to track this separately
+    };
+
+    // Add depth texture format if present
+    if (rt.depthTexture) {
+      data.depthTextureFormat = rt.depthTexture.format;
+      data.depthTextureFormatName = this.getFormatName(rt.depthTexture.format);
+    }
+
+    // Add viewport if different from full size
+    if (rt.viewport) {
+      data.viewport = {
+        x: rt.viewport.x,
+        y: rt.viewport.y,
+        width: rt.viewport.width,
+        height: rt.viewport.height,
+      };
+    }
+
+    // Add scissor if enabled
+    if (rt.scissorTest && rt.scissor) {
+      data.scissor = {
+        x: rt.scissor.x,
+        y: rt.scissor.y,
+        width: rt.scissor.width,
+        height: rt.scissor.height,
+      };
+    }
+
+    return data;
   }
 
   /**
