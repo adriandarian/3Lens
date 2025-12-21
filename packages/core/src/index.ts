@@ -50,6 +50,26 @@ export type {
 } from './types/geometry';
 
 export type {
+  RenderTargetData,
+  RenderTargetsSummary,
+  RenderTargetUsage,
+} from './types/renderTargets';
+
+export type {
+  MaterialData,
+  MaterialTextureRef,
+  UniformData,
+  MaterialsSummary,
+} from './types/materials';
+
+export type {
+  TextureData,
+  TextureSourceInfo,
+  TextureMaterialUsage,
+  TexturesSummary,
+} from './types/textures';
+
+export type {
   RendererAdapter,
   RendererKind,
 } from './types/adapter';

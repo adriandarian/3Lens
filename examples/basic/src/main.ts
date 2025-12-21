@@ -21,34 +21,68 @@ camera.name = 'MainCamera';
 camera.position.set(5, 5, 8);
 camera.lookAt(0, 0, 0);
 
-// Renderer
+// Renderer with shadows enabled
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
-  alpha: true,
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setClearColor(0x0a0e14);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
 // ───────────────────────────────────────────────────────────────
-// Lights
+// Lights with Shadow Maps (creates render targets!)
 // ───────────────────────────────────────────────────────────────
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
 ambientLight.name = 'AmbientLight';
 scene.add(ambientLight);
 
+// Directional light with shadow map (2048x2048 render target)
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.name = 'DirectionalLight';
 directionalLight.position.set(5, 10, 5);
 directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 2048;
+directionalLight.shadow.mapSize.height = 2048;
+directionalLight.shadow.camera.near = 0.5;
+directionalLight.shadow.camera.far = 50;
+directionalLight.shadow.camera.left = -10;
+directionalLight.shadow.camera.right = 10;
+directionalLight.shadow.camera.top = 10;
+directionalLight.shadow.camera.bottom = -10;
+directionalLight.shadow.bias = -0.0001;
 scene.add(directionalLight);
 
+// Point light with shadow map (512x512 cube render target)
 const pointLight = new THREE.PointLight(0x22d3ee, 2, 20);
 pointLight.name = 'PointLight_Cyan';
 pointLight.position.set(-3, 3, 3);
+pointLight.castShadow = true;
+pointLight.shadow.mapSize.width = 512;
+pointLight.shadow.mapSize.height = 512;
+pointLight.shadow.camera.near = 0.5;
+pointLight.shadow.camera.far = 20;
 scene.add(pointLight);
+
+// Spot light with shadow map (1024x1024 render target)
+const spotLight = new THREE.SpotLight(0xf472b6, 3);
+spotLight.name = 'SpotLight_Pink';
+spotLight.position.set(4, 6, -3);
+spotLight.angle = Math.PI / 6;
+spotLight.penumbra = 0.3;
+spotLight.decay = 2;
+spotLight.distance = 30;
+spotLight.castShadow = true;
+spotLight.shadow.mapSize.width = 1024;
+spotLight.shadow.mapSize.height = 1024;
+spotLight.shadow.camera.near = 1;
+spotLight.shadow.camera.far = 30;
+spotLight.target.position.set(0, 0, 0);
+scene.add(spotLight);
+scene.add(spotLight.target);
 
 // ───────────────────────────────────────────────────────────────
 // Objects
@@ -85,7 +119,7 @@ const cubeGroup = new THREE.Group();
 cubeGroup.name = 'CubeGroup';
 scene.add(cubeGroup);
 
-// Create shared and unique materials for cubes (to demonstrate material sharing)
+// Create shared and unique materials for cubes
 const goldMaterial = new THREE.MeshStandardMaterial({
   name: 'GoldMaterial',
   color: 0xfbbf24,
@@ -102,14 +136,14 @@ const emeraldMaterial = new THREE.MeshStandardMaterial({
 
 // 8 cubes: some share materials, some have unique materials
 const cubeConfigs = [
-  { color: 0xfbbf24, material: goldMaterial },      // Cube 1 - shared gold
-  { color: 0x34d399, material: emeraldMaterial },   // Cube 2 - shared emerald
-  { color: 0xfb7185, material: null },              // Cube 3 - unique rose
-  { color: 0xfbbf24, material: goldMaterial },      // Cube 4 - shared gold
-  { color: 0xa78bfa, material: null },              // Cube 5 - unique violet
-  { color: 0x34d399, material: emeraldMaterial },   // Cube 6 - shared emerald
-  { color: 0xf472b6, material: null },              // Cube 7 - unique pink
-  { color: 0xfbbf24, material: goldMaterial },      // Cube 8 - shared gold
+  { color: 0xfbbf24, material: goldMaterial },
+  { color: 0x34d399, material: emeraldMaterial },
+  { color: 0xfb7185, material: null },
+  { color: 0xfbbf24, material: goldMaterial },
+  { color: 0xa78bfa, material: null },
+  { color: 0x34d399, material: emeraldMaterial },
+  { color: 0xf472b6, material: null },
+  { color: 0xfbbf24, material: goldMaterial },
 ];
 
 for (let i = 0; i < 8; i++) {
@@ -145,10 +179,121 @@ torusKnot.castShadow = true;
 scene.add(torusKnot);
 
 // ───────────────────────────────────────────────────────────────
+// RENDER TARGET DEMO 1: Reflective Mirror Sphere
+// Uses a CubeCamera to capture environment into a cube render target
+// ───────────────────────────────────────────────────────────────
+
+const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
+  generateMipmaps: true,
+  minFilter: THREE.LinearMipmapLinearFilter,
+});
+cubeRenderTarget.texture.name = 'ReflectionCubeMap';
+
+const cubeCamera = new THREE.CubeCamera(0.1, 100, cubeRenderTarget);
+cubeCamera.name = 'ReflectionCubeCamera';
+scene.add(cubeCamera);
+
+// Chrome mirror ball
+const mirrorSphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
+const mirrorMaterial = new THREE.MeshStandardMaterial({
+  name: 'ChromeMirrorMaterial',
+  color: 0xffffff,
+  roughness: 0.0,
+  metalness: 1.0,
+  envMap: cubeRenderTarget.texture,
+  envMapIntensity: 1.0,
+});
+const mirrorSphere = new THREE.Mesh(mirrorSphereGeometry, mirrorMaterial);
+mirrorSphere.name = 'MirrorBall';
+mirrorSphere.position.set(-3, 0.7, -2);
+mirrorSphere.castShadow = true;
+scene.add(mirrorSphere);
+
+// ───────────────────────────────────────────────────────────────
+// RENDER TARGET DEMO 2: Floating Monitor with Live Camera Feed
+// Shows a bird's eye view of the scene on a floating screen
+// ───────────────────────────────────────────────────────────────
+
+// Create render target for the monitor display
+const monitorRT = new THREE.WebGLRenderTarget(512, 512, {
+  minFilter: THREE.LinearFilter,
+  magFilter: THREE.LinearFilter,
+});
+monitorRT.texture.name = 'MonitorFeed';
+
+// Overhead camera looking down at the scene
+const overheadCamera = new THREE.PerspectiveCamera(70, 1, 0.1, 100);
+overheadCamera.name = 'OverheadCamera';
+overheadCamera.position.set(0, 12, 0);
+overheadCamera.lookAt(0, 0, 0);
+
+// Monitor group (screen + frame + stand)
+const monitorGroup = new THREE.Group();
+monitorGroup.name = 'FloatingMonitor';
+monitorGroup.position.set(6, 2.5, 0);
+monitorGroup.rotation.y = -Math.PI / 3;
+scene.add(monitorGroup);
+
+// Monitor screen (shows the render target)
+const screenGeometry = new THREE.PlaneGeometry(2, 1.5);
+const screenMaterial = new THREE.MeshBasicMaterial({
+  name: 'MonitorScreenMaterial',
+  map: monitorRT.texture,
+});
+const monitorScreen = new THREE.Mesh(screenGeometry, screenMaterial);
+monitorScreen.name = 'MonitorScreen';
+monitorGroup.add(monitorScreen);
+
+// Glowing frame around the monitor
+const frameGeometry = new THREE.BoxGeometry(2.2, 1.7, 0.1);
+const frameMaterial = new THREE.MeshStandardMaterial({
+  name: 'MonitorFrameMaterial',
+  color: 0x22d3ee,
+  roughness: 0.3,
+  metalness: 0.9,
+  emissive: 0x22d3ee,
+  emissiveIntensity: 0.3,
+});
+const monitorFrame = new THREE.Mesh(frameGeometry, frameMaterial);
+monitorFrame.name = 'MonitorFrame';
+monitorFrame.position.z = -0.06;
+monitorGroup.add(monitorFrame);
+
+// Monitor stand/pole
+const standGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2, 16);
+const standMaterial = new THREE.MeshStandardMaterial({
+  color: 0x374151,
+  roughness: 0.5,
+  metalness: 0.8,
+});
+const monitorStand = new THREE.Mesh(standGeometry, standMaterial);
+monitorStand.name = 'MonitorStand';
+monitorStand.position.set(0, -1.6, -0.1);
+monitorGroup.add(monitorStand);
+
+// Stand base
+const baseGeometry = new THREE.CylinderGeometry(0.3, 0.4, 0.1, 16);
+const monitorBase = new THREE.Mesh(baseGeometry, standMaterial);
+monitorBase.name = 'MonitorBase';
+monitorBase.position.set(0, -2.6, -0.1);
+monitorGroup.add(monitorBase);
+
+// Label text (using a small plane with emissive material)
+const labelGeometry = new THREE.PlaneGeometry(1.5, 0.2);
+const labelMaterial = new THREE.MeshBasicMaterial({
+  color: 0x22d3ee,
+  transparent: true,
+  opacity: 0.8,
+});
+const monitorLabel = new THREE.Mesh(labelGeometry, labelMaterial);
+monitorLabel.name = 'MonitorLabel';
+monitorLabel.position.set(0, -0.95, 0.01);
+monitorGroup.add(monitorLabel);
+
+// ───────────────────────────────────────────────────────────────
 // 3Lens Integration
 // ───────────────────────────────────────────────────────────────
 
-// Create the probe with performance rules
 const probe = createProbe({
   appName: 'Basic Example',
   debug: true,
@@ -159,14 +304,14 @@ const probe = createProbe({
   },
 });
 
-// Enable selection highlighting in the 3D scene
 probe.setThreeReference(THREE);
-
-// Attach renderer and scene
 probe.observeRenderer(renderer);
 probe.observeScene(scene);
 
-// Create the floating panel overlay UI
+// Register our custom render targets for the Render Targets panel
+probe.observeRenderTarget(cubeRenderTarget, 'reflection');
+probe.observeRenderTarget(monitorRT, 'custom');
+
 const overlay = createOverlay(probe);
 
 // ───────────────────────────────────────────────────────────────
@@ -174,10 +319,12 @@ const overlay = createOverlay(probe);
 // ───────────────────────────────────────────────────────────────
 
 let time = 0;
+let frameCount = 0;
 
 function animate() {
   requestAnimationFrame(animate);
   time += 0.016;
+  frameCount++;
 
   // Rotate cubes
   cubeGroup.children.forEach((cube, i) => {
@@ -190,14 +337,43 @@ function animate() {
   torusKnot.rotation.x += 0.005;
   torusKnot.rotation.y += 0.01;
 
-  // Pulse sphere
+  // Pulse central sphere
   const scale = 1 + Math.sin(time * 3) * 0.1;
   sphere.scale.set(scale, scale, scale);
 
-  // Move point light
+  // Move point light in a circle
   pointLight.position.x = Math.sin(time) * 5;
   pointLight.position.z = Math.cos(time) * 5;
 
+  // Orbit spot light
+  spotLight.position.x = Math.cos(time * 0.5) * 6;
+  spotLight.position.z = Math.sin(time * 0.5) * 6;
+
+  // Gently bob the mirror sphere
+  mirrorSphere.position.y = 0.7 + Math.sin(time * 1.2) * 0.2;
+
+  // Rotate monitor slightly
+  monitorGroup.rotation.y = -Math.PI / 3 + Math.sin(time * 0.3) * 0.1;
+
+  // Update cube camera for mirror reflections (every 10 frames)
+  if (frameCount % 10 === 0) {
+    mirrorSphere.visible = false;
+    cubeCamera.position.copy(mirrorSphere.position);
+    cubeCamera.update(renderer, scene);
+    mirrorSphere.visible = true;
+  }
+
+  // Render overhead camera view to monitor (every 5 frames)
+  if (frameCount % 5 === 0) {
+    monitorScreen.visible = false;
+    renderer.setRenderTarget(monitorRT);
+    renderer.clear();
+    renderer.render(scene, overheadCamera);
+    renderer.setRenderTarget(null);
+    monitorScreen.visible = true;
+  }
+
+  // Main render
   renderer.render(scene, camera);
 }
 
@@ -224,6 +400,9 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// Log that we're ready
 console.log('🔍 3Lens initialized. Press Ctrl+Shift+D to toggle the devtool.');
-
+console.log('');
+console.log('📺 Render Targets in this demo:');
+console.log('   • 3x Shadow Maps (DirectionalLight, PointLight, SpotLight)');
+console.log('   • 1x Cube Render Target (Mirror Ball reflections)');
+console.log('   • 1x 2D Render Target (Floating Monitor feed)');
