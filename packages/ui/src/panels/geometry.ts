@@ -2,8 +2,33 @@
  * Geometry Panel - Shared renderer for geometry inspection
  */
 
-import type { PanelContext, UIState, GeometryData, SceneSnapshot } from '../types';
+import type { PanelContext, UIState, GeometryData, SceneSnapshot, SceneNode } from '../types';
 import { escapeHtml, formatNumber, formatBytes, getGeometryIcon, getShortTypeName } from '../utils/format';
+
+/**
+ * Build a map of debug ID -> mesh name from the scene tree
+ */
+function buildMeshNameMap(snapshot: SceneSnapshot | null): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!snapshot?.scenes) return map;
+
+  function traverse(node: SceneNode) {
+    const name = node.ref.name || node.ref.objectType;
+    map.set(node.ref.debugId, name);
+    
+    if (node.children) {
+      for (const child of node.children) {
+        traverse(child);
+      }
+    }
+  }
+
+  for (const scene of snapshot.scenes) {
+    traverse(scene);
+  }
+
+  return map;
+}
 
 /**
  * Render the geometry panel content
@@ -26,6 +51,22 @@ export function renderGeometryPanel(
     `;
   }
 
+  // Build a map of debugId -> name from the scene tree
+  const meshNames = buildMeshNameMap(context.snapshot);
+
+  // Filter geometries by search query
+  const searchQuery = state.geometrySearch.toLowerCase().trim();
+  const filteredGeometries = searchQuery
+    ? geometries.filter((geo: GeometryData) => {
+        const geoName = (geo.name || geo.type).toLowerCase();
+        const meshNamesList = geo.usedByMeshes
+          .map(id => meshNames.get(id) || '')
+          .join(' ')
+          .toLowerCase();
+        return geoName.includes(searchQuery) || meshNamesList.includes(searchQuery);
+      })
+    : geometries;
+
   const selectedGeometry = state.selectedGeometryId
     ? geometries.find((g: GeometryData) => g.uuid === state.selectedGeometryId)
     : null;
@@ -35,11 +76,14 @@ export function renderGeometryPanel(
       <div class="panel-list geometry-list-panel">
         ${renderGeometrySummary(summary)}
         <div class="geometry-list">
-          ${geometries.map((geo: GeometryData) => renderGeometryListItem(geo, state)).join('')}
+          ${filteredGeometries.length > 0
+            ? filteredGeometries.map((geo: GeometryData) => renderGeometryListItem(geo, state, meshNames)).join('')
+            : `<div class="no-results">No geometries match "${escapeHtml(state.geometrySearch)}"</div>`
+          }
         </div>
       </div>
       <div class="panel-inspector geometry-inspector-panel">
-        ${selectedGeometry ? renderGeometryInspector(selectedGeometry, state) : renderNoGeometrySelected()}
+        ${selectedGeometry ? renderGeometryInspector(selectedGeometry, state, meshNames) : renderNoGeometrySelected()}
       </div>
     </div>
   `;
@@ -78,10 +122,21 @@ function renderGeometrySummary(summary: SceneSnapshot['geometriesSummary']): str
   `;
 }
 
-function renderGeometryListItem(geo: GeometryData, state: UIState): string {
+function renderGeometryListItem(geo: GeometryData, state: UIState, meshNames: Map<string, string>): string {
   const isSelected = state.selectedGeometryId === geo.uuid;
-  const displayName = geo.name || `<${geo.type}>`;
   const geoIcon = getGeometryIcon(geo.type);
+  
+  // Get mesh names that use this geometry
+  const usedByNames = geo.usedByMeshes
+    .map(debugId => meshNames.get(debugId) || debugId.substring(0, 8))
+    .slice(0, 3);
+  const moreCount = geo.usedByMeshes.length - usedByNames.length;
+  
+  // Title: geometry name or type
+  const displayName = geo.name || geo.type;
+  
+  // Subtitle: object names that use this geometry
+  const subtitle = usedByNames.join(', ') + (moreCount > 0 ? ` +${moreCount}` : '');
 
   return `
     <div class="list-item geometry-item ${isSelected ? 'selected' : ''}" data-uuid="${geo.uuid}" data-action="select-geometry">
@@ -89,9 +144,7 @@ function renderGeometryListItem(geo: GeometryData, state: UIState): string {
       <div class="geometry-item-info">
         <div class="geometry-item-name">${escapeHtml(displayName)}</div>
         <div class="geometry-item-meta">
-          <span>${geo.type}</span>
-          <span>${geo.attributes.length} attrs</span>
-          ${geo.isIndexed ? '<span>indexed</span>' : ''}
+          <span class="geometry-used-by">${escapeHtml(subtitle)}</span>
         </div>
       </div>
       <div class="geometry-item-stats">
@@ -113,17 +166,38 @@ function renderNoGeometrySelected(): string {
   `;
 }
 
-function renderGeometryInspector(geo: GeometryData, state: UIState): string {
+function renderGeometryInspector(geo: GeometryData, state: UIState, meshNames: Map<string, string>): string {
   const geoIcon = getGeometryIcon(geo.type);
+  
+  // Get mesh names that use this geometry
+  const usedByList = geo.usedByMeshes.map(debugId => ({
+    debugId,
+    name: meshNames.get(debugId) || debugId.substring(0, 8),
+  }));
+  
+  // Title: geometry name or type
+  const displayName = geo.name || geo.type;
 
   return `
     <div class="inspector-header geometry-header">
       <div class="geometry-item-icon">${geoIcon}</div>
       <div class="inspector-header-text">
-        <span class="inspector-title">${escapeHtml(geo.name || `<${geo.type}>`)}</span>
+        <span class="inspector-title">${escapeHtml(displayName)}</span>
         <span class="inspector-subtitle">${geo.type}</span>
       </div>
       <span class="inspector-uuid">${geo.uuid.substring(0, 8)}</span>
+    </div>
+
+    <div class="inspector-section used-by-section">
+      <div class="section-title">Used By (${usedByList.length})</div>
+      <div class="used-by-list">
+        ${usedByList.map(item => `
+          <div class="used-by-item" data-debug-id="${item.debugId}">
+            <span class="mesh-icon">M</span>
+            <span class="mesh-name">${escapeHtml(item.name)}</span>
+          </div>
+        `).join('')}
+      </div>
     </div>
 
     <div class="inspector-section">
