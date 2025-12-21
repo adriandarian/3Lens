@@ -219,26 +219,28 @@ export function calculateBenchmarkScore(
   }
 
   // Memory score (0-100)
-  const textureMemRatio = stats.memory.textureMemory / config.maxTextureMemory;
-  const geoMemRatio = stats.memory.geometryMemory / config.maxGeometryMemory;
-  const memoryRatio = Math.max(textureMemRatio, geoMemRatio);
-  let memoryScore: number;
-  if (memoryRatio <= 0.5) {
-    memoryScore = 100;
-  } else if (memoryRatio <= 1) {
-    memoryScore = 100 - (memoryRatio - 0.5) * 40;
-  } else {
-    memoryScore = Math.max(0, 80 - (memoryRatio - 1) * 40);
-  }
+  let memoryScore = 100;
+  if (stats.memory) {
+    const textureMemRatio = stats.memory.textureMemory / config.maxTextureMemory;
+    const geoMemRatio = stats.memory.geometryMemory / config.maxGeometryMemory;
+    const memoryRatio = Math.max(textureMemRatio, geoMemRatio);
+    if (memoryRatio <= 0.5) {
+      memoryScore = 100;
+    } else if (memoryRatio <= 1) {
+      memoryScore = 100 - (memoryRatio - 0.5) * 40;
+    } else {
+      memoryScore = Math.max(0, 80 - (memoryRatio - 1) * 40);
+    }
 
-  if (memoryScore < 80) {
-    issues.push('High GPU memory usage');
-    suggestions.push('Compress textures or reduce resolution');
+    if (memoryScore < 80) {
+      issues.push('High GPU memory usage');
+      suggestions.push('Compress textures or reduce resolution');
+    }
   }
 
   // State changes score (0-100)
   const stateChangesPerDraw =
-    stats.drawCalls > 0
+    stats.drawCalls > 0 && stats.rendering
       ? (stats.rendering.programSwitches + stats.rendering.textureBinds) /
         stats.drawCalls
       : 0;
