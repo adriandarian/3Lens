@@ -183,7 +183,6 @@ export class DevtoolProbe {
    * Take a manual snapshot of all observed scenes
    */
   takeSnapshot(): SceneSnapshot {
-    console.log('[3Lens Probe] Taking snapshot, observers:', this._sceneObservers.size);
     const scenes: SceneNode[] = [];
     let allMaterials: import('../types').MaterialData[] = [];
     let combinedMaterialSummary: import('../types').MaterialsSummary = {

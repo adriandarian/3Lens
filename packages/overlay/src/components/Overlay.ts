@@ -440,8 +440,6 @@ export class ThreeLensOverlay {
   
   private refreshSnapshot(): void {
     this.latestSnapshot = this.probe.takeSnapshot();
-    console.log('[3Lens Overlay] Snapshot taken:', this.latestSnapshot);
-    console.log('[3Lens Overlay] Materials in snapshot:', this.latestSnapshot?.materials?.length);
   }
   
   private updateUIState(updates: Partial<UIState>): void {

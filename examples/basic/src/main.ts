@@ -85,20 +85,47 @@ const cubeGroup = new THREE.Group();
 cubeGroup.name = 'CubeGroup';
 scene.add(cubeGroup);
 
-const colors = [0xfbbf24, 0x34d399, 0xfb7185, 0xa78bfa, 0xf472b6];
-for (let i = 0; i < 5; i++) {
+// Create shared and unique materials for cubes (to demonstrate material sharing)
+const goldMaterial = new THREE.MeshStandardMaterial({
+  name: 'GoldMaterial',
+  color: 0xfbbf24,
+  roughness: 0.3,
+  metalness: 0.8,
+});
+
+const emeraldMaterial = new THREE.MeshStandardMaterial({
+  name: 'EmeraldMaterial', 
+  color: 0x34d399,
+  roughness: 0.2,
+  metalness: 0.6,
+});
+
+// 8 cubes: some share materials, some have unique materials
+const cubeConfigs = [
+  { color: 0xfbbf24, material: goldMaterial },      // Cube 1 - shared gold
+  { color: 0x34d399, material: emeraldMaterial },   // Cube 2 - shared emerald
+  { color: 0xfb7185, material: null },              // Cube 3 - unique rose
+  { color: 0xfbbf24, material: goldMaterial },      // Cube 4 - shared gold
+  { color: 0xa78bfa, material: null },              // Cube 5 - unique violet
+  { color: 0x34d399, material: emeraldMaterial },   // Cube 6 - shared emerald
+  { color: 0xf472b6, material: null },              // Cube 7 - unique pink
+  { color: 0xfbbf24, material: goldMaterial },      // Cube 8 - shared gold
+];
+
+for (let i = 0; i < 8; i++) {
   const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-  const cubeMaterial = new THREE.MeshStandardMaterial({
-    color: colors[i],
+  const config = cubeConfigs[i];
+  const material = config.material || new THREE.MeshStandardMaterial({
+    color: config.color,
     roughness: 0.3,
     metalness: 0.6,
   });
-  const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+  const cube = new THREE.Mesh(cubeGeometry, material);
   cube.name = `Cube_${i + 1}`;
   cube.position.set(
-    Math.cos((i / 5) * Math.PI * 2) * 3,
+    Math.cos((i / 8) * Math.PI * 2) * 3,
     0,
-    Math.sin((i / 5) * Math.PI * 2) * 3
+    Math.sin((i / 8) * Math.PI * 2) * 3
   );
   cube.castShadow = true;
   cubeGroup.add(cube);

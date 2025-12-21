@@ -303,6 +303,51 @@ export const PANEL_STYLES = `
   color: #fff;
 }
 
+/* Used By Section */
+.used-by-section {
+  padding: 12px;
+  border-bottom: 1px solid var(--3lens-border-subtle);
+}
+
+.used-by-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.used-by-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--3lens-bg-primary);
+  border-radius: var(--3lens-radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.used-by-item:hover {
+  background: var(--3lens-bg-hover);
+}
+
+.used-by-item .mesh-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--3lens-color-mesh);
+  color: #000;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.used-by-item .mesh-name {
+  font-size: 12px;
+  color: var(--3lens-text-primary);
+}
+
 .badge.rt {
   background: rgba(34, 211, 238, 0.2);
   color: var(--3lens-accent-cyan);
