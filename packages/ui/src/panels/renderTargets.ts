@@ -411,7 +411,8 @@ export function attachRenderTargetsEvents(
     const itemEl = item as HTMLElement;
     const uuid = itemEl.dataset.uuid;
 
-    itemEl.addEventListener('click', () => {
+    itemEl.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (!uuid) return;
       updateState({ selectedRenderTargetId: uuid });
       rerender();

@@ -161,6 +161,14 @@ export class DevtoolProbe {
   // ─────────────────────────────────────────────────────────────────
 
   /**
+   * Get a unique ID for a render target (uses texture.uuid since WebGLRenderTarget lacks uuid)
+   */
+  private getRenderTargetId(rt: THREE.WebGLRenderTarget): string {
+    // WebGLRenderTarget doesn't have a uuid property, but the texture does
+    return (rt as unknown as { uuid?: string }).uuid || rt.texture?.uuid || '';
+  }
+
+  /**
    * Register a render target for observation
    * @param renderTarget The WebGLRenderTarget to observe
    * @param usage The usage type for this render target (helps with categorization)
@@ -169,14 +177,20 @@ export class DevtoolProbe {
     renderTarget: THREE.WebGLRenderTarget,
     usage: import('../types').RenderTargetUsage = 'custom'
   ): void {
-    if (this._registeredRenderTargets.has(renderTarget.uuid)) {
-      this.log('Render target already being observed', { uuid: renderTarget.uuid });
+    const rtId = this.getRenderTargetId(renderTarget);
+    if (!rtId) {
+      this.log('Cannot observe render target: no valid ID', { usage });
+      return;
+    }
+    
+    if (this._registeredRenderTargets.has(rtId)) {
+      this.log('Render target already being observed', { uuid: rtId });
       return;
     }
 
-    this._registeredRenderTargets.set(renderTarget.uuid, { rt: renderTarget, usage });
+    this._registeredRenderTargets.set(rtId, { rt: renderTarget, usage });
     this.log('Observing render target', { 
-      uuid: renderTarget.uuid,
+      uuid: rtId,
       name: renderTarget.texture?.name || '<unnamed>',
       size: `${renderTarget.width}x${renderTarget.height}`,
       usage
@@ -187,8 +201,9 @@ export class DevtoolProbe {
    * Stop observing a render target
    */
   unobserveRenderTarget(renderTarget: THREE.WebGLRenderTarget): void {
-    if (this._registeredRenderTargets.delete(renderTarget.uuid)) {
-      this.log('Stopped observing render target', { uuid: renderTarget.uuid });
+    const rtId = this.getRenderTargetId(renderTarget);
+    if (this._registeredRenderTargets.delete(rtId)) {
+      this.log('Stopped observing render target', { uuid: rtId });
     }
   }
 

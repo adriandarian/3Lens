@@ -387,6 +387,11 @@ export class SceneObserver {
   collectRenderTargets(): { renderTargets: RenderTargetData[]; summary: RenderTargetsSummary } {
     const renderTargetMap = new Map<string, THREE.WebGLRenderTarget>();
 
+    // Helper to get render target ID (WebGLRenderTarget doesn't have uuid, use texture.uuid)
+    const getRtId = (rt: THREE.WebGLRenderTarget): string => {
+      return (rt as unknown as { uuid?: string }).uuid || rt.texture?.uuid || '';
+    };
+
     // Traverse scene to find render targets used by lights (shadow maps)
     this.scene.traverse((obj) => {
       // Check for shadow-casting lights with shadow maps
@@ -394,10 +399,11 @@ export class SceneObserver {
         const shadow = (obj as THREE.DirectionalLight | THREE.SpotLight | THREE.PointLight).shadow;
         if (shadow?.map) {
           const rt = shadow.map as THREE.WebGLRenderTarget;
-          if (rt.uuid && !renderTargetMap.has(rt.uuid)) {
+          const rtId = getRtId(rt);
+          if (rtId && !renderTargetMap.has(rtId)) {
             // Mark as shadow map
             (rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage = 'shadow-map';
-            renderTargetMap.set(rt.uuid, rt);
+            renderTargetMap.set(rtId, rt);
           }
         }
       }
@@ -508,8 +514,11 @@ export class SceneObserver {
     // which is expensive. For now, we skip this - thumbnails would need to be
     // generated during the render pass when the RT is active.
 
+    // WebGLRenderTarget doesn't have a uuid property - use the texture's uuid
+    const rtUuid = (rt as unknown as { uuid?: string }).uuid || texture.uuid;
+    
     const data: RenderTargetData = {
-      uuid: rt.uuid,
+      uuid: rtUuid,
       name: texture.name || '',
       type: rt.constructor.name || 'WebGLRenderTarget',
       dimensions: {
