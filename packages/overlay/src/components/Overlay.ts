@@ -359,10 +359,25 @@ export class ThreeLensOverlay {
       z-index: ${state.zIndex};
     `;
 
+    const hasSearch = ['materials', 'geometry', 'textures'].includes(config.id);
+    const searchPlaceholder = config.id === 'materials' ? 'Search materials...' 
+      : config.id === 'geometry' ? 'Search geometry...' 
+      : 'Search textures...';
+    
     panel.innerHTML = `
       <div class="three-lens-panel-header" data-panel="${config.id}">
         <span class="three-lens-panel-icon ${config.iconClass}">${config.icon}</span>
         <span class="three-lens-panel-title">${config.title}</span>
+        ${hasSearch ? `
+          <div class="three-lens-header-search">
+            <input 
+              type="text" 
+              class="header-search-input" 
+              data-panel="${config.id}"
+              placeholder="${searchPlaceholder}" 
+            />
+          </div>
+        ` : ''}
         <div class="three-lens-panel-controls">
           <button class="three-lens-panel-btn minimize" data-action="minimize" title="Minimize">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
@@ -522,9 +537,23 @@ export class ThreeLensOverlay {
     // Header drag
     const header = panel.querySelector('.three-lens-panel-header') as HTMLElement;
     header?.addEventListener('mousedown', (e) => {
+      // Don't start drag on buttons or search input
       if ((e.target as HTMLElement).closest('.three-lens-panel-btn')) return;
+      if ((e.target as HTMLElement).closest('.three-lens-header-search')) return;
       this.startDrag(panelId, e);
     });
+    
+    // Header search input
+    const headerSearch = panel.querySelector('.header-search-input') as HTMLInputElement;
+    if (headerSearch) {
+      headerSearch.addEventListener('input', () => {
+        const searchKey = panelId === 'materials' ? 'materialsSearch' 
+          : panelId === 'geometry' ? 'geometrySearch' 
+          : 'texturesSearch';
+        this.updateUIState({ [searchKey]: headerSearch.value } as Partial<UIState>);
+        this.updatePanelById(panelId);
+      });
+    }
 
     // Focus on click
     panel.addEventListener('mousedown', () => {
@@ -635,6 +664,14 @@ export class ThreeLensOverlay {
     content.innerHTML = this.renderTexturesContent();
     const panel = document.getElementById('three-lens-panel-textures');
     if (panel) this.attachTexturesPanelEvents(panel);
+  }
+  
+  private updatePanelById(panelId: string): void {
+    switch (panelId) {
+      case 'materials': this.updateMaterialsPanel(); break;
+      case 'geometry': this.updateGeometryPanel(); break;
+      case 'textures': this.updateTexturesPanel(); break;
+    }
   }
 
   private focusPanel(panelId: string): void {
