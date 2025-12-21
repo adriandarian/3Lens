@@ -357,7 +357,7 @@ function renderTextureUsage(tex: TextureData): string {
 export function attachTexturesEvents(
   container: HTMLElement,
   _context: PanelContext,
-  _state: UIState,
+  state: UIState,
   updateState: (updates: Partial<UIState>) => void,
   rerender: () => void
 ): void {
@@ -368,7 +368,9 @@ export function attachTexturesEvents(
 
     itemEl.addEventListener('click', () => {
       if (!uuid) return;
-      updateState({ selectedTextureId: uuid });
+      // Toggle selection - clicking selected item deselects it
+      const newSelection = state.selectedTextureId === uuid ? null : uuid;
+      updateState({ selectedTextureId: newSelection });
       rerender();
     });
   });

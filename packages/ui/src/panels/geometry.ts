@@ -379,7 +379,9 @@ export function attachGeometryEvents(
 
     itemEl.addEventListener('click', () => {
       if (!uuid) return;
-      updateState({ selectedGeometryId: uuid });
+      // Toggle selection - clicking selected item deselects it
+      const newSelection = state.selectedGeometryId === uuid ? null : uuid;
+      updateState({ selectedGeometryId: newSelection });
       rerender();
     });
   });
