@@ -1558,6 +1558,410 @@ body {
   font-size: 14px;
 }
 
+/* ───────────────────────────────────────────────────────────────
+   Textures Tab
+   ─────────────────────────────────────────────────────────────── */
+
+.textures-split-view {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.textures-list-panel {
+  flex: 1;
+  min-width: 300px;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+}
+
+.textures-inspector-panel {
+  width: 360px;
+  min-width: 300px;
+  max-width: 500px;
+  overflow: auto;
+  background: var(--bg-secondary);
+}
+
+/* Textures Summary */
+.textures-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
+  border-bottom: 1px solid var(--border);
+}
+
+.textures-summary .summary-stat {
+  flex: 1;
+}
+
+.textures-summary .summary-value {
+  color: #f472b6; /* pink accent for textures */
+}
+
+/* Textures List */
+.textures-list {
+  padding: 8px;
+}
+
+.texture-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 120ms ease;
+  margin-bottom: 4px;
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+}
+
+.texture-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+.texture-item.selected {
+  background: rgba(244, 114, 182, 0.15);
+  border-color: #f472b6;
+  box-shadow: inset 3px 0 0 #f472b6;
+}
+
+/* Texture Thumbnail */
+.texture-item-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.texture-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.texture-thumb-placeholder {
+  font-size: 18px;
+  opacity: 0.7;
+}
+
+.texture-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.texture-item-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.texture-item-meta {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.texture-item-badges {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.badge.cube {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  color: #fff;
+}
+
+.badge.compressed {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--accent-amber);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.badge.video {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: #fff;
+}
+
+.badge.rt {
+  background: rgba(34, 211, 238, 0.2);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+.badge.mip {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.texture-item-stats {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tex-stat-pill {
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.tex-stat-pill.memory {
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.3);
+}
+
+.texture-item-usage {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  padding: 2px 6px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+}
+
+/* Texture Inspector Header */
+.texture-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.texture-header-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.texture-header-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.texture-header-placeholder {
+  font-size: 24px;
+  opacity: 0.7;
+}
+
+/* Texture Preview Section */
+.texture-preview-section {
+  background: var(--bg-primary);
+}
+
+.texture-preview-container {
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+  background: repeating-conic-gradient(#1f2937 0% 25%, #0f1419 0% 50%) 50% / 16px 16px;
+}
+
+.texture-preview-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* Channel filters */
+.texture-preview-img.channel-rgb {
+  /* No filter */
+}
+
+.texture-preview-img.channel-r {
+  filter: grayscale(100%) sepia(100%) hue-rotate(-30deg) saturate(300%);
+}
+
+.texture-preview-img.channel-g {
+  filter: grayscale(100%) sepia(100%) hue-rotate(70deg) saturate(300%);
+}
+
+.texture-preview-img.channel-b {
+  filter: grayscale(100%) sepia(100%) hue-rotate(190deg) saturate(300%);
+}
+
+.texture-preview-img.channel-a {
+  filter: grayscale(100%);
+  mix-blend-mode: luminosity;
+}
+
+.texture-channel-toggles {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 2px;
+  background: rgba(10, 14, 20, 0.9);
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.channel-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 100ms ease;
+}
+
+.channel-btn:hover {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.channel-btn.active {
+  background: #f472b6;
+  color: #000;
+}
+
+/* Memory value highlight */
+.property-value.memory-value {
+  color: #f472b6;
+  font-weight: 500;
+}
+
+/* Texture URL */
+.texture-url {
+  font-size: 9px;
+  color: var(--accent-cyan);
+  word-break: break-all;
+  cursor: help;
+}
+
+.url-row .property-label {
+  flex-shrink: 0;
+}
+
+.url-row .property-value {
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Texture Flags */
+.texture-flags {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.flag-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  opacity: 0.4;
+}
+
+.flag-item.enabled {
+  opacity: 1;
+  border-color: rgba(244, 114, 182, 0.3);
+  background: rgba(244, 114, 182, 0.08);
+}
+
+.flag-icon {
+  font-size: 14px;
+}
+
+.flag-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.flag-item.enabled .flag-label {
+  color: var(--text-primary);
+}
+
+/* Texture Usage List */
+.texture-usage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.texture-usage-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.usage-slot {
+  font-family: var(--font-mono);
+  color: var(--accent-emerald);
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.usage-material {
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usage-uuid {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.no-usage {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
+  padding: 12px;
+  text-align: center;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

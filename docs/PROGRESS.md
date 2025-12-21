@@ -211,12 +211,12 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Texture list with thumbnails | ⬜ | |
-| Size/format/mipmap info | ⬜ | |
-| Memory usage display | ⬜ | |
-| Usage tracking (which materials) | ⬜ | |
-| Texture preview modal | ⬜ | |
-| Channel toggle (RGB/A) | ⬜ | |
+| Texture list with thumbnails | ✅ | Thumbnails auto-generated for 2D textures (64px max) |
+| Size/format/mipmap info | ✅ | Full details: format, data type, mipmaps, filtering, wrapping |
+| Memory usage display | ✅ | Per-texture GPU memory estimate with summary totals |
+| Usage tracking (which materials) | ✅ | Shows slot name + material name/UUID for each usage |
+| Texture preview modal | ✅ | Inline preview with checkerboard background |
+| Channel toggle (RGB/A) | ✅ | RGB, R, G, B, A channel buttons with CSS filters |
 
 ### Render Targets Panel
 
