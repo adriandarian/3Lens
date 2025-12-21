@@ -1,8 +1,18 @@
-import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore } from '@3lens/core';
+import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot } from '@3lens/core';
 import { calculateBenchmarkScore } from '@3lens/core';
 
 import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
 import { OVERLAY_STYLES } from '../styles/styles';
+import { 
+  renderMaterialsPanel, attachMaterialsEvents,
+  renderGeometryPanel, attachGeometryEvents,
+  renderTexturesPanel, attachTexturesEvents,
+  getSharedStyles,
+  createDefaultUIState,
+  type UIState,
+  type PanelContext,
+  type PanelCommand,
+} from '@3lens/ui';
 
 export interface OverlayOptions {
   probe: DevtoolProbe;
@@ -55,6 +65,9 @@ const SCENE_PANEL_MAX_HEIGHT = 450;      // Max auto-height before scrolling
 const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: SCENE_PANEL_WIDTH_COLLAPSED, defaultHeight: 0 }, // 0 = auto height
   { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 360, defaultHeight: 480 },
+  { id: 'materials', title: 'Materials', icon: '🎨', iconClass: 'materials', defaultWidth: 700, defaultHeight: 500 },
+  { id: 'geometry', title: 'Geometry', icon: '📐', iconClass: 'inspector', defaultWidth: 750, defaultHeight: 500 },
+  { id: 'textures', title: 'Textures', icon: '🖼️', iconClass: 'textures', defaultWidth: 800, defaultHeight: 520 },
 ];
 
 /**
@@ -69,6 +82,7 @@ export class ThreeLensOverlay {
   private expandedNodes: Set<string> = new Set();
   private latestStats: FrameStats | null = null;
   private latestBenchmark: BenchmarkScore | null = null;
+  private latestSnapshot: SceneSnapshot | null = null;
   private frameHistory: number[] = [];
   private fpsHistory: number[] = [];
   private topZIndex = 999997;
@@ -79,6 +93,9 @@ export class ThreeLensOverlay {
   private statsTab: 'overview' | 'memory' | 'rendering' = 'overview';
   private panelDefinitions: Map<string, OverlayPanelDefinition> = new Map();
   private panelContexts: Map<string, OverlayPanelContext> = new Map();
+  
+  // Shared UI state for Materials, Geometry, Textures panels
+  private uiState: UIState = createDefaultUIState();
   
   // Chart state
   private chartZoom = 1; // 1 = show all 60 frames, 2 = show 30, etc.
@@ -144,7 +161,8 @@ export class ThreeLensOverlay {
     if (document.getElementById('three-lens-styles')) return;
     const style = document.createElement('style');
     style.id = 'three-lens-styles';
-    style.textContent = OVERLAY_STYLES;
+    // Combine overlay styles with shared panel styles
+    style.textContent = OVERLAY_STYLES + '\n' + getSharedStyles();
     document.head.appendChild(style);
   }
 
@@ -376,9 +394,73 @@ export class ThreeLensOverlay {
         return this.renderSceneContent();
       case 'stats':
         return this.renderStatsContent();
+      case 'materials':
+        return this.renderMaterialsContent();
+      case 'geometry':
+        return this.renderGeometryContent();
+      case 'textures':
+        return this.renderTexturesContent();
       default:
         return '<div class="three-lens-inspector-empty">Panel content</div>';
     }
+  }
+  
+  private buildSharedPanelContext(): PanelContext {
+    return {
+      probe: this.probe,
+      snapshot: this.latestSnapshot,
+      stats: this.latestStats,
+      benchmark: this.latestBenchmark,
+      sendCommand: (cmd: PanelCommand) => this.handlePanelCommand(cmd),
+      requestSnapshot: () => this.refreshSnapshot(),
+    };
+  }
+  
+  private handlePanelCommand(command: PanelCommand): void {
+    switch (command.type) {
+      case 'select-object':
+        if (command.debugId) {
+          this.probe.selectByDebugId(command.debugId);
+        } else {
+          this.probe.selectObject(null);
+        }
+        break;
+      case 'update-material-property':
+        // Find the material and update it
+        this.probe.updateMaterialProperty(command.materialUuid, command.property, command.value);
+        // Refresh the snapshot after the update
+        this.refreshSnapshot();
+        break;
+      case 'geometry-visualization':
+        // Toggle visualization - for now just track in UI state
+        // The actual visualization helpers would require THREE reference
+        break;
+    }
+  }
+  
+  private refreshSnapshot(): void {
+    this.latestSnapshot = this.probe.takeSnapshot();
+    console.log('[3Lens Overlay] Snapshot taken:', this.latestSnapshot);
+    console.log('[3Lens Overlay] Materials in snapshot:', this.latestSnapshot?.materials?.length);
+  }
+  
+  private updateUIState(updates: Partial<UIState>): void {
+    this.uiState = { ...this.uiState, ...updates };
+  }
+  
+  private renderMaterialsContent(): string {
+    this.refreshSnapshot();
+    return renderMaterialsPanel(this.buildSharedPanelContext(), this.uiState);
+  }
+  
+  private renderGeometryContent(): string {
+    this.refreshSnapshot();
+    return renderGeometryPanel(this.buildSharedPanelContext(), this.uiState);
+  }
+  
+  private renderTexturesContent(): string {
+    this.refreshSnapshot();
+    return renderTexturesPanel(this.buildSharedPanelContext(), this.uiState);
   }
 
   private mountPanel(panelId: string, panelElement: HTMLElement): void {
@@ -476,6 +558,85 @@ export class ThreeLensOverlay {
     if (panelId === 'stats') {
       this.attachStatsTabEvents(panel);
     }
+    
+    // Shared panel events for Materials, Geometry, Textures
+    if (panelId === 'materials') {
+      this.attachMaterialsPanelEvents(panel);
+    }
+    
+    if (panelId === 'geometry') {
+      this.attachGeometryPanelEvents(panel);
+    }
+    
+    if (panelId === 'textures') {
+      this.attachTexturesPanelEvents(panel);
+    }
+  }
+  
+  private attachMaterialsPanelEvents(panel: HTMLElement): void {
+    const container = panel.querySelector(`#three-lens-content-materials`) as HTMLElement;
+    if (!container) return;
+    
+    attachMaterialsEvents(
+      container,
+      this.buildSharedPanelContext(),
+      this.uiState,
+      (updates) => this.updateUIState(updates),
+      () => this.updateMaterialsPanel()
+    );
+  }
+  
+  private attachGeometryPanelEvents(panel: HTMLElement): void {
+    const container = panel.querySelector(`#three-lens-content-geometry`) as HTMLElement;
+    if (!container) return;
+    
+    attachGeometryEvents(
+      container,
+      this.buildSharedPanelContext(),
+      this.uiState,
+      (updates) => this.updateUIState(updates),
+      () => this.updateGeometryPanel()
+    );
+  }
+  
+  private attachTexturesPanelEvents(panel: HTMLElement): void {
+    const container = panel.querySelector(`#three-lens-content-textures`) as HTMLElement;
+    if (!container) return;
+    
+    attachTexturesEvents(
+      container,
+      this.buildSharedPanelContext(),
+      this.uiState,
+      (updates) => this.updateUIState(updates),
+      () => this.updateTexturesPanel()
+    );
+  }
+  
+  private updateMaterialsPanel(): void {
+    const content = document.getElementById('three-lens-content-materials');
+    if (!content) return;
+    
+    content.innerHTML = this.renderMaterialsContent();
+    const panel = document.getElementById('three-lens-panel-materials');
+    if (panel) this.attachMaterialsPanelEvents(panel);
+  }
+  
+  private updateGeometryPanel(): void {
+    const content = document.getElementById('three-lens-content-geometry');
+    if (!content) return;
+    
+    content.innerHTML = this.renderGeometryContent();
+    const panel = document.getElementById('three-lens-panel-geometry');
+    if (panel) this.attachGeometryPanelEvents(panel);
+  }
+  
+  private updateTexturesPanel(): void {
+    const content = document.getElementById('three-lens-content-textures');
+    if (!content) return;
+    
+    content.innerHTML = this.renderTexturesContent();
+    const panel = document.getElementById('three-lens-panel-textures');
+    if (panel) this.attachTexturesPanelEvents(panel);
   }
 
   private focusPanel(panelId: string): void {
@@ -616,6 +777,9 @@ export class ThreeLensOverlay {
     switch (panelId) {
       case 'scene': return this.renderSceneContent();
       case 'stats': return this.renderStatsContent();
+      case 'materials': return this.renderMaterialsContent();
+      case 'geometry': return this.renderGeometryContent();
+      case 'textures': return this.renderTexturesContent();
       default: {
         const definition = this.panelDefinitions.get(panelId);
         if (definition?.render) {

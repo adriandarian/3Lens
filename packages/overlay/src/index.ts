@@ -12,6 +12,7 @@ export type {
   OverlayPanelState,
 } from './components/Overlay';
 
+
 // Convenience function
 import type { DevtoolProbe, ProbeConfig } from '@3lens/core';
 import { createProbe } from '@3lens/core';

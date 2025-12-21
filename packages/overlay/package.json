@@ -31,7 +31,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@3lens/core": "workspace:*"
+    "@3lens/core": "workspace:*",
+    "@3lens/ui": "workspace:*"
   },
   "devDependencies": {
     "three": "^0.160.0"
