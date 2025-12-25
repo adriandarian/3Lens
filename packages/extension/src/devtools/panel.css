@@ -293,6 +293,11 @@ body {
   min-width: 20px;
 }
 
+.node-name.unnamed {
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
 .node-spacer {
   flex: 1;
   min-width: 8px;

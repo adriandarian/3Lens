@@ -447,7 +447,7 @@ function renderNode(node: SceneNode): string {
           </svg>
         </span>
         <span class="node-icon ${iconClass}">${getIcon(node.ref.type)}</span>
-        <span class="node-name">${node.ref.name || `<${node.ref.type}>`}</span>
+        <span class="node-name ${!node.ref.name ? 'unnamed' : ''}">${node.ref.name || 'unnamed'}</span>
         <button class="node-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">
           ${isVisible ? getEyeOpenIcon() : getEyeClosedIcon()}
         </button>

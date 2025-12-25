@@ -922,7 +922,7 @@ export class ThreeLensOverlay {
             <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1L6 4L2 7z"/></svg>
           </span>
           <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${getObjectIcon(node.ref.type)}</span>
-          <span class="three-lens-node-name">${node.ref.name || `<${node.ref.type}>`}</span>
+          <span class="three-lens-node-name ${!node.ref.name ? 'unnamed' : ''}">${node.ref.name || 'unnamed'}</span>
           <button class="three-lens-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">
             ${isVisible ? this.getEyeOpenIcon() : this.getEyeClosedIcon()}
           </button>
