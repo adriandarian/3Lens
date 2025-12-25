@@ -885,10 +885,20 @@ export const PANEL_STYLES = `
   overflow: hidden;
 }
 
+.geometry-item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
 .geometry-item-name {
   font-size: 12px;
   font-weight: 500;
   color: var(--3lens-text-primary);
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -911,7 +921,7 @@ export const PANEL_STYLES = `
   display: flex;
   gap: 4px;
   flex-shrink: 0;
-  margin-left: 8px;
+  flex-wrap: wrap;
 }
 
 .geo-stat-pill {
@@ -938,6 +948,11 @@ export const PANEL_STYLES = `
 .geo-stat-pill.memory {
   color: var(--3lens-accent-amber);
   border-color: rgba(251, 191, 36, 0.3);
+}
+
+.geo-stat-pill.usage {
+  color: var(--3lens-text-secondary);
+  border-color: var(--3lens-border);
 }
 
 .geometry-item-usage {

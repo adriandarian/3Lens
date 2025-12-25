@@ -142,17 +142,19 @@ function renderGeometryListItem(geo: GeometryData, state: UIState, meshNames: Ma
     <div class="list-item geometry-item ${isSelected ? 'selected' : ''}" data-uuid="${geo.uuid}" data-action="select-geometry">
       <div class="geometry-item-icon">${geoIcon}</div>
       <div class="geometry-item-info">
-        <div class="geometry-item-name">${escapeHtml(displayName)}</div>
+        <div class="geometry-item-name-row">
+          <div class="geometry-item-name">${escapeHtml(displayName)}</div>
+          <div class="geometry-item-stats">
+            <span class="geo-stat-pill vertices">${formatNumber(geo.vertexCount)} v</span>
+            <span class="geo-stat-pill triangles">${formatNumber(geo.faceCount)} △</span>
+            <span class="geo-stat-pill memory">${formatBytes(geo.memoryBytes)}</span>
+            <span class="geo-stat-pill usage">${geo.usageCount}×</span>
+          </div>
+        </div>
         <div class="geometry-item-meta">
           <span class="geometry-used-by">${escapeHtml(subtitle)}</span>
         </div>
       </div>
-      <div class="geometry-item-stats">
-        <span class="geo-stat-pill vertices">${formatNumber(geo.vertexCount)} v</span>
-        <span class="geo-stat-pill triangles">${formatNumber(geo.faceCount)} △</span>
-        <span class="geo-stat-pill memory">${formatBytes(geo.memoryBytes)}</span>
-      </div>
-      <div class="geometry-item-usage">${geo.usageCount}×</div>
     </div>
   `;
 }

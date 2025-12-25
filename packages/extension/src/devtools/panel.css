@@ -1289,10 +1289,20 @@ body {
   min-width: 0;
 }
 
+.geometry-item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
 .geometry-item-name {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-primary);
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1312,6 +1322,7 @@ body {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .geo-stat-pill {
@@ -1338,6 +1349,11 @@ body {
 .geo-stat-pill.memory {
   color: var(--accent-amber);
   border-color: rgba(251, 191, 36, 0.3);
+}
+
+.geo-stat-pill.usage {
+  color: var(--text-secondary);
+  border-color: var(--border);
 }
 
 .geometry-item-usage {

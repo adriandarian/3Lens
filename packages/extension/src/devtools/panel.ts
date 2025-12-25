@@ -1395,19 +1395,21 @@ function renderGeometryListItem(geo: GeometryData): string {
     <div class="geometry-item ${isSelected ? 'selected' : ''}" data-uuid="${geo.uuid}">
       <div class="geometry-item-icon">${geoIcon}</div>
       <div class="geometry-item-info">
-        <div class="geometry-item-name">${escapeHtml(displayName)}</div>
+        <div class="geometry-item-name-row">
+          <div class="geometry-item-name">${escapeHtml(displayName)}</div>
+          <div class="geometry-item-stats">
+            <span class="geo-stat-pill vertices">${formatNumber(geo.vertexCount)} v</span>
+            <span class="geo-stat-pill triangles">${formatNumber(geo.faceCount)} △</span>
+            <span class="geo-stat-pill memory">${formatBytes(geo.memoryBytes)}</span>
+            <span class="geo-stat-pill usage">${geo.usageCount}×</span>
+          </div>
+        </div>
         <div class="geometry-item-meta">
           <span>${geo.type}</span>
           <span>${geo.attributes.length} attrs</span>
           ${geo.isIndexed ? '<span>indexed</span>' : ''}
         </div>
       </div>
-      <div class="geometry-item-stats">
-        <span class="geo-stat-pill vertices">${formatNumber(geo.vertexCount)} v</span>
-        <span class="geo-stat-pill triangles">${formatNumber(geo.faceCount)} △</span>
-        <span class="geo-stat-pill memory">${formatBytes(geo.memoryBytes)}</span>
-      </div>
-      <div class="geometry-item-usage">${geo.usageCount}×</div>
     </div>
   `;
 }
@@ -1642,19 +1644,22 @@ function attachGeometryEvents(): void {
     });
   });
 
-  // Action buttons
-  document.querySelectorAll('.action-btn').forEach((btn) => {
-    const btnEl = btn as HTMLElement;
-    const action = btnEl.dataset.action;
-    const uuid = btnEl.dataset.uuid;
+  // Action buttons - scope to geometry inspector panel only
+  const inspectorPanel = document.querySelector('.geometry-inspector-panel');
+  if (inspectorPanel) {
+    inspectorPanel.querySelectorAll('.action-btn').forEach((btn) => {
+      const btnEl = btn as HTMLElement;
+      const action = btnEl.dataset.action;
+      const uuid = btnEl.dataset.uuid;
 
-    if (!action || !uuid) return;
+      if (!action || !uuid) return;
 
-    btnEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      handleGeometryAction(action, uuid);
+      btnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleGeometryAction(action, uuid);
+      });
     });
-  });
+  }
 }
 
 function handleGeometryAction(action: string, geometryUuid: string): void {

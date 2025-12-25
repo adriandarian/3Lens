@@ -90,7 +90,9 @@ scene.add(spotLight.target);
 
 // Ground plane
 const groundGeometry = new THREE.PlaneGeometry(20, 20);
+groundGeometry.name = 'GroundPlane';
 const groundMaterial = new THREE.MeshStandardMaterial({
+  name: 'GroundMaterial',
   color: 0x1a222c,
   roughness: 0.8,
   metalness: 0.2,
@@ -104,7 +106,9 @@ scene.add(ground);
 
 // Central sphere
 const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+sphereGeometry.name = 'CentralSphereGeometry';
 const sphereMaterial = new THREE.MeshStandardMaterial({
+  name: 'BlueSphere',
   color: 0x60a5fa,
   roughness: 0.2,
   metalness: 0.8,
@@ -134,6 +138,11 @@ const emeraldMaterial = new THREE.MeshStandardMaterial({
   metalness: 0.6,
 });
 
+// Shared cube geometry - best practice for performance!
+// All 8 cubes share this single geometry instance
+const sharedCubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+sharedCubeGeometry.name = 'SharedCubeGeometry';
+
 // 8 cubes: some share materials, some have unique materials
 const cubeConfigs = [
   { color: 0xfbbf24, material: goldMaterial },
@@ -147,14 +156,13 @@ const cubeConfigs = [
 ];
 
 for (let i = 0; i < 8; i++) {
-  const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
   const config = cubeConfigs[i];
   const material = config.material || new THREE.MeshStandardMaterial({
     color: config.color,
     roughness: 0.3,
     metalness: 0.6,
   });
-  const cube = new THREE.Mesh(cubeGeometry, material);
+  const cube = new THREE.Mesh(sharedCubeGeometry, material);
   cube.name = `Cube_${i + 1}`;
   cube.position.set(
     Math.cos((i / 8) * Math.PI * 2) * 3,
@@ -167,7 +175,9 @@ for (let i = 0; i < 8; i++) {
 
 // Torus knot
 const torusKnotGeometry = new THREE.TorusKnotGeometry(0.6, 0.2, 100, 16);
+torusKnotGeometry.name = 'TorusKnotGeometry';
 const torusKnotMaterial = new THREE.MeshStandardMaterial({
+  name: 'CyanMetal',
   color: 0x22d3ee,
   roughness: 0.1,
   metalness: 0.9,
@@ -195,6 +205,7 @@ scene.add(cubeCamera);
 
 // Chrome mirror ball
 const mirrorSphereGeometry = new THREE.SphereGeometry(0.7, 32, 32);
+mirrorSphereGeometry.name = 'MirrorSphereGeometry';
 const mirrorMaterial = new THREE.MeshStandardMaterial({
   name: 'ChromeMirrorMaterial',
   color: 0xffffff,
@@ -236,6 +247,7 @@ scene.add(monitorGroup);
 
 // Monitor screen (shows the render target)
 const screenGeometry = new THREE.PlaneGeometry(2, 1.5);
+screenGeometry.name = 'ScreenPlane';
 const screenMaterial = new THREE.MeshBasicMaterial({
   name: 'MonitorScreenMaterial',
   map: monitorRT.texture,
@@ -246,6 +258,7 @@ monitorGroup.add(monitorScreen);
 
 // Glowing frame around the monitor
 const frameGeometry = new THREE.BoxGeometry(2.2, 1.7, 0.1);
+frameGeometry.name = 'FrameBox';
 const frameMaterial = new THREE.MeshStandardMaterial({
   name: 'MonitorFrameMaterial',
   color: 0x22d3ee,
@@ -261,7 +274,9 @@ monitorGroup.add(monitorFrame);
 
 // Monitor stand/pole
 const standGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2, 16);
+standGeometry.name = 'StandPole';
 const standMaterial = new THREE.MeshStandardMaterial({
+  name: 'StandMetal',
   color: 0x374151,
   roughness: 0.5,
   metalness: 0.8,
@@ -273,6 +288,7 @@ monitorGroup.add(monitorStand);
 
 // Stand base
 const baseGeometry = new THREE.CylinderGeometry(0.3, 0.4, 0.1, 16);
+baseGeometry.name = 'StandBase';
 const monitorBase = new THREE.Mesh(baseGeometry, standMaterial);
 monitorBase.name = 'MonitorBase';
 monitorBase.position.set(0, -2.6, -0.1);
@@ -280,7 +296,9 @@ monitorGroup.add(monitorBase);
 
 // Label text (using a small plane with emissive material)
 const labelGeometry = new THREE.PlaneGeometry(1.5, 0.2);
+labelGeometry.name = 'LabelPlane';
 const labelMaterial = new THREE.MeshBasicMaterial({
+  name: 'LabelGlow',
   color: 0x22d3ee,
   transparent: true,
   opacity: 0.8,
@@ -307,6 +325,11 @@ const probe = createProbe({
 probe.setThreeReference(THREE);
 probe.observeRenderer(renderer);
 probe.observeScene(scene);
+
+// Initialize inspect mode for interactive object selection
+probe.initializeInspectMode(renderer.domElement, camera, THREE);
+// Enable inspect mode - users can now click on objects to select them
+// You can toggle this via UI: probe.setInspectModeEnabled(true/false)
 
 // Register our custom render targets for the Render Targets panel
 probe.observeRenderTarget(cubeRenderTarget, 'reflection');
