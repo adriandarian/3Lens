@@ -238,11 +238,11 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| "Inspect" mode toggle | ⬜ | |
-| Raycasting implementation | ⬜ | |
-| Click to select objects | ⬜ | |
-| Hover highlighting | ⬜ | |
-| Cursor change in inspect mode | ⬜ | |
+| "Inspect" mode toggle | ✅ | `setInspectModeEnabled()` method added to DevtoolProbe |
+| Raycasting implementation | ✅ | `InspectMode` class with THREE.Raycaster integration |
+| Click to select objects | ✅ | Pointer events trigger `selectObject()` via raycasting |
+| Hover highlighting | ✅ | Uses `SelectionHelper.highlightHover()` for visual feedback |
+| Cursor change in inspect mode | ✅ | Canvas cursor changes to 'crosshair' when enabled |
 
 ### Visual Overlays
 
