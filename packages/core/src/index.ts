@@ -87,6 +87,7 @@ export { createProbe } from './probe/createProbe';
 
 // Helpers
 export { SelectionHelper } from './helpers/SelectionHelper';
+export { InspectMode } from './helpers/InspectMode';
 
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';

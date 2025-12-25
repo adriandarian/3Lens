@@ -328,8 +328,7 @@ probe.observeScene(scene);
 
 // Initialize inspect mode for interactive object selection
 probe.initializeInspectMode(renderer.domElement, camera, THREE);
-// Enable inspect mode - users can now click on objects to select them
-// You can toggle this via UI: probe.setInspectModeEnabled(true/false)
+// Note: Inspect mode is disabled by default. Press 'I' key to toggle it on/off.
 
 // Register our custom render targets for the Render Targets panel
 probe.observeRenderTarget(cubeRenderTarget, 'reflection');
@@ -413,17 +412,83 @@ window.addEventListener('resize', () => {
 });
 
 // ───────────────────────────────────────────────────────────────
-// Keyboard shortcut for overlay
+// Keyboard shortcuts
 // ───────────────────────────────────────────────────────────────
 
+let inspectModeEnabled = false;
+
 window.addEventListener('keydown', (e) => {
+  // Toggle overlay: Ctrl+Shift+D
   if (e.key === 'd' && e.ctrlKey && e.shiftKey) {
     overlay.toggle();
     e.preventDefault();
   }
+  
+  // Toggle inspect mode: Press 'I' key
+  if (e.key === 'i' || e.key === 'I') {
+    inspectModeEnabled = !inspectModeEnabled;
+    probe.setInspectModeEnabled(inspectModeEnabled);
+    
+    // Show visual feedback
+    const indicator = document.getElementById('inspect-indicator');
+    if (indicator) {
+      indicator.style.display = inspectModeEnabled ? 'block' : 'none';
+    } else if (inspectModeEnabled) {
+      // Create indicator if it doesn't exist
+      const div = document.createElement('div');
+      div.id = 'inspect-indicator';
+      div.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(34, 211, 238, 0.9);
+        color: #000;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 14px;
+        font-weight: bold;
+        z-index: 1000000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+      `;
+      div.textContent = '🔍 INSPECT MODE: Click objects to select them | Press I to disable';
+      document.body.appendChild(div);
+    }
+    
+    e.preventDefault();
+  }
 });
 
-console.log('🔍 3Lens initialized. Press Ctrl+Shift+D to toggle the devtool.');
+// Create initial indicator (hidden)
+const indicator = document.createElement('div');
+indicator.id = 'inspect-indicator';
+indicator.style.cssText = `
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(34, 211, 238, 0.9);
+  color: #000;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  z-index: 1000000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  display: none;
+`;
+indicator.textContent = '🔍 INSPECT MODE: Click objects to select them | Press I to disable';
+document.body.appendChild(indicator);
+
+console.log('🔍 3Lens initialized.');
+console.log('');
+console.log('⌨️  Keyboard Shortcuts:');
+console.log('   • Ctrl+Shift+D - Toggle devtool overlay');
+console.log('   • I - Toggle inspect mode (click objects to select)');
 console.log('');
 console.log('📺 Render Targets in this demo:');
 console.log('   • 3x Shadow Maps (DirectionalLight, PointLight, SpotLight)');

@@ -16,6 +16,7 @@ import type {
 import { createWebGLAdapter } from '../adapters/webgl-adapter';
 import { SceneObserver } from '../observers/SceneObserver';
 import { SelectionHelper } from '../helpers/SelectionHelper';
+import { InspectMode } from '../helpers/InspectMode';
 
 /**
  * Version of the probe
@@ -40,6 +41,7 @@ export class DevtoolProbe {
   private _frameStatsHistoryIndex = 0;
   private _maxHistorySize = 300;
   private _selectionHelper: SelectionHelper = new SelectionHelper();
+  private _inspectMode: InspectMode = new InspectMode(this);
   private _threeRef: typeof import('three') | null = null;
   private _visualizationHelpers: Map<string, THREE.Object3D> = new Map();
 
@@ -512,6 +514,86 @@ export class DevtoolProbe {
     };
   }
 
+  /**
+   * Set the hovered object (used by InspectMode for hover highlighting)
+   */
+  setHoveredObject(obj: THREE.Object3D | null): void {
+    this._hoveredObject = obj;
+    this._selectionHelper.highlightHover(obj);
+  }
+
+  /**
+   * Get the currently hovered object
+   */
+  getHoveredObject(): THREE.Object3D | null {
+    return this._hoveredObject;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // INSPECT MODE (Interactive Debugging)
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Initialize inspect mode with canvas and camera
+   * This enables interactive object selection via raycasting
+   * 
+   * @example
+   * ```typescript
+   * import * as THREE from 'three';
+   * const probe = createProbe({ appName: 'My App' });
+   * probe.setThreeReference(THREE);
+   * probe.observeRenderer(renderer);
+   * probe.observeScene(scene);
+   * 
+   * // Initialize inspect mode
+   * probe.initializeInspectMode(renderer.domElement, camera, THREE);
+   * 
+   * // Enable inspect mode (e.g., via UI toggle)
+   * probe.setInspectModeEnabled(true);
+   * ```
+   */
+  initializeInspectMode(
+    canvas: HTMLCanvasElement,
+    camera: THREE.Camera,
+    three: typeof import('three')
+  ): void {
+    this._inspectMode.initialize(canvas, camera, three);
+    this.log('Inspect mode initialized');
+  }
+
+  /**
+   * Enable or disable inspect mode
+   * When enabled, users can click on objects in the 3D scene to select them
+   * and hover to see highlights
+   */
+  setInspectModeEnabled(enabled: boolean): void {
+    this._inspectMode.setEnabled(enabled);
+    this.log(enabled ? 'Inspect mode enabled' : 'Inspect mode disabled');
+  }
+
+  /**
+   * Check if inspect mode is currently enabled
+   */
+  isInspectModeEnabled(): boolean {
+    return this._inspectMode.isEnabled();
+  }
+
+  /**
+   * Update the camera used for raycasting in inspect mode
+   * Useful when camera changes during runtime (e.g., camera switching)
+   */
+  setInspectModeCamera(camera: THREE.Camera): void {
+    this._inspectMode.setCamera(camera);
+  }
+
+  /**
+   * Set specific objects to be pickable in inspect mode
+   * If not set, all meshes in observed scenes will be pickable
+   */
+  setInspectModePickableObjects(objects: THREE.Object3D[]): void {
+    this._inspectMode.setPickableObjects(objects);
+  }
+
   // ─────────────────────────────────────────────────────────────────
   // LOGICAL ENTITIES
   // ─────────────────────────────────────────────────────────────────
@@ -688,6 +770,9 @@ export class DevtoolProbe {
   dispose(): void {
     // Dispose selection helper
     this._selectionHelper.dispose();
+
+    // Dispose inspect mode
+    this._inspectMode.dispose();
 
     // Dispose visualization helpers
     for (const [, helper] of this._visualizationHelpers) {
