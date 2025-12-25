@@ -823,24 +823,19 @@ export const OVERLAY_STYLES = `
 .three-lens-node-icon.object { background: var(--3lens-text-tertiary); color: #000; }
 
 .three-lens-node-name {
-  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.three-lens-node-type {
-  font-size: 9px;
-  color: var(--3lens-text-tertiary);
-  font-family: var(--3lens-font-mono);
+  flex-shrink: 1;
+  min-width: 20px;
 }
 
 .three-lens-visibility-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   margin-left: 4px;
   background: transparent;
@@ -850,6 +845,18 @@ export const OVERLAY_STYLES = `
   cursor: pointer;
   opacity: 0;
   transition: all 100ms ease;
+  flex-shrink: 0;
+}
+
+.three-lens-node-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.three-lens-node-type {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  font-family: var(--3lens-font-mono);
   flex-shrink: 0;
 }
 

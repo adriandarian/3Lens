@@ -248,6 +248,10 @@ body {
   font-weight: 500;
 }
 
+.node-header.hidden-object {
+  opacity: 0.5;
+}
+
 .node-toggle {
   width: 16px;
   height: 16px;
@@ -281,17 +285,63 @@ body {
 .node-icon.camera { background: #f472b6; color: #000; }
 
 .node-name {
-  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
+  flex-shrink: 1;
+  min-width: 20px;
+}
+
+.node-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.node-visibility-btn {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity 100ms ease, color 100ms ease;
+  flex-shrink: 0;
+}
+
+.node-header:hover .node-visibility-btn {
+  opacity: 1;
+}
+
+.node-visibility-btn:hover {
+  color: var(--accent-cyan);
+}
+
+.node-visibility-btn.visible {
+  color: var(--text-secondary);
+}
+
+.node-visibility-btn.hidden {
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
+
+.node-visibility-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .node-type {
   font-size: 10px;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
+  flex-shrink: 0;
 }
 
 .node-children {
