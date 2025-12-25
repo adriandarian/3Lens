@@ -575,15 +575,17 @@ export const OVERLAY_STYLES = `
 .three-lens-split-view {
   display: flex;
   gap: 0;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 .three-lens-tree-pane {
   flex: 1;
   min-width: 180px;
-  height: 100%;
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-right: 1px solid var(--3lens-border);
   padding: 8px;
 }
@@ -605,8 +607,9 @@ export const OVERLAY_STYLES = `
   width: 240px;
   min-width: 200px;
   max-width: 300px;
-  height: 100%;
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--3lens-bg-secondary);
   padding: 12px;
 }
@@ -659,6 +662,13 @@ export const OVERLAY_STYLES = `
 .three-lens-panel:has(.three-lens-tree-full),
 .three-lens-panel:has(.three-lens-split-view) {
   height: auto;
+  max-height: 80vh;
+}
+
+/* Ensure panel content constrains height for scrolling */
+.three-lens-panel:has(.three-lens-split-view) .three-lens-panel-content {
+  max-height: calc(80vh - 50px);
+  overflow: hidden;
 }
 
 /* Full width tree (no selection) */
@@ -828,6 +838,11 @@ export const OVERLAY_STYLES = `
   white-space: nowrap;
   flex-shrink: 1;
   min-width: 20px;
+}
+
+.three-lens-node-name.unnamed {
+  font-style: italic;
+  color: var(--3lens-text-tertiary);
 }
 
 .three-lens-visibility-btn {

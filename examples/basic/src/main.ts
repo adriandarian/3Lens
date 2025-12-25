@@ -81,6 +81,7 @@ spotLight.shadow.mapSize.height = 1024;
 spotLight.shadow.camera.near = 1;
 spotLight.shadow.camera.far = 30;
 spotLight.target.position.set(0, 0, 0);
+spotLight.target.name = 'SpotLight_Target';
 scene.add(spotLight);
 scene.add(spotLight.target);
 
