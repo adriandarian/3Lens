@@ -388,38 +388,10 @@ export const OVERLAY_STYLES = `
    STATS PANEL CONTENT
    ═══════════════════════════════════════════════════════════════ */
 
-.three-lens-stats-tab-content {
-  padding: 12px;
-}
-
-/* Responsive two-column layout for overview tab */
-.three-lens-stats-tab-content.wide-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.three-lens-stats-tab-content.wide-layout > * {
-  margin-bottom: 0;
-}
-
-/* Full-width items in overview wide layout */
-.three-lens-stats-tab-content.wide-layout .three-lens-stats-grid,
-.three-lens-stats-tab-content.wide-layout .three-lens-chart,
-.three-lens-stats-tab-content.wide-layout .three-lens-benchmark,
-.three-lens-stats-tab-content.wide-layout .three-lens-issues {
-  grid-column: 1 / -1;
-}
-
 .three-lens-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
-}
-
-/* More columns for wide panels */
-.wide-layout .three-lens-stats-grid {
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
 }
 
 .three-lens-stat-card {
@@ -1361,50 +1333,6 @@ export const OVERLAY_STYLES = `
 
 .three-lens-memory-profiler {
   padding: 12px;
-  container-type: inline-size;
-  container-name: memory-profiler;
-}
-
-/* Responsive two-column layout using container queries */
-@container memory-profiler (min-width: 500px) {
-  .three-lens-memory-profiler-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  
-  .three-lens-memory-profiler-grid > * {
-    margin-bottom: 0;
-  }
-  
-  /* Full-width items that span both columns */
-  .three-lens-memory-profiler-grid .three-lens-memory-header,
-  .three-lens-memory-profiler-grid .three-lens-memory-chart,
-  .three-lens-memory-profiler-grid .three-lens-memory-warnings,
-  .three-lens-memory-profiler-grid .three-lens-memory-tips,
-  .three-lens-memory-profiler-grid .three-lens-memory-breakdown {
-    grid-column: 1 / -1;
-  }
-}
-
-/* Legacy class-based approach as fallback */
-.three-lens-memory-profiler.wide-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.three-lens-memory-profiler.wide-layout > * {
-  margin-bottom: 0;
-}
-
-/* Full-width items in wide layout (headers, charts that span both columns) */
-.three-lens-memory-profiler.wide-layout .three-lens-memory-header,
-.three-lens-memory-profiler.wide-layout .three-lens-memory-chart,
-.three-lens-memory-profiler.wide-layout .three-lens-memory-warnings,
-.three-lens-memory-profiler.wide-layout .three-lens-memory-tips,
-.three-lens-memory-profiler.wide-layout .three-lens-memory-breakdown {
-  grid-column: 1 / -1;
 }
 
 /* Memory Header */
@@ -1994,45 +1922,6 @@ export const OVERLAY_STYLES = `
 
 .three-lens-rendering-profiler {
   padding: 12px;
-  container-type: inline-size;
-  container-name: rendering-profiler;
-}
-
-/* Responsive two-column layout using container queries */
-@container rendering-profiler (min-width: 500px) {
-  .three-lens-rendering-profiler-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  
-  .three-lens-rendering-profiler-grid > * {
-    margin-bottom: 0;
-  }
-  
-  /* Full-width items that span both columns */
-  .three-lens-rendering-profiler-grid .three-lens-pipeline,
-  .three-lens-rendering-profiler-grid .three-lens-rendering-warnings,
-  .three-lens-rendering-profiler-grid .three-lens-drawcall-chart {
-    grid-column: 1 / -1;
-  }
-}
-
-/* Legacy class-based approach as fallback */
-.three-lens-rendering-profiler.wide-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.three-lens-rendering-profiler.wide-layout > * {
-  margin-bottom: 0;
-}
-
-/* Full-width items in rendering wide layout */
-.three-lens-rendering-profiler.wide-layout .three-lens-pipeline,
-.three-lens-rendering-profiler.wide-layout .three-lens-rendering-warnings {
-  grid-column: 1 / -1;
 }
 
 .three-lens-pipeline {
