@@ -1571,12 +1571,21 @@ export class ThreeLensOverlay {
   }
 
   private updateInspectorPanel(): void {
-    // Since the layout changes between full-width tree and split view,
-    // we need to re-render the entire scene panel when selection changes
+    const panel = document.getElementById('three-lens-panel-scene');
+    const content = document.getElementById('three-lens-content-scene');
+    if (!panel || !content) return;
+
+    // Lock the current width to prevent shrinking during DOM update
+    const currentWidth = panel.offsetWidth;
+    panel.style.minWidth = `${currentWidth}px`;
+    
+    // Update the content (this changes the DOM structure)
     this.updateScenePanel();
     
-    // Dynamically resize the scene panel based on selection
-    this.updateScenePanelSize();
+    // Now animate to the target width
+    requestAnimationFrame(() => {
+      this.updateScenePanelSize();
+    });
   }
 
   private updateScenePanelSize(): void {
@@ -1588,7 +1597,9 @@ export class ThreeLensOverlay {
       ? SCENE_PANEL_WIDTH_EXPANDED 
       : SCENE_PANEL_WIDTH_COLLAPSED;
 
-    // Only update if width is different
+    // Update min-width and width to target
+    panel.style.minWidth = `${targetWidth}px`;
+    
     if (state.width !== targetWidth) {
       state.width = targetWidth;
       panel.style.width = `${targetWidth}px`;

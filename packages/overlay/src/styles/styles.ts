@@ -211,7 +211,7 @@ export const OVERLAY_STYLES = `
 
 /* Smooth width animation only when not resizing */
 .three-lens-panel:not(.resizing) {
-  transition: box-shadow 150ms ease, width 150ms ease;
+  transition: box-shadow 150ms ease, width 150ms ease, min-width 150ms ease;
 }
 
 .three-lens-panel:hover {
