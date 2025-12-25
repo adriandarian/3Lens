@@ -118,6 +118,34 @@ export class DevtoolProbe {
     return this._rendererAdapter;
   }
 
+  /**
+   * Get all textures from the renderer adapter
+   */
+  getTextures(): import('../types').TextureInfo[] {
+    return this._rendererAdapter?.getTextures() ?? [];
+  }
+
+  /**
+   * Get all geometries from the renderer adapter
+   */
+  getGeometries(): import('../types').GeometryInfo[] {
+    return this._rendererAdapter?.getGeometries() ?? [];
+  }
+
+  /**
+   * Get all materials from the renderer adapter
+   */
+  getMaterials(): import('../types').MaterialInfo[] {
+    return this._rendererAdapter?.getMaterials() ?? [];
+  }
+
+  /**
+   * Get GPU timing information
+   */
+  async getGpuTimings(): Promise<import('../types').GpuTimingInfo | null> {
+    return this._rendererAdapter?.getGpuTimings?.() ?? null;
+  }
+
   // ─────────────────────────────────────────────────────────────────
   // SCENE MANAGEMENT
   // ─────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot } from '@3lens/core';
+import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics } from '@3lens/core';
 import { calculateBenchmarkScore } from '@3lens/core';
 
 import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
@@ -107,6 +107,55 @@ export class ThreeLensOverlay {
   private chartDragStartX = 0;
   private chartDragStartOffset = 0;
   private maxHistoryLength = 120; // Store more history for zoom
+  
+  // Memory profiler state
+  private memoryHistory: {
+    timestamp: number;
+    totalGpu: number;
+    textures: number;
+    geometry: number;
+    renderTargets: number;
+    jsHeap: number;
+  }[] = [];
+  private memoryHistoryMaxLength = 60; // 60 samples for memory chart
+  private lastMemoryUpdate = 0;
+  private memoryUpdateInterval = 1000; // Update memory history every 1 second
+  
+  // Advanced performance tracking
+  private fpsHistogram: number[] = new Array(12).fill(0); // FPS buckets: 0-5, 5-10, 10-15, ... 50-55, 55+
+  private drawCallHistory: number[] = [];
+  private triangleHistory: number[] = [];
+  private frameTimePercentiles: { p50: number; p90: number; p95: number; p99: number } = { p50: 0, p90: 0, p95: 0, p99: 0 };
+  private performanceHistory: {
+    timestamp: number;
+    fps: number;
+    frameTime: number;
+    drawCalls: number;
+    triangles: number;
+  }[] = [];
+  private performanceHistoryMaxLength = 120;
+  
+  // Session statistics
+  private sessionStartTime = performance.now();
+  private totalFramesRendered = 0;
+  private droppedFrameCount = 0;
+  private smoothFrameCount = 0;
+  private peakFps = 0;
+  private lowestFps = Infinity;
+  private peakDrawCalls = 0;
+  private peakTriangles = 0;
+  private peakMemory = 0;
+  private gpuCapabilities: {
+    renderer: string;
+    vendor: string;
+    maxTextureSize: number;
+    maxVertexUniforms: number;
+    maxFragmentUniforms: number;
+    maxTextureUnits: number;
+    extensions: string[];
+    antialias: boolean;
+    powerPreference: string;
+  } | null = null;
 
   constructor(options: OverlayOptions) {
     this.probe = options.probe;
@@ -133,11 +182,81 @@ export class ThreeLensOverlay {
       this.fpsHistory.push(fps);
       if (this.fpsHistory.length > this.maxHistoryLength) this.fpsHistory.shift();
       
+      // Update FPS histogram
+      const fpsBucket = Math.min(11, Math.floor(fps / 5));
+      this.fpsHistogram[fpsBucket]++;
+      
+      // Track draw calls and triangles history
+      this.drawCallHistory.push(stats.drawCalls);
+      if (this.drawCallHistory.length > this.maxHistoryLength) this.drawCallHistory.shift();
+      this.triangleHistory.push(stats.triangles);
+      if (this.triangleHistory.length > this.maxHistoryLength) this.triangleHistory.shift();
+      
+      // Update session statistics
+      this.totalFramesRendered++;
+      if (fps > this.peakFps) this.peakFps = fps;
+      if (fps < this.lowestFps && fps > 0) this.lowestFps = fps;
+      if (stats.drawCalls > this.peakDrawCalls) this.peakDrawCalls = stats.drawCalls;
+      if (stats.triangles > this.peakTriangles) this.peakTriangles = stats.triangles;
+      if (stats.memory && stats.memory.totalGpuMemory > this.peakMemory) {
+        this.peakMemory = stats.memory.totalGpuMemory;
+      }
+      if (stats.cpuTimeMs > 16.67) {
+        this.droppedFrameCount++;
+      } else {
+        this.smoothFrameCount++;
+      }
+      
+      // Calculate frame time percentiles
+      if (this.frameHistory.length >= 10) {
+        const sorted = [...this.frameHistory].sort((a, b) => a - b);
+        const len = sorted.length;
+        this.frameTimePercentiles = {
+          p50: sorted[Math.floor(len * 0.5)],
+          p90: sorted[Math.floor(len * 0.9)],
+          p95: sorted[Math.floor(len * 0.95)],
+          p99: sorted[Math.floor(len * 0.99)],
+        };
+      }
+      
       // Calculate benchmark score
       this.latestBenchmark = calculateBenchmarkScore(stats);
       
-      // Throttle UI updates to prevent flickering
       const now = performance.now();
+      
+      // Track performance history (at a slower interval)
+      if (now - this.lastMemoryUpdate >= this.memoryUpdateInterval) {
+        this.lastMemoryUpdate = now;
+        
+        // Memory history
+        if (stats.memory) {
+          this.memoryHistory.push({
+            timestamp: stats.timestamp,
+            totalGpu: stats.memory.totalGpuMemory,
+            textures: stats.memory.textureMemory,
+            geometry: stats.memory.geometryMemory,
+            renderTargets: stats.memory.renderTargetMemory,
+            jsHeap: stats.memory.jsHeapSize ?? 0,
+          });
+          if (this.memoryHistory.length > this.memoryHistoryMaxLength) {
+            this.memoryHistory.shift();
+          }
+        }
+        
+        // Performance history
+        this.performanceHistory.push({
+          timestamp: stats.timestamp,
+          fps,
+          frameTime: stats.cpuTimeMs,
+          drawCalls: stats.drawCalls,
+          triangles: stats.triangles,
+        });
+        if (this.performanceHistory.length > this.performanceHistoryMaxLength) {
+          this.performanceHistory.shift();
+        }
+      }
+      
+      // Throttle UI updates to prevent flickering
       if (now - this.lastStatsUpdate >= this.statsUpdateInterval) {
         this.lastStatsUpdate = now;
         this.updateStatsPanel();
@@ -814,6 +933,14 @@ export class ThreeLensOverlay {
       if (el) {
         el.style.width = `${state.width}px`;
         el.style.height = `${state.height}px`;
+        
+        // Update responsive layout for stats panel during resize
+        if (this.resizeState.panelId === 'stats') {
+          const content = document.getElementById('three-lens-content-stats');
+          if (content) {
+            this.applyResponsiveLayout(content);
+          }
+        }
       }
     }
   }
@@ -985,9 +1112,15 @@ export class ThreeLensOverlay {
           <div class="three-lens-stat-value ${fps < 30 ? 'error' : fps < 55 ? 'warning' : ''}">${fps}</div>
         </div>
         <div class="three-lens-stat-card">
-          <div class="three-lens-stat-label">Frame Time</div>
+          <div class="three-lens-stat-label">CPU Time</div>
           <div class="three-lens-stat-value ${stats.cpuTimeMs > 16.67 ? 'warning' : ''}">${stats.cpuTimeMs.toFixed(1)}<span class="three-lens-stat-unit">ms</span></div>
         </div>
+        ${stats.gpuTimeMs !== undefined ? `
+          <div class="three-lens-stat-card gpu">
+            <div class="three-lens-stat-label">GPU Time</div>
+            <div class="three-lens-stat-value ${stats.gpuTimeMs > 16.67 ? 'warning' : ''}">${stats.gpuTimeMs.toFixed(1)}<span class="three-lens-stat-unit">ms</span></div>
+          </div>
+        ` : ''}
         <div class="three-lens-stat-card">
           <div class="three-lens-stat-label">Draw Calls</div>
           <div class="three-lens-stat-value ${stats.drawCalls > 1000 ? 'warning' : ''}">${formatNumber(stats.drawCalls)}</div>
@@ -997,6 +1130,8 @@ export class ThreeLensOverlay {
           <div class="three-lens-stat-value ${stats.triangles > 500000 ? 'warning' : ''}">${formatNumber(stats.triangles)}</div>
         </div>
       </div>
+      
+      <!-- Frame Time Chart -->
       <div class="three-lens-chart">
         <div class="three-lens-chart-header">
           <span class="three-lens-chart-title">Frame Time</span>
@@ -1047,22 +1182,337 @@ export class ThreeLensOverlay {
             <span class="three-lens-chart-stat-value" id="three-lens-chart-jitter">${this.getFrameTimeJitter().toFixed(1)}ms</span>
           </div>
         </div>
-        <div class="three-lens-percentiles">
-          <div class="three-lens-percentile">
-            <span class="three-lens-percentile-label">Avg FPS:</span>
-            <span class="three-lens-percentile-value">${fpsSmoothed}</span>
           </div>
-          <div class="three-lens-percentile">
-            <span class="three-lens-percentile-label">1% Low:</span>
-            <span class="three-lens-percentile-value">${Math.round(fps1Low)}</span>
+      
+      <!-- FPS Histogram -->
+      ${this.renderFpsHistogram()}
+      
+      <!-- Frame Time Percentiles -->
+      ${this.renderFrameTimePercentiles(fpsSmoothed, fps1Low, budgetUsed)}
+      
+      <!-- Frame Budget Gauge -->
+      ${this.renderFrameBudgetGauge(stats, budgetUsed)}
+      
+      <!-- Bottleneck Analysis -->
+      ${this.renderBottleneckAnalysis(stats)}
+      
+      <!-- Session Statistics -->
+      ${this.renderSessionStatistics()}
+      
+      ${benchmark && benchmark.topIssues.length > 0 ? this.renderIssues(benchmark) : ''}
+    `;
+  }
+  
+  private renderFpsHistogram(): string {
+    const maxCount = Math.max(...this.fpsHistogram, 1);
+    const totalFrames = this.fpsHistogram.reduce((a, b) => a + b, 0);
+    
+    if (totalFrames < 10) {
+      return `
+        <div class="three-lens-histogram">
+          <div class="three-lens-histogram-title">FPS Distribution</div>
+          <div class="three-lens-histogram-empty">Collecting data...</div>
           </div>
-          <div class="three-lens-percentile">
-            <span class="three-lens-percentile-label">Budget:</span>
-            <span class="three-lens-percentile-value ${budgetUsed > 100 ? 'warning' : ''}">${budgetUsed.toFixed(0)}%</span>
+      `;
+    }
+
+    const bucketLabels = ['0-5', '5-10', '10-15', '15-20', '20-25', '25-30', '30-35', '35-40', '40-45', '45-50', '50-55', '55+'];
+    
+    return `
+      <div class="three-lens-histogram">
+        <div class="three-lens-histogram-header">
+          <div class="three-lens-histogram-title">FPS Distribution</div>
+          <div class="three-lens-histogram-total">${totalFrames} frames</div>
+          </div>
+        <div class="three-lens-histogram-chart">
+          ${this.fpsHistogram.map((count, i) => {
+            const height = (count / maxCount) * 100;
+            const percent = totalFrames > 0 ? ((count / totalFrames) * 100).toFixed(1) : 0;
+            const isGood = i >= 10; // 50+ FPS
+            const isOk = i >= 6 && i < 10; // 30-50 FPS
+            const isBad = i < 6; // <30 FPS
+            const colorClass = isGood ? 'good' : isOk ? 'ok' : 'bad';
+            return `
+              <div class="three-lens-histogram-bar-wrapper" title="${bucketLabels[i]} FPS: ${count} frames (${percent}%)">
+                <div class="three-lens-histogram-bar ${colorClass}" style="height: ${height}%"></div>
+                <div class="three-lens-histogram-label">${i === 11 ? '55+' : (i * 5)}</div>
+        </div>
+            `;
+          }).join('')}
+      </div>
+        <div class="three-lens-histogram-legend">
+          <span class="three-lens-histogram-legend-item bad">●&nbsp;Slow</span>
+          <span class="three-lens-histogram-legend-item ok">●&nbsp;Okay</span>
+          <span class="three-lens-histogram-legend-item good">●&nbsp;Smooth</span>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderFrameTimePercentiles(fpsSmoothed: number, fps1Low: number, budgetUsed: number): string {
+    return `
+      <div class="three-lens-percentiles-section">
+        <div class="three-lens-percentiles-title">Frame Time Percentiles</div>
+        <div class="three-lens-percentiles-grid">
+          <div class="three-lens-percentile-item">
+            <div class="three-lens-percentile-label">P50</div>
+            <div class="three-lens-percentile-value">${this.frameTimePercentiles.p50.toFixed(1)}ms</div>
+          </div>
+          <div class="three-lens-percentile-item">
+            <div class="three-lens-percentile-label">P90</div>
+            <div class="three-lens-percentile-value ${this.frameTimePercentiles.p90 > 16.67 ? 'warning' : ''}">${this.frameTimePercentiles.p90.toFixed(1)}ms</div>
+          </div>
+          <div class="three-lens-percentile-item">
+            <div class="three-lens-percentile-label">P95</div>
+            <div class="three-lens-percentile-value ${this.frameTimePercentiles.p95 > 16.67 ? 'warning' : ''}">${this.frameTimePercentiles.p95.toFixed(1)}ms</div>
+          </div>
+          <div class="three-lens-percentile-item">
+            <div class="three-lens-percentile-label">P99</div>
+            <div class="three-lens-percentile-value ${this.frameTimePercentiles.p99 > 33.33 ? 'error' : this.frameTimePercentiles.p99 > 16.67 ? 'warning' : ''}">${this.frameTimePercentiles.p99.toFixed(1)}ms</div>
+          </div>
+        </div>
+        <div class="three-lens-percentiles-summary">
+          <div class="three-lens-percentile-summary-item">
+            <span class="three-lens-percentile-summary-label">Avg FPS:</span>
+            <span class="three-lens-percentile-summary-value">${fpsSmoothed}</span>
+          </div>
+          <div class="three-lens-percentile-summary-item">
+            <span class="three-lens-percentile-summary-label">1% Low:</span>
+            <span class="three-lens-percentile-summary-value">${Math.round(fps1Low)}</span>
+          </div>
+          <div class="three-lens-percentile-summary-item">
+            <span class="three-lens-percentile-summary-label">Budget:</span>
+            <span class="three-lens-percentile-summary-value ${budgetUsed > 100 ? 'warning' : ''}">${budgetUsed.toFixed(0)}%</span>
           </div>
         </div>
       </div>
-      ${benchmark && benchmark.topIssues.length > 0 ? this.renderIssues(benchmark) : ''}
+    `;
+  }
+
+  private renderBottleneckAnalysis(stats: FrameStats): string {
+    const bottlenecks: { type: string; severity: 'low' | 'medium' | 'high'; message: string; suggestion: string }[] = [];
+    
+    // Analyze potential bottlenecks
+    if (stats.drawCalls > 500) {
+      const severity = stats.drawCalls > 1000 ? 'high' : stats.drawCalls > 750 ? 'medium' : 'low';
+      bottlenecks.push({
+        type: 'Draw Calls',
+        severity,
+        message: `${stats.drawCalls} draw calls per frame`,
+        suggestion: 'Consider using instancing, merging geometries, or LOD'
+      });
+    }
+    
+    if (stats.triangles > 1000000) {
+      const severity = stats.triangles > 2000000 ? 'high' : stats.triangles > 1500000 ? 'medium' : 'low';
+      bottlenecks.push({
+        type: 'Geometry',
+        severity,
+        message: `${formatNumber(stats.triangles)} triangles`,
+        suggestion: 'Use LOD, occlusion culling, or reduce mesh complexity'
+      });
+    }
+    
+    const rendering = stats.rendering;
+    if (rendering) {
+      if (rendering.shadowCastingLights > 2) {
+        bottlenecks.push({
+          type: 'Shadows',
+          severity: rendering.shadowCastingLights > 4 ? 'high' : 'medium',
+          message: `${rendering.shadowCastingLights} shadow-casting lights`,
+          suggestion: 'Reduce shadow-casting lights or use baked shadows'
+        });
+      }
+      
+      if (rendering.skinnedMeshes > 10) {
+        bottlenecks.push({
+          type: 'Animation',
+          severity: rendering.skinnedMeshes > 20 ? 'high' : 'medium',
+          message: `${rendering.skinnedMeshes} skinned meshes with ${rendering.totalBones} bones`,
+          suggestion: 'Use LOD for animated characters or reduce bone counts'
+        });
+      }
+      
+      if (rendering.transparentObjects > 50) {
+        bottlenecks.push({
+          type: 'Transparency',
+          severity: rendering.transparentObjects > 100 ? 'high' : 'medium',
+          message: `${rendering.transparentObjects} transparent objects`,
+          suggestion: 'Reduce transparent objects or use alpha cutout'
+        });
+      }
+    }
+    
+    if (stats.memory) {
+      const MB = 1024 * 1024;
+      if (stats.memory.textureMemory > 256 * MB) {
+        bottlenecks.push({
+          type: 'Texture Memory',
+          severity: stats.memory.textureMemory > 512 * MB ? 'high' : 'medium',
+          message: `${formatBytes(stats.memory.textureMemory)} texture memory`,
+          suggestion: 'Use compressed textures (KTX2/Basis) or reduce texture sizes'
+        });
+      }
+    }
+    
+    if (bottlenecks.length === 0) {
+      return `
+        <div class="three-lens-bottleneck-section">
+          <div class="three-lens-bottleneck-title">Bottleneck Analysis</div>
+          <div class="three-lens-bottleneck-ok">
+            <span class="three-lens-bottleneck-ok-icon">✓</span>
+            <span>No significant bottlenecks detected</span>
+          </div>
+        </div>
+      `;
+    }
+    
+    return `
+      <div class="three-lens-bottleneck-section">
+        <div class="three-lens-bottleneck-title">Bottleneck Analysis</div>
+        <div class="three-lens-bottleneck-list">
+          ${bottlenecks.map(b => `
+            <div class="three-lens-bottleneck-item ${b.severity}">
+              <div class="three-lens-bottleneck-header">
+                <span class="three-lens-bottleneck-type">${b.type}</span>
+                <span class="three-lens-bottleneck-severity ${b.severity}">${b.severity.toUpperCase()}</span>
+              </div>
+              <div class="three-lens-bottleneck-message">${b.message}</div>
+              <div class="three-lens-bottleneck-suggestion">💡 ${b.suggestion}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderFrameBudgetGauge(stats: FrameStats, budgetUsed: number): string {
+    const targetMs = 16.67; // 60 FPS target
+    const frameTime = stats.cpuTimeMs;
+    const remaining = Math.max(0, targetMs - frameTime);
+    const overBudget = frameTime > targetMs;
+    
+    // Calculate gauge angle (0-180 degrees, with 0 being fully under budget)
+    const angle = Math.min(180, (frameTime / (targetMs * 2)) * 180);
+    
+    // Determine status
+    let status = 'excellent';
+    let statusText = 'Excellent';
+    if (budgetUsed > 120) { status = 'critical'; statusText = 'Critical'; }
+    else if (budgetUsed > 100) { status = 'over'; statusText = 'Over Budget'; }
+    else if (budgetUsed > 80) { status = 'warning'; statusText = 'Warning'; }
+    else if (budgetUsed > 60) { status = 'good'; statusText = 'Good'; }
+    
+    return `
+      <div class="three-lens-budget-gauge">
+        <div class="three-lens-budget-gauge-header">
+          <div class="three-lens-budget-gauge-title">Frame Budget</div>
+          <div class="three-lens-budget-gauge-target">Target: ${targetMs.toFixed(2)}ms (60 FPS)</div>
+        </div>
+        <div class="three-lens-budget-gauge-visual">
+          <svg viewBox="0 0 200 110" class="three-lens-gauge-svg">
+            <!-- Background arc -->
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--3lens-bg-primary)" stroke-width="12" stroke-linecap="round"/>
+            <!-- Colored segments -->
+            <path d="M 20 100 A 80 80 0 0 1 65 32" fill="none" stroke="var(--3lens-accent-emerald)" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
+            <path d="M 65 32 A 80 80 0 0 1 100 20" fill="none" stroke="var(--3lens-accent-cyan)" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
+            <path d="M 100 20 A 80 80 0 0 1 135 32" fill="none" stroke="var(--3lens-warning)" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
+            <path d="M 135 32 A 80 80 0 0 1 180 100" fill="none" stroke="var(--3lens-error)" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
+            <!-- Needle -->
+            <line x1="100" y1="100" x2="${100 + 60 * Math.cos((angle - 180) * Math.PI / 180)}" y2="${100 + 60 * Math.sin((angle - 180) * Math.PI / 180)}" 
+                  stroke="var(--3lens-text-primary)" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="100" cy="100" r="6" fill="var(--3lens-text-primary)"/>
+          </svg>
+          <div class="three-lens-budget-gauge-value ${status}">
+            <span class="three-lens-budget-gauge-number">${frameTime.toFixed(2)}</span>
+            <span class="three-lens-budget-gauge-unit">ms</span>
+          </div>
+        </div>
+        <div class="three-lens-budget-gauge-footer">
+          <div class="three-lens-budget-gauge-status ${status}">${statusText}</div>
+          <div class="three-lens-budget-gauge-remaining">
+            ${overBudget 
+              ? `<span class="over">+${(frameTime - targetMs).toFixed(2)}ms over</span>`
+              : `<span class="under">${remaining.toFixed(2)}ms remaining</span>`
+            }
+          </div>
+        </div>
+        <div class="three-lens-budget-gauge-breakdown">
+          <div class="three-lens-budget-bar">
+            <div class="three-lens-budget-bar-fill ${status}" style="width: ${Math.min(100, budgetUsed)}%"></div>
+            ${budgetUsed > 100 ? `<div class="three-lens-budget-bar-over" style="width: ${Math.min(50, budgetUsed - 100)}%"></div>` : ''}
+          </div>
+          <div class="three-lens-budget-labels">
+            <span>0%</span>
+            <span>50%</span>
+            <span>100%</span>
+            <span>150%</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderSessionStatistics(): string {
+    const sessionDuration = (performance.now() - this.sessionStartTime) / 1000; // seconds
+    const avgFps = this.totalFramesRendered / sessionDuration;
+    const smoothPercent = this.totalFramesRendered > 0 
+      ? (this.smoothFrameCount / this.totalFramesRendered) * 100 
+      : 100;
+    
+    const formatDuration = (secs: number) => {
+      const mins = Math.floor(secs / 60);
+      const s = Math.floor(secs % 60);
+      return mins > 0 ? `${mins}m ${s}s` : `${s}s`;
+    };
+    
+    return `
+      <div class="three-lens-session">
+        <div class="three-lens-session-header">
+          <div class="three-lens-session-title">Session Statistics</div>
+          <div class="three-lens-session-duration">${formatDuration(sessionDuration)}</div>
+        </div>
+        <div class="three-lens-session-grid">
+          <div class="three-lens-session-stat">
+            <div class="three-lens-session-stat-value">${formatNumber(this.totalFramesRendered)}</div>
+            <div class="three-lens-session-stat-label">Total Frames</div>
+          </div>
+          <div class="three-lens-session-stat">
+            <div class="three-lens-session-stat-value">${avgFps.toFixed(1)}</div>
+            <div class="three-lens-session-stat-label">Avg FPS</div>
+          </div>
+          <div class="three-lens-session-stat">
+            <div class="three-lens-session-stat-value ${smoothPercent < 90 ? 'warning' : ''}">${smoothPercent.toFixed(1)}%</div>
+            <div class="three-lens-session-stat-label">Smooth Frames</div>
+          </div>
+          <div class="three-lens-session-stat">
+            <div class="three-lens-session-stat-value">${this.droppedFrameCount}</div>
+            <div class="three-lens-session-stat-label">Dropped</div>
+          </div>
+        </div>
+        <div class="three-lens-session-peaks">
+          <div class="three-lens-session-peak">
+            <span class="three-lens-session-peak-label">Peak FPS</span>
+            <span class="three-lens-session-peak-value">${this.peakFps.toFixed(0)}</span>
+          </div>
+          <div class="three-lens-session-peak">
+            <span class="three-lens-session-peak-label">Lowest FPS</span>
+            <span class="three-lens-session-peak-value ${this.lowestFps < 30 ? 'warning' : ''}">${this.lowestFps === Infinity ? '--' : this.lowestFps.toFixed(0)}</span>
+          </div>
+          <div class="three-lens-session-peak">
+            <span class="three-lens-session-peak-label">Peak Draw Calls</span>
+            <span class="three-lens-session-peak-value">${this.peakDrawCalls}</span>
+          </div>
+          <div class="three-lens-session-peak">
+            <span class="three-lens-session-peak-label">Peak Triangles</span>
+            <span class="three-lens-session-peak-value">${formatNumber(this.peakTriangles)}</span>
+          </div>
+          <div class="three-lens-session-peak">
+            <span class="three-lens-session-peak-label">Peak Memory</span>
+            <span class="three-lens-session-peak-value">${formatBytes(this.peakMemory)}</span>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -1148,28 +1598,70 @@ export class ThreeLensOverlay {
       return `<div class="three-lens-inspector-empty">Memory stats not available</div>`;
     }
 
+    // Calculate memory breakdown percentages
+    const totalGpu = memory.totalGpuMemory || 1; // Avoid division by zero
+    const texturePercent = Math.round((memory.textureMemory / totalGpu) * 100);
+    const geometryPercent = Math.round((memory.geometryMemory / totalGpu) * 100);
+    const rtPercent = Math.round((memory.renderTargetMemory / totalGpu) * 100);
+
+    // Memory thresholds for warnings (in MB)
+    const MB = 1024 * 1024;
+    const textureWarning = memory.textureMemory > 256 * MB;
+    const geometryWarning = memory.geometryMemory > 128 * MB;
+    const totalWarning = memory.totalGpuMemory > 512 * MB;
+
+    // Get memory trend (comparing current to average of history)
+    const avgHistoryGpu = this.memoryHistory.length > 0
+      ? this.memoryHistory.reduce((sum, h) => sum + h.totalGpu, 0) / this.memoryHistory.length
+      : memory.totalGpuMemory;
+    const memoryTrend = memory.totalGpuMemory > avgHistoryGpu * 1.1 ? 'rising' 
+      : memory.totalGpuMemory < avgHistoryGpu * 0.9 ? 'falling' : 'stable';
+
     return `
-      <div class="three-lens-metrics-section">
-        <div class="three-lens-metrics-title">GPU Memory</div>
-        <div class="three-lens-memory-grid">
-          <div class="three-lens-memory-item">
-            <div class="three-lens-memory-label">Total GPU</div>
-            <div class="three-lens-memory-value">${formatBytes(memory.totalGpuMemory)}</div>
+      <div class="three-lens-memory-profiler">
+        <div class="three-lens-memory-profiler-grid">
+          <!-- Total GPU Memory Header -->
+          <div class="three-lens-memory-header">
+            <div class="three-lens-memory-total">
+              <div class="three-lens-memory-total-value ${totalWarning ? 'warning' : ''}">${formatBytes(memory.totalGpuMemory)}</div>
+              <div class="three-lens-memory-total-label">Total GPU Memory</div>
           </div>
-          <div class="three-lens-memory-item">
-            <div class="three-lens-memory-label">Textures</div>
-            <div class="three-lens-memory-value">${formatBytes(memory.textureMemory)}</div>
+            <div class="three-lens-memory-trend ${memoryTrend}">
+              ${memoryTrend === 'rising' ? '↗ Rising' : memoryTrend === 'falling' ? '↘ Falling' : '→ Stable'}
           </div>
-          <div class="three-lens-memory-item">
-            <div class="three-lens-memory-label">Geometry</div>
-            <div class="three-lens-memory-value">${formatBytes(memory.geometryMemory)}</div>
           </div>
-          <div class="three-lens-memory-item">
-            <div class="three-lens-memory-label">Render Targets</div>
-            <div class="three-lens-memory-value">${formatBytes(memory.renderTargetMemory)}</div>
+
+          <!-- Memory Breakdown Bar -->
+          <div class="three-lens-memory-breakdown">
+            <div class="three-lens-memory-breakdown-title">Memory Breakdown</div>
+            <div class="three-lens-memory-bar">
+              <div class="three-lens-memory-bar-segment texture" style="width: ${texturePercent}%" title="Textures: ${formatBytes(memory.textureMemory)}"></div>
+              <div class="three-lens-memory-bar-segment geometry" style="width: ${geometryPercent}%" title="Geometry: ${formatBytes(memory.geometryMemory)}"></div>
+              <div class="three-lens-memory-bar-segment render-target" style="width: ${rtPercent}%" title="Render Targets: ${formatBytes(memory.renderTargetMemory)}"></div>
           </div>
+            <div class="three-lens-memory-legend">
+              <div class="three-lens-memory-legend-item">
+                <span class="three-lens-memory-legend-color texture"></span>
+                <span class="three-lens-memory-legend-label">Textures</span>
+                <span class="three-lens-memory-legend-value ${textureWarning ? 'warning' : ''}">${formatBytes(memory.textureMemory)}</span>
         </div>
+              <div class="three-lens-memory-legend-item">
+                <span class="three-lens-memory-legend-color geometry"></span>
+                <span class="three-lens-memory-legend-label">Geometry</span>
+                <span class="three-lens-memory-legend-value ${geometryWarning ? 'warning' : ''}">${formatBytes(memory.geometryMemory)}</span>
       </div>
+              <div class="three-lens-memory-legend-item">
+                <span class="three-lens-memory-legend-color render-target"></span>
+                <span class="three-lens-memory-legend-label">Render Targets</span>
+                <span class="three-lens-memory-legend-value">${formatBytes(memory.renderTargetMemory)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Memory History Chart -->
+          ${this.renderMemoryHistoryChart()}
+
+          <!-- Resource Counts -->
       <div class="three-lens-metrics-section">
         <div class="three-lens-metrics-title">Resource Counts</div>
         <div class="three-lens-metrics-grid">
@@ -1183,7 +1675,7 @@ export class ThreeLensOverlay {
           </div>
           <div class="three-lens-metric">
             <div class="three-lens-metric-value">${memory.programs}</div>
-            <div class="three-lens-metric-label">Programs</div>
+                <div class="three-lens-metric-label">Shaders</div>
           </div>
           <div class="three-lens-metric">
             <div class="three-lens-metric-value">${memory.renderTargets}</div>
@@ -1199,21 +1691,444 @@ export class ThreeLensOverlay {
           </div>
         </div>
       </div>
-      ${memory.jsHeapSize ? `
-        <div class="three-lens-metrics-section">
-          <div class="three-lens-metrics-title">JS Heap</div>
-          <div class="three-lens-memory-grid">
-            <div class="three-lens-memory-item">
-              <div class="three-lens-memory-label">Used</div>
-              <div class="three-lens-memory-value">${formatBytes(memory.jsHeapSize)}</div>
+
+          <!-- Memory Efficiency Analysis -->
+          ${this.renderMemoryEfficiency(memory, stats)}
+          
+          <!-- Memory Per Category Breakdown -->
+          ${this.renderMemoryCategoryDetails(memory)}
+
+          <!-- JS Heap (if available) -->
+          ${memory.jsHeapSize ? this.renderJsHeapSection(memory.jsHeapSize, memory.jsHeapLimit ?? 0) : ''}
+          
+          <!-- Memory Tips -->
+          ${this.renderMemoryTips(memory, stats)}
+
+          <!-- Memory Warnings -->
+          ${this.renderMemoryWarnings(memory, stats)}
             </div>
-            <div class="three-lens-memory-item">
-              <div class="three-lens-memory-label">Limit</div>
-              <div class="three-lens-memory-value">${formatBytes(memory.jsHeapLimit ?? 0)}</div>
             </div>
+    `;
+  }
+
+  private renderMemoryEfficiency(memory: MemoryStats, stats: FrameStats): string {
+    // Calculate memory efficiency metrics
+    const avgMemoryPerObject = stats.objectsTotal > 0 
+      ? memory.totalGpuMemory / stats.objectsTotal 
+      : 0;
+    const avgTextureMemory = memory.textures > 0 
+      ? memory.textureMemory / memory.textures 
+      : 0;
+    const avgGeometryMemory = memory.geometries > 0 
+      ? memory.geometryMemory / memory.geometries 
+      : 0;
+    
+    // Memory efficiency score (0-100)
+    const MB = 1024 * 1024;
+    let efficiencyScore = 100;
+    if (memory.totalGpuMemory > 512 * MB) efficiencyScore -= 30;
+    else if (memory.totalGpuMemory > 256 * MB) efficiencyScore -= 15;
+    if (avgTextureMemory > 4 * MB) efficiencyScore -= 20;
+    else if (avgTextureMemory > 2 * MB) efficiencyScore -= 10;
+    if (memory.geometries > 100) efficiencyScore -= 15;
+    if (memory.textures > 50) efficiencyScore -= 10;
+    efficiencyScore = Math.max(0, efficiencyScore);
+    
+    const grade = efficiencyScore >= 80 ? 'A' : efficiencyScore >= 60 ? 'B' : efficiencyScore >= 40 ? 'C' : efficiencyScore >= 20 ? 'D' : 'F';
+    const gradeColor = grade === 'A' ? 'var(--3lens-accent-emerald)' : grade === 'B' ? 'var(--3lens-accent-cyan)' : grade === 'C' ? 'var(--3lens-accent-amber)' : 'var(--3lens-error)';
+    
+    return `
+      <div class="three-lens-memory-efficiency">
+        <div class="three-lens-memory-efficiency-header">
+          <div class="three-lens-memory-efficiency-title">Memory Efficiency</div>
+          <div class="three-lens-memory-efficiency-grade" style="color: ${gradeColor};">${grade}</div>
+          </div>
+        <div class="three-lens-memory-efficiency-grid">
+          <div class="three-lens-memory-efficiency-item">
+            <div class="three-lens-memory-efficiency-value">${formatBytes(avgMemoryPerObject)}</div>
+            <div class="three-lens-memory-efficiency-label">Avg per Object</div>
+          </div>
+          <div class="three-lens-memory-efficiency-item">
+            <div class="three-lens-memory-efficiency-value">${formatBytes(avgTextureMemory)}</div>
+            <div class="three-lens-memory-efficiency-label">Avg Texture Size</div>
+          </div>
+          <div class="three-lens-memory-efficiency-item">
+            <div class="three-lens-memory-efficiency-value">${formatBytes(avgGeometryMemory)}</div>
+            <div class="three-lens-memory-efficiency-label">Avg Geometry Size</div>
           </div>
         </div>
+        <div class="three-lens-memory-efficiency-bar">
+          <div class="three-lens-memory-efficiency-fill" style="width: ${efficiencyScore}%; background: ${gradeColor};"></div>
+        </div>
+        <div class="three-lens-memory-efficiency-score">${efficiencyScore}/100</div>
+      </div>
+    `;
+  }
+
+  private renderMemoryCategoryDetails(memory: MemoryStats): string {
+    const KB = 1024;
+    const MB = 1024 * KB;
+    
+    // Get real texture and geometry data from the probe
+    const textures = this.probe.getTextures();
+    const geometries = this.probe.getGeometries();
+    
+    // Categorize textures by actual size
+    let smallTextures = 0;
+    let mediumTextures = 0;
+    let largeTextures = 0;
+    let largestTexture = { name: '', size: 0, dimensions: '' };
+    
+    for (const tex of textures) {
+      if (tex.estimatedMemoryBytes < 512 * KB) {
+        smallTextures++;
+      } else if (tex.estimatedMemoryBytes < 2 * MB) {
+        mediumTextures++;
+      } else {
+        largeTextures++;
+      }
+      if (tex.estimatedMemoryBytes > largestTexture.size) {
+        largestTexture = {
+          name: tex.name || 'unnamed',
+          size: tex.estimatedMemoryBytes,
+          dimensions: `${tex.width}×${tex.height}`
+        };
+      }
+    }
+    
+    // If no textures from probe, fall back to estimates
+    if (textures.length === 0 && memory.textures > 0) {
+      smallTextures = Math.floor(memory.textures * 0.6);
+      mediumTextures = Math.floor(memory.textures * 0.3);
+      largeTextures = memory.textures - smallTextures - mediumTextures;
+    }
+    
+    // Categorize geometries by actual vertex count
+    let simpleGeos = 0;
+    let mediumGeos = 0;
+    let complexGeos = 0;
+    let largestGeo = { name: '', vertices: 0, faces: 0 };
+    
+    for (const geo of geometries) {
+      if (geo.vertexCount < 1000) {
+        simpleGeos++;
+      } else if (geo.vertexCount < 10000) {
+        mediumGeos++;
+      } else {
+        complexGeos++;
+      }
+      if (geo.vertexCount > largestGeo.vertices) {
+        largestGeo = {
+          name: geo.name || geo.type,
+          vertices: geo.vertexCount,
+          faces: geo.faceCount
+        };
+      }
+    }
+    
+    const textureCount = textures.length || memory.textures;
+    const geometryCount = geometries.length || memory.geometries;
+    
+    return `
+      <div class="three-lens-memory-categories">
+        <div class="three-lens-memory-categories-title">Memory Distribution</div>
+        
+        <!-- Texture Size Distribution -->
+        <div class="three-lens-memory-category">
+          <div class="three-lens-memory-category-header">
+            <span class="three-lens-memory-category-icon">🖼️</span>
+            <span class="three-lens-memory-category-name">Textures</span>
+            <span class="three-lens-memory-category-count">${textureCount}</span>
+          </div>
+          <div class="three-lens-memory-category-bar">
+            <div class="three-lens-memory-category-segment small" style="flex: ${smallTextures || 1}" title="Small (<512KB): ${smallTextures}"></div>
+            <div class="three-lens-memory-category-segment medium" style="flex: ${mediumTextures || 0}" title="Medium (512KB-2MB): ${mediumTextures}"></div>
+            <div class="three-lens-memory-category-segment large" style="flex: ${largeTextures || 0}" title="Large (>2MB): ${largeTextures}"></div>
+          </div>
+          <div class="three-lens-memory-category-legend">
+            <span class="small">● Small (${smallTextures})</span>
+            <span class="medium">● Medium (${mediumTextures})</span>
+            <span class="large">● Large (${largeTextures})</span>
+          </div>
+          ${largestTexture.size > 0 ? `
+            <div class="three-lens-memory-category-largest">
+              Largest: <strong>${largestTexture.name}</strong> (${largestTexture.dimensions}, ${formatBytes(largestTexture.size)})
+        </div>
       ` : ''}
+        </div>
+        
+        <!-- Geometry Complexity Distribution -->
+        <div class="three-lens-memory-category">
+          <div class="three-lens-memory-category-header">
+            <span class="three-lens-memory-category-icon">📐</span>
+            <span class="three-lens-memory-category-name">Geometries</span>
+            <span class="three-lens-memory-category-count">${geometryCount}</span>
+          </div>
+          ${geometries.length > 0 ? `
+            <div class="three-lens-memory-category-bar">
+              <div class="three-lens-memory-category-segment small" style="flex: ${simpleGeos || 1}" title="Simple (<1K verts): ${simpleGeos}"></div>
+              <div class="three-lens-memory-category-segment medium" style="flex: ${mediumGeos || 0}" title="Medium (1K-10K verts): ${mediumGeos}"></div>
+              <div class="three-lens-memory-category-segment large" style="flex: ${complexGeos || 0}" title="Complex (>10K verts): ${complexGeos}"></div>
+            </div>
+            <div class="three-lens-memory-category-legend">
+              <span class="small">● Simple (${simpleGeos})</span>
+              <span class="medium">● Medium (${mediumGeos})</span>
+              <span class="large">● Complex (${complexGeos})</span>
+            </div>
+            ${largestGeo.vertices > 0 ? `
+              <div class="three-lens-memory-category-largest">
+                Largest: <strong>${largestGeo.name}</strong> (${formatNumber(largestGeo.vertices)} verts, ${formatNumber(largestGeo.faces)} faces)
+              </div>
+            ` : ''}
+          ` : `
+            <div class="three-lens-memory-category-details">
+              <div class="three-lens-memory-category-detail">
+                <span class="label">Total Memory</span>
+                <span class="value">${formatBytes(memory.geometryMemory)}</span>
+              </div>
+              <div class="three-lens-memory-category-detail">
+                <span class="label">Avg Size</span>
+                <span class="value">${formatBytes(memory.geometries > 0 ? memory.geometryMemory / memory.geometries : 0)}</span>
+              </div>
+            </div>
+          `}
+        </div>
+        
+        <!-- Programs/Shaders -->
+        <div class="three-lens-memory-category">
+          <div class="three-lens-memory-category-header">
+            <span class="three-lens-memory-category-icon">⚡</span>
+            <span class="three-lens-memory-category-name">Shader Programs</span>
+            <span class="three-lens-memory-category-count">${memory.programs}</span>
+          </div>
+          <div class="three-lens-memory-category-note">
+            ${memory.programs > 20 ? '⚠️ Many unique shaders may impact performance' : '✓ Reasonable number of shader variants'}
+          </div>
+        </div>
+        
+        <!-- Render Targets -->
+        ${memory.renderTargets > 0 ? `
+          <div class="three-lens-memory-category">
+            <div class="three-lens-memory-category-header">
+              <span class="three-lens-memory-category-icon">🎯</span>
+              <span class="three-lens-memory-category-name">Render Targets</span>
+              <span class="three-lens-memory-category-count">${memory.renderTargets}</span>
+            </div>
+            <div class="three-lens-memory-category-details">
+              <div class="three-lens-memory-category-detail">
+                <span class="label">Memory</span>
+                <span class="value">${formatBytes(memory.renderTargetMemory)}</span>
+              </div>
+              <div class="three-lens-memory-category-detail">
+                <span class="label">Avg Size</span>
+                <span class="value">${formatBytes(memory.renderTargets > 0 ? memory.renderTargetMemory / memory.renderTargets : 0)}</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  private renderMemoryTips(memory: MemoryStats, stats: FrameStats): string {
+    const tips: { icon: string; tip: string; priority: 'low' | 'medium' | 'high' }[] = [];
+    const MB = 1024 * 1024;
+    
+    // Generate contextual tips based on current memory state
+    if (memory.textureMemory > 128 * MB && memory.textures > 10) {
+      tips.push({
+        icon: '🗜️',
+        tip: 'Use KTX2/Basis texture compression to reduce texture memory by 75%+',
+        priority: 'high'
+      });
+    }
+    
+    if (memory.geometries > 50) {
+      tips.push({
+        icon: '🔗',
+        tip: 'Consider merging static geometries with BufferGeometryUtils.mergeBufferGeometries()',
+        priority: 'medium'
+      });
+    }
+    
+    if (memory.textures > 30) {
+      tips.push({
+        icon: '🎨',
+        tip: 'Use texture atlases to reduce texture count and draw calls',
+        priority: 'medium'
+      });
+    }
+    
+    if (stats.objectsTotal > 1000 && memory.geometryMemory > 64 * MB) {
+      tips.push({
+        icon: '📏',
+        tip: 'Implement LOD (Level of Detail) for distant objects',
+        priority: 'high'
+      });
+    }
+    
+    if (memory.programs > 15) {
+      tips.push({
+        icon: '⚙️',
+        tip: 'Reduce shader variants by sharing materials when possible',
+        priority: 'low'
+      });
+    }
+    
+    if (memory.renderTargets > 5) {
+      tips.push({
+        icon: '🎯',
+        tip: 'Consolidate post-processing passes to reduce render target memory',
+        priority: 'medium'
+      });
+    }
+    
+    // Check for memory growth
+    if (this.memoryHistory.length >= 10) {
+      const first = this.memoryHistory[0].totalGpu;
+      const last = this.memoryHistory[this.memoryHistory.length - 1].totalGpu;
+      if (last > first * 1.5) {
+        tips.push({
+          icon: '🔍',
+          tip: 'Memory is growing - check for texture/geometry leaks. Dispose unused resources.',
+          priority: 'high'
+        });
+      }
+    }
+    
+    if (tips.length === 0) return '';
+    
+    // Sort by priority
+    tips.sort((a, b) => {
+      const order = { high: 0, medium: 1, low: 2 };
+      return order[a.priority] - order[b.priority];
+    });
+    
+    return `
+      <div class="three-lens-memory-tips">
+        <div class="three-lens-memory-tips-title">💡 Optimization Tips</div>
+        <div class="three-lens-memory-tips-list">
+          ${tips.slice(0, 4).map(t => `
+            <div class="three-lens-memory-tip ${t.priority}">
+              <span class="three-lens-memory-tip-icon">${t.icon}</span>
+              <span class="three-lens-memory-tip-text">${t.tip}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderMemoryHistoryChart(): string {
+    if (this.memoryHistory.length < 2) {
+      return `
+        <div class="three-lens-memory-chart">
+          <div class="three-lens-memory-chart-title">Memory Over Time</div>
+          <div class="three-lens-memory-chart-empty">Collecting data...</div>
+        </div>
+      `;
+    }
+
+    // Find max memory for scaling
+    const maxMem = Math.max(...this.memoryHistory.map(h => h.totalGpu), 1);
+    const chartHeight = 48;
+    const chartWidth = 300;
+    const pointSpacing = chartWidth / Math.max(this.memoryHistory.length - 1, 1);
+
+    // Build SVG path for memory line
+    const points = this.memoryHistory.map((h, i) => {
+      const x = i * pointSpacing;
+      const y = chartHeight - (h.totalGpu / maxMem) * chartHeight;
+      return `${x},${y}`;
+    });
+    const linePath = `M${points.join(' L')}`;
+
+    // Build area fill path
+    const areaPath = `M0,${chartHeight} L${points.join(' L')} L${chartWidth},${chartHeight} Z`;
+
+    return `
+      <div class="three-lens-memory-chart">
+        <div class="three-lens-memory-chart-header">
+          <div class="three-lens-memory-chart-title">Memory Over Time</div>
+          <div class="three-lens-memory-chart-max">${formatBytes(maxMem)}</div>
+        </div>
+        <svg class="three-lens-memory-chart-svg" viewBox="0 0 ${chartWidth} ${chartHeight}" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="memoryGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color: var(--3lens-accent-cyan); stop-opacity: 0.4"/>
+              <stop offset="100%" style="stop-color: var(--3lens-accent-cyan); stop-opacity: 0.05"/>
+            </linearGradient>
+          </defs>
+          <path class="three-lens-memory-chart-area" d="${areaPath}" fill="url(#memoryGradient)"/>
+          <path class="three-lens-memory-chart-line" d="${linePath}" fill="none" stroke="var(--3lens-accent-cyan)" stroke-width="1.5"/>
+        </svg>
+        <div class="three-lens-memory-chart-labels">
+          <span>60s ago</span>
+          <span>Now</span>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderJsHeapSection(used: number, limit: number): string {
+    const usedPercent = limit > 0 ? Math.round((used / limit) * 100) : 0;
+    const isHigh = usedPercent > 80;
+    
+    return `
+      <div class="three-lens-metrics-section">
+        <div class="three-lens-metrics-title">JavaScript Heap</div>
+        <div class="three-lens-heap-container">
+          <div class="three-lens-heap-bar">
+            <div class="three-lens-heap-bar-fill ${isHigh ? 'warning' : ''}" style="width: ${usedPercent}%"></div>
+          </div>
+          <div class="three-lens-heap-stats">
+            <span class="three-lens-heap-used ${isHigh ? 'warning' : ''}">${formatBytes(used)}</span>
+            <span class="three-lens-heap-separator">/</span>
+            <span class="three-lens-heap-limit">${formatBytes(limit)}</span>
+            <span class="three-lens-heap-percent ${isHigh ? 'warning' : ''}">(${usedPercent}%)</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderMemoryWarnings(memory: MemoryStats, stats: FrameStats): string {
+    const warnings: string[] = [];
+    const MB = 1024 * 1024;
+
+    // Check for memory issues
+    if (memory.textureMemory > 256 * MB) {
+      warnings.push(`High texture memory: ${formatBytes(memory.textureMemory)}. Consider using compressed textures or reducing texture sizes.`);
+    }
+    if (memory.geometryMemory > 128 * MB) {
+      warnings.push(`High geometry memory: ${formatBytes(memory.geometryMemory)}. Consider using LOD or geometry instancing.`);
+    }
+    if (memory.totalGpuMemory > 512 * MB) {
+      warnings.push(`Total GPU memory is high: ${formatBytes(memory.totalGpuMemory)}. May cause performance issues on lower-end devices.`);
+    }
+    if (memory.textures > 50) {
+      warnings.push(`Many textures loaded (${memory.textures}). Consider using texture atlases.`);
+    }
+    if (memory.geometries > 100) {
+      warnings.push(`Many geometries (${memory.geometries}). Consider merging static meshes.`);
+    }
+
+    // Check for memory leaks (continuously rising memory)
+    if (this.memoryHistory.length >= 10) {
+      const recent = this.memoryHistory.slice(-10);
+      const isRising = recent.every((h, i) => i === 0 || h.totalGpu >= recent[i - 1].totalGpu);
+      if (isRising && recent[recent.length - 1].totalGpu > recent[0].totalGpu * 1.2) {
+        warnings.push('⚠️ Memory appears to be continuously increasing. Possible memory leak detected.');
+      }
+    }
+
+    if (warnings.length === 0) return '';
+
+    return `
+      <div class="three-lens-memory-warnings">
+        <div class="three-lens-memory-warnings-title">⚠ Memory Warnings</div>
+        ${warnings.map(w => `<div class="three-lens-memory-warning">${w}</div>`).join('')}
+      </div>
     `;
   }
 
@@ -1226,8 +2141,17 @@ export class ThreeLensOverlay {
     }
 
     return `
+      <div class="three-lens-rendering-profiler">
+        <div class="three-lens-rendering-profiler-grid">
+          <!-- Render Pipeline Visualization -->
+          ${this.renderPipelineVisualization(stats, rendering)}
+          
+          <!-- Draw Call Efficiency -->
+          ${this.renderDrawCallEfficiency(stats, perf)}
+          
+          <!-- Geometry Statistics -->
       <div class="three-lens-metrics-section">
-        <div class="three-lens-metrics-title">Geometry Stats</div>
+            <div class="three-lens-metrics-title">Geometry Statistics</div>
         <div class="three-lens-metrics-grid">
           <div class="three-lens-metric">
             <div class="three-lens-metric-value">${formatNumber(stats.triangles)}</div>
@@ -1255,89 +2179,403 @@ export class ThreeLensOverlay {
           </div>
         </div>
       </div>
-      <div class="three-lens-metrics-section">
-        <div class="three-lens-metrics-title">Objects</div>
-        <div class="three-lens-metrics-grid">
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${stats.objectsVisible}</div>
-            <div class="three-lens-metric-label">Visible</div>
+          
+          <!-- Object Visibility Breakdown -->
+          ${this.renderObjectVisibilityBreakdown(stats, rendering)}
+          
+          <!-- Lighting Analysis -->
+          ${this.renderLightingAnalysis(rendering)}
+          
+          <!-- Animation & Instancing -->
+          ${this.renderAnimationInstancing(rendering)}
+          
+          <!-- State Changes Analysis -->
+          ${this.renderStateChangesAnalysis(rendering)}
+          
+          ${rendering.xrActive ? this.renderXRInfo(rendering) : ''}
+          
+          <!-- Rendering Warnings -->
+          ${this.renderRenderingWarnings(stats, rendering)}
           </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${stats.objectsCulled}</div>
-            <div class="three-lens-metric-label">Culled</div>
           </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.transparentObjects}</div>
-            <div class="three-lens-metric-label">Transparent</div>
+    `;
+  }
+
+  private renderPipelineVisualization(stats: FrameStats, rendering: RenderingStats): string {
+    // Calculate estimated time for each stage (simplified estimation)
+    const totalTime = stats.cpuTimeMs;
+    const shadowTime = rendering.shadowCastingLights * 0.5; // Rough estimate
+    const opaqueTime = totalTime * 0.6;
+    const transparentTime = rendering.transparentObjects > 0 ? totalTime * 0.2 : 0;
+    const postProcessTime = rendering.postProcessingPasses * 0.3;
+    
+    const stages = [
+      { name: 'Shadow Pass', time: shadowTime, color: '#8b5cf6', active: rendering.shadowCastingLights > 0 },
+      { name: 'Opaque', time: opaqueTime, color: '#3b82f6', active: true },
+      { name: 'Transparent', time: transparentTime, color: '#22d3ee', active: rendering.transparentObjects > 0 },
+      { name: 'Post-Process', time: postProcessTime, color: '#f59e0b', active: rendering.postProcessingPasses > 0 },
+    ].filter(s => s.active);
+    
+    const totalEstimated = stages.reduce((sum, s) => sum + s.time, 0);
+    
+    return `
+      <div class="three-lens-pipeline">
+        <div class="three-lens-pipeline-header">
+          <div class="three-lens-pipeline-title">Render Pipeline</div>
+          <div class="three-lens-pipeline-time">${totalTime.toFixed(2)}ms total</div>
+          </div>
+        <div class="three-lens-pipeline-bar">
+          ${stages.map(s => {
+            const width = totalEstimated > 0 ? (s.time / totalEstimated) * 100 : 0;
+            return `<div class="three-lens-pipeline-segment" style="width: ${width}%; background: ${s.color};" title="${s.name}: ~${s.time.toFixed(1)}ms"></div>`;
+          }).join('')}
+        </div>
+        <div class="three-lens-pipeline-legend">
+          ${stages.map(s => `
+            <div class="three-lens-pipeline-legend-item">
+              <span class="three-lens-pipeline-legend-color" style="background: ${s.color};"></span>
+              <span class="three-lens-pipeline-legend-label">${s.name}</span>
+      </div>
+          `).join('')}
+          </div>
+          </div>
+    `;
+  }
+
+  private renderDrawCallEfficiency(stats: FrameStats, perf: PerformanceMetrics | undefined): string {
+    const triPerCall = perf?.trianglesPerDrawCall ?? (stats.drawCalls > 0 ? stats.triangles / stats.drawCalls : 0);
+    const efficiency = perf?.drawCallEfficiency ?? Math.min(100, triPerCall / 100);
+    
+    // Determine efficiency grade
+    let grade = 'A';
+    let gradeColor = 'var(--3lens-accent-emerald)';
+    if (efficiency < 25) { grade = 'F'; gradeColor = 'var(--3lens-error)'; }
+    else if (efficiency < 50) { grade = 'D'; gradeColor = 'var(--3lens-warning)'; }
+    else if (efficiency < 65) { grade = 'C'; gradeColor = 'var(--3lens-accent-amber)'; }
+    else if (efficiency < 80) { grade = 'B'; gradeColor = 'var(--3lens-accent-cyan)'; }
+    
+    // Draw call history chart
+    const historyChart = this.drawCallHistory.length > 5 ? this.renderMiniChart(this.drawCallHistory, 'var(--3lens-accent-blue)') : '';
+    
+    return `
+      <div class="three-lens-efficiency">
+        <div class="three-lens-efficiency-header">
+          <div class="three-lens-efficiency-title">Draw Call Efficiency</div>
+          <div class="three-lens-efficiency-grade" style="color: ${gradeColor};">${grade}</div>
+          </div>
+        <div class="three-lens-efficiency-content">
+          <div class="three-lens-efficiency-meter">
+            <div class="three-lens-efficiency-bar">
+              <div class="three-lens-efficiency-fill" style="width: ${Math.min(100, efficiency)}%; background: ${gradeColor};"></div>
+        </div>
+            <div class="three-lens-efficiency-value">${efficiency.toFixed(0)}%</div>
+      </div>
+          <div class="three-lens-efficiency-stats">
+            <div class="three-lens-efficiency-stat">
+              <span class="three-lens-efficiency-stat-value">${formatNumber(Math.round(triPerCall))}</span>
+              <span class="three-lens-efficiency-stat-label">Triangles/Call</span>
+          </div>
+            <div class="three-lens-efficiency-stat">
+              <span class="three-lens-efficiency-stat-value">${stats.drawCalls}</span>
+              <span class="three-lens-efficiency-stat-label">Total Calls</span>
+          </div>
           </div>
         </div>
+        ${historyChart ? `
+          <div class="three-lens-efficiency-history">
+            <div class="three-lens-efficiency-history-title">Draw Calls Over Time</div>
+            ${historyChart}
       </div>
-      <div class="three-lens-metrics-section">
-        <div class="three-lens-metrics-title">Lighting & Shadows</div>
-        <div class="three-lens-metrics-grid">
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.totalLights}</div>
-            <div class="three-lens-metric-label">Lights</div>
+        ` : ''}
           </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.shadowCastingLights}</div>
-            <div class="three-lens-metric-label">Shadows</div>
+    `;
+  }
+
+  private renderMiniChart(data: number[], color: string): string {
+    const max = Math.max(...data, 1);
+    const min = Math.min(...data, 0);
+    const range = max - min || 1;
+    const height = 32;
+    const width = 200;
+    const pointSpacing = width / Math.max(data.length - 1, 1);
+    
+    const points = data.map((v, i) => {
+      const x = i * pointSpacing;
+      const y = height - ((v - min) / range) * height;
+      return `${x},${y}`;
+    });
+    
+    const linePath = `M${points.join(' L')}`;
+    const areaPath = `M0,${height} L${points.join(' L')} L${width},${height} Z`;
+    
+    return `
+      <svg class="three-lens-mini-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="miniChartGradient-${color.replace('#', '')}" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color: ${color}; stop-opacity: 0.3"/>
+            <stop offset="100%" style="stop-color: ${color}; stop-opacity: 0.05"/>
+          </linearGradient>
+        </defs>
+        <path d="${areaPath}" fill="url(#miniChartGradient-${color.replace('#', '')})"/>
+        <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.5"/>
+      </svg>
+    `;
+  }
+
+  private renderObjectVisibilityBreakdown(stats: FrameStats, rendering: RenderingStats): string {
+    const total = stats.objectsTotal || 1;
+    const visible = stats.objectsVisible;
+    const culled = stats.objectsCulled;
+    const transparent = rendering.transparentObjects;
+    const opaque = visible - transparent;
+    
+    const visiblePercent = (visible / total) * 100;
+    const culledPercent = (culled / total) * 100;
+    
+    return `
+      <div class="three-lens-visibility-breakdown">
+        <div class="three-lens-visibility-title">Object Visibility</div>
+        <div class="three-lens-visibility-bar">
+          <div class="three-lens-visibility-segment visible" style="width: ${visiblePercent}%;" title="Visible: ${visible}"></div>
+          <div class="three-lens-visibility-segment culled" style="width: ${culledPercent}%;" title="Culled: ${culled}"></div>
           </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.shadowMapUpdates}</div>
-            <div class="three-lens-metric-label">Updates</div>
+        <div class="three-lens-visibility-stats">
+          <div class="three-lens-visibility-stat">
+            <span class="three-lens-visibility-dot visible"></span>
+            <span class="three-lens-visibility-label">Visible</span>
+            <span class="three-lens-visibility-value">${visible}</span>
           </div>
+          <div class="three-lens-visibility-stat">
+            <span class="three-lens-visibility-dot culled"></span>
+            <span class="three-lens-visibility-label">Culled</span>
+            <span class="three-lens-visibility-value">${culled}</span>
         </div>
+          <div class="three-lens-visibility-stat">
+            <span class="three-lens-visibility-dot transparent"></span>
+            <span class="three-lens-visibility-label">Transparent</span>
+            <span class="three-lens-visibility-value">${transparent}</span>
       </div>
-      <div class="three-lens-metrics-section">
-        <div class="three-lens-metrics-title">Animation</div>
-        <div class="three-lens-metrics-grid">
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.skinnedMeshes}</div>
-            <div class="three-lens-metric-label">Skinned</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.totalBones}</div>
-            <div class="three-lens-metric-label">Bones</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.totalInstances}</div>
-            <div class="three-lens-metric-label">Instances</div>
-          </div>
-        </div>
-      </div>
-      <div class="three-lens-metrics-section">
-        <div class="three-lens-metrics-title">State Changes</div>
-        <div class="three-lens-metrics-grid">
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.programSwitches}</div>
-            <div class="three-lens-metric-label">Programs</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.textureBinds}</div>
-            <div class="three-lens-metric-label">Textures</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${rendering.renderTargetSwitches}</div>
-            <div class="three-lens-metric-label">RT Switch</div>
-          </div>
-        </div>
-      </div>
-      ${rendering.xrActive ? `
-        <div class="three-lens-metrics-section">
-          <div class="three-lens-metrics-title">XR Mode</div>
-          <div class="three-lens-metrics-grid">
-            <div class="three-lens-metric">
-              <div class="three-lens-metric-value">✓</div>
-              <div class="three-lens-metric-label">Active</div>
+          <div class="three-lens-visibility-stat">
+            <span class="three-lens-visibility-dot opaque"></span>
+            <span class="three-lens-visibility-label">Opaque</span>
+            <span class="three-lens-visibility-value">${opaque}</span>
             </div>
-            <div class="three-lens-metric">
-              <div class="three-lens-metric-value">${rendering.viewports}</div>
-              <div class="three-lens-metric-label">Viewports</div>
             </div>
           </div>
+    `;
+  }
+
+  private renderLightingAnalysis(rendering: RenderingStats): string {
+    const hasLights = rendering.totalLights > 0;
+    const hasShadows = rendering.shadowCastingLights > 0;
+    
+    // Calculate shadow cost estimate (rough)
+    const shadowCost = rendering.shadowCastingLights * 2; // Assume 2ms per shadow light
+    const isShadowCostHigh = shadowCost > 4;
+    
+    return `
+      <div class="three-lens-lighting">
+        <div class="three-lens-lighting-title">Lighting & Shadows</div>
+        <div class="three-lens-lighting-grid">
+          <div class="three-lens-lighting-item">
+            <div class="three-lens-lighting-icon">💡</div>
+            <div class="three-lens-lighting-info">
+              <div class="three-lens-lighting-value">${rendering.totalLights}</div>
+              <div class="three-lens-lighting-label">Total Lights</div>
+          </div>
+        </div>
+          <div class="three-lens-lighting-item ${isShadowCostHigh ? 'warning' : ''}">
+            <div class="three-lens-lighting-icon">🌓</div>
+            <div class="three-lens-lighting-info">
+              <div class="three-lens-lighting-value">${rendering.shadowCastingLights}</div>
+              <div class="three-lens-lighting-label">Shadow Casters</div>
+            </div>
+          </div>
+          <div class="three-lens-lighting-item">
+            <div class="three-lens-lighting-icon">🔄</div>
+            <div class="three-lens-lighting-info">
+              <div class="three-lens-lighting-value">${rendering.shadowMapUpdates}</div>
+              <div class="three-lens-lighting-label">Shadow Updates</div>
+            </div>
+          </div>
+          <div class="three-lens-lighting-item">
+            <div class="three-lens-lighting-icon">👁️</div>
+            <div class="three-lens-lighting-info">
+              <div class="three-lens-lighting-value">${rendering.activeLights}</div>
+              <div class="three-lens-lighting-label">Active Lights</div>
+            </div>
+          </div>
+        </div>
+        ${isShadowCostHigh ? `
+          <div class="three-lens-lighting-warning">
+            ⚠️ High shadow cost (~${shadowCost.toFixed(0)}ms). Consider reducing shadow-casting lights.
         </div>
       ` : ''}
+      </div>
+    `;
+  }
+
+  private renderAnimationInstancing(rendering: RenderingStats): string {
+    const hasAnimation = rendering.skinnedMeshes > 0 || rendering.totalBones > 0;
+    const hasInstancing = rendering.instancedDrawCalls > 0 || rendering.totalInstances > 0;
+    
+    if (!hasAnimation && !hasInstancing) {
+      return `
+        <div class="three-lens-animation">
+          <div class="three-lens-animation-title">Animation & Instancing</div>
+          <div class="three-lens-animation-empty">No skinned meshes or instances detected</div>
+        </div>
+      `;
+    }
+    
+    return `
+      <div class="three-lens-animation">
+        <div class="three-lens-animation-title">Animation & Instancing</div>
+        <div class="three-lens-animation-grid">
+          ${hasAnimation ? `
+            <div class="three-lens-animation-section">
+              <div class="three-lens-animation-section-title">Skinned Meshes</div>
+              <div class="three-lens-animation-stats">
+                <div class="three-lens-animation-stat">
+                  <span class="three-lens-animation-stat-value">${rendering.skinnedMeshes}</span>
+                  <span class="three-lens-animation-stat-label">Meshes</span>
+                </div>
+                <div class="three-lens-animation-stat">
+                  <span class="three-lens-animation-stat-value">${rendering.totalBones}</span>
+                  <span class="three-lens-animation-stat-label">Bones</span>
+                </div>
+                <div class="three-lens-animation-stat">
+                  <span class="three-lens-animation-stat-value">${rendering.skinnedMeshes > 0 ? Math.round(rendering.totalBones / rendering.skinnedMeshes) : 0}</span>
+                  <span class="three-lens-animation-stat-label">Avg/Mesh</span>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+          ${hasInstancing ? `
+            <div class="three-lens-animation-section">
+              <div class="three-lens-animation-section-title">Instancing</div>
+              <div class="three-lens-animation-stats">
+                <div class="three-lens-animation-stat">
+                  <span class="three-lens-animation-stat-value">${rendering.instancedDrawCalls}</span>
+                  <span class="three-lens-animation-stat-label">Draw Calls</span>
+                </div>
+                <div class="three-lens-animation-stat">
+                  <span class="three-lens-animation-stat-value">${formatNumber(rendering.totalInstances)}</span>
+                  <span class="three-lens-animation-stat-label">Instances</span>
+                </div>
+                <div class="three-lens-animation-stat">
+                  <span class="three-lens-animation-stat-value">${rendering.instancedDrawCalls > 0 ? Math.round(rendering.totalInstances / rendering.instancedDrawCalls) : 0}</span>
+                  <span class="three-lens-animation-stat-label">Avg/Call</span>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderStateChangesAnalysis(rendering: RenderingStats): string {
+    const totalStateChanges = rendering.programSwitches + rendering.textureBinds + rendering.renderTargetSwitches;
+    const isHigh = totalStateChanges > 200;
+    
+    return `
+      <div class="three-lens-state-changes">
+        <div class="three-lens-state-changes-header">
+          <div class="three-lens-state-changes-title">State Changes</div>
+          <div class="three-lens-state-changes-total ${isHigh ? 'warning' : ''}">${totalStateChanges} total</div>
+        </div>
+        <div class="three-lens-state-changes-grid">
+          <div class="three-lens-state-change-item">
+            <div class="three-lens-state-change-bar">
+              <div class="three-lens-state-change-fill program" style="width: ${Math.min(100, rendering.programSwitches / 2)}%;"></div>
+            </div>
+            <div class="three-lens-state-change-info">
+              <span class="three-lens-state-change-label">Shader Switches</span>
+              <span class="three-lens-state-change-value">${rendering.programSwitches}</span>
+            </div>
+          </div>
+          <div class="three-lens-state-change-item">
+            <div class="three-lens-state-change-bar">
+              <div class="three-lens-state-change-fill texture" style="width: ${Math.min(100, rendering.textureBinds / 5)}%;"></div>
+            </div>
+            <div class="three-lens-state-change-info">
+              <span class="three-lens-state-change-label">Texture Binds</span>
+              <span class="three-lens-state-change-value">${rendering.textureBinds}</span>
+            </div>
+          </div>
+          <div class="three-lens-state-change-item">
+            <div class="three-lens-state-change-bar">
+              <div class="three-lens-state-change-fill rt" style="width: ${Math.min(100, rendering.renderTargetSwitches * 10)}%;"></div>
+            </div>
+            <div class="three-lens-state-change-info">
+              <span class="three-lens-state-change-label">RT Switches</span>
+              <span class="three-lens-state-change-value">${rendering.renderTargetSwitches}</span>
+            </div>
+          </div>
+          <div class="three-lens-state-change-item">
+            <div class="three-lens-state-change-bar">
+              <div class="three-lens-state-change-fill upload" style="width: ${Math.min(100, rendering.bufferUploads * 5)}%;"></div>
+            </div>
+            <div class="three-lens-state-change-info">
+              <span class="three-lens-state-change-label">Buffer Uploads</span>
+              <span class="three-lens-state-change-value">${rendering.bufferUploads}</span>
+            </div>
+          </div>
+        </div>
+        ${rendering.bytesUploaded > 0 ? `
+          <div class="three-lens-state-changes-upload">
+            Data uploaded: ${formatBytes(rendering.bytesUploaded)}/frame
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  private renderXRInfo(rendering: RenderingStats): string {
+    return `
+      <div class="three-lens-xr">
+        <div class="three-lens-xr-header">
+          <div class="three-lens-xr-title">🥽 XR Mode Active</div>
+          <div class="three-lens-xr-badge">VR</div>
+        </div>
+        <div class="three-lens-xr-stats">
+          <div class="three-lens-xr-stat">
+            <span class="three-lens-xr-stat-value">${rendering.viewports}</span>
+            <span class="three-lens-xr-stat-label">Viewports</span>
+          </div>
+          <div class="three-lens-xr-stat">
+            <span class="three-lens-xr-stat-value">×${rendering.viewports}</span>
+            <span class="three-lens-xr-stat-label">Draw Cost</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderRenderingWarnings(stats: FrameStats, rendering: RenderingStats): string {
+    const warnings: string[] = [];
+    
+    if (stats.drawCalls > 500 && stats.performance?.trianglesPerDrawCall && stats.performance.trianglesPerDrawCall < 500) {
+      warnings.push('Low triangles per draw call. Consider batching or using instancing.');
+    }
+    if (rendering.transparentObjects > 50) {
+      warnings.push(`${rendering.transparentObjects} transparent objects may cause overdraw issues.`);
+    }
+    if (rendering.shadowCastingLights > 4) {
+      warnings.push('Many shadow-casting lights. Consider using fewer or baked shadows.');
+    }
+    if (rendering.renderTargetSwitches > 10) {
+      warnings.push('High render target switches. Consider consolidating post-processing passes.');
+    }
+    
+    if (warnings.length === 0) return '';
+    
+    return `
+      <div class="three-lens-rendering-warnings">
+        <div class="three-lens-rendering-warnings-title">⚠ Rendering Warnings</div>
+        ${warnings.map(w => `<div class="three-lens-rendering-warning">${w}</div>`).join('')}
+      </div>
     `;
   }
 
@@ -1513,6 +2751,32 @@ export class ThreeLensOverlay {
         this.renderChart();
       }
     }
+    
+    // Apply responsive layout based on panel width
+    this.applyResponsiveLayout(content);
+  }
+  
+  private applyResponsiveLayout(content: HTMLElement): void {
+    // Get the panel width
+    const panelWidth = content.offsetWidth;
+    const wideThreshold = 550; // Switch to two-column layout above this width
+    
+    // Apply wide-layout class to profiler containers based on panel width
+    const memoryProfiler = content.querySelector('.three-lens-memory-profiler');
+    const renderingProfiler = content.querySelector('.three-lens-rendering-profiler');
+    const overviewContent = content.querySelector('.three-lens-stats-tab-content');
+    
+    if (memoryProfiler) {
+      memoryProfiler.classList.toggle('wide-layout', panelWidth >= wideThreshold);
+    }
+    if (renderingProfiler) {
+      renderingProfiler.classList.toggle('wide-layout', panelWidth >= wideThreshold);
+    }
+    
+    // For overview tab, apply wide layout to the content container
+    if (overviewContent && this.statsTab === 'overview') {
+      overviewContent.classList.toggle('wide-layout', panelWidth >= wideThreshold);
+    }
   }
 
   private renderCurrentTabContent(): string {
@@ -1556,6 +2820,8 @@ export class ThreeLensOverlay {
               this.attachChartEvents();
               this.renderChart();
             }
+            // Apply responsive layout
+            this.applyResponsiveLayout(container);
           }
         }
       });
