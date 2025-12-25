@@ -108,6 +108,10 @@ function createBenchmarkScene() {
   }
 
   // Add some nested groups for hierarchy complexity
+  // Shared geometry and material for all group children - best practice!
+  const sharedIcosahedronGeo = new THREE.IcosahedronGeometry(0.3, 1);
+  const sharedGroupMaterial = new THREE.MeshStandardMaterial({ color: 0x60a5fa });
+  
   for (let g = 0; g < 5; g++) {
     const group = new THREE.Group();
     group.name = `Group_${g}`;
@@ -118,10 +122,7 @@ function createBenchmarkScene() {
     );
     
     for (let c = 0; c < 5; c++) {
-      const child = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(0.3, 1),
-        new THREE.MeshStandardMaterial({ color: 0x60a5fa })
-      );
+      const child = new THREE.Mesh(sharedIcosahedronGeo, sharedGroupMaterial);
       child.name = `Child_${g}_${c}`;
       child.position.set(Math.cos(c * 1.2), 0, Math.sin(c * 1.2));
       group.add(child);
