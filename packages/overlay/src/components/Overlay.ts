@@ -923,10 +923,11 @@ export class ThreeLensOverlay {
           </span>
           <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${getObjectIcon(node.ref.type)}</span>
           <span class="three-lens-node-name">${node.ref.name || `<${node.ref.type}>`}</span>
-          <span class="three-lens-node-type">${node.ref.type}</span>
           <button class="three-lens-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">
             ${isVisible ? this.getEyeOpenIcon() : this.getEyeClosedIcon()}
           </button>
+          <span class="three-lens-node-spacer"></span>
+          <span class="three-lens-node-type">${node.ref.type}</span>
         </div>
         ${hasChildren && isExpanded ? `<div class="three-lens-node-children">${node.children.map(c => this.renderNode(c)).join('')}</div>` : ''}
       </div>

@@ -435,11 +435,12 @@ function renderNode(node: SceneNode): string {
   const hasChildren = node.children.length > 0;
   const isExpanded = state.expandedNodes.has(node.ref.debugId);
   const isSelected = state.selectedNodeId === node.ref.debugId;
+  const isVisible = node.visible;
   const iconClass = getIconClass(node.ref.type);
 
   return `
     <div class="tree-node" data-id="${node.ref.debugId}">
-      <div class="node-header ${isSelected ? 'selected' : ''}">
+      <div class="node-header ${isSelected ? 'selected' : ''} ${!isVisible ? 'hidden-object' : ''}">
         <span class="node-toggle ${hasChildren ? (isExpanded ? 'expanded' : '') : ''}" style="${hasChildren ? '' : 'visibility:hidden'}">
           <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
             <path d="M2 1L6 4L2 7z"/>
@@ -447,6 +448,10 @@ function renderNode(node: SceneNode): string {
         </span>
         <span class="node-icon ${iconClass}">${getIcon(node.ref.type)}</span>
         <span class="node-name">${node.ref.name || `<${node.ref.type}>`}</span>
+        <button class="node-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">
+          ${isVisible ? getEyeOpenIcon() : getEyeClosedIcon()}
+        </button>
+        <span class="node-spacer"></span>
         <span class="node-type">${node.ref.type}</span>
       </div>
       ${
@@ -456,6 +461,20 @@ function renderNode(node: SceneNode): string {
       }
     </div>
   `;
+}
+
+function getEyeOpenIcon(): string {
+  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>`;
+}
+
+function getEyeClosedIcon(): string {
+  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>`;
 }
 
 function renderStats(): void {
@@ -2624,6 +2643,20 @@ function renderPlaceholder(): void {
 // ───────────────────────────────────────────────────────────────
 
 function attachTreeEvents(): void {
+  // Visibility toggle buttons (eye icons)
+  document.querySelectorAll('.node-visibility-btn').forEach((btn) => {
+    const btnEl = btn as HTMLElement;
+    const id = btnEl.dataset.id;
+
+    btnEl.addEventListener('click', (e) => {
+      e.stopPropagation(); // Don't trigger node selection
+      if (id) {
+        port.postMessage({ type: 'toggle-visibility', debugId: id });
+        requestSnapshot();
+      }
+    });
+  });
+
   document.querySelectorAll('.node-header').forEach((header) => {
     const headerEl = header as HTMLElement;
     const node = headerEl.parentElement;
@@ -2645,6 +2678,11 @@ function attachTreeEvents(): void {
     // Click handling
     headerEl.addEventListener('click', (e) => {
       if (!id) return;
+
+      // Ignore if clicking visibility button
+      if ((e.target as HTMLElement).closest('.node-visibility-btn')) {
+        return;
+      }
 
       // Check if clicking toggle
       const toggle = (e.target as HTMLElement).closest('.node-toggle');
