@@ -933,14 +933,6 @@ export class ThreeLensOverlay {
       if (el) {
         el.style.width = `${state.width}px`;
         el.style.height = `${state.height}px`;
-        
-        // Update responsive layout for stats panel during resize
-        if (this.resizeState.panelId === 'stats') {
-          const content = document.getElementById('three-lens-content-stats');
-          if (content) {
-            this.applyResponsiveLayout(content);
-          }
-        }
       }
     }
   }
@@ -1619,9 +1611,8 @@ export class ThreeLensOverlay {
 
     return `
       <div class="three-lens-memory-profiler">
-        <div class="three-lens-memory-profiler-grid">
-          <!-- Total GPU Memory Header -->
-          <div class="three-lens-memory-header">
+        <!-- Total GPU Memory Header -->
+        <div class="three-lens-memory-header">
             <div class="three-lens-memory-total">
               <div class="three-lens-memory-total-value ${totalWarning ? 'warning' : ''}">${formatBytes(memory.totalGpuMemory)}</div>
               <div class="three-lens-memory-total-label">Total GPU Memory</div>
@@ -1704,10 +1695,9 @@ export class ThreeLensOverlay {
           <!-- Memory Tips -->
           ${this.renderMemoryTips(memory, stats)}
 
-          <!-- Memory Warnings -->
-          ${this.renderMemoryWarnings(memory, stats)}
-            </div>
-            </div>
+        <!-- Memory Warnings -->
+        ${this.renderMemoryWarnings(memory, stats)}
+      </div>
     `;
   }
 
@@ -2142,62 +2132,60 @@ export class ThreeLensOverlay {
 
     return `
       <div class="three-lens-rendering-profiler">
-        <div class="three-lens-rendering-profiler-grid">
-          <!-- Render Pipeline Visualization -->
-          ${this.renderPipelineVisualization(stats, rendering)}
-          
-          <!-- Draw Call Efficiency -->
-          ${this.renderDrawCallEfficiency(stats, perf)}
-          
-          <!-- Geometry Statistics -->
-      <div class="three-lens-metrics-section">
-            <div class="three-lens-metrics-title">Geometry Statistics</div>
-        <div class="three-lens-metrics-grid">
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${formatNumber(stats.triangles)}</div>
-            <div class="three-lens-metric-label">Triangles</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${formatNumber(stats.vertices)}</div>
-            <div class="three-lens-metric-label">Vertices</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${stats.drawCalls}</div>
-            <div class="three-lens-metric-label">Draw Calls</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${perf?.trianglesPerDrawCall ?? 0}</div>
-            <div class="three-lens-metric-label">Tri/Call</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${stats.points}</div>
-            <div class="three-lens-metric-label">Points</div>
-          </div>
-          <div class="three-lens-metric">
-            <div class="three-lens-metric-value">${stats.lines}</div>
-            <div class="three-lens-metric-label">Lines</div>
+        <!-- Render Pipeline Visualization -->
+        ${this.renderPipelineVisualization(stats, rendering)}
+        
+        <!-- Draw Call Efficiency -->
+        ${this.renderDrawCallEfficiency(stats, perf)}
+        
+        <!-- Geometry Statistics -->
+        <div class="three-lens-metrics-section">
+          <div class="three-lens-metrics-title">Geometry Statistics</div>
+          <div class="three-lens-metrics-grid">
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(stats.triangles)}</div>
+              <div class="three-lens-metric-label">Triangles</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(stats.vertices)}</div>
+              <div class="three-lens-metric-label">Vertices</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${stats.drawCalls}</div>
+              <div class="three-lens-metric-label">Draw Calls</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${perf?.trianglesPerDrawCall ?? 0}</div>
+              <div class="three-lens-metric-label">Tri/Call</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${stats.points}</div>
+              <div class="three-lens-metric-label">Points</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${stats.lines}</div>
+              <div class="three-lens-metric-label">Lines</div>
+            </div>
           </div>
         </div>
+        
+        <!-- Object Visibility Breakdown -->
+        ${this.renderObjectVisibilityBreakdown(stats, rendering)}
+        
+        <!-- Lighting Analysis -->
+        ${this.renderLightingAnalysis(rendering)}
+        
+        <!-- Animation & Instancing -->
+        ${this.renderAnimationInstancing(rendering)}
+        
+        <!-- State Changes Analysis -->
+        ${this.renderStateChangesAnalysis(rendering)}
+        
+        ${rendering.xrActive ? this.renderXRInfo(rendering) : ''}
+        
+        <!-- Rendering Warnings -->
+        ${this.renderRenderingWarnings(stats, rendering)}
       </div>
-          
-          <!-- Object Visibility Breakdown -->
-          ${this.renderObjectVisibilityBreakdown(stats, rendering)}
-          
-          <!-- Lighting Analysis -->
-          ${this.renderLightingAnalysis(rendering)}
-          
-          <!-- Animation & Instancing -->
-          ${this.renderAnimationInstancing(rendering)}
-          
-          <!-- State Changes Analysis -->
-          ${this.renderStateChangesAnalysis(rendering)}
-          
-          ${rendering.xrActive ? this.renderXRInfo(rendering) : ''}
-          
-          <!-- Rendering Warnings -->
-          ${this.renderRenderingWarnings(stats, rendering)}
-          </div>
-          </div>
     `;
   }
 
@@ -2752,31 +2740,6 @@ export class ThreeLensOverlay {
       }
     }
     
-    // Apply responsive layout based on panel width
-    this.applyResponsiveLayout(content);
-  }
-  
-  private applyResponsiveLayout(content: HTMLElement): void {
-    // Get the panel width
-    const panelWidth = content.offsetWidth;
-    const wideThreshold = 550; // Switch to two-column layout above this width
-    
-    // Apply wide-layout class to profiler containers based on panel width
-    const memoryProfiler = content.querySelector('.three-lens-memory-profiler');
-    const renderingProfiler = content.querySelector('.three-lens-rendering-profiler');
-    const overviewContent = content.querySelector('.three-lens-stats-tab-content');
-    
-    if (memoryProfiler) {
-      memoryProfiler.classList.toggle('wide-layout', panelWidth >= wideThreshold);
-    }
-    if (renderingProfiler) {
-      renderingProfiler.classList.toggle('wide-layout', panelWidth >= wideThreshold);
-    }
-    
-    // For overview tab, apply wide layout to the content container
-    if (overviewContent && this.statsTab === 'overview') {
-      overviewContent.classList.toggle('wide-layout', panelWidth >= wideThreshold);
-    }
   }
 
   private renderCurrentTabContent(): string {
@@ -2820,8 +2783,6 @@ export class ThreeLensOverlay {
               this.attachChartEvents();
               this.renderChart();
             }
-            // Apply responsive layout
-            this.applyResponsiveLayout(container);
           }
         }
       });
