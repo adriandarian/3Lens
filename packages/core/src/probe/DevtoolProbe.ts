@@ -18,6 +18,7 @@ import { SceneObserver } from '../observers/SceneObserver';
 import { SelectionHelper } from '../helpers/SelectionHelper';
 import { InspectMode } from '../helpers/InspectMode';
 import { TransformGizmo, type TransformMode, type TransformSpace, type TransformHistoryEntry } from '../helpers/TransformGizmo';
+import { CameraController, type CameraInfo, type FlyToOptions } from '../helpers/CameraController';
 
 /**
  * Version of the probe
@@ -44,6 +45,7 @@ export class DevtoolProbe {
   private _selectionHelper: SelectionHelper = new SelectionHelper();
   private _inspectMode: InspectMode = new InspectMode(this);
   private _transformGizmo: TransformGizmo = new TransformGizmo(this);
+  private _cameraController: CameraController = new CameraController(this);
   private _threeRef: typeof import('three') | null = null;
   private _visualizationHelpers: Map<string, THREE.Object3D> = new Map();
   private _globalWireframe = false;
@@ -769,6 +771,128 @@ export class DevtoolProbe {
    */
   onTransformChanged(callback: (entry: TransformHistoryEntry) => void): () => void {
     return this._transformGizmo.onTransformChanged(callback);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // CAMERA CONTROLS
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Initialize the camera controller
+   * Enables focus on object, fly-to animations, and camera switching
+   */
+  initializeCameraController(
+    camera: THREE.Camera,
+    three: typeof import('three'),
+    orbitTarget?: { x: number; y: number; z: number }
+  ): void {
+    this._cameraController.initialize(camera, three, orbitTarget);
+    this.log('Camera controller initialized');
+  }
+
+  /**
+   * Get information about the current camera
+   */
+  getCameraInfo(): CameraInfo | null {
+    return this._cameraController.getCameraInfo();
+  }
+
+  /**
+   * Get all available cameras in the scene
+   */
+  getAvailableCameras(): CameraInfo[] {
+    return this._cameraController.getAvailableCameras();
+  }
+
+  /**
+   * Focus instantly on an object
+   */
+  focusOnObject(object: THREE.Object3D, padding = 1.5): void {
+    this._cameraController.focusOnObject(object, padding);
+  }
+
+  /**
+   * Focus instantly on the currently selected object
+   */
+  focusOnSelected(padding = 1.5): boolean {
+    return this._cameraController.focusOnSelected(padding);
+  }
+
+  /**
+   * Fly the camera to an object with animation
+   */
+  flyToObject(object: THREE.Object3D, options?: FlyToOptions): void {
+    this._cameraController.flyToObject(object, options);
+  }
+
+  /**
+   * Fly the camera to the currently selected object
+   */
+  flyToSelected(options?: FlyToOptions): boolean {
+    return this._cameraController.flyToSelected(options);
+  }
+
+  /**
+   * Stop any running camera animation
+   */
+  stopCameraAnimation(): void {
+    this._cameraController.stopAnimation();
+  }
+
+  /**
+   * Check if a camera animation is running
+   */
+  isCameraAnimating(): boolean {
+    return this._cameraController.isAnimating();
+  }
+
+  /**
+   * Switch to a camera by index
+   */
+  switchToCamera(index: number): boolean {
+    return this._cameraController.switchToCamera(index);
+  }
+
+  /**
+   * Switch to a camera by UUID
+   */
+  switchToCameraByUuid(uuid: string): boolean {
+    return this._cameraController.switchToCameraByUuid(uuid);
+  }
+
+  /**
+   * Get the index of the active camera
+   */
+  getActiveCameraIndex(): number {
+    return this._cameraController.getActiveCameraIndex();
+  }
+
+  /**
+   * Set the orbit target (point the camera looks at)
+   */
+  setOrbitTarget(target: { x: number; y: number; z: number }): void {
+    this._cameraController.setOrbitTarget(target);
+  }
+
+  /**
+   * Get the orbit target
+   */
+  getOrbitTarget(): { x: number; y: number; z: number } {
+    return this._cameraController.getOrbitTarget();
+  }
+
+  /**
+   * Subscribe to camera change events
+   */
+  onCameraChanged(callback: (camera: THREE.Camera, info: CameraInfo) => void): () => void {
+    return this._cameraController.onCameraChanged(callback);
+  }
+
+  /**
+   * Subscribe to camera animation complete events
+   */
+  onCameraAnimationComplete(callback: () => void): () => void {
+    return this._cameraController.onAnimationComplete(callback);
   }
 
   /**

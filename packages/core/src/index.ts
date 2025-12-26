@@ -96,6 +96,12 @@ export type {
   TransformHistoryEntry,
 } from './helpers/TransformGizmo';
 
+export { CameraController } from './helpers/CameraController';
+export type {
+  CameraInfo,
+  FlyToOptions,
+} from './helpers/CameraController';
+
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
 

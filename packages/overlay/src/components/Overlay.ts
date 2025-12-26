@@ -2627,6 +2627,7 @@ export class ThreeLensOverlay {
       ${node.lightData ? this.renderLightInfo(node.lightData) : ''}
       ${node.cameraData ? this.renderCameraInfo(node.cameraData) : ''}
       ${this.renderVisualOverlaysSection(node)}
+      ${this.renderCameraControlsSection(node)}
       <div class="three-lens-section">
         <div class="three-lens-section-header">Rendering</div>
         ${this.renderProp('Layers', this.formatLayers(node.layers))}
@@ -2721,6 +2722,88 @@ export class ThreeLensOverlay {
         </div>
       </div>
       ${this.renderTransformGizmoSection()}
+    `;
+  }
+
+  private renderCameraControlsSection(node: SceneNode): string {
+    const cameraInfo = this.probe.getCameraInfo();
+    const availableCameras = this.probe.getAvailableCameras();
+    const isAnimating = this.probe.isCameraAnimating();
+    
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Camera Controls</div>
+        
+        <div class="three-lens-camera-actions">
+          <button class="three-lens-action-btn" data-action="focus-selected" title="Focus camera on selected object (F)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+            </svg>
+            Focus
+          </button>
+          <button class="three-lens-action-btn" data-action="fly-to-selected" title="Fly camera to selected object">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13"/>
+              <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+            Fly To
+          </button>
+        </div>
+        
+        ${cameraInfo ? `
+          <div class="three-lens-camera-info">
+            <div class="three-lens-camera-info-title">Active Camera</div>
+            <div class="three-lens-camera-info-details">
+              <div class="three-lens-camera-info-row">
+                <span class="three-lens-camera-info-label">Name</span>
+                <span class="three-lens-camera-info-value">${cameraInfo.name}</span>
+              </div>
+              <div class="three-lens-camera-info-row">
+                <span class="three-lens-camera-info-label">Type</span>
+                <span class="three-lens-camera-info-value">${cameraInfo.type}</span>
+              </div>
+              ${cameraInfo.fov !== undefined ? `
+                <div class="three-lens-camera-info-row">
+                  <span class="three-lens-camera-info-label">FOV</span>
+                  <span class="three-lens-camera-info-value">${cameraInfo.fov.toFixed(1)}°</span>
+                </div>
+              ` : ''}
+              <div class="three-lens-camera-info-row">
+                <span class="three-lens-camera-info-label">Near/Far</span>
+                <span class="three-lens-camera-info-value">${cameraInfo.near} / ${cameraInfo.far}</span>
+              </div>
+              <div class="three-lens-camera-info-row">
+                <span class="three-lens-camera-info-label">Position</span>
+                <span class="three-lens-camera-info-value">${cameraInfo.position.x.toFixed(1)}, ${cameraInfo.position.y.toFixed(1)}, ${cameraInfo.position.z.toFixed(1)}</span>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+        
+        ${availableCameras.length > 1 ? `
+          <div class="three-lens-camera-switcher">
+            <div class="three-lens-camera-switcher-title">Switch Camera</div>
+            <div class="three-lens-camera-list">
+              ${availableCameras.map((cam, index) => `
+                <button class="three-lens-camera-item ${index === this.probe.getActiveCameraIndex() ? 'active' : ''}" 
+                        data-camera-index="${index}" 
+                        data-camera-uuid="${cam.uuid}"
+                        title="${cam.type}">
+                  <span class="three-lens-camera-item-icon">📷</span>
+                  <span class="three-lens-camera-item-name">${cam.name}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${isAnimating ? `
+          <button class="three-lens-action-btn stop" data-action="stop-animation" title="Stop camera animation">
+            Stop Animation
+          </button>
+        ` : ''}
+      </div>
     `;
   }
 
@@ -3077,6 +3160,45 @@ export class ThreeLensOverlay {
         e.stopPropagation();
         if (this.probe.canRedoTransform()) {
           this.probe.redoTransform();
+          this.updateScenePanel();
+        }
+      });
+    });
+
+    // Camera control buttons
+    panel.querySelectorAll('.three-lens-action-btn').forEach(btn => {
+      const action = (btn as HTMLElement).dataset.action;
+      if (!action) return;
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        switch (action) {
+          case 'focus-selected':
+            this.probe.focusOnSelected();
+            break;
+          case 'fly-to-selected':
+            this.probe.flyToSelected({
+              duration: 800,
+              easing: 'easeInOut',
+              onComplete: () => this.updateScenePanel(),
+            });
+            this.updateScenePanel(); // Show "Stop Animation" button
+            break;
+          case 'stop-animation':
+            this.probe.stopCameraAnimation();
+            this.updateScenePanel();
+            break;
+        }
+      });
+    });
+
+    // Camera switcher buttons
+    panel.querySelectorAll('.three-lens-camera-item').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const index = parseInt((btn as HTMLElement).dataset.cameraIndex || '0', 10);
+        if (this.probe.switchToCamera(index)) {
           this.updateScenePanel();
         }
       });
