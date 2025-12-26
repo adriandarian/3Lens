@@ -1697,7 +1697,7 @@ export class ThreeLensOverlay {
 
         <!-- Memory Warnings -->
         ${this.renderMemoryWarnings(memory, stats)}
-      </div>
+            </div>
     `;
   }
 
@@ -1732,7 +1732,7 @@ export class ThreeLensOverlay {
         <div class="three-lens-memory-efficiency-header">
           <div class="three-lens-memory-efficiency-title">Memory Efficiency</div>
           <div class="three-lens-memory-efficiency-grade" style="color: ${gradeColor};">${grade}</div>
-          </div>
+            </div>
         <div class="three-lens-memory-efficiency-grid">
           <div class="three-lens-memory-efficiency-item">
             <div class="three-lens-memory-efficiency-value">${formatBytes(avgMemoryPerObject)}</div>
@@ -2139,35 +2139,35 @@ export class ThreeLensOverlay {
         ${this.renderDrawCallEfficiency(stats, perf)}
         
         <!-- Geometry Statistics -->
-        <div class="three-lens-metrics-section">
+      <div class="three-lens-metrics-section">
           <div class="three-lens-metrics-title">Geometry Statistics</div>
-          <div class="three-lens-metrics-grid">
-            <div class="three-lens-metric">
-              <div class="three-lens-metric-value">${formatNumber(stats.triangles)}</div>
-              <div class="three-lens-metric-label">Triangles</div>
-            </div>
-            <div class="three-lens-metric">
-              <div class="three-lens-metric-value">${formatNumber(stats.vertices)}</div>
-              <div class="three-lens-metric-label">Vertices</div>
-            </div>
-            <div class="three-lens-metric">
-              <div class="three-lens-metric-value">${stats.drawCalls}</div>
-              <div class="three-lens-metric-label">Draw Calls</div>
-            </div>
-            <div class="three-lens-metric">
-              <div class="three-lens-metric-value">${perf?.trianglesPerDrawCall ?? 0}</div>
-              <div class="three-lens-metric-label">Tri/Call</div>
-            </div>
-            <div class="three-lens-metric">
-              <div class="three-lens-metric-value">${stats.points}</div>
-              <div class="three-lens-metric-label">Points</div>
-            </div>
-            <div class="three-lens-metric">
-              <div class="three-lens-metric-value">${stats.lines}</div>
-              <div class="three-lens-metric-label">Lines</div>
-            </div>
+        <div class="three-lens-metrics-grid">
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${formatNumber(stats.triangles)}</div>
+            <div class="three-lens-metric-label">Triangles</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${formatNumber(stats.vertices)}</div>
+            <div class="three-lens-metric-label">Vertices</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.drawCalls}</div>
+            <div class="three-lens-metric-label">Draw Calls</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${perf?.trianglesPerDrawCall ?? 0}</div>
+            <div class="three-lens-metric-label">Tri/Call</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.points}</div>
+            <div class="three-lens-metric-label">Points</div>
+          </div>
+          <div class="three-lens-metric">
+            <div class="three-lens-metric-value">${stats.lines}</div>
+            <div class="three-lens-metric-label">Lines</div>
           </div>
         </div>
+      </div>
         
         <!-- Object Visibility Breakdown -->
         ${this.renderObjectVisibilityBreakdown(stats, rendering)}
@@ -2185,7 +2185,7 @@ export class ThreeLensOverlay {
         
         <!-- Rendering Warnings -->
         ${this.renderRenderingWarnings(stats, rendering)}
-      </div>
+          </div>
     `;
   }
 
@@ -2217,15 +2217,15 @@ export class ThreeLensOverlay {
             const width = totalEstimated > 0 ? (s.time / totalEstimated) * 100 : 0;
             return `<div class="three-lens-pipeline-segment" style="width: ${width}%; background: ${s.color};" title="${s.name}: ~${s.time.toFixed(1)}ms"></div>`;
           }).join('')}
-        </div>
+          </div>
         <div class="three-lens-pipeline-legend">
           ${stages.map(s => `
             <div class="three-lens-pipeline-legend-item">
               <span class="three-lens-pipeline-legend-color" style="background: ${s.color};"></span>
               <span class="three-lens-pipeline-legend-label">${s.name}</span>
-      </div>
+        </div>
           `).join('')}
-          </div>
+      </div>
           </div>
     `;
   }
@@ -2255,27 +2255,27 @@ export class ThreeLensOverlay {
           <div class="three-lens-efficiency-meter">
             <div class="three-lens-efficiency-bar">
               <div class="three-lens-efficiency-fill" style="width: ${Math.min(100, efficiency)}%; background: ${gradeColor};"></div>
-        </div>
+          </div>
             <div class="three-lens-efficiency-value">${efficiency.toFixed(0)}%</div>
-      </div>
+        </div>
           <div class="three-lens-efficiency-stats">
             <div class="three-lens-efficiency-stat">
               <span class="three-lens-efficiency-stat-value">${formatNumber(Math.round(triPerCall))}</span>
               <span class="three-lens-efficiency-stat-label">Triangles/Call</span>
-          </div>
+      </div>
             <div class="three-lens-efficiency-stat">
               <span class="three-lens-efficiency-stat-value">${stats.drawCalls}</span>
               <span class="three-lens-efficiency-stat-label">Total Calls</span>
           </div>
           </div>
-        </div>
+          </div>
         ${historyChart ? `
           <div class="three-lens-efficiency-history">
             <div class="three-lens-efficiency-history-title">Draw Calls Over Time</div>
             ${historyChart}
-      </div>
+        </div>
         ` : ''}
-          </div>
+      </div>
     `;
   }
 
@@ -2337,19 +2337,19 @@ export class ThreeLensOverlay {
             <span class="three-lens-visibility-dot culled"></span>
             <span class="three-lens-visibility-label">Culled</span>
             <span class="three-lens-visibility-value">${culled}</span>
-        </div>
+          </div>
           <div class="three-lens-visibility-stat">
             <span class="three-lens-visibility-dot transparent"></span>
             <span class="three-lens-visibility-label">Transparent</span>
             <span class="three-lens-visibility-value">${transparent}</span>
-      </div>
+        </div>
           <div class="three-lens-visibility-stat">
             <span class="three-lens-visibility-dot opaque"></span>
             <span class="three-lens-visibility-label">Opaque</span>
             <span class="three-lens-visibility-value">${opaque}</span>
+      </div>
             </div>
             </div>
-          </div>
     `;
   }
 
@@ -2611,6 +2611,7 @@ export class ThreeLensOverlay {
       ${node.meshData ? this.renderMeshInfo(node.meshData) : ''}
       ${node.lightData ? this.renderLightInfo(node.lightData) : ''}
       ${node.cameraData ? this.renderCameraInfo(node.cameraData) : ''}
+      ${this.renderVisualOverlaysSection(node)}
       <div class="three-lens-section">
         <div class="three-lens-section-header">Rendering</div>
         ${this.renderProp('Layers', this.formatLayers(node.layers))}
@@ -2658,6 +2659,51 @@ export class ThreeLensOverlay {
         ${this.renderProp('Far', cameraData.far)}
         ${cameraData.fov !== undefined ? this.renderProp('FOV', cameraData.fov + '°') : ''}
         ${cameraData.aspect !== undefined ? this.renderProp('Aspect', cameraData.aspect.toFixed(2)) : ''}
+      </div>
+    `;
+  }
+
+  private renderVisualOverlaysSection(node: SceneNode): string {
+    // Only show for meshes (objects that can have wireframe/bounding box)
+    const isMesh = node.ref.type === 'Mesh' || node.ref.type === 'SkinnedMesh' || node.ref.type === 'InstancedMesh';
+    
+    // Get the actual object to check current state
+    const obj = this.probe.getSelectedObject();
+    const wireframeEnabled = obj ? this.probe.isWireframeEnabled(obj) : false;
+    const boundingBoxEnabled = obj ? this.probe.isBoundingBoxEnabled(obj) : false;
+    const globalWireframe = this.probe.isGlobalWireframeEnabled();
+
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Visual Overlays</div>
+        ${isMesh ? `
+          <div class="three-lens-toggle-row" data-action="toggle-wireframe">
+            <span class="three-lens-toggle-label">Wireframe</span>
+            <button class="three-lens-toggle-btn ${wireframeEnabled ? 'active' : ''}" title="Toggle wireframe for this object">
+              <span class="three-lens-toggle-track">
+                <span class="three-lens-toggle-thumb"></span>
+              </span>
+            </button>
+          </div>
+          <div class="three-lens-toggle-row" data-action="toggle-boundingbox">
+            <span class="three-lens-toggle-label">Bounding Box</span>
+            <button class="three-lens-toggle-btn ${boundingBoxEnabled ? 'active' : ''}" title="Toggle bounding box for this object">
+              <span class="three-lens-toggle-track">
+                <span class="three-lens-toggle-thumb"></span>
+              </span>
+            </button>
+          </div>
+        ` : `
+          <div class="three-lens-overlay-note">Select a mesh to toggle overlays</div>
+        `}
+        <div class="three-lens-toggle-row global" data-action="toggle-global-wireframe">
+          <span class="three-lens-toggle-label">Global Wireframe</span>
+          <button class="three-lens-toggle-btn ${globalWireframe ? 'active' : ''}" title="Toggle wireframe for all meshes">
+            <span class="three-lens-toggle-track">
+              <span class="three-lens-toggle-thumb"></span>
+            </span>
+          </button>
+        </div>
       </div>
     `;
   }
@@ -2842,6 +2888,33 @@ export class ThreeLensOverlay {
         const id = (btn as HTMLElement).dataset.id;
         if (id) {
           this.toggleObjectVisibility(id);
+        }
+      });
+    });
+
+    // Visual overlays toggle buttons
+    panel.querySelectorAll('.three-lens-toggle-row').forEach(row => {
+      const action = (row as HTMLElement).dataset.action;
+      const btn = row.querySelector('.three-lens-toggle-btn');
+      if (!btn || !action) return;
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isActive = btn.classList.contains('active');
+        
+        switch (action) {
+          case 'toggle-wireframe':
+            this.probe.toggleSelectedWireframe(!isActive);
+            btn.classList.toggle('active', !isActive);
+            break;
+          case 'toggle-boundingbox':
+            this.probe.toggleSelectedBoundingBox(!isActive);
+            btn.classList.toggle('active', !isActive);
+            break;
+          case 'toggle-global-wireframe':
+            this.probe.toggleGlobalWireframe(!isActive);
+            btn.classList.toggle('active', !isActive);
+            break;
         }
       });
     });
