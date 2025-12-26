@@ -1125,6 +1125,138 @@ export const OVERLAY_STYLES = `
   cursor: not-allowed;
 }
 
+/* Camera Controls Styles */
+.three-lens-camera-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.three-lens-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--3lens-bg-tertiary);
+  border: 1px solid var(--3lens-border);
+  border-radius: var(--3lens-radius-md);
+  color: var(--3lens-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  justify-content: center;
+}
+
+.three-lens-action-btn:hover {
+  background: var(--3lens-bg-hover);
+  border-color: var(--3lens-accent-cyan);
+  color: var(--3lens-text-primary);
+}
+
+.three-lens-action-btn.stop {
+  background: var(--3lens-error);
+  border-color: var(--3lens-error);
+  color: white;
+}
+
+.three-lens-action-btn.stop:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.three-lens-camera-info {
+  background: var(--3lens-bg-tertiary);
+  border: 1px solid var(--3lens-border-subtle);
+  border-radius: var(--3lens-radius-sm);
+  padding: 8px;
+  margin-bottom: 12px;
+}
+
+.three-lens-camera-info-title {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.three-lens-camera-info-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.three-lens-camera-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+}
+
+.three-lens-camera-info-label {
+  color: var(--3lens-text-tertiary);
+}
+
+.three-lens-camera-info-value {
+  color: var(--3lens-text-primary);
+  font-family: var(--3lens-font-mono);
+}
+
+.three-lens-camera-switcher {
+  margin-top: 8px;
+}
+
+.three-lens-camera-switcher-title {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.three-lens-camera-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.three-lens-camera-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--3lens-bg-secondary);
+  border: 1px solid var(--3lens-border-subtle);
+  border-radius: var(--3lens-radius-sm);
+  color: var(--3lens-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.three-lens-camera-item:hover {
+  background: var(--3lens-bg-hover);
+  border-color: var(--3lens-border);
+}
+
+.three-lens-camera-item.active {
+  background: var(--3lens-accent-cyan);
+  border-color: var(--3lens-accent-cyan);
+  color: var(--3lens-bg-primary);
+}
+
+.three-lens-camera-item-icon {
+  font-size: 12px;
+}
+
+.three-lens-camera-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .three-lens-property-row {
   display: flex;
   align-items: center;

@@ -334,6 +334,9 @@ probe.initializeInspectMode(renderer.domElement, camera, THREE);
 // Initialize transform gizmo for manipulating objects
 probe.initializeTransformGizmo(scene, camera, renderer.domElement, THREE);
 
+// Initialize camera controller for focus/fly-to functionality
+probe.initializeCameraController(camera, THREE, { x: 0, y: 0, z: 0 });
+
 // Register our custom render targets for the Render Targets panel
 probe.observeRenderTarget(cubeRenderTarget, 'reflection');
 probe.observeRenderTarget(monitorRT, 'custom');

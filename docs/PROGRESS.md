@@ -268,10 +268,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| "Focus on object" command | ⬜ | |
-| Fly-to animation | ⬜ | |
-| Camera info display | ⬜ | |
-| Camera switching | ⬜ | |
+| "Focus on object" command | ✅ | Instant focus with automatic framing |
+| Fly-to animation | ✅ | Smooth eased animation (800ms default) |
+| Camera info display | ✅ | Shows type, FOV, near/far, position |
+| Camera switching | ✅ | List all scene cameras and switch between them |
 
 ## 2.3 Performance Enhancements
 
