@@ -17,6 +17,7 @@ import { createWebGLAdapter } from '../adapters/webgl-adapter';
 import { SceneObserver } from '../observers/SceneObserver';
 import { SelectionHelper } from '../helpers/SelectionHelper';
 import { InspectMode } from '../helpers/InspectMode';
+import { TransformGizmo, type TransformMode, type TransformSpace, type TransformHistoryEntry } from '../helpers/TransformGizmo';
 
 /**
  * Version of the probe
@@ -42,6 +43,7 @@ export class DevtoolProbe {
   private _maxHistorySize = 300;
   private _selectionHelper: SelectionHelper = new SelectionHelper();
   private _inspectMode: InspectMode = new InspectMode(this);
+  private _transformGizmo: TransformGizmo = new TransformGizmo(this);
   private _threeRef: typeof import('three') | null = null;
   private _visualizationHelpers: Map<string, THREE.Object3D> = new Map();
   private _globalWireframe = false;
@@ -603,6 +605,170 @@ export class DevtoolProbe {
    */
   isGlobalWireframeEnabled(): boolean {
     return this._globalWireframe;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // TRANSFORM GIZMO
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Initialize the transform gizmo
+   * Must be called before enabling transform mode
+   */
+  initializeTransformGizmo(
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    domElement: HTMLElement,
+    three: typeof import('three')
+  ): void {
+    this._transformGizmo.initialize(scene, camera, domElement, three);
+    
+    // Subscribe to selection changes to update gizmo attachment
+    this.onSelectionChanged(() => {
+      this._transformGizmo.onSelectionChanged();
+    });
+    
+    this.log('Transform gizmo initialized');
+  }
+
+  /**
+   * Enable the transform gizmo
+   */
+  async enableTransformGizmo(): Promise<void> {
+    await this._transformGizmo.enable();
+  }
+
+  /**
+   * Disable the transform gizmo
+   */
+  disableTransformGizmo(): void {
+    this._transformGizmo.disable();
+  }
+
+  /**
+   * Check if the transform gizmo is enabled
+   */
+  isTransformGizmoEnabled(): boolean {
+    return this._transformGizmo.isEnabled();
+  }
+
+  /**
+   * Set the transform mode (translate, rotate, scale)
+   */
+  setTransformMode(mode: TransformMode): void {
+    this._transformGizmo.setMode(mode);
+  }
+
+  /**
+   * Get the current transform mode
+   */
+  getTransformMode(): TransformMode {
+    return this._transformGizmo.getMode();
+  }
+
+  /**
+   * Set the transform space (world or local)
+   */
+  setTransformSpace(space: TransformSpace): void {
+    this._transformGizmo.setSpace(space);
+  }
+
+  /**
+   * Get the current transform space
+   */
+  getTransformSpace(): TransformSpace {
+    return this._transformGizmo.getSpace();
+  }
+
+  /**
+   * Toggle between world and local space
+   */
+  toggleTransformSpace(): TransformSpace {
+    return this._transformGizmo.toggleSpace();
+  }
+
+  /**
+   * Enable or disable snapping
+   */
+  setTransformSnapEnabled(enabled: boolean): void {
+    this._transformGizmo.setSnapEnabled(enabled);
+  }
+
+  /**
+   * Check if snapping is enabled
+   */
+  isTransformSnapEnabled(): boolean {
+    return this._transformGizmo.isSnapEnabled();
+  }
+
+  /**
+   * Set snap values
+   */
+  setTransformSnapValues(translation?: number, rotation?: number, scale?: number): void {
+    this._transformGizmo.setSnapValues(translation, rotation, scale);
+  }
+
+  /**
+   * Get snap values
+   */
+  getTransformSnapValues(): { translation: number; rotation: number; scale: number } {
+    return this._transformGizmo.getSnapValues();
+  }
+
+  /**
+   * Undo the last transform
+   */
+  undoTransform(): boolean {
+    return this._transformGizmo.undo();
+  }
+
+  /**
+   * Redo the last undone transform
+   */
+  redoTransform(): boolean {
+    return this._transformGizmo.redo();
+  }
+
+  /**
+   * Check if undo is available
+   */
+  canUndoTransform(): boolean {
+    return this._transformGizmo.canUndo();
+  }
+
+  /**
+   * Check if redo is available
+   */
+  canRedoTransform(): boolean {
+    return this._transformGizmo.canRedo();
+  }
+
+  /**
+   * Get the transform history
+   */
+  getTransformHistory(): TransformHistoryEntry[] {
+    return this._transformGizmo.getHistory();
+  }
+
+  /**
+   * Clear the transform history
+   */
+  clearTransformHistory(): void {
+    this._transformGizmo.clearHistory();
+  }
+
+  /**
+   * Subscribe to transform gizmo dragging state changes
+   */
+  onTransformDraggingChanged(callback: (isDragging: boolean) => void): () => void {
+    return this._transformGizmo.onDraggingChanged(callback);
+  }
+
+  /**
+   * Subscribe to transform changes
+   */
+  onTransformChanged(callback: (entry: TransformHistoryEntry) => void): () => void {
+    return this._transformGizmo.onTransformChanged(callback);
   }
 
   /**

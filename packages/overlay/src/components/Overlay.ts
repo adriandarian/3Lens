@@ -2705,6 +2705,91 @@ export class ThreeLensOverlay {
           </button>
         </div>
       </div>
+      ${this.renderTransformGizmoSection()}
+    `;
+  }
+
+  private renderTransformGizmoSection(): string {
+    const gizmoEnabled = this.probe.isTransformGizmoEnabled();
+    const mode = this.probe.getTransformMode();
+    const space = this.probe.getTransformSpace();
+    const snapEnabled = this.probe.isTransformSnapEnabled();
+    const canUndo = this.probe.canUndoTransform();
+    const canRedo = this.probe.canRedoTransform();
+
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Transform Gizmo</div>
+        
+        <div class="three-lens-toggle-row" data-action="toggle-transform-gizmo">
+          <span class="three-lens-toggle-label">Enable Gizmo</span>
+          <button class="three-lens-toggle-btn ${gizmoEnabled ? 'active' : ''}" title="Enable transform gizmo">
+            <span class="three-lens-toggle-track">
+              <span class="three-lens-toggle-thumb"></span>
+            </span>
+          </button>
+        </div>
+
+        <div class="three-lens-transform-modes ${!gizmoEnabled ? 'disabled' : ''}">
+          <div class="three-lens-mode-label">Mode</div>
+          <div class="three-lens-mode-buttons">
+            <button class="three-lens-mode-btn ${mode === 'translate' ? 'active' : ''}" data-mode="translate" title="Translate (W)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+              </svg>
+            </button>
+            <button class="three-lens-mode-btn ${mode === 'rotate' ? 'active' : ''}" data-mode="rotate" title="Rotate (E)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                <path d="M21 3v5h-5"/>
+              </svg>
+            </button>
+            <button class="three-lens-mode-btn ${mode === 'scale' ? 'active' : ''}" data-mode="scale" title="Scale (R)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 21l-6-6m6 6v-4.8m0 4.8h-4.8"/>
+                <path d="M3 16.2V21h4.8"/>
+                <path d="M21 7.8V3h-4.8"/>
+                <path d="M3 7.8V3h4.8"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="three-lens-transform-options ${!gizmoEnabled ? 'disabled' : ''}">
+          <div class="three-lens-option-row" data-action="toggle-space">
+            <span class="three-lens-option-label">Space</span>
+            <button class="three-lens-space-btn" title="Toggle between world and local space">
+              ${space === 'world' ? 'World' : 'Local'}
+            </button>
+          </div>
+          
+          <div class="three-lens-toggle-row" data-action="toggle-snap">
+            <span class="three-lens-toggle-label">Snap to Grid</span>
+            <button class="three-lens-toggle-btn ${snapEnabled ? 'active' : ''}" title="Enable grid snapping">
+              <span class="three-lens-toggle-track">
+                <span class="three-lens-toggle-thumb"></span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div class="three-lens-undo-redo ${!gizmoEnabled ? 'disabled' : ''}">
+          <button class="three-lens-undo-btn ${!canUndo ? 'disabled' : ''}" data-action="undo-transform" title="Undo (Ctrl+Z)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 7v6h6"/>
+              <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/>
+            </svg>
+            Undo
+          </button>
+          <button class="three-lens-redo-btn ${!canRedo ? 'disabled' : ''}" data-action="redo-transform" title="Redo (Ctrl+Shift+Z)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 7v6h-6"/>
+              <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/>
+            </svg>
+            Redo
+          </button>
+        </div>
+      </div>
     `;
   }
 
@@ -2915,6 +3000,69 @@ export class ThreeLensOverlay {
             this.probe.toggleGlobalWireframe(!isActive);
             btn.classList.toggle('active', !isActive);
             break;
+          case 'toggle-transform-gizmo':
+            if (!isActive) {
+              this.probe.enableTransformGizmo();
+            } else {
+              this.probe.disableTransformGizmo();
+            }
+            btn.classList.toggle('active', !isActive);
+            this.updateScenePanel(); // Refresh to update disabled states
+            break;
+          case 'toggle-snap':
+            this.probe.setTransformSnapEnabled(!isActive);
+            btn.classList.toggle('active', !isActive);
+            break;
+        }
+      });
+    });
+
+    // Transform mode buttons
+    panel.querySelectorAll('.three-lens-mode-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const mode = (btn as HTMLElement).dataset.mode as 'translate' | 'rotate' | 'scale';
+        if (mode && this.probe.isTransformGizmoEnabled()) {
+          this.probe.setTransformMode(mode);
+          // Update active states
+          panel.querySelectorAll('.three-lens-mode-btn').forEach(b => {
+            b.classList.toggle('active', (b as HTMLElement).dataset.mode === mode);
+          });
+        }
+      });
+    });
+
+    // Space toggle button
+    panel.querySelectorAll('.three-lens-option-row[data-action="toggle-space"]').forEach(row => {
+      const btn = row.querySelector('.three-lens-space-btn');
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.probe.isTransformGizmoEnabled()) {
+            const newSpace = this.probe.toggleTransformSpace();
+            btn.textContent = newSpace === 'world' ? 'World' : 'Local';
+          }
+        });
+      }
+    });
+
+    // Undo/Redo buttons
+    panel.querySelectorAll('.three-lens-undo-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.probe.canUndoTransform()) {
+          this.probe.undoTransform();
+          this.updateScenePanel();
+        }
+      });
+    });
+
+    panel.querySelectorAll('.three-lens-redo-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.probe.canRedoTransform()) {
+          this.probe.redoTransform();
+          this.updateScenePanel();
         }
       });
     });

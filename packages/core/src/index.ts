@@ -88,6 +88,13 @@ export { createProbe } from './probe/createProbe';
 // Helpers
 export { SelectionHelper } from './helpers/SelectionHelper';
 export { InspectMode } from './helpers/InspectMode';
+export { TransformGizmo } from './helpers/TransformGizmo';
+export type {
+  TransformMode,
+  TransformSpace,
+  TransformSnapshot,
+  TransformHistoryEntry,
+} from './helpers/TransformGizmo';
 
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
