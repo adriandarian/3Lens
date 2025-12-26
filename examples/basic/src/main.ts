@@ -331,6 +331,9 @@ probe.observeScene(scene);
 probe.initializeInspectMode(renderer.domElement, camera, THREE);
 // Note: Inspect mode is disabled by default. Press 'I' key to toggle it on/off.
 
+// Initialize transform gizmo for manipulating objects
+probe.initializeTransformGizmo(scene, camera, renderer.domElement, THREE);
+
 // Register our custom render targets for the Render Targets panel
 probe.observeRenderTarget(cubeRenderTarget, 'reflection');
 probe.observeRenderTarget(monitorRT, 'custom');

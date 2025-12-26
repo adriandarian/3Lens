@@ -257,12 +257,12 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Translate gizmo | ⬜ | |
-| Rotate gizmo | ⬜ | |
-| Scale gizmo | ⬜ | |
-| Local vs world space toggle | ⬜ | |
-| Snap to grid option | ⬜ | |
-| Undo/redo for changes | ⬜ | |
+| Translate gizmo | ✅ | TransformControls with W key shortcut |
+| Rotate gizmo | ✅ | E key shortcut |
+| Scale gizmo | ✅ | R key shortcut |
+| Local vs world space toggle | ✅ | Button to switch between world/local |
+| Snap to grid option | ✅ | Toggle with configurable snap values |
+| Undo/redo for changes | ✅ | Full history with Ctrl+Z/Ctrl+Shift+Z support |
 
 ### Camera Controls
 
