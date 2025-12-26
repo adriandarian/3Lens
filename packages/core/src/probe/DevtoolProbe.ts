@@ -44,6 +44,7 @@ export class DevtoolProbe {
   private _inspectMode: InspectMode = new InspectMode(this);
   private _threeRef: typeof import('three') | null = null;
   private _visualizationHelpers: Map<string, THREE.Object3D> = new Map();
+  private _globalWireframe = false;
 
   // Event callbacks
   private _selectionCallbacks: Array<
@@ -510,6 +511,98 @@ export class DevtoolProbe {
    */
   getSelectedObject(): THREE.Object3D | null {
     return this._selectedObject;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // VISUAL OVERLAYS
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Toggle wireframe visualization for an object
+   */
+  toggleWireframe(obj: THREE.Object3D, enabled: boolean): void {
+    if (!('isMesh' in obj) || !(obj as THREE.Mesh).isMesh) {
+      return;
+    }
+    const mesh = obj as THREE.Mesh;
+    this.applyGeometryVisualization(mesh, 'wireframe', enabled);
+  }
+
+  /**
+   * Toggle bounding box visualization for an object
+   */
+  toggleBoundingBox(obj: THREE.Object3D, enabled: boolean): void {
+    if (!('isMesh' in obj) || !(obj as THREE.Mesh).isMesh) {
+      return;
+    }
+    const mesh = obj as THREE.Mesh;
+    this.applyGeometryVisualization(mesh, 'boundingBox', enabled);
+  }
+
+  /**
+   * Toggle wireframe for the currently selected object
+   */
+  toggleSelectedWireframe(enabled: boolean): void {
+    if (this._selectedObject) {
+      this.toggleWireframe(this._selectedObject, enabled);
+    }
+  }
+
+  /**
+   * Toggle bounding box for the currently selected object
+   */
+  toggleSelectedBoundingBox(enabled: boolean): void {
+    if (this._selectedObject) {
+      this.toggleBoundingBox(this._selectedObject, enabled);
+    }
+  }
+
+  /**
+   * Check if wireframe is enabled for an object
+   */
+  isWireframeEnabled(obj: THREE.Object3D): boolean {
+    const helperKey = `${obj.uuid}_wireframe`;
+    return this._visualizationHelpers.has(helperKey);
+  }
+
+  /**
+   * Check if bounding box is enabled for an object
+   */
+  isBoundingBoxEnabled(obj: THREE.Object3D): boolean {
+    const helperKey = `${obj.uuid}_boundingBox`;
+    return this._visualizationHelpers.has(helperKey);
+  }
+
+  /**
+   * Toggle global wireframe mode for all meshes in all scenes
+   */
+  toggleGlobalWireframe(enabled: boolean): void {
+    this._globalWireframe = enabled;
+    for (const scene of this._sceneObservers.keys()) {
+      scene.traverse((obj) => {
+        if ('isMesh' in obj && (obj as THREE.Mesh).isMesh) {
+          const mesh = obj as THREE.Mesh;
+          // Skip 3lens helpers
+          if (mesh.name.startsWith('3lens_') || mesh.name.startsWith('__3lens')) {
+            return;
+          }
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const mat of materials) {
+            if (mat && 'wireframe' in mat) {
+              (mat as THREE.MeshBasicMaterial).wireframe = enabled;
+              mat.needsUpdate = true;
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * Check if global wireframe mode is enabled
+   */
+  isGlobalWireframeEnabled(): boolean {
+    return this._globalWireframe;
   }
 
   /**

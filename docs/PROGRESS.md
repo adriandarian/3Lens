@@ -248,10 +248,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Bounding box display (BoxHelper) | ⬜ | |
-| Selection outline | ⬜ | |
-| Wireframe toggle per object | ⬜ | |
-| Global wireframe toggle | ⬜ | |
+| Bounding box display (BoxHelper) | ✅ | SelectionHelper shows box on selection; per-object toggle in inspector |
+| Selection outline | ✅ | BoxHelper with cyan color on selected, blue on hover |
+| Wireframe toggle per object | ✅ | Toggle in Visual Overlays section of inspector |
+| Global wireframe toggle | ✅ | Applies wireframe to all meshes in all scenes |
 
 ### Transform Gizmos
 
