@@ -441,11 +441,18 @@ export class ThreeLensOverlay {
 
     // Calculate position (cascade)
     const offset = this.openPanels.size * 30;
+    
+    // For scene panel, check if there's a selection to determine initial width
+    let initialWidth = config.defaultWidth;
+    if (panelId === 'scene' && this.selectedNodeId) {
+      initialWidth = SCENE_PANEL_WIDTH_EXPANDED;
+    }
+    
     const state: PanelState = {
       id: panelId,
       x: 100 + offset,
       y: 100 + offset,
-      width: config.defaultWidth,
+      width: initialWidth,
       height: config.defaultHeight,
       minimized: false,
       zIndex: ++this.topZIndex,
@@ -453,6 +460,14 @@ export class ThreeLensOverlay {
 
     this.openPanels.set(panelId, state);
     this.createPanelElement(config, state);
+    
+    // For scene panel, ensure size is correct after mounting (handles edge cases)
+    if (panelId === 'scene') {
+      requestAnimationFrame(() => {
+        this.updateScenePanelSize();
+      });
+    }
+    
     this.updateMenu();
   }
 
