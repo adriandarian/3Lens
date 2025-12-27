@@ -59,12 +59,11 @@ export interface OverlayPanelDefinition {
   onDestroy?: (context: OverlayPanelContext) => void;
 }
 
-const SCENE_PANEL_WIDTH_COLLAPSED = 320; // Tree only (no selection)
-const SCENE_PANEL_WIDTH_EXPANDED = 560;  // Tree + Inspector (with selection)
+const SCENE_PANEL_WIDTH = 560;           // Always show tree + inspector/global tools
 const SCENE_PANEL_MAX_HEIGHT = 450;      // Max auto-height before scrolling
 
 const DEFAULT_PANELS: OverlayPanelDefinition[] = [
-  { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: SCENE_PANEL_WIDTH_COLLAPSED, defaultHeight: 0 }, // 0 = auto height
+  { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: SCENE_PANEL_WIDTH, defaultHeight: 0 }, // 0 = auto height
   { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 360, defaultHeight: 480 },
   { id: 'materials', title: 'Materials', icon: '🎨', iconClass: 'materials', defaultWidth: 700, defaultHeight: 500 },
   { id: 'geometry', title: 'Geometry', icon: '📐', iconClass: 'inspector', defaultWidth: 750, defaultHeight: 500 },
@@ -443,10 +442,7 @@ export class ThreeLensOverlay {
     const offset = this.openPanels.size * 30;
     
     // For scene panel, check if there's a selection to determine initial width
-    let initialWidth = config.defaultWidth;
-    if (panelId === 'scene' && this.selectedNodeId) {
-      initialWidth = SCENE_PANEL_WIDTH_EXPANDED;
-    }
+    const initialWidth = config.defaultWidth;
     
     const state: PanelState = {
       id: panelId,
@@ -2676,12 +2672,6 @@ export class ThreeLensOverlay {
             </button>
           </div>
         </div>
-        <div class="three-lens-section">
-          <div class="three-lens-section-header">Selection</div>
-          <div class="three-lens-global-hint">
-            Select an object in the scene tree to view and edit its properties.
-          </div>
-        </div>
       </div>
     `;
   }
@@ -3120,16 +3110,12 @@ export class ThreeLensOverlay {
     const state = this.openPanels.get('scene');
     if (!panel || !state) return;
 
-    const targetWidth = this.selectedNodeId 
-      ? SCENE_PANEL_WIDTH_EXPANDED 
-      : SCENE_PANEL_WIDTH_COLLAPSED;
-
-    // Update min-width and width to target
-    panel.style.minWidth = `${targetWidth}px`;
+    // Scene panel always uses the fixed width (tree + inspector/global tools)
+    panel.style.minWidth = `${SCENE_PANEL_WIDTH}px`;
     
-    if (state.width !== targetWidth) {
-      state.width = targetWidth;
-      panel.style.width = `${targetWidth}px`;
+    if (state.width !== SCENE_PANEL_WIDTH) {
+      state.width = SCENE_PANEL_WIDTH;
+      panel.style.width = `${SCENE_PANEL_WIDTH}px`;
     }
   }
 
