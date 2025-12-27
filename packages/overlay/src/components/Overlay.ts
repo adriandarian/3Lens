@@ -268,6 +268,11 @@ export class ThreeLensOverlay {
       this.updateInspectorPanel();
     });
 
+    // Subscribe to transform changes to update undo/redo button states
+    this.probe.onTransformChanged(() => {
+      this.updateScenePanel();
+    });
+
     // Initial render
     this.render();
 
@@ -3156,12 +3161,15 @@ export class ThreeLensOverlay {
             break;
           case 'toggle-transform-gizmo':
             if (!isActive) {
-              this.probe.enableTransformGizmo();
+              this.probe.enableTransformGizmo().then(() => {
+                btn.classList.toggle('active', true);
+                this.updateScenePanel(); // Refresh to update disabled states
+              });
             } else {
               this.probe.disableTransformGizmo();
+              btn.classList.toggle('active', false);
+              this.updateScenePanel(); // Refresh to update disabled states
             }
-            btn.classList.toggle('active', !isActive);
-            this.updateScenePanel(); // Refresh to update disabled states
             break;
           case 'toggle-snap':
             this.probe.setTransformSnapEnabled(!isActive);
