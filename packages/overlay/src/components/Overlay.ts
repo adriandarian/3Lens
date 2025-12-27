@@ -1021,24 +1021,15 @@ export class ThreeLensOverlay {
       ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
       : null;
 
-    // Only show split view with inspector when something is selected
-    if (selectedNode) {
+    // Always show split view - inspector on right shows object details or global tools
       return `
         <div class="three-lens-split-view">
           <div class="three-lens-tree-pane">
             <div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>
           </div>
           <div class="three-lens-inspector-pane">
-            ${this.renderNodeInspector(selectedNode)}
+          ${selectedNode ? this.renderNodeInspector(selectedNode) : this.renderGlobalTools()}
           </div>
-        </div>
-      `;
-    }
-
-    // No selection - show tree only (full width)
-    return `
-      <div class="three-lens-tree-full">
-        <div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>
       </div>
     `;
   }
@@ -2638,6 +2629,63 @@ export class ThreeLensOverlay {
     `;
   }
 
+  private renderGlobalTools(): string {
+    const globalWireframe = this.probe.isGlobalWireframeEnabled();
+    const cameraInfo = this.probe.getCameraInfo();
+    const hasHome = this.probe.hasHomePosition();
+
+    return `
+      <div class="three-lens-global-tools">
+        <div class="three-lens-global-tools-header">
+          <span class="three-lens-global-icon">🌐</span>
+          <span>Global Tools</span>
+        </div>
+        <div class="three-lens-section">
+          <div class="three-lens-section-header">Visual Settings</div>
+          <div class="three-lens-toggle-row global" data-action="toggle-global-wireframe">
+            <span class="three-lens-toggle-label">Global Wireframe</span>
+            <button class="three-lens-toggle-btn ${globalWireframe ? 'active' : ''}" title="Toggle wireframe for all meshes">
+              <span class="three-lens-toggle-track">
+                <span class="three-lens-toggle-thumb"></span>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="three-lens-section">
+          <div class="three-lens-section-header">Camera</div>
+          ${cameraInfo ? `
+            <div class="three-lens-camera-info">
+              <div class="three-lens-property-row compact">
+                <span class="three-lens-property-name">Type</span>
+                <span class="three-lens-property-value">${cameraInfo.type}</span>
+              </div>
+              <div class="three-lens-property-row compact">
+                <span class="three-lens-property-name">Position</span>
+                <span class="three-lens-property-value">(${cameraInfo.position.x.toFixed(1)}, ${cameraInfo.position.y.toFixed(1)}, ${cameraInfo.position.z.toFixed(1)})</span>
+              </div>
+            </div>
+          ` : ''}
+          <div class="three-lens-camera-actions">
+            <button class="three-lens-action-btn three-lens-home-btn" data-action="go-home" ${!hasHome ? 'disabled' : ''} title="Return to home position">
+              <span class="three-lens-btn-icon">🏠</span>
+              <span>Home</span>
+            </button>
+            <button class="three-lens-action-btn" data-action="save-home" title="Save current camera position as home">
+              <span class="three-lens-btn-icon">💾</span>
+              <span>Save Home</span>
+            </button>
+          </div>
+        </div>
+        <div class="three-lens-section">
+          <div class="three-lens-section-header">Selection</div>
+          <div class="three-lens-global-hint">
+            Select an object in the scene tree to view and edit its properties.
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private renderMeshInfo(meshData: NonNullable<SceneNode['meshData']>): string {
     return `
       <div class="three-lens-section">
@@ -2683,38 +2731,30 @@ export class ThreeLensOverlay {
     // Only show for meshes (objects that can have wireframe/bounding box)
     const isMesh = node.ref.type === 'Mesh' || node.ref.type === 'SkinnedMesh' || node.ref.type === 'InstancedMesh';
     
+    if (!isMesh) {
+      // Don't show visual overlays section for non-mesh objects
+      return this.renderTransformGizmoSection();
+    }
+    
     // Get the actual object to check current state
     const obj = this.probe.getSelectedObject();
     const wireframeEnabled = obj ? this.probe.isWireframeEnabled(obj) : false;
     const boundingBoxEnabled = obj ? this.probe.isBoundingBoxEnabled(obj) : false;
-    const globalWireframe = this.probe.isGlobalWireframeEnabled();
 
     return `
       <div class="three-lens-section">
         <div class="three-lens-section-header">Visual Overlays</div>
-        ${isMesh ? `
-          <div class="three-lens-toggle-row" data-action="toggle-wireframe">
-            <span class="three-lens-toggle-label">Wireframe</span>
-            <button class="three-lens-toggle-btn ${wireframeEnabled ? 'active' : ''}" title="Toggle wireframe for this object">
-              <span class="three-lens-toggle-track">
-                <span class="three-lens-toggle-thumb"></span>
-              </span>
-            </button>
-          </div>
-          <div class="three-lens-toggle-row" data-action="toggle-boundingbox">
-            <span class="three-lens-toggle-label">Bounding Box</span>
-            <button class="three-lens-toggle-btn ${boundingBoxEnabled ? 'active' : ''}" title="Toggle bounding box for this object">
-              <span class="three-lens-toggle-track">
-                <span class="three-lens-toggle-thumb"></span>
-              </span>
-            </button>
-          </div>
-        ` : `
-          <div class="three-lens-overlay-note">Select a mesh to toggle overlays</div>
-        `}
-        <div class="three-lens-toggle-row global" data-action="toggle-global-wireframe">
-          <span class="three-lens-toggle-label">Global Wireframe</span>
-          <button class="three-lens-toggle-btn ${globalWireframe ? 'active' : ''}" title="Toggle wireframe for all meshes">
+        <div class="three-lens-toggle-row" data-action="toggle-wireframe">
+          <span class="three-lens-toggle-label">Wireframe</span>
+          <button class="three-lens-toggle-btn ${wireframeEnabled ? 'active' : ''}" title="Toggle wireframe for this object">
+            <span class="three-lens-toggle-track">
+              <span class="three-lens-toggle-thumb"></span>
+            </span>
+          </button>
+        </div>
+        <div class="three-lens-toggle-row" data-action="toggle-boundingbox">
+          <span class="three-lens-toggle-label">Bounding Box</span>
+          <button class="three-lens-toggle-btn ${boundingBoxEnabled ? 'active' : ''}" title="Toggle bounding box for this object">
             <span class="three-lens-toggle-track">
               <span class="three-lens-toggle-thumb"></span>
             </span>

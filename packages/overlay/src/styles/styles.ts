@@ -1003,6 +1003,48 @@ export const OVERLAY_STYLES = `
   padding: 4px 0;
 }
 
+/* Global Tools Panel */
+.three-lens-global-tools {
+  padding: 0;
+}
+
+.three-lens-global-tools-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  background: linear-gradient(135deg, var(--3lens-accent-cyan-dim) 0%, var(--3lens-bg-hover) 100%);
+  border-bottom: 1px solid var(--3lens-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--3lens-accent-cyan);
+}
+
+.three-lens-global-icon {
+  font-size: 14px;
+}
+
+.three-lens-global-hint {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+  line-height: 1.4;
+  padding: 4px 0;
+}
+
+.three-lens-camera-info {
+  margin-bottom: 8px;
+}
+
+.three-lens-property-row.compact {
+  padding: 2px 0;
+}
+
+.three-lens-camera-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 /* Transform Gizmo Styles */
 .three-lens-transform-modes {
   margin: 8px 0;
