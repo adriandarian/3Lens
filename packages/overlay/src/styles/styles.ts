@@ -1024,6 +1024,23 @@ export const OVERLAY_STYLES = `
   font-size: 14px;
 }
 
+/* Sections inside global tools - cleaner look */
+.three-lens-global-tools .three-lens-section {
+  padding: 10px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--3lens-border-subtle);
+}
+
+.three-lens-global-tools .three-lens-section:last-child {
+  border-bottom: none;
+}
+
+.three-lens-global-tools .three-lens-section-header {
+  border-bottom: none;
+  padding-bottom: 8px;
+  margin-bottom: 0;
+}
+
 .three-lens-global-hint {
   font-size: 10px;
   color: var(--3lens-text-tertiary);
@@ -1032,11 +1049,24 @@ export const OVERLAY_STYLES = `
 }
 
 .three-lens-camera-info {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .three-lens-property-row.compact {
-  padding: 2px 0;
+  padding: 3px 0;
+}
+
+.three-lens-property-row.compact .three-lens-property-name {
+  width: 55px;
+  min-width: 55px;
+}
+
+.three-lens-property-row.compact .three-lens-property-value {
+  font-size: 10px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .three-lens-camera-actions {
