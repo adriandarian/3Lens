@@ -54,6 +54,14 @@ export class CameraController {
   private sceneCameras: THREE.Camera[] = [];
   private activeCameraIndex = 0;
   
+  // Home position (saved on initialization)
+  private homePosition: { x: number; y: number; z: number } | null = null;
+  private homeTarget: { x: number; y: number; z: number } | null = null;
+  
+  // Track last focused object to prevent refocusing on the same object
+  private lastFocusedObjectUuid: string | null = null;
+  private lastFocusPadding: number = 1.5;
+  
   // Callbacks
   private onCameraChangedCallbacks: Array<(camera: THREE.Camera, info: CameraInfo) => void> = [];
   private onAnimationCompleteCallbacks: Array<() => void> = [];
@@ -74,8 +82,112 @@ export class CameraController {
       this.orbitTarget = { ...orbitTarget };
     }
     
+    // Save home position
+    this.homePosition = {
+      x: camera.position.x,
+      y: camera.position.y,
+      z: camera.position.z,
+    };
+    this.homeTarget = { ...this.orbitTarget };
+    
     // Scan for cameras in observed scenes
     this.updateSceneCameras();
+  }
+
+  /**
+   * Set a new home position (useful if you want to update it)
+   */
+  setHomePosition(
+    position: { x: number; y: number; z: number },
+    target?: { x: number; y: number; z: number }
+  ): void {
+    this.homePosition = { ...position };
+    if (target) {
+      this.homeTarget = { ...target };
+    }
+  }
+
+  /**
+   * Save the current camera position as home
+   */
+  saveCurrentAsHome(): void {
+    if (!this.camera) return;
+    this.homePosition = {
+      x: this.camera.position.x,
+      y: this.camera.position.y,
+      z: this.camera.position.z,
+    };
+    this.homeTarget = { ...this.orbitTarget };
+  }
+
+  /**
+   * Reset camera to home position (instant)
+   */
+  goHome(): void {
+    if (!this.camera || !this.homePosition || !this.homeTarget) return;
+
+    this.camera.position.set(
+      this.homePosition.x,
+      this.homePosition.y,
+      this.homePosition.z
+    );
+    this.orbitTarget = { ...this.homeTarget };
+    this.camera.lookAt(this.homeTarget.x, this.homeTarget.y, this.homeTarget.z);
+    
+    // Clear focus tracking since we're no longer focused on an object
+    this.lastFocusedObjectUuid = null;
+  }
+
+  /**
+   * Fly camera back to home position with animation
+   */
+  flyHome(options: Omit<FlyToOptions, 'padding'> = {}): void {
+    if (!this.camera || !this.homePosition || !this.homeTarget) return;
+
+    const {
+      duration = 800,
+      easing = 'easeInOut',
+      onComplete,
+    } = options;
+
+    // Clear focus tracking since we're going home
+    this.lastFocusedObjectUuid = null;
+
+    // Start animation
+    this.animation = {
+      startTime: performance.now(),
+      duration,
+      startPosition: {
+        x: this.camera.position.x,
+        y: this.camera.position.y,
+        z: this.camera.position.z,
+      },
+      endPosition: { ...this.homePosition },
+      startTarget: { ...this.orbitTarget },
+      endTarget: { ...this.homeTarget },
+      easing,
+      onComplete,
+    };
+
+    this.startAnimationLoop();
+  }
+
+  /**
+   * Check if home position is set
+   */
+  hasHomePosition(): boolean {
+    return this.homePosition !== null && this.homeTarget !== null;
+  }
+
+  /**
+   * Get the home position
+   */
+  getHomePosition(): { position: { x: number; y: number; z: number }; target: { x: number; y: number; z: number } } | null {
+    if (!this.homePosition || !this.homeTarget) return null;
+    return {
+      position: { ...this.homePosition },
+      target: { ...this.homeTarget },
+    };
   }
 
   /**
@@ -176,6 +288,11 @@ export class CameraController {
   focusOnObject(object: THREE.Object3D, padding = 1.5): void {
     if (!this.camera || !this.THREE) return;
 
+    // Skip if already focused on this exact object with same padding
+    if (this.lastFocusedObjectUuid === object.uuid && this.lastFocusPadding === padding) {
+      return;
+    }
+
     const target = this.calculateFocusPosition(object, padding);
     if (!target) return;
 
@@ -185,6 +302,10 @@ export class CameraController {
     
     // Update camera to look at target
     this.camera.lookAt(target.target.x, target.target.y, target.target.z);
+    
+    // Remember what we focused on
+    this.lastFocusedObjectUuid = object.uuid;
+    this.lastFocusPadding = padding;
   }
 
   /**
@@ -211,8 +332,18 @@ export class CameraController {
       onComplete,
     } = options;
 
+    // Skip if already focused on this exact object with same padding
+    if (this.lastFocusedObjectUuid === object.uuid && this.lastFocusPadding === padding) {
+      if (onComplete) onComplete();
+      return;
+    }
+
     const target = this.calculateFocusPosition(object, padding);
     if (!target) return;
+
+    // Remember what we're focusing on (set before animation so repeated clicks are ignored)
+    this.lastFocusedObjectUuid = object.uuid;
+    this.lastFocusPadding = padding;
 
     // Start animation
     this.animation = {

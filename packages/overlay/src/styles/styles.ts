@@ -1165,6 +1165,17 @@ export const OVERLAY_STYLES = `
   border-color: #dc2626;
 }
 
+.three-lens-action-btn.home {
+  background: var(--3lens-accent-emerald);
+  border-color: var(--3lens-accent-emerald);
+  color: var(--3lens-bg-primary);
+}
+
+.three-lens-action-btn.home:hover {
+  background: #2dd4bf;
+  border-color: #2dd4bf;
+}
+
 .three-lens-camera-info {
   background: var(--3lens-bg-tertiary);
   border: 1px solid var(--3lens-border-subtle);

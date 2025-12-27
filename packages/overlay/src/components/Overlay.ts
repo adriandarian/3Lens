@@ -2751,6 +2751,24 @@ export class ThreeLensOverlay {
           </button>
         </div>
         
+        <div class="three-lens-camera-actions">
+          <button class="three-lens-action-btn home" data-action="go-home" title="Return to home view (H)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Home
+          </button>
+          <button class="three-lens-action-btn" data-action="save-home" title="Save current view as home">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Set Home
+          </button>
+        </div>
+        
         ${cameraInfo ? `
           <div class="three-lens-camera-info">
             <div class="three-lens-camera-info-title">Active Camera</div>
@@ -3021,9 +3039,21 @@ export class ThreeLensOverlay {
   private updateScenePanel(): void {
     const content = document.getElementById('three-lens-content-scene');
     if (content) {
+      // Preserve scroll position of the inspector pane
+      const inspectorPane = content.querySelector('.three-lens-inspector-pane');
+      const scrollTop = inspectorPane?.scrollTop ?? 0;
+      
       content.innerHTML = this.renderSceneContent();
       const panel = document.getElementById('three-lens-panel-scene');
       if (panel) this.attachTreeEvents(panel);
+      
+      // Restore scroll position
+      if (scrollTop > 0) {
+        const newInspectorPane = content.querySelector('.three-lens-inspector-pane');
+        if (newInspectorPane) {
+          newInspectorPane.scrollTop = scrollTop;
+        }
+      }
     }
   }
 
@@ -3188,6 +3218,16 @@ export class ThreeLensOverlay {
           case 'stop-animation':
             this.probe.stopCameraAnimation();
             this.updateScenePanel();
+            break;
+          case 'go-home':
+            this.probe.flyHome({
+              duration: 600,
+              easing: 'easeOut',
+              onComplete: () => this.updateScenePanel(),
+            });
+            break;
+          case 'save-home':
+            this.probe.saveCurrentCameraAsHome();
             break;
         }
       });
