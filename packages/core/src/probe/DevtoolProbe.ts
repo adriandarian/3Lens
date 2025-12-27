@@ -896,6 +896,34 @@ export class DevtoolProbe {
   }
 
   /**
+   * Reset camera to home position (instant)
+   */
+  goHome(): void {
+    this._cameraController.goHome();
+  }
+
+  /**
+   * Fly camera back to home position with animation
+   */
+  flyHome(options?: Omit<FlyToOptions, 'padding'>): void {
+    this._cameraController.flyHome(options);
+  }
+
+  /**
+   * Save the current camera position as the new home position
+   */
+  saveCurrentCameraAsHome(): void {
+    this._cameraController.saveCurrentAsHome();
+  }
+
+  /**
+   * Check if a home position is set
+   */
+  hasHomePosition(): boolean {
+    return this._cameraController.hasHomePosition();
+  }
+
+  /**
    * Update a material property by UUID
    * Used by the overlay and extension to live-edit materials
    */
