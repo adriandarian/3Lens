@@ -298,10 +298,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Triangle count per object | ⬜ | |
-| Material complexity estimate | ⬜ | |
-| Cost heatmap overlay | ⬜ | |
-| Sort objects by cost | ⬜ | |
+| Triangle count per object | ✅ | Shows in Cost Analysis section (faceCount), normalized to 1 point per 1000 triangles |
+| Material complexity estimate | ✅ | Scores materials 1-10 based on type (Basic→Physical), textures, features (normal/env/displacement maps) |
+| Cost heatmap overlay | ✅ | Color-coded tree nodes (green=low, yellow=medium, orange=high, red=critical) with cost indicator |
+| Sort objects by cost | ✅ | Global Tools shows Cost Ranking with top 5 meshes sorted by total cost, clickable to select |
 
 ## 2.4 Resource Tracking
 

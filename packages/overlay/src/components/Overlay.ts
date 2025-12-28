@@ -1072,15 +1072,20 @@ export class ThreeLensOverlay {
     const isExpanded = this.expandedNodes.has(node.ref.debugId);
     const isSelected = this.selectedNodeId === node.ref.debugId;
     const isVisible = node.visible;
+    
+    // Get cost level for heatmap coloring (only for meshes)
+    const costLevel = node.meshData?.costData?.costLevel || '';
+    const costClass = costLevel ? `cost-${costLevel}` : '';
 
     return `
       <div class="three-lens-node" data-id="${node.ref.debugId}">
-        <div class="three-lens-node-header ${isSelected ? 'selected' : ''} ${!isVisible ? 'hidden-object' : ''}">
+        <div class="three-lens-node-header ${isSelected ? 'selected' : ''} ${!isVisible ? 'hidden-object' : ''} ${costClass}">
           <span class="three-lens-node-toggle ${hasChildren ? (isExpanded ? 'expanded' : '') : 'hidden'}">
             <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1L6 4L2 7z"/></svg>
           </span>
           <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${getObjectIcon(node.ref.type)}</span>
           <span class="three-lens-node-name ${!node.ref.name ? 'unnamed' : ''}">${node.ref.name || 'unnamed'}</span>
+          ${costLevel ? `<span class="three-lens-cost-indicator ${costClass}" title="Cost: ${costLevel}">${this.getCostIcon(costLevel)}</span>` : ''}
           <button class="three-lens-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">
             ${isVisible ? this.getEyeOpenIcon() : this.getEyeClosedIcon()}
           </button>
@@ -1090,6 +1095,16 @@ export class ThreeLensOverlay {
         ${hasChildren && isExpanded ? `<div class="three-lens-node-children">${node.children.map(c => this.renderNode(c)).join('')}</div>` : ''}
       </div>
     `;
+  }
+
+  private getCostIcon(costLevel: string): string {
+    switch (costLevel) {
+      case 'low': return '●';
+      case 'medium': return '●';
+      case 'high': return '●';
+      case 'critical': return '🔥';
+      default: return '';
+    }
   }
 
   private getEyeOpenIcon(): string {
@@ -2794,6 +2809,9 @@ export class ThreeLensOverlay {
     const globalWireframe = this.probe.isGlobalWireframeEnabled();
     const cameraInfo = this.probe.getCameraInfo();
     const hasHome = this.probe.hasHomePosition();
+    
+    // Collect and sort objects by cost
+    const costRanking = this.collectCostRanking();
 
     return `
       <div class="three-lens-global-tools">
@@ -2837,6 +2855,91 @@ export class ThreeLensOverlay {
             </button>
           </div>
         </div>
+        ${this.renderCostRankingSection(costRanking)}
+      </div>
+    `;
+  }
+
+  private collectCostRanking(): Array<{ debugId: string; name: string; type: string; cost: number; costLevel: string; triangles: number }> {
+    const snapshot = this.probe.takeSnapshot();
+    const ranking: Array<{ debugId: string; name: string; type: string; cost: number; costLevel: string; triangles: number }> = [];
+
+    const collectFromNode = (node: SceneNode) => {
+      if (node.meshData?.costData) {
+        ranking.push({
+          debugId: node.ref.debugId,
+          name: node.ref.name || 'unnamed',
+          type: node.ref.type,
+          cost: node.meshData.costData.totalCost,
+          costLevel: node.meshData.costData.costLevel,
+          triangles: node.meshData.faceCount,
+        });
+      }
+      for (const child of node.children) {
+        collectFromNode(child);
+      }
+    };
+
+    for (const scene of snapshot.scenes) {
+      collectFromNode(scene);
+    }
+
+    // Sort by cost (highest first)
+    ranking.sort((a, b) => b.cost - a.cost);
+    
+    return ranking;
+  }
+
+  private renderCostRankingSection(ranking: Array<{ debugId: string; name: string; type: string; cost: number; costLevel: string; triangles: number }>): string {
+    if (ranking.length === 0) {
+      return '';
+    }
+
+    // Get total scene cost
+    const totalCost = ranking.reduce((sum, item) => sum + item.cost, 0);
+    const totalTriangles = ranking.reduce((sum, item) => sum + item.triangles, 0);
+    
+    // Count by cost level
+    const criticalCount = ranking.filter(r => r.costLevel === 'critical').length;
+    const highCount = ranking.filter(r => r.costLevel === 'high').length;
+
+    // Take top 5 for display
+    const topItems = ranking.slice(0, 5);
+
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Cost Ranking</div>
+        <div class="three-lens-cost-summary">
+          <div class="three-lens-cost-summary-stat">
+            <span class="three-lens-cost-summary-value">${totalCost.toFixed(1)}</span>
+            <span class="three-lens-cost-summary-label">Total Cost</span>
+          </div>
+          <div class="three-lens-cost-summary-stat">
+            <span class="three-lens-cost-summary-value">${formatNumber(totalTriangles)}</span>
+            <span class="three-lens-cost-summary-label">Triangles</span>
+          </div>
+          <div class="three-lens-cost-summary-stat">
+            <span class="three-lens-cost-summary-value">${ranking.length}</span>
+            <span class="three-lens-cost-summary-label">Meshes</span>
+          </div>
+        </div>
+        ${criticalCount > 0 || highCount > 0 ? `
+          <div class="three-lens-cost-warning">
+            ${criticalCount > 0 ? `<span class="cost-critical">🔥 ${criticalCount} critical</span>` : ''}
+            ${highCount > 0 ? `<span class="cost-high">⚠ ${highCount} high cost</span>` : ''}
+          </div>
+        ` : ''}
+        <div class="three-lens-cost-ranking-list">
+          ${topItems.map((item, index) => `
+            <div class="three-lens-cost-ranking-item" data-id="${item.debugId}" data-action="select-object">
+              <span class="three-lens-cost-rank">#${index + 1}</span>
+              <span class="three-lens-cost-ranking-name">${item.name}</span>
+              <span class="three-lens-cost-ranking-triangles">${formatNumber(item.triangles)}</span>
+              <span class="three-lens-cost-ranking-score cost-${item.costLevel}">${item.cost.toFixed(1)}</span>
+            </div>
+          `).join('')}
+        </div>
+        ${ranking.length > 5 ? `<div class="three-lens-cost-more">+ ${ranking.length - 5} more objects</div>` : ''}
       </div>
     `;
   }
@@ -2851,6 +2954,98 @@ export class ThreeLensOverlay {
         ${this.renderProp('Material', this.formatMaterialRefs(meshData.materialRefs))}
         ${this.renderProp('Cast Shadow', meshData.castShadow)}
         ${this.renderProp('Receive Shadow', meshData.receiveShadow)}
+      </div>
+      ${meshData.costData ? this.renderCostAnalysis(meshData.costData) : ''}
+    `;
+  }
+
+  private renderCostAnalysis(costData: NonNullable<NonNullable<SceneNode['meshData']>['costData']>): string {
+    const costLevelClass = `cost-${costData.costLevel}`;
+    const costLevelLabel = costData.costLevel.charAt(0).toUpperCase() + costData.costLevel.slice(1);
+    
+    // Calculate cost breakdown percentages
+    const total = costData.triangleCost + costData.materialComplexity + costData.textureCost + costData.shadowCost;
+    const triPct = total > 0 ? (costData.triangleCost / total * 100).toFixed(0) : '0';
+    const matPct = total > 0 ? (costData.materialComplexity / total * 100).toFixed(0) : '0';
+    const texPct = total > 0 ? (costData.textureCost / total * 100).toFixed(0) : '0';
+    const shadowPct = total > 0 ? (costData.shadowCost / total * 100).toFixed(0) : '0';
+
+    return `
+      <div class="three-lens-section">
+        <div class="three-lens-section-header">Cost Analysis</div>
+        <div class="three-lens-cost-header">
+          <span class="three-lens-cost-level ${costLevelClass}">${costLevelLabel}</span>
+          <span class="three-lens-cost-score">${costData.totalCost.toFixed(1)} pts</span>
+        </div>
+        <div class="three-lens-cost-breakdown">
+          <div class="three-lens-cost-bar">
+            <div class="three-lens-cost-bar-segment triangles" style="width: ${triPct}%" title="Triangles: ${triPct}%"></div>
+            <div class="three-lens-cost-bar-segment material" style="width: ${matPct}%" title="Material: ${matPct}%"></div>
+            <div class="three-lens-cost-bar-segment textures" style="width: ${texPct}%" title="Textures: ${texPct}%"></div>
+            <div class="three-lens-cost-bar-segment shadows" style="width: ${shadowPct}%" title="Shadows: ${shadowPct}%"></div>
+          </div>
+          <div class="three-lens-cost-legend">
+            <span class="three-lens-cost-legend-item triangles">▪ Tris ${triPct}%</span>
+            <span class="three-lens-cost-legend-item material">▪ Mat ${matPct}%</span>
+            <span class="three-lens-cost-legend-item textures">▪ Tex ${texPct}%</span>
+            <span class="three-lens-cost-legend-item shadows">▪ Shd ${shadowPct}%</span>
+          </div>
+        </div>
+        <div class="three-lens-cost-details">
+          ${this.renderCostRow('Triangles', costData.triangleCost.toFixed(2), formatNumber(Math.round(costData.triangleCost * 1000)) + ' tris')}
+          ${this.renderCostRow('Material', costData.materialComplexity.toFixed(1) + '/10', this.getMaterialComplexityLabel(costData.materialComplexity))}
+          ${this.renderCostRow('Textures', costData.textureCost.toFixed(1), costData.materials.reduce((s, m) => s + m.textureCount, 0) + ' maps')}
+          ${this.renderCostRow('Shadows', costData.shadowCost.toFixed(1), this.getShadowLabel(costData.shadowCost))}
+        </div>
+        ${this.renderMaterialDetails(costData.materials)}
+      </div>
+    `;
+  }
+
+  private renderCostRow(label: string, value: string, detail: string): string {
+    return `
+      <div class="three-lens-cost-row">
+        <span class="three-lens-cost-row-label">${label}</span>
+        <span class="three-lens-cost-row-value">${value}</span>
+        <span class="three-lens-cost-row-detail">${detail}</span>
+      </div>
+    `;
+  }
+
+  private getMaterialComplexityLabel(complexity: number): string {
+    if (complexity <= 2) return 'Simple';
+    if (complexity <= 4) return 'Standard';
+    if (complexity <= 6) return 'Complex';
+    if (complexity <= 8) return 'Heavy';
+    return 'Very Heavy';
+  }
+
+  private getShadowLabel(shadowCost: number): string {
+    if (shadowCost === 0) return 'None';
+    if (shadowCost === 1) return 'Receive only';
+    if (shadowCost === 2) return 'Cast only';
+    return 'Cast + Receive';
+  }
+
+  private renderMaterialDetails(materials: NonNullable<NonNullable<SceneNode['meshData']>['costData']>['materials']): string {
+    if (materials.length === 0) return '';
+
+    return `
+      <div class="three-lens-material-details">
+        <div class="three-lens-material-details-header">Materials (${materials.length})</div>
+        ${materials.map((mat, i) => `
+          <div class="three-lens-material-item">
+            <span class="three-lens-material-type">${mat.type}</span>
+            <span class="three-lens-material-score">${mat.complexityScore.toFixed(1)}/10</span>
+            <div class="three-lens-material-features">
+              ${mat.textureCount > 0 ? `<span class="three-lens-mat-feature" title="Textures">🖼 ${mat.textureCount}</span>` : ''}
+              ${mat.hasNormalMap ? `<span class="three-lens-mat-feature" title="Normal Map">N</span>` : ''}
+              ${mat.hasEnvMap ? `<span class="three-lens-mat-feature" title="Environment Map">E</span>` : ''}
+              ${mat.transparent ? `<span class="three-lens-mat-feature" title="Transparent">α</span>` : ''}
+              ${mat.doubleSided ? `<span class="three-lens-mat-feature" title="Double Sided">⇄</span>` : ''}
+            </div>
+          </div>
+        `).join('')}
       </div>
     `;
   }
@@ -3450,6 +3645,17 @@ export class ThreeLensOverlay {
         const index = parseInt((btn as HTMLElement).dataset.cameraIndex || '0', 10);
         if (this.probe.switchToCamera(index)) {
           this.updateScenePanel();
+        }
+      });
+    });
+
+    // Cost ranking item selection
+    panel.querySelectorAll('.three-lens-cost-ranking-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = (item as HTMLElement).dataset.id;
+        if (id) {
+          this.probe.selectByDebugId(id);
         }
       });
     });

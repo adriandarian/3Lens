@@ -182,6 +182,35 @@ export interface SphereData {
 }
 
 /**
+ * Material complexity info for cost analysis
+ */
+export interface MaterialComplexityInfo {
+  type: string;
+  textureCount: number;
+  hasNormalMap: boolean;
+  hasEnvMap: boolean;
+  hasDisplacementMap: boolean;
+  hasAoMap: boolean;
+  transparent: boolean;
+  alphaTest: boolean;
+  doubleSided: boolean;
+  complexityScore: number; // 1-10 scale
+}
+
+/**
+ * Object cost analysis data
+ */
+export interface ObjectCostData {
+  triangleCost: number;           // Triangle count contribution
+  materialComplexity: number;     // Material complexity score (1-10)
+  textureCost: number;            // Estimated texture memory cost
+  shadowCost: number;             // Shadow casting/receiving cost
+  totalCost: number;              // Combined cost score
+  costLevel: 'low' | 'medium' | 'high' | 'critical';  // Categorized cost level
+  materials: MaterialComplexityInfo[];
+}
+
+/**
  * Mesh-specific node data
  */
 export interface MeshNodeData {
@@ -191,6 +220,7 @@ export interface MeshNodeData {
   faceCount: number;
   castShadow: boolean;
   receiveShadow: boolean;
+  costData?: ObjectCostData;
 }
 
 /**
