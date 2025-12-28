@@ -1523,6 +1523,9 @@ export class SceneObserver {
       }
     }
 
+    // Compute cost analysis data
+    const costData = this.computeObjectCost(mesh, materials, faceCount);
+
     return {
       geometryRef: geometry?.uuid ?? '',
       materialRefs: materials.map((m) => m?.uuid ?? ''),
@@ -1530,6 +1533,131 @@ export class SceneObserver {
       faceCount,
       castShadow: mesh.castShadow,
       receiveShadow: mesh.receiveShadow,
+      costData,
+    };
+  }
+
+  private computeObjectCost(
+    mesh: THREE.Mesh,
+    materials: THREE.Material[],
+    faceCount: number
+  ): import('../types/snapshot').ObjectCostData {
+    // Analyze each material
+    const materialInfos: import('../types/snapshot').MaterialComplexityInfo[] = materials.map(mat => 
+      this.analyzeMaterialComplexity(mat)
+    );
+
+    // Calculate triangle cost (normalized: 1 point per 1000 triangles)
+    const triangleCost = faceCount / 1000;
+
+    // Calculate material complexity (average of all materials)
+    const materialComplexity = materialInfos.length > 0
+      ? materialInfos.reduce((sum, m) => sum + m.complexityScore, 0) / materialInfos.length
+      : 1;
+
+    // Calculate texture cost (sum of texture usage)
+    const textureCost = materialInfos.reduce((sum, m) => sum + m.textureCount * 2, 0);
+
+    // Calculate shadow cost
+    let shadowCost = 0;
+    if (mesh.castShadow) shadowCost += 2;
+    if (mesh.receiveShadow) shadowCost += 1;
+
+    // Calculate total cost (weighted sum)
+    const totalCost = (triangleCost * 1) + (materialComplexity * 0.5) + (textureCost * 0.3) + (shadowCost * 0.2);
+
+    // Determine cost level
+    let costLevel: 'low' | 'medium' | 'high' | 'critical';
+    if (totalCost < 2) costLevel = 'low';
+    else if (totalCost < 10) costLevel = 'medium';
+    else if (totalCost < 50) costLevel = 'high';
+    else costLevel = 'critical';
+
+    return {
+      triangleCost,
+      materialComplexity,
+      textureCost,
+      shadowCost,
+      totalCost,
+      costLevel,
+      materials: materialInfos,
+    };
+  }
+
+  private analyzeMaterialComplexity(material: THREE.Material): import('../types/snapshot').MaterialComplexityInfo {
+    if (!material) {
+      return {
+        type: 'unknown',
+        textureCount: 0,
+        hasNormalMap: false,
+        hasEnvMap: false,
+        hasDisplacementMap: false,
+        hasAoMap: false,
+        transparent: false,
+        alphaTest: false,
+        doubleSided: false,
+        complexityScore: 1,
+      };
+    }
+
+    const mat = material as THREE.MeshStandardMaterial;
+    
+    // Count textures
+    let textureCount = 0;
+    let hasNormalMap = false;
+    let hasEnvMap = false;
+    let hasDisplacementMap = false;
+    let hasAoMap = false;
+
+    // Check for standard material properties
+    if ('map' in mat && mat.map) textureCount++;
+    if ('normalMap' in mat && mat.normalMap) { textureCount++; hasNormalMap = true; }
+    if ('envMap' in mat && mat.envMap) { textureCount++; hasEnvMap = true; }
+    if ('displacementMap' in mat && mat.displacementMap) { textureCount++; hasDisplacementMap = true; }
+    if ('aoMap' in mat && mat.aoMap) { textureCount++; hasAoMap = true; }
+    if ('roughnessMap' in mat && mat.roughnessMap) textureCount++;
+    if ('metalnessMap' in mat && mat.metalnessMap) textureCount++;
+    if ('emissiveMap' in mat && mat.emissiveMap) textureCount++;
+    if ('bumpMap' in mat && mat.bumpMap) textureCount++;
+    if ('alphaMap' in mat && mat.alphaMap) textureCount++;
+    if ('lightMap' in mat && mat.lightMap) textureCount++;
+
+    // Calculate complexity score (1-10)
+    let complexityScore = 1;
+
+    // Material type complexity
+    const type = material.type;
+    if (type === 'MeshBasicMaterial') complexityScore += 0;
+    else if (type === 'MeshLambertMaterial') complexityScore += 1;
+    else if (type === 'MeshPhongMaterial') complexityScore += 2;
+    else if (type === 'MeshStandardMaterial') complexityScore += 3;
+    else if (type === 'MeshPhysicalMaterial') complexityScore += 4;
+    else if (type === 'ShaderMaterial' || type === 'RawShaderMaterial') complexityScore += 5;
+
+    // Add texture complexity
+    complexityScore += textureCount * 0.5;
+
+    // Add feature complexity
+    if (hasNormalMap) complexityScore += 0.5;
+    if (hasEnvMap) complexityScore += 1;
+    if (hasDisplacementMap) complexityScore += 1.5;
+    if (material.transparent) complexityScore += 0.5;
+    if (material.side === 2) complexityScore += 0.3; // DoubleSide
+
+    // Clamp to 1-10
+    complexityScore = Math.min(10, Math.max(1, complexityScore));
+
+    return {
+      type,
+      textureCount,
+      hasNormalMap,
+      hasEnvMap,
+      hasDisplacementMap,
+      hasAoMap,
+      transparent: material.transparent,
+      alphaTest: material.alphaTest > 0,
+      doubleSided: material.side === 2,
+      complexityScore,
     };
   }
 
