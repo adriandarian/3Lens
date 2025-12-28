@@ -288,11 +288,11 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Frame time chart | ⬜ | |
-| CPU vs GPU breakdown | ⬜ | |
-| Spike detection | ⬜ | |
-| Zoom/pan through history | ⬜ | |
-| Frame selection | ⬜ | |
+| Frame time chart | ✅ | Implemented with CPU and GPU visualization |
+| CPU vs GPU breakdown | ✅ | Dual-layer chart showing both metrics |
+| Spike detection | ✅ | Highlights frames exceeding 33.33ms threshold |
+| Zoom/pan through history | ✅ | Mouse wheel zoom, drag to pan, zoom controls |
+| Frame selection | ✅ | Click frames to view detailed stats |
 
 ### Object Cost Analysis
 

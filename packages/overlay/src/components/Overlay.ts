@@ -64,7 +64,7 @@ const SCENE_PANEL_MAX_HEIGHT = 450;      // Max auto-height before scrolling
 
 const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: SCENE_PANEL_WIDTH, defaultHeight: 0 }, // 0 = auto height
-  { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 360, defaultHeight: 480 },
+  { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 320, defaultHeight: 400 },
   { id: 'materials', title: 'Materials', icon: '🎨', iconClass: 'materials', defaultWidth: 700, defaultHeight: 500 },
   { id: 'geometry', title: 'Geometry', icon: '📐', iconClass: 'inspector', defaultWidth: 750, defaultHeight: 500 },
   { id: 'textures', title: 'Textures', icon: '🖼️', iconClass: 'textures', defaultWidth: 800, defaultHeight: 520 },
@@ -85,13 +85,28 @@ export class ThreeLensOverlay {
   private latestBenchmark: BenchmarkScore | null = null;
   private latestSnapshot: SceneSnapshot | null = null;
   private frameHistory: number[] = [];
+  private gpuHistory: number[] = [];
   private fpsHistory: number[] = [];
   private topZIndex = 999997;
   private dragState: { panelId: string; startX: number; startY: number; startPanelX: number; startPanelY: number } | null = null;
   private resizeState: { panelId: string; startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
   private lastStatsUpdate = 0;
   private statsUpdateInterval = 500; // Update stats UI every 500ms (2x per second)
-  private statsTab: 'overview' | 'memory' | 'rendering' = 'overview';
+  private statsTab: 'overview' | 'memory' | 'rendering' | 'timeline' = 'overview';
+  
+  // Timeline/Frames state
+  private timelineZoom = 1.0;
+  private timelineOffset = 0;
+  private timelineSelectedFrame: number | null = null;
+  private timelineDragging = false;
+  private timelineDragStartX = 0;
+  private timelineDragStartOffset = 0;
+  private timelineHoverIndex: number | null = null;
+  private timelinePaused = false; // Pause auto-scrolling when hovering
+  private isRecording = false;
+  private recordedFrames: { cpu: number; gpu?: number; timestamp: number; drawCalls?: number; triangles?: number }[] = [];
+  private maxRecordedFrames = 1800; // 30 seconds at 60fps
+  private frameBufferSize = 300; // Configurable buffer size (default 5 seconds at 60fps)
   private panelDefinitions: Map<string, OverlayPanelDefinition> = new Map();
   private panelContexts: Map<string, OverlayPanelContext> = new Map();
   
@@ -105,7 +120,7 @@ export class ThreeLensOverlay {
   private chartDragging = false;
   private chartDragStartX = 0;
   private chartDragStartOffset = 0;
-  private maxHistoryLength = 120; // Store more history for zoom
+  private maxHistoryLength = 300; // Store more history for zoom (configurable via frameBufferSize)
   
   // Memory profiler state
   private memoryHistory: {
@@ -174,12 +189,29 @@ export class ThreeLensOverlay {
     this.probe.onFrameStats((stats) => {
       this.latestStats = stats;
       this.frameHistory.push(stats.cpuTimeMs);
-      if (this.frameHistory.length > this.maxHistoryLength) this.frameHistory.shift();
+      if (this.frameHistory.length > this.frameBufferSize) this.frameHistory.shift();
+      
+      // Track GPU history
+      if (stats.gpuTimeMs !== undefined) {
+        this.gpuHistory.push(stats.gpuTimeMs);
+        if (this.gpuHistory.length > this.frameBufferSize) this.gpuHistory.shift();
+      }
+      
+      // Record frames if recording is active
+      if (this.isRecording && this.recordedFrames.length < this.maxRecordedFrames) {
+        this.recordedFrames.push({
+          cpu: stats.cpuTimeMs,
+          gpu: stats.gpuTimeMs,
+          timestamp: stats.timestamp,
+          drawCalls: stats.drawCalls,
+          triangles: stats.triangles,
+        });
+      }
       
       // Track FPS history
       const fps = stats.cpuTimeMs > 0 ? 1000 / stats.cpuTimeMs : 0;
       this.fpsHistory.push(fps);
-      if (this.fpsHistory.length > this.maxHistoryLength) this.fpsHistory.shift();
+      if (this.fpsHistory.length > this.frameBufferSize) this.fpsHistory.shift();
       
       // Update FPS histogram
       const fpsBucket = Math.min(11, Math.floor(fps / 5));
@@ -187,9 +219,9 @@ export class ThreeLensOverlay {
       
       // Track draw calls and triangles history
       this.drawCallHistory.push(stats.drawCalls);
-      if (this.drawCallHistory.length > this.maxHistoryLength) this.drawCallHistory.shift();
+      if (this.drawCallHistory.length > this.frameBufferSize) this.drawCallHistory.shift();
       this.triangleHistory.push(stats.triangles);
-      if (this.triangleHistory.length > this.maxHistoryLength) this.triangleHistory.shift();
+      if (this.triangleHistory.length > this.frameBufferSize) this.triangleHistory.shift();
       
       // Update session statistics
       this.totalFramesRendered++;
@@ -1090,11 +1122,13 @@ export class ThreeLensOverlay {
         <button class="three-lens-tab ${this.statsTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
         <button class="three-lens-tab ${this.statsTab === 'memory' ? 'active' : ''}" data-tab="memory">Memory</button>
         <button class="three-lens-tab ${this.statsTab === 'rendering' ? 'active' : ''}" data-tab="rendering">Rendering</button>
+        <button class="three-lens-tab ${this.statsTab === 'timeline' ? 'active' : ''}" data-tab="timeline">Frames</button>
       </div>
       <div class="three-lens-stats-tab-content" id="three-lens-stats-tab-content">
         ${this.statsTab === 'overview' ? this.renderOverviewTab(stats, benchmark, fps, fpsSmoothed, fps1Low) : ''}
         ${this.statsTab === 'memory' ? this.renderMemoryTab(stats) : ''}
         ${this.statsTab === 'rendering' ? this.renderRenderingTab(stats) : ''}
+        ${this.statsTab === 'timeline' ? this.renderTimelineTab(stats) : ''}
       </div>
     `;
   }
@@ -2574,6 +2608,132 @@ export class ThreeLensOverlay {
     `;
   }
 
+  private renderTimelineTab(stats: FrameStats): string {
+    const hasGpuData = this.gpuHistory.length > 0;
+    const visibleFrameCount = this.getTimelineVisibleFrameCount();
+    const spikeThreshold = 33.33; // 30 FPS threshold (2x 60fps budget)
+    const hasRecording = this.recordedFrames.length > 0;
+    const recordingDuration = hasRecording ? ((this.recordedFrames[this.recordedFrames.length - 1].timestamp - this.recordedFrames[0].timestamp) / 1000).toFixed(1) : '0';
+    
+    // Detect spikes in current view (live or recorded)
+    const spikes = this.detectSpikes(spikeThreshold);
+    
+    return `
+      <div class="three-lens-timeline-container">
+        <div class="three-lens-timeline-controls">
+          <div class="three-lens-timeline-left-controls">
+            <button class="three-lens-timeline-record-btn ${this.isRecording ? 'recording' : ''}" id="three-lens-timeline-record" title="${this.isRecording ? 'Stop Recording' : 'Start Recording'}">
+              ${this.isRecording ? '⏹' : '⏺'}
+            </button>
+            ${hasRecording ? `
+              <button class="three-lens-timeline-btn" id="three-lens-timeline-clear" title="Clear Recording">🗑</button>
+              <span class="three-lens-timeline-recording-info">${this.recordedFrames.length}f / ${recordingDuration}s</span>
+            ` : ''}
+            <div class="three-lens-timeline-divider"></div>
+            <button class="three-lens-timeline-btn" id="three-lens-timeline-zoom-out" title="Zoom Out">−</button>
+            <span class="three-lens-timeline-zoom-label" id="three-lens-timeline-zoom-label">${visibleFrameCount}f</span>
+            <button class="three-lens-timeline-btn" id="three-lens-timeline-zoom-in" title="Zoom In">+</button>
+            <button class="three-lens-timeline-btn" id="three-lens-timeline-reset" title="Reset View">↺</button>
+          </div>
+          <div class="three-lens-timeline-right-controls">
+            <span class="three-lens-timeline-stat">
+              <span class="three-lens-timeline-stat-label">Spikes:</span>
+              <span class="three-lens-timeline-stat-value ${spikes.length > 0 ? 'warning' : ''}">${spikes.length}</span>
+            </span>
+            <select class="three-lens-timeline-buffer-select" id="three-lens-timeline-buffer-size" title="Buffer size">
+              <option value="120" ${this.frameBufferSize === 120 ? 'selected' : ''}>2s</option>
+              <option value="300" ${this.frameBufferSize === 300 ? 'selected' : ''}>5s</option>
+              <option value="600" ${this.frameBufferSize === 600 ? 'selected' : ''}>10s</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="three-lens-timeline-chart-container" id="three-lens-timeline-chart-container">
+          <canvas id="three-lens-timeline-chart" class="three-lens-timeline-chart"></canvas>
+          <div class="three-lens-timeline-tooltip" id="three-lens-timeline-tooltip"></div>
+        </div>
+        
+        <div class="three-lens-timeline-legend">
+          <div class="three-lens-timeline-legend-item">
+            <span class="three-lens-timeline-legend-color cpu"></span>
+            <span>CPU</span>
+          </div>
+          ${hasGpuData ? `
+            <div class="three-lens-timeline-legend-item">
+              <span class="three-lens-timeline-legend-color gpu"></span>
+              <span>GPU</span>
+            </div>
+          ` : ''}
+          <div class="three-lens-timeline-legend-item">
+            <span class="three-lens-timeline-legend-color spike"></span>
+            <span>Spike</span>
+          </div>
+        </div>
+        
+        ${this.timelineSelectedFrame !== null ? this.renderTimelineFrameDetails(this.timelineSelectedFrame) : ''}
+      </div>
+    `;
+  }
+  
+  private renderTimelineFrameDetails(frameIndex: number): string {
+    const cpuTime = this.frameHistory[frameIndex] ?? 0;
+    const gpuTime = this.gpuHistory[frameIndex];
+    const fps = cpuTime > 0 ? 1000 / cpuTime : 0;
+    const perfEntry = this.performanceHistory[frameIndex];
+    
+    return `
+      <div class="three-lens-timeline-frame-details">
+        <div class="three-lens-timeline-frame-details-header">
+          <span>Frame #${frameIndex + 1}</span>
+          <button class="three-lens-timeline-close-btn" id="three-lens-timeline-close-details">×</button>
+        </div>
+        <div class="three-lens-timeline-frame-details-grid">
+          <div class="three-lens-timeline-frame-detail">
+            <span class="three-lens-timeline-frame-detail-label">CPU Time</span>
+            <span class="three-lens-timeline-frame-detail-value ${cpuTime > 16.67 ? 'warning' : ''}">${cpuTime.toFixed(2)}ms</span>
+          </div>
+          ${gpuTime !== undefined ? `
+            <div class="three-lens-timeline-frame-detail">
+              <span class="three-lens-timeline-frame-detail-label">GPU Time</span>
+              <span class="three-lens-timeline-frame-detail-value ${gpuTime > 16.67 ? 'warning' : ''}">${gpuTime.toFixed(2)}ms</span>
+            </div>
+          ` : ''}
+          <div class="three-lens-timeline-frame-detail">
+            <span class="three-lens-timeline-frame-detail-label">FPS</span>
+            <span class="three-lens-timeline-frame-detail-value ${fps < 30 ? 'error' : fps < 55 ? 'warning' : ''}">${fps.toFixed(1)}</span>
+          </div>
+          ${perfEntry ? `
+            <div class="three-lens-timeline-frame-detail">
+              <span class="three-lens-timeline-frame-detail-label">Draw Calls</span>
+              <span class="three-lens-timeline-frame-detail-value">${perfEntry.drawCalls}</span>
+            </div>
+            <div class="three-lens-timeline-frame-detail">
+              <span class="three-lens-timeline-frame-detail-label">Triangles</span>
+              <span class="three-lens-timeline-frame-detail-value">${formatNumber(perfEntry.triangles)}</span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+  
+  private getTimelineVisibleFrameCount(): number {
+    return Math.max(10, Math.min(this.maxHistoryLength, Math.floor(this.maxHistoryLength / this.timelineZoom)));
+  }
+  
+  private detectSpikes(threshold: number): number[] {
+    const spikes: number[] = [];
+    for (let i = 0; i < this.frameHistory.length; i++) {
+      const cpuTime = this.frameHistory[i];
+      const gpuTime = this.gpuHistory[i];
+      const totalTime = cpuTime + (gpuTime ?? 0);
+      if (totalTime > threshold) {
+        spikes.push(i);
+      }
+    }
+    return spikes;
+  }
+
   private findNodeById(nodes: SceneNode[], id: string): SceneNode | null {
     for (const node of nodes) {
       if (node.ref.debugId === id) return node;
@@ -3003,10 +3163,18 @@ export class ThreeLensOverlay {
 
     if (existingTabs && tabContent) {
       // Only update the tab content, not the tabs themselves
+      if (this.statsTab === 'timeline') {
+        // For timeline, only re-render the chart (not the whole HTML) to preserve state
+        // Skip if hovering or dragging to prevent jank
+        if (!this.timelinePaused && !this.timelineDragging) {
+          this.renderTimelineChart();
+        }
+      } else {
       tabContent.innerHTML = this.renderCurrentTabContent();
       if (this.statsTab === 'overview') {
         this.attachChartEvents();
         this.renderChart();
+        }
       }
     } else {
       // Initial render or transitioning from "Waiting for data..." state
@@ -3019,6 +3187,9 @@ export class ThreeLensOverlay {
       if (this.statsTab === 'overview') {
         this.attachChartEvents();
         this.renderChart();
+      } else if (this.statsTab === 'timeline') {
+        this.attachTimelineEvents();
+        this.renderTimelineChart();
       }
     }
     
@@ -3042,6 +3213,8 @@ export class ThreeLensOverlay {
         return this.renderMemoryTab(stats);
       case 'rendering':
         return this.renderRenderingTab(stats);
+      case 'timeline':
+        return this.renderTimelineTab(stats);
       default:
         return '';
     }
@@ -3050,7 +3223,7 @@ export class ThreeLensOverlay {
   private attachStatsTabEvents(container: HTMLElement): void {
     container.querySelectorAll('.three-lens-tab').forEach(tab => {
       tab.addEventListener('click', (e) => {
-        const tabName = (e.currentTarget as HTMLElement).dataset.tab as 'overview' | 'memory' | 'rendering';
+        const tabName = (e.currentTarget as HTMLElement).dataset.tab as 'overview' | 'memory' | 'rendering' | 'timeline';
         if (tabName && tabName !== this.statsTab) {
           this.statsTab = tabName;
           // Update tab active states
@@ -3064,6 +3237,9 @@ export class ThreeLensOverlay {
             if (this.statsTab === 'overview') {
               this.attachChartEvents();
               this.renderChart();
+            } else if (this.statsTab === 'timeline') {
+              this.attachTimelineEvents();
+              this.renderTimelineChart();
             }
           }
         }
@@ -3657,6 +3833,296 @@ export class ThreeLensOverlay {
         ctx.stroke();
       }
     });
+  }
+
+  private attachTimelineEvents(): void {
+    const container = document.getElementById('three-lens-timeline-chart-container');
+    const canvas = document.getElementById('three-lens-timeline-chart') as HTMLCanvasElement;
+    const tooltip = document.getElementById('three-lens-timeline-tooltip');
+    
+    if (!container || !canvas) return;
+    
+    // Record/Stop button
+    document.getElementById('three-lens-timeline-record')?.addEventListener('click', () => {
+      this.isRecording = !this.isRecording;
+      if (this.isRecording) {
+        // Start fresh recording
+        this.recordedFrames = [];
+      }
+      this.updateTimelineView();
+    });
+    
+    // Clear recording button
+    document.getElementById('three-lens-timeline-clear')?.addEventListener('click', () => {
+      this.recordedFrames = [];
+      this.updateTimelineView();
+    });
+    
+    // Buffer size selector
+    const bufferSelect = document.getElementById('three-lens-timeline-buffer-size') as HTMLSelectElement;
+    bufferSelect?.addEventListener('change', () => {
+      this.frameBufferSize = parseInt(bufferSelect.value, 10);
+      this.maxHistoryLength = this.frameBufferSize;
+      // Trim existing history if needed
+      while (this.frameHistory.length > this.frameBufferSize) this.frameHistory.shift();
+      while (this.gpuHistory.length > this.frameBufferSize) this.gpuHistory.shift();
+      while (this.fpsHistory.length > this.frameBufferSize) this.fpsHistory.shift();
+      while (this.drawCallHistory.length > this.frameBufferSize) this.drawCallHistory.shift();
+      while (this.triangleHistory.length > this.frameBufferSize) this.triangleHistory.shift();
+      this.updateTimelineView();
+    });
+    
+    // Zoom controls
+    document.getElementById('three-lens-timeline-zoom-in')?.addEventListener('click', () => {
+      this.timelineZoom = Math.min(10, this.timelineZoom * 1.5);
+      this.updateTimelineView();
+    });
+    
+    document.getElementById('three-lens-timeline-zoom-out')?.addEventListener('click', () => {
+      this.timelineZoom = Math.max(0.1, this.timelineZoom / 1.5);
+      this.updateTimelineView();
+    });
+    
+    document.getElementById('three-lens-timeline-reset')?.addEventListener('click', () => {
+      this.timelineZoom = 1.0;
+      this.timelineOffset = 0;
+      this.timelineSelectedFrame = null;
+      this.updateTimelineView();
+    });
+    
+    // Close frame details
+    document.getElementById('three-lens-timeline-close-details')?.addEventListener('click', () => {
+      this.timelineSelectedFrame = null;
+      this.updateTimelineView();
+    });
+    
+    // Mouse wheel zoom
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        this.timelineZoom = Math.min(10, this.timelineZoom * 1.2);
+      } else {
+        this.timelineZoom = Math.max(0.1, this.timelineZoom / 1.2);
+      }
+      this.updateTimelineView();
+    });
+    
+    // Pan with drag
+    container.addEventListener('mousedown', (e) => {
+      this.timelineDragging = true;
+      this.timelineDragStartX = e.clientX;
+      this.timelineDragStartOffset = this.timelineOffset;
+      container.style.cursor = 'grabbing';
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (this.timelineDragging) {
+        const dx = e.clientX - this.timelineDragStartX;
+        const visibleCount = this.getTimelineVisibleFrameCount();
+        const rect = canvas.getBoundingClientRect();
+        const framesPerPixel = visibleCount / rect.width;
+        const offsetDelta = Math.round(dx * framesPerPixel);
+        const maxOffset = Math.max(0, this.frameHistory.length - visibleCount);
+        this.timelineOffset = Math.max(0, Math.min(maxOffset, this.timelineDragStartOffset - offsetDelta));
+        this.updateTimelineView();
+      }
+    });
+    
+    document.addEventListener('mouseup', () => {
+      if (this.timelineDragging) {
+        this.timelineDragging = false;
+        if (container) container.style.cursor = 'default';
+      }
+    });
+    
+    // Frame selection on click
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const visibleCount = this.getTimelineVisibleFrameCount();
+      const barWidth = rect.width / visibleCount;
+      const frameIndex = Math.floor(x / barWidth) + this.timelineOffset;
+      
+      if (frameIndex >= 0 && frameIndex < this.frameHistory.length) {
+        this.timelineSelectedFrame = frameIndex;
+        this.updateTimelineView();
+      }
+    });
+    
+    // Pause on mouse enter to prevent jank
+    canvas.addEventListener('mouseenter', () => {
+      this.timelinePaused = true;
+    });
+    
+    // Hover tooltip
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const visibleCount = this.getTimelineVisibleFrameCount();
+      const barWidth = rect.width / visibleCount;
+      const frameIndex = Math.floor(x / barWidth) + this.timelineOffset;
+      
+      this.timelineHoverIndex = frameIndex;
+      
+      if (frameIndex >= 0 && frameIndex < this.frameHistory.length && tooltip) {
+        const cpuTime = this.frameHistory[frameIndex];
+        const gpuTime = this.gpuHistory[frameIndex];
+        const fps = cpuTime > 0 ? 1000 / cpuTime : 0;
+        
+        tooltip.style.display = 'block';
+        tooltip.style.left = `${e.clientX - rect.left + 10}px`;
+        tooltip.style.top = `${e.clientY - rect.top - 10}px`;
+        tooltip.innerHTML = `
+          <div>Frame #${frameIndex + 1}</div>
+          <div>CPU: ${cpuTime.toFixed(2)}ms</div>
+          ${gpuTime !== undefined ? `<div>GPU: ${gpuTime.toFixed(2)}ms</div>` : ''}
+          <div>FPS: ${fps.toFixed(1)}</div>
+        `;
+      }
+    });
+    
+    canvas.addEventListener('mouseleave', () => {
+      if (tooltip) tooltip.style.display = 'none';
+      this.timelineHoverIndex = null;
+      this.timelinePaused = false;
+    });
+  }
+  
+  private updateTimelineView(): void {
+    const tabContent = document.getElementById('three-lens-stats-tab-content');
+    if (tabContent && this.statsTab === 'timeline') {
+      tabContent.innerHTML = this.renderCurrentTabContent();
+      this.attachTimelineEvents();
+      this.renderTimelineChart();
+    }
+  }
+  
+  private renderTimelineChart(): void {
+    const canvas = document.getElementById('three-lens-timeline-chart') as HTMLCanvasElement;
+    if (!canvas) return;
+    
+    const visibleCount = this.getTimelineVisibleFrameCount();
+    const startIndex = Math.max(0, this.frameHistory.length - visibleCount - this.timelineOffset);
+    const endIndex = Math.min(this.frameHistory.length, startIndex + visibleCount);
+    const cpuData = this.frameHistory.slice(startIndex, endIndex);
+    const gpuData = this.gpuHistory.slice(startIndex, endIndex);
+    const spikes = this.detectSpikes(33.33).filter(i => i >= startIndex && i < endIndex).map(i => i - startIndex);
+    
+    if (cpuData.length === 0) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+    const { width, height } = rect;
+    const padding = { top: 20, bottom: 20, left: 40, right: 10 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    
+    ctx.clearRect(0, 0, width, height);
+    
+    // Calculate max value
+    const maxCpu = Math.max(...cpuData, 16.67);
+    const maxGpu = gpuData.length > 0 ? Math.max(...gpuData, 16.67) : 0;
+    const maxValue = Math.ceil(Math.max(maxCpu, maxGpu, 33.33) / 8.33) * 8.33;
+    
+    const barWidth = chartWidth / cpuData.length;
+    
+    // Draw gridlines
+    ctx.strokeStyle = 'rgba(45, 55, 72, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+    
+    const gridValues = [16.67, 33.33, 50, 66.67];
+    gridValues.forEach(value => {
+      if (value <= maxValue) {
+        const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+        
+        // Grid label
+        ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${value.toFixed(0)}ms`, padding.left - 5, y + 3);
+      }
+    });
+    
+    // Draw 60fps target line
+    ctx.strokeStyle = 'rgba(52, 211, 153, 0.5)';
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    const target60Y = padding.top + chartHeight - (16.67 / maxValue) * chartHeight;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, target60Y);
+    ctx.lineTo(width - padding.right, target60Y);
+    ctx.stroke();
+    
+    // Draw 30fps warning line
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+    const target30Y = padding.top + chartHeight - (33.33 / maxValue) * chartHeight;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, target30Y);
+    ctx.lineTo(width - padding.right, target30Y);
+    ctx.stroke();
+    
+    ctx.setLineDash([]);
+    
+    // Draw CPU bars
+    cpuData.forEach((value, i) => {
+      const x = padding.left + i * barWidth;
+      const barHeight = (value / maxValue) * chartHeight;
+      const y = padding.top + chartHeight - barHeight;
+      
+      // Check if spike, selected, or hovered
+      const isSpike = spikes.includes(i);
+      const isSelected = this.timelineSelectedFrame === startIndex + i;
+      const isHovered = this.timelineHoverIndex === startIndex + i;
+      
+      ctx.fillStyle = isSpike ? 'rgba(239, 68, 68, 0.8)' : 'rgba(96, 165, 250, 0.6)';
+      
+      if (isHovered) {
+        ctx.fillStyle = 'rgba(147, 197, 253, 1)'; // Lighter blue for hover
+      }
+      if (isSelected) {
+        ctx.fillStyle = 'rgba(96, 165, 250, 1)';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, barWidth - 1, barHeight);
+      }
+      
+      ctx.fillRect(x, y, barWidth - 1, barHeight);
+    });
+    
+    // Draw GPU bars on top (if available)
+    if (gpuData.length > 0) {
+      gpuData.forEach((value, i) => {
+        if (value > 0) {
+          const x = padding.left + i * barWidth;
+          const barHeight = (value / maxValue) * chartHeight;
+          const y = padding.top + chartHeight - barHeight;
+          
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.6)';
+          ctx.fillRect(x, y, barWidth - 1, barHeight);
+        }
+      });
+    }
+    
+    // Draw frame numbers on x-axis
+    ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    const frameStep = Math.max(1, Math.floor(cpuData.length / 10));
+    for (let i = 0; i < cpuData.length; i += frameStep) {
+      const x = padding.left + i * barWidth + barWidth / 2;
+      ctx.fillText(`${startIndex + i + 1}`, x, height - padding.bottom + 12);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
