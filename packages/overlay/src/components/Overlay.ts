@@ -2809,6 +2809,7 @@ export class ThreeLensOverlay {
     const globalWireframe = this.probe.isGlobalWireframeEnabled();
     const cameraInfo = this.probe.getCameraInfo();
     const hasHome = this.probe.hasHomePosition();
+    const availableCameras = this.probe.getAvailableCameras();
     
     // Collect and sort objects by cost
     const costRanking = this.collectCostRanking();
@@ -2854,6 +2855,22 @@ export class ThreeLensOverlay {
               <span>Save Home</span>
             </button>
           </div>
+          ${availableCameras.length > 1 ? `
+            <div class="three-lens-camera-switcher">
+              <div class="three-lens-camera-switcher-title">Switch Camera</div>
+              <div class="three-lens-camera-list">
+                ${availableCameras.map((cam, index) => `
+                  <button class="three-lens-camera-item ${index === this.probe.getActiveCameraIndex() ? 'active' : ''}" 
+                          data-camera-index="${index}" 
+                          data-camera-uuid="${cam.uuid}"
+                          title="${cam.type}">
+                    <span class="three-lens-camera-item-icon">📷</span>
+                    <span class="three-lens-camera-item-name">${cam.name}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
         </div>
         ${this.renderCostRankingSection(costRanking)}
       </div>
@@ -3116,13 +3133,14 @@ export class ThreeLensOverlay {
   }
 
   private renderCameraControlsSection(node: SceneNode): string {
-    const cameraInfo = this.probe.getCameraInfo();
-    const availableCameras = this.probe.getAvailableCameras();
     const isAnimating = this.probe.isCameraAnimating();
+    const hasHome = this.probe.hasHomePosition();
     
+    // Only show object-specific camera controls (Focus, Fly To)
+    // Global camera controls (switcher, home) are in Global Tools
     return `
       <div class="three-lens-section">
-        <div class="three-lens-section-header">Camera Controls</div>
+        <div class="three-lens-section-header">Camera</div>
         
         <div class="three-lens-camera-actions">
           <button class="three-lens-action-btn" data-action="focus-selected" title="Focus camera on selected object (F)">
@@ -3139,72 +3157,14 @@ export class ThreeLensOverlay {
             </svg>
             Fly To
           </button>
-        </div>
-        
-        <div class="three-lens-camera-actions">
-          <button class="three-lens-action-btn home" data-action="go-home" title="Return to home view (H)">
+          <button class="three-lens-action-btn home" data-action="go-home" ${!hasHome ? 'disabled' : ''} title="Return to home view (H)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
             Home
           </button>
-          <button class="three-lens-action-btn" data-action="save-home" title="Save current view as home">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            Set Home
-          </button>
         </div>
-        
-        ${cameraInfo ? `
-          <div class="three-lens-camera-info">
-            <div class="three-lens-camera-info-title">Active Camera</div>
-            <div class="three-lens-camera-info-details">
-              <div class="three-lens-camera-info-row">
-                <span class="three-lens-camera-info-label">Name</span>
-                <span class="three-lens-camera-info-value">${cameraInfo.name}</span>
-              </div>
-              <div class="three-lens-camera-info-row">
-                <span class="three-lens-camera-info-label">Type</span>
-                <span class="three-lens-camera-info-value">${cameraInfo.type}</span>
-              </div>
-              ${cameraInfo.fov !== undefined ? `
-                <div class="three-lens-camera-info-row">
-                  <span class="three-lens-camera-info-label">FOV</span>
-                  <span class="three-lens-camera-info-value">${cameraInfo.fov.toFixed(1)}°</span>
-                </div>
-              ` : ''}
-              <div class="three-lens-camera-info-row">
-                <span class="three-lens-camera-info-label">Near/Far</span>
-                <span class="three-lens-camera-info-value">${cameraInfo.near} / ${cameraInfo.far}</span>
-              </div>
-              <div class="three-lens-camera-info-row">
-                <span class="three-lens-camera-info-label">Position</span>
-                <span class="three-lens-camera-info-value">${cameraInfo.position.x.toFixed(1)}, ${cameraInfo.position.y.toFixed(1)}, ${cameraInfo.position.z.toFixed(1)}</span>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-        
-        ${availableCameras.length > 1 ? `
-          <div class="three-lens-camera-switcher">
-            <div class="three-lens-camera-switcher-title">Switch Camera</div>
-            <div class="three-lens-camera-list">
-              ${availableCameras.map((cam, index) => `
-                <button class="three-lens-camera-item ${index === this.probe.getActiveCameraIndex() ? 'active' : ''}" 
-                        data-camera-index="${index}" 
-                        data-camera-uuid="${cam.uuid}"
-                        title="${cam.type}">
-                  <span class="three-lens-camera-item-icon">📷</span>
-                  <span class="three-lens-camera-item-name">${cam.name}</span>
-                </button>
-              `).join('')}
-            </div>
-          </div>
-        ` : ''}
         
         ${isAnimating ? `
           <button class="three-lens-action-btn stop" data-action="stop-animation" title="Stop camera animation">
