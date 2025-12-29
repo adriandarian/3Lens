@@ -84,23 +84,23 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | Define `Transport` interface | ✅ | `types/transport.ts` |
-| Implement `postMessage` transport | ✅ | For extension mode |
+| Implement `postMessage` transport | ✅ | For iframe/cross-context mode |
 | Implement direct-call transport | ✅ | For overlay mode |
 | Message serialization | ✅ | JSON wrapper |
 | Connection state management | ✅ | isConnected() + callbacks |
 
-## 1.3 Browser Extension (Chrome)
+## 1.3 In-App Overlay (`@3lens/overlay`)
 
-### Extension Shell
+### Overlay Shell
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Create manifest.json (v3) | ✅ | Chrome MV3 format |
-| DevTools panel registration | ✅ | `devtools.ts` |
-| Content script injection | ✅ | Auto-injects on all pages |
-| Background service worker | ✅ | Port-based messaging |
-| Extension ↔ content script bridge | ✅ | postMessage relay |
-| Connection status indicator | ✅ | In panel header |
+| Create overlay container | ✅ | Fixed position, styled |
+| Dockable panel (right side) | ✅ | Left/right position option |
+| Toggle button | ✅ | Chevron icon w/ animation |
+| Collapse/expand animation | ✅ | CSS transforms |
+| Resize handle | ✅ | Corner resize handle with drag support, min size constraints |
+| Keyboard shortcut (Ctrl+Shift+D) | ✅ | In example app |
 
 ### Scene Explorer Panel
 
@@ -134,27 +134,7 @@
 | Frame time chart | ✅ | Line + bar hybrid chart with gridlines, hover tooltips, min/max/avg/jitter stats |
 | Chart zoom/pan | ✅ | Mouse wheel zoom, drag to pan, zoom controls with reset button |
 
-## 1.4 In-App Overlay (`@3lens/overlay`)
-
-### Overlay Shell
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Create overlay container | ✅ | Fixed position, styled |
-| Dockable panel (right side) | ✅ | Left/right position option |
-| Toggle button | ✅ | Chevron icon w/ animation |
-| Collapse/expand animation | ✅ | CSS transforms |
-| Resize handle | ✅ | Corner resize handle with drag support, min size constraints |
-| Keyboard shortcut (Ctrl+Shift+D) | ✅ | In example app |
-
-### Panels (Same as Extension)
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Scene panel | ✅ | Tree view with expand/collapse + inspector |
-| Stats panel | ✅ | Grid + chart |
-
-## 1.5 Documentation & Examples
+## 1.4 Documentation & Examples
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -163,14 +143,13 @@
 | API documentation (partial) | ✅ | `docs/API.md` with full usage guide |
 | Package READMEs | ✅ | Added to `@3lens/core` and `@3lens/overlay` |
 
-## 1.6 Phase 1 Validation
+## 1.5 Phase 1 Validation
 
 | Criteria | Status | Notes |
 |----------|--------|-------|
 | Can inspect scene graph of any three.js app | ✅ | Auto-injected probe streams full snapshots |
-| Shows real-time performance stats | ✅ | Frame metrics mirrored in extension + overlay |
-| Works in extension mode | ✅ | MV3 build ships injected probe + devtools panel |
-| Works in npm/overlay mode | ✅ | One-call overlay bootstrap helper |
+| Shows real-time performance stats | ✅ | Frame metrics displayed in overlay |
+| Works as npm package | ✅ | One-call overlay bootstrap helper |
 | Performance overhead < 5% | ✅ | Validated via benchmark page at `/benchmark.html` |
 
 ---
@@ -341,14 +320,6 @@
 | Sampling options | ✅ | DEFAULT_SAMPLING for frame stats, snapshots, GPU timing, resource tracking |
 | Rule definitions | ✅ | Built-in rules + custom rules via CustomRule interface |
 | Rule violation warnings | ✅ | Violations shown in Overview tab with severity badges, dismissable |
-
-## 2.6 Firefox Extension
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Port Chrome extension to Firefox | ⬜ | |
-| Firefox DevTools integration | ⬜ | |
-| Firefox Add-ons submission | ⬜ | |
 
 ---
 
@@ -599,8 +570,7 @@
 |------|--------|-------|
 | Unit tests for core (>80% coverage) | ⬜ | |
 | Unit tests for bridges (>70% coverage) | ⬜ | |
-| Extension E2E tests | ⬜ | |
-| Overlay E2E tests | ⬜ | |
+| Integration E2E tests | ⬜ | |
 | Performance benchmarks | ⬜ | |
 | Memory leak tests | ⬜ | |
 
@@ -610,8 +580,6 @@
 |------|--------|-------|
 | Changelog generation | ⬜ | |
 | npm publish workflow | ⬜ | |
-| Chrome Web Store submission | ⬜ | |
-| Firefox Add-ons submission | ⬜ | |
 | GitHub Releases automation | ⬜ | |
 | Version 1.0.0 release | ⬜ | |
 
@@ -623,11 +591,11 @@
 
 | Phase | Total Tasks | Completed | In Progress | Remaining |
 |-------|-------------|-----------|-------------|-----------|
-| Phase 1 | 69 | 69 | 0 | 0 |
-| Phase 2 | 78 | 11 | 0 | 67 |
+| Phase 1 | 49 | 49 | 0 | 0 |
+| Phase 2 | 72 | 42 | 0 | 30 |
 | Phase 3 | 72 | 0 | 0 | 72 |
-| Phase 4 | 47 | 0 | 0 | 47 |
-| **Total** | **266** | **80** | **0** | **186** |
+| Phase 4 | 44 | 0 | 0 | 44 |
+| **Total** | **237** | **91** | **0** | **146** |
 
 ## Timeline
 

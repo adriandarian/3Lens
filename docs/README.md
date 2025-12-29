@@ -22,7 +22,7 @@
 
 - **Vision**: Universal devtool for all three.js projects
 - **Core Principles**: Framework-agnostic, renderer-agnostic (WebGL + WebGPU), deeply introspective
-- **Deployment Modes**: Browser extension, standalone app, npm/in-app integration
+- **Deployment Mode**: Embedded in-app overlay via npm package
 
 ## Key Features
 

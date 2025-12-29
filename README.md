@@ -24,17 +24,21 @@
 
 - **Scene Inspector** — Explore the scene graph with a tree view, select objects, and inspect properties
 - **Performance Monitoring** — Real-time stats for FPS, draw calls, triangles, and frame timing
+- **Memory Profiling** — Track GPU memory, textures, geometries, and detect potential leaks
+- **Transform Gizmos** — Translate, rotate, scale objects with visual gizmos and undo/redo
+- **Camera Controls** — Focus on objects, fly-to animations, camera switching, and home position
+- **Object Cost Analysis** — Per-mesh cost scoring with heatmap visualization
+- **Resource Lifecycle Tracking** — Monitor creation/disposal of geometries, materials, and textures
+- **Leak Detection** — Detect orphaned resources, undisposed objects, and memory growth
 - **Rule Violations** — Set thresholds and get warned when performance degrades
-- **Dual Modes** — Use as an in-app overlay or browser extension (Chrome DevTools panel)
 - **Zero Config** — Works out of the box with any three.js application
 
 ## 📦 Packages
 
 | Package | Description |
 |---------|-------------|
-| `@3lens/core` | Probe SDK that collects stats and exposes events |
-| `@3lens/overlay` | In-app floating panel UI |
-| `@3lens/extension` | Chrome DevTools extension |
+| `@3lens/core` | Probe SDK that collects stats, manages scene observation, and exposes events |
+| `@3lens/overlay` | In-app floating panel UI with full devtools functionality |
 
 ---
 
@@ -239,9 +243,9 @@ overlay.destroy();   // Remove from DOM
 ```
 3lens/
 ├── packages/
-│   ├── core/           # Probe SDK
-│   ├── overlay/        # In-app overlay UI
-│   └── extension/      # Browser extension
+│   ├── core/           # Probe SDK - data collection, scene observation, helpers
+│   ├── overlay/        # In-app floating panel UI with full devtools
+│   └── ui/             # Shared UI components
 ├── examples/
 │   └── basic/          # Vanilla three.js example
 └── docs/               # Documentation
