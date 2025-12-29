@@ -69,6 +69,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   { id: 'geometry', title: 'Geometry', icon: '📐', iconClass: 'inspector', defaultWidth: 750, defaultHeight: 500 },
   { id: 'textures', title: 'Textures', icon: '🖼️', iconClass: 'textures', defaultWidth: 800, defaultHeight: 520 },
   { id: 'render-targets', title: 'Render Targets', icon: '🎯', iconClass: 'render-targets', defaultWidth: 850, defaultHeight: 550 },
+  { id: 'plugins', title: 'Plugins', icon: '🔌', iconClass: 'plugin', defaultWidth: 420, defaultHeight: 480 },
 ];
 
 /**
@@ -757,6 +758,8 @@ export class ThreeLensOverlay {
         return this.renderTexturesContent();
       case 'render-targets':
         return this.renderRenderTargetsContent();
+      case 'plugins':
+        return this.renderPluginsContent();
       default:
         return '<div class="three-lens-inspector-empty">Panel content</div>';
     }
@@ -823,6 +826,342 @@ export class ThreeLensOverlay {
     return renderRenderTargetsPanel(this.buildSharedPanelContext(), this.uiState);
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // PLUGINS PANEL
+  // ═══════════════════════════════════════════════════════════════
+
+  private selectedPluginId: string | null = null;
+
+  private renderPluginsContent(): string {
+    const pluginManager = this.probe.getPluginManager();
+    const plugins = pluginManager.getPlugins();
+    
+    return `
+      <div class="three-lens-plugins-panel">
+        <div class="three-lens-plugins-header">
+          <span class="three-lens-plugins-count">${plugins.length} plugin${plugins.length !== 1 ? 's' : ''}</span>
+          <button class="three-lens-plugins-btn" data-action="load-plugin" title="Load Plugin">
+            <span>+ Load Plugin</span>
+          </button>
+        </div>
+        
+        <div class="three-lens-plugins-list">
+          ${plugins.length === 0 
+            ? '<div class="three-lens-plugins-empty">No plugins installed</div>'
+            : plugins.map(p => this.renderPluginListItem(p)).join('')
+          }
+        </div>
+        
+        ${this.selectedPluginId ? this.renderPluginSettings(this.selectedPluginId) : this.renderPluginLoadForm()}
+      </div>
+    `;
+  }
+
+  private renderPluginListItem(plugin: { id: string; metadata: { id: string; name: string; version: string; icon?: string; description?: string }; state: string }): string {
+    const isSelected = this.selectedPluginId === plugin.id;
+    const isActive = plugin.state === 'activated';
+    const isError = plugin.state === 'error';
+    
+    return `
+      <div class="three-lens-plugin-item ${isSelected ? 'selected' : ''} ${isError ? 'error' : ''}" data-plugin-id="${plugin.id}">
+        <div class="three-lens-plugin-icon">${plugin.metadata.icon ?? '🔌'}</div>
+        <div class="three-lens-plugin-info">
+          <div class="three-lens-plugin-name">${plugin.metadata.name}</div>
+          <div class="three-lens-plugin-version">v${plugin.metadata.version}</div>
+        </div>
+        <div class="three-lens-plugin-status ${isActive ? 'active' : isError ? 'error' : 'inactive'}">
+          ${isActive ? '●' : isError ? '!' : '○'}
+        </div>
+        <div class="three-lens-plugin-actions">
+          ${isActive 
+            ? `<button class="three-lens-plugin-action-btn" data-action="deactivate" data-plugin-id="${plugin.id}" title="Deactivate">⏸</button>`
+            : `<button class="three-lens-plugin-action-btn" data-action="activate" data-plugin-id="${plugin.id}" title="Activate">▶</button>`
+          }
+          <button class="three-lens-plugin-action-btn" data-action="unregister" data-plugin-id="${plugin.id}" title="Unregister">✕</button>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderPluginLoadForm(): string {
+    return `
+      <div class="three-lens-plugin-load-form">
+        <div class="three-lens-section-header">Load Plugin</div>
+        <div class="three-lens-plugin-form-group">
+          <label class="three-lens-plugin-label">Source</label>
+          <select class="three-lens-plugin-select" id="plugin-load-source">
+            <option value="npm">npm Package</option>
+            <option value="url">URL</option>
+          </select>
+        </div>
+        <div class="three-lens-plugin-form-group">
+          <label class="three-lens-plugin-label">Package / URL</label>
+          <input type="text" class="three-lens-plugin-input" id="plugin-load-input" placeholder="@3lens/plugin-example" />
+        </div>
+        <div class="three-lens-plugin-form-group npm-only">
+          <label class="three-lens-plugin-label">Version</label>
+          <input type="text" class="three-lens-plugin-input" id="plugin-load-version" placeholder="latest" value="latest" />
+        </div>
+        <button class="three-lens-plugin-submit-btn" data-action="submit-load">Load Plugin</button>
+        <div class="three-lens-plugin-load-status" id="plugin-load-status"></div>
+      </div>
+    `;
+  }
+
+  private renderPluginSettings(pluginId: string): string {
+    const pluginManager = this.probe.getPluginManager();
+    const registered = pluginManager.getPlugin(pluginId);
+    
+    if (!registered) {
+      return '<div class="three-lens-plugin-settings">Plugin not found</div>';
+    }
+    
+    const { plugin, state, settings } = registered;
+    const settingsSchema = plugin.settings;
+    
+    return `
+      <div class="three-lens-plugin-settings">
+        <div class="three-lens-plugin-settings-header">
+          <button class="three-lens-plugin-back-btn" data-action="back-to-list">← Back</button>
+          <span class="three-lens-plugin-settings-title">${plugin.metadata.name}</span>
+        </div>
+        
+        <div class="three-lens-plugin-details">
+          ${plugin.metadata.description ? `<div class="three-lens-plugin-description">${plugin.metadata.description}</div>` : ''}
+          <div class="three-lens-plugin-meta">
+            <span>Version: ${plugin.metadata.version}</span>
+            ${plugin.metadata.author ? `<span>Author: ${plugin.metadata.author}</span>` : ''}
+            <span>Status: ${state}</span>
+          </div>
+        </div>
+        
+        ${settingsSchema && settingsSchema.fields.length > 0 ? `
+          <div class="three-lens-section-header">Settings</div>
+          <div class="three-lens-plugin-settings-fields">
+            ${settingsSchema.fields.map(field => this.renderPluginSettingField(pluginId, field, settings[field.key])).join('')}
+          </div>
+        ` : '<div class="three-lens-plugin-no-settings">This plugin has no configurable settings.</div>'}
+        
+        <div class="three-lens-plugin-settings-actions">
+          ${state === 'activated' 
+            ? `<button class="three-lens-plugin-btn danger" data-action="deactivate" data-plugin-id="${pluginId}">Deactivate</button>`
+            : `<button class="three-lens-plugin-btn primary" data-action="activate" data-plugin-id="${pluginId}">Activate</button>`
+          }
+          <button class="three-lens-plugin-btn danger" data-action="unregister" data-plugin-id="${pluginId}">Unregister</button>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderPluginSettingField(pluginId: string, field: { key: string; label: string; type: string; description?: string; options?: Array<{ value: unknown; label: string }>; min?: number; max?: number; step?: number }, value: unknown): string {
+    const inputId = `plugin-setting-${pluginId}-${field.key}`;
+    
+    let inputHtml = '';
+    switch (field.type) {
+      case 'boolean':
+        inputHtml = `
+          <label class="three-lens-toggle">
+            <input type="checkbox" id="${inputId}" data-plugin-id="${pluginId}" data-setting-key="${field.key}" ${value ? 'checked' : ''} />
+            <span class="three-lens-toggle-slider"></span>
+          </label>
+        `;
+        break;
+      case 'number':
+        inputHtml = `
+          <input type="number" class="three-lens-plugin-input" id="${inputId}" 
+            data-plugin-id="${pluginId}" data-setting-key="${field.key}"
+            value="${value ?? ''}" 
+            ${field.min !== undefined ? `min="${field.min}"` : ''}
+            ${field.max !== undefined ? `max="${field.max}"` : ''}
+            ${field.step !== undefined ? `step="${field.step}"` : ''}
+          />
+        `;
+        break;
+      case 'select':
+        inputHtml = `
+          <select class="three-lens-plugin-select" id="${inputId}" data-plugin-id="${pluginId}" data-setting-key="${field.key}">
+            ${(field.options ?? []).map(opt => `
+              <option value="${opt.value}" ${opt.value === value ? 'selected' : ''}>${opt.label}</option>
+            `).join('')}
+          </select>
+        `;
+        break;
+      case 'color':
+        inputHtml = `
+          <input type="color" class="three-lens-plugin-color" id="${inputId}" 
+            data-plugin-id="${pluginId}" data-setting-key="${field.key}"
+            value="${value ?? '#000000'}" 
+          />
+        `;
+        break;
+      case 'string':
+      default:
+        inputHtml = `
+          <input type="text" class="three-lens-plugin-input" id="${inputId}" 
+            data-plugin-id="${pluginId}" data-setting-key="${field.key}"
+            value="${value ?? ''}" 
+          />
+        `;
+        break;
+    }
+    
+    return `
+      <div class="three-lens-plugin-setting-field">
+        <div class="three-lens-plugin-setting-row">
+          <label class="three-lens-plugin-setting-label" for="${inputId}">${field.label}</label>
+          ${inputHtml}
+        </div>
+        ${field.description ? `<div class="three-lens-plugin-setting-desc">${field.description}</div>` : ''}
+      </div>
+    `;
+  }
+
+  private attachPluginsPanelEvents(container: HTMLElement): void {
+    // Plugin item selection
+    container.querySelectorAll('.three-lens-plugin-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        // Don't select if clicking action buttons
+        if ((e.target as HTMLElement).closest('.three-lens-plugin-action-btn')) return;
+        const pluginId = (item as HTMLElement).dataset.pluginId;
+        if (pluginId) {
+          this.selectedPluginId = pluginId;
+          this.updatePluginsPanel();
+        }
+      });
+    });
+    
+    // Action buttons in list
+    container.querySelectorAll('.three-lens-plugin-action-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const action = (btn as HTMLElement).dataset.action;
+        const pluginId = (btn as HTMLElement).dataset.pluginId;
+        if (!pluginId) return;
+        
+        await this.handlePluginAction(action!, pluginId);
+      });
+    });
+    
+    // Header load plugin button
+    container.querySelector('[data-action="load-plugin"]')?.addEventListener('click', () => {
+      this.selectedPluginId = null;
+      this.updatePluginsPanel();
+    });
+    
+    // Back to list button
+    container.querySelector('[data-action="back-to-list"]')?.addEventListener('click', () => {
+      this.selectedPluginId = null;
+      this.updatePluginsPanel();
+    });
+    
+    // Settings actions
+    container.querySelectorAll('.three-lens-plugin-btn[data-action]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = (btn as HTMLElement).dataset.action;
+        const pluginId = (btn as HTMLElement).dataset.pluginId;
+        if (!pluginId) return;
+        
+        await this.handlePluginAction(action!, pluginId);
+      });
+    });
+    
+    // Setting field changes
+    container.querySelectorAll('[data-setting-key]').forEach(input => {
+      input.addEventListener('change', () => {
+        const pluginId = (input as HTMLElement).dataset.pluginId!;
+        const key = (input as HTMLElement).dataset.settingKey!;
+        let value: unknown;
+        
+        if ((input as HTMLInputElement).type === 'checkbox') {
+          value = (input as HTMLInputElement).checked;
+        } else if ((input as HTMLInputElement).type === 'number') {
+          value = parseFloat((input as HTMLInputElement).value);
+        } else {
+          value = (input as HTMLInputElement).value;
+        }
+        
+        this.probe.getPluginManager().updatePluginSettings(pluginId, { [key]: value });
+      });
+    });
+    
+    // Load form source change
+    const sourceSelect = container.querySelector('#plugin-load-source') as HTMLSelectElement | null;
+    sourceSelect?.addEventListener('change', () => {
+      const npmOnlyFields = container.querySelectorAll('.npm-only');
+      const inputField = container.querySelector('#plugin-load-input') as HTMLInputElement | null;
+      
+      if (sourceSelect.value === 'npm') {
+        npmOnlyFields.forEach(f => (f as HTMLElement).style.display = '');
+        if (inputField) inputField.placeholder = '@3lens/plugin-example';
+      } else {
+        npmOnlyFields.forEach(f => (f as HTMLElement).style.display = 'none');
+        if (inputField) inputField.placeholder = 'https://example.com/plugin.js';
+      }
+    });
+    
+    // Submit load form
+    container.querySelector('[data-action="submit-load"]')?.addEventListener('click', async () => {
+      const source = (container.querySelector('#plugin-load-source') as HTMLSelectElement)?.value ?? 'npm';
+      const input = (container.querySelector('#plugin-load-input') as HTMLInputElement)?.value?.trim();
+      const version = (container.querySelector('#plugin-load-version') as HTMLInputElement)?.value?.trim() || 'latest';
+      const statusEl = container.querySelector('#plugin-load-status') as HTMLElement | null;
+      
+      if (!input) {
+        if (statusEl) statusEl.innerHTML = '<span class="error">Please enter a package name or URL</span>';
+        return;
+      }
+      
+      if (statusEl) statusEl.innerHTML = '<span class="loading">Loading plugin...</span>';
+      
+      try {
+        let result;
+        if (source === 'npm') {
+          result = await this.probe.loadPlugin(input, version);
+        } else {
+          result = await this.probe.loadPluginFromUrl(input);
+        }
+        
+        if (result.success) {
+          if (statusEl) statusEl.innerHTML = `<span class="success">✓ Loaded ${result.plugin?.metadata.name}</span>`;
+          setTimeout(() => this.updatePluginsPanel(), 1000);
+        } else {
+          if (statusEl) statusEl.innerHTML = `<span class="error">✕ ${result.error?.message ?? 'Failed to load'}</span>`;
+        }
+      } catch (error) {
+        if (statusEl) statusEl.innerHTML = `<span class="error">✕ ${error instanceof Error ? error.message : 'Unknown error'}</span>`;
+      }
+    });
+  }
+
+  private async handlePluginAction(action: string, pluginId: string): Promise<void> {
+    const pluginManager = this.probe.getPluginManager();
+    
+    switch (action) {
+      case 'activate':
+        await pluginManager.activatePlugin(pluginId);
+        break;
+      case 'deactivate':
+        await pluginManager.deactivatePlugin(pluginId);
+        break;
+      case 'unregister':
+        if (this.selectedPluginId === pluginId) {
+          this.selectedPluginId = null;
+        }
+        await pluginManager.unregisterPlugin(pluginId);
+        break;
+    }
+    
+    this.updatePluginsPanel();
+  }
+
+  private updatePluginsPanel(): void {
+    const content = document.getElementById('three-lens-content-plugins');
+    if (!content) return;
+    
+    content.innerHTML = this.renderPluginsContent();
+    this.attachPluginsPanelEvents(content);
+  }
+
   private mountPanel(panelId: string, panelElement: HTMLElement): void {
     const definition = this.panelDefinitions.get(panelId);
     const container = panelElement.querySelector(`#three-lens-content-${panelId}`) as HTMLElement | null;
@@ -835,6 +1174,11 @@ export class ThreeLensOverlay {
     const content = this.renderPanelContent(panelId, context);
     this.applyPanelContent(container, content);
     definition.onMount?.(context);
+    
+    // Attach panel-specific events
+    if (panelId === 'plugins') {
+      this.attachPluginsPanelEvents(container);
+    }
   }
 
   private applyPanelContent(container: HTMLElement, content: string | HTMLElement | void): void {
@@ -1211,6 +1555,7 @@ export class ThreeLensOverlay {
       case 'geometry': return this.renderGeometryContent();
       case 'textures': return this.renderTexturesContent();
       case 'render-targets': return this.renderRenderTargetsContent();
+      case 'plugins': return this.renderPluginsContent();
       default: {
         const definition = this.panelDefinitions.get(panelId);
         if (definition?.render) {

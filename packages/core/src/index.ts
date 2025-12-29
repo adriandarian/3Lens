@@ -145,7 +145,7 @@ export type {
 } from './entities';
 
 // Plugin System
-export { PluginManager } from './plugins';
+export { PluginManager, PluginLoader, PluginRegistry } from './plugins';
 export type {
   PluginId,
   PluginState,
@@ -163,6 +163,12 @@ export type {
   PluginSettingField,
   PluginSettingsSchema,
   RegisteredPlugin,
+  PluginPackage,
+  PluginSourceType,
+  PluginSource,
+  PluginRegistryEntry,
+  PluginLoadResult,
+  PluginLoaderOptions,
 } from './plugins';
 
 // Adapters
