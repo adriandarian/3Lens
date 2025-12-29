@@ -309,11 +309,11 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Track geometry creation/disposal | ⬜ | |
-| Track material creation/disposal | ⬜ | |
-| Track texture creation/disposal | ⬜ | |
-| Stack traces (optional) | ⬜ | |
-| Timeline view of events | ⬜ | |
+| Track geometry creation/disposal | ✅ | ResourceLifecycleTracker records created/disposed events with memory estimates |
+| Track material creation/disposal | ✅ | Tracks material type, attached meshes, textures |
+| Track texture creation/disposal | ✅ | Tracks texture slot (map, normalMap, etc.), memory estimate |
+| Stack traces (optional) | ✅ | Toggle in Resources tab - captures stack traces for debugging (performance impact) |
+| Timeline view of events | ✅ | Resources tab with summary, potential leaks, bar chart timeline (60s), event list |
 
 ### Leak Detection
 
