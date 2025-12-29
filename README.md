@@ -41,6 +41,7 @@
 | `@3lens/overlay` | In-app floating panel UI with full devtools functionality |
 | `@3lens/react-bridge` | React and React Three Fiber integration with hooks and components |
 | `@3lens/angular-bridge` | Angular integration with services, directives, and Nx workspace helpers |
+| `@3lens/vue-bridge` | Vue 3 and TresJS integration with composables and plugin |
 
 ---
 
@@ -280,6 +281,7 @@ overlay.destroy();   // Remove from DOM
 │   ├── overlay/         # In-app floating panel UI with full devtools
 │   ├── react-bridge/    # React and R3F integration (hooks, components)
 │   ├── angular-bridge/  # Angular integration (services, directives, Nx helpers)
+│   ├── vue-bridge/      # Vue 3 and TresJS integration (composables, plugin)
 │   └── ui/              # Shared UI components
 ├── examples/
 │   └── basic/           # Vanilla three.js example

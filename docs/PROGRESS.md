@@ -356,9 +356,9 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `provide/inject` integration | ⬜ | |
-| `useDevtoolEntity` composable | ⬜ | |
-| TresJS compatibility | ⬜ | |
+| `provide/inject` integration | ✅ | ThreeLensPlugin, createThreeLens, ThreeLensKey injection key |
+| `useDevtoolEntity` composable | ✅ | Plus useDevtoolEntityGroup for groups, reactive with watch |
+| TresJS compatibility | ✅ | useTresProbe, createTresConnector factory for useTres hook |
 
 ## 3.2 Logical Entities
 
@@ -593,9 +593,9 @@
 |-------|-------------|-----------|-------------|-----------|
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
-| Phase 3 | 72 | 11 | 0 | 61 |
+| Phase 3 | 72 | 14 | 0 | 58 |
 | Phase 4 | 44 | 0 | 0 | 44 |
-| **Total** | **238** | **133** | **0** | **105** |
+| **Total** | **238** | **136** | **0** | **102** |
 
 ## Timeline
 
