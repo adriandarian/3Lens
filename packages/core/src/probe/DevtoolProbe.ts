@@ -22,6 +22,7 @@ import { CameraController, type CameraInfo, type FlyToOptions } from '../helpers
 import { ResourceLifecycleTracker, type ResourceLifecycleEvent, type ResourceLifecycleSummary, type ResourceType, type LifecycleEventType, type LeakAlert, type LeakReport, type LeakAlertCallback } from '../tracking/ResourceLifecycleTracker';
 import { ConfigLoader, type RuleViolation, type RuleCheckResult, type RuleViolationCallback, type ViolationSeverity } from '../config/ConfigLoader';
 import { LogicalEntityManager, type LogicalEntityOptions, type LogicalEntity as NewLogicalEntity, type EntityId, type ModuleId, type ModuleInfo, type EntityFilter, type NavigationResult, type EntityEventCallback } from '../entities';
+import { PluginManager, type DevtoolPlugin, type PluginId } from '../plugins';
 
 /**
  * Version of the probe
@@ -43,6 +44,7 @@ export class DevtoolProbe {
   private _hoveredObject: THREE.Object3D | null = null;
   private _logicalEntities: Map<string, LogicalEntity> = new Map(); // Legacy
   private _entityManager: LogicalEntityManager = new LogicalEntityManager();
+  private _pluginManager: PluginManager | null = null;
   private _frameStatsHistory: FrameStats[] = [];
   private _frameStatsHistoryIndex = 0;
   private _maxHistorySize = 300;
@@ -1318,6 +1320,98 @@ export class DevtoolProbe {
    */
   get moduleCount(): number {
     return this._entityManager.moduleCount;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // PLUGIN SYSTEM
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Get the plugin manager
+   * Creates it lazily on first access
+   */
+  getPluginManager(): PluginManager {
+    if (!this._pluginManager) {
+      this._pluginManager = new PluginManager(this);
+    }
+    return this._pluginManager;
+  }
+
+  /**
+   * Register a plugin
+   * 
+   * @param plugin Plugin definition
+   * 
+   * @example
+   * ```typescript
+   * probe.registerPlugin({
+   *   metadata: {
+   *     id: 'com.example.my-plugin',
+   *     name: 'My Plugin',
+   *     version: '1.0.0',
+   *   },
+   *   activate(context) {
+   *     context.log('Plugin activated!');
+   *   },
+   *   panels: [{
+   *     id: 'my-panel',
+   *     name: 'My Panel',
+   *     icon: '📊',
+   *     render: (ctx) => '<div>Hello!</div>',
+   *   }],
+   * });
+   * ```
+   */
+  registerPlugin(plugin: DevtoolPlugin): void {
+    this.getPluginManager().registerPlugin(plugin);
+  }
+
+  /**
+   * Unregister a plugin
+   * 
+   * @param pluginId Plugin ID
+   */
+  async unregisterPlugin(pluginId: PluginId): Promise<void> {
+    await this.getPluginManager().unregisterPlugin(pluginId);
+  }
+
+  /**
+   * Activate a plugin
+   * 
+   * @param pluginId Plugin ID
+   */
+  async activatePlugin(pluginId: PluginId): Promise<void> {
+    await this.getPluginManager().activatePlugin(pluginId);
+  }
+
+  /**
+   * Deactivate a plugin
+   * 
+   * @param pluginId Plugin ID
+   */
+  async deactivatePlugin(pluginId: PluginId): Promise<void> {
+    await this.getPluginManager().deactivatePlugin(pluginId);
+  }
+
+  /**
+   * Get all registered plugins
+   */
+  getPlugins(): ReturnType<PluginManager['getPlugins']> {
+    return this.getPluginManager().getPlugins();
+  }
+
+  /**
+   * Get plugin count
+   */
+  get pluginCount(): number {
+    return this._pluginManager?.pluginCount ?? 0;
+  }
+
+  /**
+   * Get active plugin count
+   */
+  get activePluginCount(): number {
+    return this._pluginManager?.activePluginCount ?? 0;
   }
 
   // ─────────────────────────────────────────────────────────────────
