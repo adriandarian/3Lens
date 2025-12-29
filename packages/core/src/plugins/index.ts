@@ -26,3 +26,8 @@ export type {
   PluginLoadResult,
   PluginLoaderOptions,
 } from './PluginLoader';
+
+// Built-in plugins
+export { LODCheckerPlugin, ShadowDebuggerPlugin, BUILTIN_PLUGINS, getBuiltinPlugins } from './builtin';
+export type { LODAnalysis, LODCheckerSettings } from './builtin';
+export type { ShadowLightAnalysis, ShadowIssue, ShadowStats, ShadowDebuggerSettings } from './builtin';

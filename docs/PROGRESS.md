@@ -405,8 +405,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| LOD Checker plugin | ⬜ | |
-| Shadow Map Debugger plugin | ⬜ | |
+| LOD Checker plugin | ✅ | Analyzes mesh complexity vs screen coverage, over-detail detection, LOD recommendations |
+| Shadow Map Debugger plugin | ✅ | Shadow map memory analysis, issue detection (bias, frustum, resolution), optimization suggestions |
+| Plugin CSS styles | ✅ | Full styling for LOD Checker and Shadow Debugger panels |
+| Plugin exports | ✅ | LODCheckerPlugin, ShadowDebuggerPlugin, BUILTIN_PLUGINS, getBuiltinPlugins() |
 
 ## 3.6 WebGPU Support
 

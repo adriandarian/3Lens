@@ -5224,4 +5224,512 @@ export const OVERLAY_STYLES = `
   border-radius: 4px;
   cursor: pointer;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LOD CHECKER PLUGIN STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+.lod-checker-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--3lens-font-sans);
+  font-size: 11px;
+  color: var(--3lens-text-primary);
+}
+
+.lod-checker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--3lens-bg-secondary);
+  border-bottom: 1px solid var(--3lens-border);
+}
+
+.lod-checker-title {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.lod-checker-btn {
+  background: var(--3lens-bg-tertiary);
+  color: var(--3lens-text-primary);
+  border: 1px solid var(--3lens-border);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lod-checker-btn:hover {
+  background: var(--3lens-bg-hover);
+}
+
+.lod-checker-btn.primary {
+  background: var(--3lens-accent-blue);
+  border-color: var(--3lens-accent-blue);
+  color: white;
+}
+
+.lod-checker-btn.primary:hover {
+  background: #3b82f6;
+}
+
+.lod-checker-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--3lens-text-secondary);
+}
+
+.lod-checker-hint {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+  margin-top: 8px;
+}
+
+.lod-checker-summary {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--3lens-bg-tertiary);
+  border-bottom: 1px solid var(--3lens-border);
+  flex-wrap: wrap;
+}
+
+.lod-checker-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+  padding: 4px 8px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 4px;
+}
+
+.lod-checker-stat.warning {
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.lod-checker-stat.info {
+  background: rgba(96, 165, 250, 0.15);
+}
+
+.lod-checker-stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--3lens-text-primary);
+}
+
+.lod-checker-stat.warning .lod-checker-stat-value {
+  color: var(--3lens-warning);
+}
+
+.lod-checker-stat-label {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  text-transform: uppercase;
+}
+
+.lod-checker-analysis-time {
+  padding: 4px 12px;
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  text-align: right;
+}
+
+.lod-checker-section {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--3lens-border);
+}
+
+.lod-checker-section-header {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.lod-checker-section-header.warning {
+  color: var(--3lens-warning);
+}
+
+.lod-checker-section-header.info {
+  color: var(--3lens-accent-blue);
+}
+
+.lod-checker-section-desc {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+  margin-bottom: 8px;
+}
+
+.lod-checker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lod-checker-list.scrollable {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.lod-checker-item {
+  padding: 8px 10px;
+  background: var(--3lens-bg-tertiary);
+  border: 1px solid var(--3lens-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.lod-checker-item:hover {
+  background: var(--3lens-bg-hover);
+}
+
+.lod-checker-item.warning {
+  border-color: var(--3lens-warning);
+  border-left-width: 3px;
+}
+
+.lod-checker-item.info {
+  border-color: var(--3lens-accent-blue);
+  border-left-width: 3px;
+}
+
+.lod-checker-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.lod-checker-item-name {
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lod-checker-item-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.lod-checker-badge {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.lod-checker-badge.lod {
+  background: var(--3lens-accent-emerald);
+  color: black;
+}
+
+.lod-checker-badge.over {
+  background: var(--3lens-warning);
+  color: black;
+}
+
+.lod-checker-badge.far {
+  background: var(--3lens-accent-blue);
+  color: white;
+}
+
+.lod-checker-item-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--3lens-text-secondary);
+  font-family: var(--3lens-font-mono);
+}
+
+.lod-checker-item-stats .highlight {
+  color: var(--3lens-warning);
+  font-weight: 600;
+}
+
+.lod-checker-item-suggestion {
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--3lens-accent-blue);
+}
+
+.lod-checker-success {
+  padding: 16px;
+  text-align: center;
+  color: var(--3lens-success);
+  font-size: 12px;
+}
+
+.lod-checker-more {
+  text-align: center;
+  color: var(--3lens-text-tertiary);
+  font-size: 10px;
+  padding: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SHADOW DEBUGGER PLUGIN STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+.shadow-debugger-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--3lens-font-sans);
+  font-size: 11px;
+  color: var(--3lens-text-primary);
+}
+
+.shadow-debugger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--3lens-bg-secondary);
+  border-bottom: 1px solid var(--3lens-border);
+}
+
+.shadow-debugger-title {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.shadow-debugger-btn {
+  background: var(--3lens-bg-tertiary);
+  color: var(--3lens-text-primary);
+  border: 1px solid var(--3lens-border);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.shadow-debugger-btn:hover {
+  background: var(--3lens-bg-hover);
+}
+
+.shadow-debugger-btn.primary {
+  background: var(--3lens-accent-blue);
+  border-color: var(--3lens-accent-blue);
+  color: white;
+}
+
+.shadow-debugger-btn.primary:hover {
+  background: #3b82f6;
+}
+
+.shadow-debugger-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--3lens-text-secondary);
+}
+
+.shadow-debugger-hint {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+  margin-top: 8px;
+}
+
+.shadow-debugger-summary {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--3lens-bg-tertiary);
+  border-bottom: 1px solid var(--3lens-border);
+  flex-wrap: wrap;
+}
+
+.shadow-debugger-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+  padding: 4px 8px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 4px;
+}
+
+.shadow-debugger-stat.warning {
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.shadow-debugger-stat.error {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.shadow-debugger-stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--3lens-text-primary);
+}
+
+.shadow-debugger-stat.warning .shadow-debugger-stat-value {
+  color: var(--3lens-warning);
+}
+
+.shadow-debugger-stat.error .shadow-debugger-stat-value {
+  color: var(--3lens-error);
+}
+
+.shadow-debugger-stat-label {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  text-transform: uppercase;
+}
+
+.shadow-debugger-section {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--3lens-border);
+}
+
+.shadow-debugger-section-header {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.shadow-debugger-section-header.warning {
+  color: var(--3lens-warning);
+}
+
+.shadow-debugger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shadow-debugger-item {
+  padding: 10px;
+  background: var(--3lens-bg-tertiary);
+  border: 1px solid var(--3lens-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.shadow-debugger-item:hover {
+  background: var(--3lens-bg-hover);
+}
+
+.shadow-debugger-item.warning {
+  border-color: var(--3lens-warning);
+  border-left-width: 3px;
+}
+
+.shadow-debugger-item.error {
+  border-color: var(--3lens-error);
+  border-left-width: 3px;
+}
+
+.shadow-debugger-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.shadow-debugger-item-icon {
+  font-size: 14px;
+}
+
+.shadow-debugger-item-name {
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shadow-debugger-item-type {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  padding: 2px 6px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 3px;
+}
+
+.shadow-debugger-item-issues {
+  font-size: 9px;
+  color: var(--3lens-warning);
+  padding: 2px 6px;
+  background: rgba(251, 191, 36, 0.15);
+  border-radius: 3px;
+}
+
+.shadow-debugger-item-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--3lens-text-secondary);
+  font-family: var(--3lens-font-mono);
+  flex-wrap: wrap;
+}
+
+.shadow-debugger-item-issues-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shadow-debugger-issue {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.shadow-debugger-issue.warning {
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.shadow-debugger-issue.error {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.shadow-debugger-issue.info {
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.shadow-debugger-issue-icon {
+  flex-shrink: 0;
+}
+
+.shadow-debugger-issue-content {
+  flex: 1;
+}
+
+.shadow-debugger-issue-message {
+  color: var(--3lens-text-primary);
+  margin-bottom: 2px;
+}
+
+.shadow-debugger-issue-suggestion {
+  color: var(--3lens-text-tertiary);
+  font-size: 9px;
+}
+
+.shadow-debugger-success {
+  padding: 16px;
+  text-align: center;
+  color: var(--3lens-success);
+  font-size: 12px;
+}
+
+.shadow-debugger-info {
+  padding: 16px;
+  text-align: center;
+  color: var(--3lens-text-secondary);
+  font-size: 12px;
+}
 `;

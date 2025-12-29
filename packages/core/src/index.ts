@@ -171,6 +171,17 @@ export type {
   PluginLoaderOptions,
 } from './plugins';
 
+// Built-in Plugins
+export { LODCheckerPlugin, ShadowDebuggerPlugin, BUILTIN_PLUGINS, getBuiltinPlugins } from './plugins';
+export type {
+  LODAnalysis,
+  LODCheckerSettings,
+  ShadowLightAnalysis,
+  ShadowIssue,
+  ShadowStats,
+  ShadowDebuggerSettings,
+} from './plugins';
+
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
 
