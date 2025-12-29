@@ -328,19 +328,19 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Total GPU memory estimate | ⬜ | |
-| Breakdown by resource type | ⬜ | |
-| Memory trend chart | ⬜ | |
+| Total GPU memory estimate | ✅ | Shows in header with rising/falling/stable trend indicator |
+| Breakdown by resource type | ✅ | Visual bar chart showing textures, geometry, render targets with percentages |
+| Memory trend chart | ✅ | SVG line chart showing memory over 60 seconds with gradient fill |
 
 ## 2.5 Configuration System
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Config file loading (`3lens.config.js`) | ⬜ | |
-| Performance thresholds | ⬜ | |
-| Sampling options | ⬜ | |
-| Rule definitions | ⬜ | |
-| Rule violation warnings | ⬜ | |
+| Config file loading (`3lens.config.js`) | ✅ | ConfigLoader with static loadFromFile() and autoLoadConfig() |
+| Performance thresholds | ✅ | DEFAULT_THRESHOLDS for all metrics, configurable at runtime |
+| Sampling options | ✅ | DEFAULT_SAMPLING for frame stats, snapshots, GPU timing, resource tracking |
+| Rule definitions | ✅ | Built-in rules + custom rules via CustomRule interface |
+| Rule violation warnings | ✅ | Violations shown in Overview tab with severity badges, dismissable |
 
 ## 2.6 Firefox Extension
 

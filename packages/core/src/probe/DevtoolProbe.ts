@@ -20,6 +20,7 @@ import { InspectMode } from '../helpers/InspectMode';
 import { TransformGizmo, type TransformMode, type TransformSpace, type TransformHistoryEntry } from '../helpers/TransformGizmo';
 import { CameraController, type CameraInfo, type FlyToOptions } from '../helpers/CameraController';
 import { ResourceLifecycleTracker, type ResourceLifecycleEvent, type ResourceLifecycleSummary, type ResourceType, type LifecycleEventType, type LeakAlert, type LeakReport, type LeakAlertCallback } from '../tracking/ResourceLifecycleTracker';
+import { ConfigLoader, type RuleViolation, type RuleCheckResult, type RuleViolationCallback, type ViolationSeverity } from '../config/ConfigLoader';
 
 /**
  * Version of the probe
@@ -61,6 +62,12 @@ export class DevtoolProbe {
   
   // Global resource lifecycle tracker (aggregates from all scene observers)
   private _globalLifecycleTracker: ResourceLifecycleTracker = new ResourceLifecycleTracker();
+  
+  // Configuration and rule checking
+  private _configLoader: ConfigLoader;
+  private _ruleCheckEnabled = true;
+  private _lastRuleCheck = 0;
+  private _ruleCheckIntervalMs = 1000; // Check rules every second (not every frame)
 
   constructor(config: ProbeConfig) {
     this.config = {
@@ -75,6 +82,9 @@ export class DevtoolProbe {
         ...config.sampling,
       },
     };
+
+    // Initialize config loader with merged config
+    this._configLoader = new ConfigLoader(this.config);
 
     this.log('Probe initialized', { appName: config.appName });
   }
@@ -1291,15 +1301,24 @@ export class DevtoolProbe {
 
     // Skip expensive operations if nothing is listening
     const hasListeners = this._frameStatsCallbacks.length > 0 || this._transport?.isConnected();
-    if (!hasListeners && !this.config.rules && !this._selectedObject) {
+    if (!hasListeners && !this._ruleCheckEnabled && !this._selectedObject) {
       return; // Fast path - nothing to do
     }
 
-    // Only check rules if rules are configured
-    if (this.config.rules) {
-      const violations = this.checkRules(stats);
-      if (violations.length > 0) {
-        stats.violations = violations;
+    // Check rules at configured interval (not every frame to reduce overhead)
+    if (this._ruleCheckEnabled) {
+      const now = performance.now();
+      if (now - this._lastRuleCheck >= this._ruleCheckIntervalMs) {
+        this._lastRuleCheck = now;
+        const ruleResults = this._configLoader.checkRules(stats);
+        const violations = ruleResults.filter(r => !r.passed).map(r => ({
+          ruleId: r.ruleId,
+          message: r.message,
+          severity: r.severity as 'info' | 'warning' | 'error',
+        }));
+        if (violations.length > 0) {
+          stats.violations = violations;
+        }
       }
     }
 
@@ -1668,185 +1687,6 @@ export class DevtoolProbe {
     material.needsUpdate = true;
   }
 
-  private checkRules(stats: FrameStats): FrameStats['violations'] {
-    const violations: NonNullable<FrameStats['violations']> = [];
-    const rules = this.config.rules;
-
-    if (!rules) return violations;
-
-    // Frame timing rules
-    if (rules.maxDrawCalls && stats.drawCalls > rules.maxDrawCalls) {
-      violations.push({
-        ruleId: 'maxDrawCalls',
-        message: `Draw calls (${stats.drawCalls}) exceeded threshold (${rules.maxDrawCalls})`,
-        severity: 'warning',
-        value: stats.drawCalls,
-        threshold: rules.maxDrawCalls,
-        suggestion: 'Consider using instancing or merging geometries',
-      });
-    }
-
-    if (rules.maxTriangles && stats.triangles > rules.maxTriangles) {
-      violations.push({
-        ruleId: 'maxTriangles',
-        message: `Triangles (${stats.triangles}) exceeded threshold (${rules.maxTriangles})`,
-        severity: 'warning',
-        value: stats.triangles,
-        threshold: rules.maxTriangles,
-        suggestion: 'Use LOD or reduce polygon count',
-      });
-    }
-
-    if (rules.maxFrameTimeMs && stats.cpuTimeMs > rules.maxFrameTimeMs) {
-      violations.push({
-        ruleId: 'maxFrameTimeMs',
-        message: `Frame time (${stats.cpuTimeMs.toFixed(2)}ms) exceeded threshold (${rules.maxFrameTimeMs}ms)`,
-        severity: 'warning',
-        value: stats.cpuTimeMs,
-        threshold: rules.maxFrameTimeMs,
-        suggestion: 'Profile and optimize the most expensive operations',
-      });
-    }
-
-    // Memory rules
-    if (rules.maxTextureMemory && stats.memory?.textureMemory > rules.maxTextureMemory) {
-      violations.push({
-        ruleId: 'maxTextureMemory',
-        message: `Texture memory (${this.formatBytes(stats.memory.textureMemory)}) exceeded threshold`,
-        severity: 'warning',
-        value: stats.memory.textureMemory,
-        threshold: rules.maxTextureMemory,
-        suggestion: 'Compress textures or reduce resolution',
-      });
-    }
-
-    if (rules.maxGeometryMemory && stats.memory?.geometryMemory > rules.maxGeometryMemory) {
-      violations.push({
-        ruleId: 'maxGeometryMemory',
-        message: `Geometry memory (${this.formatBytes(stats.memory.geometryMemory)}) exceeded threshold`,
-        severity: 'warning',
-        value: stats.memory.geometryMemory,
-        threshold: rules.maxGeometryMemory,
-        suggestion: 'Reduce vertex count or use compression',
-      });
-    }
-
-    if (rules.maxGpuMemory && stats.memory?.totalGpuMemory > rules.maxGpuMemory) {
-      violations.push({
-        ruleId: 'maxGpuMemory',
-        message: `Total GPU memory (${this.formatBytes(stats.memory.totalGpuMemory)}) exceeded threshold`,
-        severity: 'error',
-        value: stats.memory.totalGpuMemory,
-        threshold: rules.maxGpuMemory,
-        suggestion: 'Reduce texture and geometry memory usage',
-      });
-    }
-
-    // Rendering rules
-    if (rules.maxLights && stats.rendering?.totalLights > rules.maxLights) {
-      violations.push({
-        ruleId: 'maxLights',
-        message: `Lights (${stats.rendering.totalLights}) exceeded threshold (${rules.maxLights})`,
-        severity: 'warning',
-        value: stats.rendering.totalLights,
-        threshold: rules.maxLights,
-        suggestion: 'Use light probes or baked lighting',
-      });
-    }
-
-    if (rules.maxShadowLights && stats.rendering?.shadowCastingLights > rules.maxShadowLights) {
-      violations.push({
-        ruleId: 'maxShadowLights',
-        message: `Shadow-casting lights (${stats.rendering.shadowCastingLights}) exceeded threshold`,
-        severity: 'warning',
-        value: stats.rendering.shadowCastingLights,
-        threshold: rules.maxShadowLights,
-        suggestion: 'Reduce shadow-casting lights or use baked shadows',
-      });
-    }
-
-    if (rules.maxSkinnedMeshes && stats.rendering?.skinnedMeshes > rules.maxSkinnedMeshes) {
-      violations.push({
-        ruleId: 'maxSkinnedMeshes',
-        message: `Skinned meshes (${stats.rendering.skinnedMeshes}) exceeded threshold`,
-        severity: 'warning',
-        value: stats.rendering.skinnedMeshes,
-        threshold: rules.maxSkinnedMeshes,
-        suggestion: 'Reduce animated character count or use LOD',
-      });
-    }
-
-    if (rules.maxBones && stats.rendering?.totalBones > rules.maxBones) {
-      violations.push({
-        ruleId: 'maxBones',
-        message: `Total bones (${stats.rendering.totalBones}) exceeded threshold (${rules.maxBones})`,
-        severity: 'warning',
-        value: stats.rendering.totalBones,
-        threshold: rules.maxBones,
-        suggestion: 'Reduce bone count in character rigs',
-      });
-    }
-
-    if (rules.maxTransparentObjects && stats.rendering?.transparentObjects > rules.maxTransparentObjects) {
-      violations.push({
-        ruleId: 'maxTransparentObjects',
-        message: `Transparent objects (${stats.rendering.transparentObjects}) exceeded threshold`,
-        severity: 'warning',
-        value: stats.rendering.transparentObjects,
-        threshold: rules.maxTransparentObjects,
-        suggestion: 'Reduce transparent objects or use alpha testing',
-      });
-    }
-
-    // Performance rules
-    if (rules.minFps && stats.performance?.fps < rules.minFps) {
-      violations.push({
-        ruleId: 'minFps',
-        message: `FPS (${stats.performance.fps}) below minimum (${rules.minFps})`,
-        severity: 'error',
-        value: stats.performance.fps,
-        threshold: rules.minFps,
-        suggestion: 'Reduce scene complexity or optimize shaders',
-      });
-    }
-
-    if (rules.min1PercentLowFps && stats.performance?.fps1PercentLow < rules.min1PercentLowFps) {
-      violations.push({
-        ruleId: 'min1PercentLowFps',
-        message: `1% low FPS (${Math.round(stats.performance.fps1PercentLow)}) below minimum`,
-        severity: 'warning',
-        value: stats.performance.fps1PercentLow,
-        threshold: rules.min1PercentLowFps,
-        suggestion: 'Investigate frame time spikes',
-      });
-    }
-
-    if (rules.maxFrameTimeVariance && stats.performance?.frameTimeVariance > rules.maxFrameTimeVariance) {
-      violations.push({
-        ruleId: 'maxFrameTimeVariance',
-        message: `Frame time variance (${stats.performance.frameTimeVariance.toFixed(2)}ms) too high`,
-        severity: 'info',
-        value: stats.performance.frameTimeVariance,
-        threshold: rules.maxFrameTimeVariance,
-        suggestion: 'Look for inconsistent workloads or GC pauses',
-      });
-    }
-
-    // Check custom rules
-    for (const customRule of rules.custom ?? []) {
-      const result = customRule.check(stats);
-      if (!result.passed) {
-        violations.push({
-          ruleId: customRule.id,
-          message: result.message ?? `Custom rule '${customRule.name}' failed`,
-          severity: result.severity ?? 'warning',
-        });
-      }
-    }
-
-    return violations;
-  }
-
   private formatBytes(bytes: number): string {
     if (bytes >= 1073741824) {
       return (bytes / 1073741824).toFixed(2) + ' GB';
@@ -2185,6 +2025,124 @@ export class DevtoolProbe {
       memoryHistory: [],
       recommendations: [],
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // CONFIGURATION & RULES
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Get the configuration loader
+   */
+  getConfigLoader(): ConfigLoader {
+    return this._configLoader;
+  }
+
+  /**
+   * Subscribe to rule violations
+   */
+  onRuleViolation(callback: RuleViolationCallback): Unsubscribe {
+    return this._configLoader.onViolation(callback);
+  }
+
+  /**
+   * Check all rules against the latest frame stats
+   */
+  checkRules(): RuleCheckResult[] {
+    const stats = this.getLatestStats();
+    if (!stats) return [];
+    return this._configLoader.checkRules(stats);
+  }
+
+  /**
+   * Get recent rule violations
+   */
+  getRecentViolations(): RuleViolation[] {
+    return this._configLoader.getRecentViolations();
+  }
+
+  /**
+   * Get violations by severity
+   */
+  getViolationsBySeverity(severity: ViolationSeverity): RuleViolation[] {
+    return this._configLoader.getViolationsBySeverity(severity);
+  }
+
+  /**
+   * Get violation summary
+   */
+  getViolationSummary(): { errors: number; warnings: number; info: number; total: number } {
+    return this._configLoader.getViolationSummary();
+  }
+
+  /**
+   * Clear violation history
+   */
+  clearViolations(): void {
+    this._configLoader.clearViolations();
+  }
+
+  /**
+   * Update performance thresholds at runtime
+   */
+  updateThresholds(thresholds: Partial<import('../types/config').RulesConfig>): void {
+    this._configLoader.updateThresholds(thresholds);
+  }
+
+  /**
+   * Get current thresholds
+   */
+  getThresholds(): Required<Omit<import('../types/config').RulesConfig, 'custom'>> {
+    return this._configLoader.getThresholds();
+  }
+
+  /**
+   * Add a custom rule
+   */
+  addCustomRule(rule: import('../types/config').CustomRule): void {
+    this._configLoader.addCustomRule(rule);
+  }
+
+  /**
+   * Remove a custom rule by ID
+   */
+  removeCustomRule(ruleId: string): boolean {
+    return this._configLoader.removeCustomRule(ruleId);
+  }
+
+  /**
+   * Enable or disable automatic rule checking
+   */
+  setRuleCheckEnabled(enabled: boolean): void {
+    this._ruleCheckEnabled = enabled;
+  }
+
+  /**
+   * Check if rule checking is enabled
+   */
+  isRuleCheckEnabled(): boolean {
+    return this._ruleCheckEnabled;
+  }
+
+  /**
+   * Set the interval for automatic rule checking (in ms)
+   */
+  setRuleCheckInterval(intervalMs: number): void {
+    this._ruleCheckIntervalMs = Math.max(100, intervalMs); // Minimum 100ms
+  }
+
+  /**
+   * Generate a config file template
+   */
+  generateConfigFile(): string {
+    return this._configLoader.generateConfigFileContent();
+  }
+
+  /**
+   * Export current configuration
+   */
+  exportConfig(): ProbeConfig {
+    return this._configLoader.exportConfig();
   }
 
   // ─────────────────────────────────────────────────────────────────
