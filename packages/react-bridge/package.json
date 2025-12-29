@@ -1,0 +1,55 @@
+{
+  "name": "@3lens/react-bridge",
+  "version": "0.1.0-alpha.1",
+  "description": "React and React Three Fiber integration for 3Lens devtool",
+  "keywords": [
+    "three.js",
+    "threejs",
+    "react",
+    "react-three-fiber",
+    "r3f",
+    "devtools",
+    "debugging"
+  ],
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@3lens/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@react-three/fiber": "^8.15.0",
+    "@types/react": "^18.2.0",
+    "react": "^18.2.0",
+    "three": "^0.160.0"
+  },
+  "peerDependencies": {
+    "@react-three/fiber": ">=8.0.0",
+    "react": ">=17.0.0",
+    "three": ">=0.150.0"
+  },
+  "peerDependenciesMeta": {
+    "@react-three/fiber": {
+      "optional": true
+    }
+  }
+}
+
