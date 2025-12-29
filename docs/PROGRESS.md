@@ -1,8 +1,8 @@
 # 3Lens Development Progress
 
-> **Last Updated:** December 20, 2025  
-> **Current Phase:** Phase 1 - Foundation (MVP)  
-> **Overall Progress:** ██████░░░░░░░░░░░░░░ 30%
+> **Last Updated:** December 28, 2025  
+> **Current Phase:** Phase 3 - Enterprise Features  
+> **Overall Progress:** ██████████░░░░░░░░░░ 50%
 
 ---
 
@@ -11,7 +11,7 @@
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: Foundation (MVP) | ✅ Complete | ██████████ 100% |
-| Phase 2: Core Features | 🔵 In Progress | ██░░░░░░░░ 14% |
+| Phase 2: Core Features | ✅ Complete | ██████████ 100% |
 | Phase 3: Enterprise Features | ⚪ Not Started | ░░░░░░░░░░ 0% |
 | Phase 4: Ecosystem & Polish | ⚪ Not Started | ░░░░░░░░░░ 0% |
 
@@ -158,7 +158,7 @@
 
 **Goal:** Complete inspection capabilities and add interactive debugging.  
 **Target Duration:** 3-4 months  
-**Status:** 🟡 In Progress
+**Status:** ✅ Complete
 
 ## 2.1 Enhanced Inspection
 
@@ -335,13 +335,13 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `ThreeLensProvider` context | ⬜ | |
-| `useDevtoolEntity` hook | ⬜ | |
-| `useThreeLensProbe` hook | ⬜ | |
-| `useSelectedObject` hook | ⬜ | |
-| `useMetric` hook | ⬜ | |
-| React Three Fiber auto-detection | ⬜ | |
-| R3F Canvas wrapper | ⬜ | |
+| `ThreeLensProvider` context | ✅ | Provider with probe init, keyboard shortcuts, overlay control |
+| `useDevtoolEntity` hook | ✅ | Register objects with names, modules, metadata, tags |
+| `useThreeLensProbe` hook | ✅ | Access probe instance directly |
+| `useSelectedObject` hook | ✅ | Selection state, select/clear functions, isSelected check |
+| `useMetric` hook | ✅ | Generic + convenience hooks (useFPS, useDrawCalls, etc.) |
+| React Three Fiber auto-detection | ✅ | createR3FConnector() factory with useThree/useFrame |
+| R3F Canvas wrapper | ✅ | ThreeLensCanvas component with auto-integration |
 
 ### Angular Bridge (`@3lens/angular-bridge`)
 
@@ -592,10 +592,10 @@
 | Phase | Total Tasks | Completed | In Progress | Remaining |
 |-------|-------------|-----------|-------------|-----------|
 | Phase 1 | 49 | 49 | 0 | 0 |
-| Phase 2 | 72 | 42 | 0 | 30 |
-| Phase 3 | 72 | 0 | 0 | 72 |
+| Phase 2 | 73 | 73 | 0 | 0 |
+| Phase 3 | 72 | 7 | 0 | 65 |
 | Phase 4 | 44 | 0 | 0 | 44 |
-| **Total** | **237** | **91** | **0** | **146** |
+| **Total** | **238** | **129** | **0** | **109** |
 
 ## Timeline
 

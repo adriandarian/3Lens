@@ -39,6 +39,7 @@
 |---------|-------------|
 | `@3lens/core` | Probe SDK that collects stats, manages scene observation, and exposes events |
 | `@3lens/overlay` | In-app floating panel UI with full devtools functionality |
+| `@3lens/react-bridge` | React and React Three Fiber integration with hooks and components |
 
 ---
 
@@ -109,6 +110,37 @@ const { probe, overlay } = bootstrapOverlay({
   scene,
   appName: 'My App',
 });
+```
+
+### React Three Fiber Usage
+
+```tsx
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { ThreeLensProvider, createR3FConnector, useFPS } from '@3lens/react-bridge';
+
+// Create the R3F connector with R3F's hooks
+const ThreeLensR3F = createR3FConnector(useThree, useFrame);
+
+function PerformanceHUD() {
+  const fps = useFPS(true);
+  return <div className="hud">FPS: {fps.current.toFixed(0)}</div>;
+}
+
+function App() {
+  return (
+    <ThreeLensProvider config={{ appName: 'My R3F App' }}>
+      <PerformanceHUD />
+      <Canvas>
+        <ThreeLensR3F />
+        <ambientLight />
+        <mesh>
+          <boxGeometry />
+          <meshStandardMaterial color="orange" />
+        </mesh>
+      </Canvas>
+    </ThreeLensProvider>
+  );
+}
 ```
 
 ---
@@ -245,6 +277,7 @@ overlay.destroy();   // Remove from DOM
 ├── packages/
 │   ├── core/           # Probe SDK - data collection, scene observation, helpers
 │   ├── overlay/        # In-app floating panel UI with full devtools
+│   ├── react-bridge/   # React and R3F integration (hooks, components)
 │   └── ui/             # Shared UI components
 ├── examples/
 │   └── basic/          # Vanilla three.js example
