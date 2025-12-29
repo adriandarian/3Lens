@@ -2,7 +2,7 @@
 
 > **Last Updated:** December 29, 2025  
 > **Current Phase:** Phase 3 - Enterprise Features  
-> **Overall Progress:** █████████████░░░░░░░ 65%
+> **Overall Progress:** ██████████████░░░░░░ 70%
 
 ---
 
@@ -12,7 +12,7 @@
 |-------|--------|----------|
 | Phase 1: Foundation (MVP) | ✅ Complete | ██████████ 100% |
 | Phase 2: Core Features | ✅ Complete | ██████████ 100% |
-| Phase 3: Enterprise Features | 🔄 In Progress | ██████░░░░ 60% |
+| Phase 3: Enterprise Features | 🔄 In Progress | ████████░░ 75% |
 | Phase 4: Ecosystem & Polish | ⚪ Not Started | ░░░░░░░░░░ 0% |
 
 ---
@@ -394,9 +394,12 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Load plugins from npm packages | ⬜ | |
+| Load plugins from npm packages | ✅ | PluginLoader with CDN support (unpkg), version constraints |
+| Load plugins from URL | ✅ | loadPluginFromUrl() for direct URL imports |
 | Dynamic plugin registration | ✅ | registerAndActivatePlugin(), unregisterAndDeactivatePlugin() |
-| Plugin settings UI | ⬜ | Schema defined, UI not yet implemented |
+| Plugin settings UI | ✅ | Full settings UI with boolean, number, string, select, color types |
+| Plugin management panel | ✅ | Dedicated Plugins panel in overlay with list, load form, settings |
+| Plugin registry | ✅ | PluginRegistry class for discovery with search, tags, popularity |
 
 ### Built-in Plugins
 
@@ -404,74 +407,6 @@
 |------|--------|-------|
 | LOD Checker plugin | ⬜ | |
 | Shadow Map Debugger plugin | ⬜ | |
-
-## 3.4 Standalone Application
-
-### Electron App Shell
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Electron setup | ⬜ | |
-| WebSocket server | ⬜ | |
-| Multi-app support (tabs) | ⬜ | |
-| Session persistence | ⬜ | |
-| Window management | ⬜ | |
-
-### Session Recording
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Record frame stats | ⬜ | |
-| Record snapshots | ⬜ | |
-| Record events | ⬜ | |
-| Recording controls (start/stop) | ⬜ | |
-| Recording size limits | ⬜ | |
-
-### Session Playback
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Load recorded sessions | ⬜ | |
-| Scrub through timeline | ⬜ | |
-| Compare two sessions | ⬜ | |
-| Diff visualization | ⬜ | |
-
-### Export Capabilities
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Export to JSON | ⬜ | |
-| Export to CSV (metrics) | ⬜ | |
-| PDF report generation | ⬜ | |
-
-## 3.5 CI Integration
-
-### Headless Mode
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Run without UI | ⬜ | |
-| Scripted interactions | ⬜ | |
-| Metric collection | ⬜ | |
-| Timeout handling | ⬜ | |
-
-### CI Reporter
-
-| Task | Status | Notes |
-|------|--------|-------|
-| JSON output | ⬜ | |
-| JUnit XML format | ⬜ | |
-| GitHub Actions integration | ⬜ | |
-| Console summary | ⬜ | |
-
-### Performance Regression Detection
-
-| Task | Status | Notes |
-|------|--------|-------|
-| Compare against baseline | ⬜ | |
-| Configurable thresholds | ⬜ | |
-| Pass/fail exit codes | ⬜ | |
-| Regression report | ⬜ | |
 
 ## 3.6 WebGPU Support
 

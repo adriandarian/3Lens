@@ -22,7 +22,7 @@ import { CameraController, type CameraInfo, type FlyToOptions } from '../helpers
 import { ResourceLifecycleTracker, type ResourceLifecycleEvent, type ResourceLifecycleSummary, type ResourceType, type LifecycleEventType, type LeakAlert, type LeakReport, type LeakAlertCallback } from '../tracking/ResourceLifecycleTracker';
 import { ConfigLoader, type RuleViolation, type RuleCheckResult, type RuleViolationCallback, type ViolationSeverity } from '../config/ConfigLoader';
 import { LogicalEntityManager, type LogicalEntityOptions, type LogicalEntity as NewLogicalEntity, type EntityId, type ModuleId, type ModuleInfo, type EntityFilter, type NavigationResult, type EntityEventCallback } from '../entities';
-import { PluginManager, type DevtoolPlugin, type PluginId } from '../plugins';
+import { PluginManager, PluginLoader, PluginRegistry, type DevtoolPlugin, type PluginId, type PluginSource, type PluginLoadResult } from '../plugins';
 
 /**
  * Version of the probe
@@ -45,6 +45,8 @@ export class DevtoolProbe {
   private _logicalEntities: Map<string, LogicalEntity> = new Map(); // Legacy
   private _entityManager: LogicalEntityManager = new LogicalEntityManager();
   private _pluginManager: PluginManager | null = null;
+  private _pluginLoader: PluginLoader | null = null;
+  private _pluginRegistry: PluginRegistry | null = null;
   private _frameStatsHistory: FrameStats[] = [];
   private _frameStatsHistoryIndex = 0;
   private _maxHistorySize = 300;
@@ -1412,6 +1414,101 @@ export class DevtoolProbe {
    */
   get activePluginCount(): number {
     return this._pluginManager?.activePluginCount ?? 0;
+  }
+
+  /**
+   * Get the plugin loader
+   * Creates it lazily on first access
+   */
+  getPluginLoader(): PluginLoader {
+    if (!this._pluginLoader) {
+      this._pluginLoader = new PluginLoader();
+    }
+    return this._pluginLoader;
+  }
+
+  /**
+   * Get the plugin registry
+   * Creates it lazily on first access
+   */
+  getPluginRegistry(): PluginRegistry {
+    if (!this._pluginRegistry) {
+      this._pluginRegistry = new PluginRegistry();
+    }
+    return this._pluginRegistry;
+  }
+
+  /**
+   * Load and activate a plugin from an npm package
+   * 
+   * @param packageName npm package name
+   * @param version Version constraint (default: 'latest')
+   * @param options Plugin options
+   * @returns Load result
+   * 
+   * @example
+   * ```typescript
+   * const result = await probe.loadPlugin('@3lens/plugin-shadows');
+   * if (result.success) {
+   *   console.log('Plugin loaded:', result.plugin?.metadata.name);
+   * }
+   * ```
+   */
+  async loadPlugin(
+    packageName: string,
+    version: string = 'latest',
+    options?: Record<string, unknown>
+  ): Promise<PluginLoadResult> {
+    const loader = this.getPluginLoader();
+    const result = await loader.loadFromNpm(packageName, version, options);
+
+    if (result.success && result.plugin) {
+      this.registerPlugin(result.plugin);
+      await this.activatePlugin(result.plugin.metadata.id);
+    }
+
+    return result;
+  }
+
+  /**
+   * Load and activate a plugin from a URL
+   * 
+   * @param url Plugin URL
+   * @param options Plugin options
+   * @returns Load result
+   */
+  async loadPluginFromUrl(url: string, options?: Record<string, unknown>): Promise<PluginLoadResult> {
+    const loader = this.getPluginLoader();
+    const result = await loader.loadFromUrl(url, options);
+
+    if (result.success && result.plugin) {
+      this.registerPlugin(result.plugin);
+      await this.activatePlugin(result.plugin.metadata.id);
+    }
+
+    return result;
+  }
+
+  /**
+   * Load plugins from multiple sources
+   * 
+   * @param sources Array of plugin sources
+   * @returns Array of load results
+   */
+  async loadPlugins(sources: PluginSource[]): Promise<PluginLoadResult[]> {
+    const loader = this.getPluginLoader();
+    const results = await loader.loadMultiple(sources);
+
+    for (const result of results) {
+      if (result.success && result.plugin) {
+        this.registerPlugin(result.plugin);
+        if (result.source.autoActivate !== false) {
+          await this.activatePlugin(result.plugin.metadata.id);
+        }
+      }
+    }
+
+    return results;
   }
 
   // ─────────────────────────────────────────────────────────────────
