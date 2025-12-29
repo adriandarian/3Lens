@@ -40,6 +40,7 @@
 | `@3lens/core` | Probe SDK that collects stats, manages scene observation, and exposes events |
 | `@3lens/overlay` | In-app floating panel UI with full devtools functionality |
 | `@3lens/react-bridge` | React and React Three Fiber integration with hooks and components |
+| `@3lens/angular-bridge` | Angular integration with services, directives, and Nx workspace helpers |
 
 ---
 
@@ -275,13 +276,14 @@ overlay.destroy();   // Remove from DOM
 ```
 3lens/
 ├── packages/
-│   ├── core/           # Probe SDK - data collection, scene observation, helpers
-│   ├── overlay/        # In-app floating panel UI with full devtools
-│   ├── react-bridge/   # React and R3F integration (hooks, components)
-│   └── ui/             # Shared UI components
+│   ├── core/            # Probe SDK - data collection, scene observation, helpers
+│   ├── overlay/         # In-app floating panel UI with full devtools
+│   ├── react-bridge/    # React and R3F integration (hooks, components)
+│   ├── angular-bridge/  # Angular integration (services, directives, Nx helpers)
+│   └── ui/              # Shared UI components
 ├── examples/
-│   └── basic/          # Vanilla three.js example
-└── docs/               # Documentation
+│   └── basic/           # Vanilla three.js example
+└── docs/                # Documentation
 ```
 
 ---

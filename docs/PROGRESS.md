@@ -347,10 +347,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `THREELENS_PROBE` injection token | ⬜ | |
-| `ThreeLensEntityDirective` | ⬜ | |
-| `ThreeLensService` | ⬜ | |
-| Module helper for Nx libs | ⬜ | |
+| `THREELENS_PROBE` injection token | ✅ | Plus THREELENS_CONFIG token for configuration |
+| `ThreeLensEntityDirective` | ✅ | Standalone directive with Input bindings for name, module, metadata, tags |
+| `ThreeLensService` | ✅ | Full service with RxJS observables (fps$, drawCalls$, etc.), lifecycle methods |
+| Module helper for Nx libs | ✅ | NxLibraryHelper class with scoped registration, createNxLibraryHelper factory |
 
 ### Vue Bridge (`@3lens/vue-bridge`)
 
@@ -593,9 +593,9 @@
 |-------|-------------|-----------|-------------|-----------|
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
-| Phase 3 | 72 | 7 | 0 | 65 |
+| Phase 3 | 72 | 11 | 0 | 61 |
 | Phase 4 | 44 | 0 | 0 | 44 |
-| **Total** | **238** | **129** | **0** | **109** |
+| **Total** | **238** | **133** | **0** | **105** |
 
 ## Timeline
 

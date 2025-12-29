@@ -1,0 +1,48 @@
+{
+  "name": "@3lens/angular-bridge",
+  "version": "0.1.0-alpha.1",
+  "description": "Angular integration for 3Lens - the three.js devtool",
+  "keywords": [
+    "three.js",
+    "threejs",
+    "angular",
+    "devtools",
+    "debugging"
+  ],
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@3lens/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@angular/core": "^17.0.0",
+    "rxjs": "^7.8.0",
+    "three": "^0.160.0",
+    "zone.js": "^0.14.0"
+  },
+  "peerDependencies": {
+    "@angular/core": ">=14.0.0",
+    "rxjs": ">=7.0.0",
+    "three": ">=0.150.0"
+  }
+}
+
