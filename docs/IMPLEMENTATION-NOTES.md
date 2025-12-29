@@ -20,12 +20,10 @@ The package namespace for 3Lens follows this convention:
 
 ```
 @3lens/core           # Core probe SDK
-@3lens/overlay        # In-app UI overlay
-@3lens/extension      # Browser extension (internal)
+@3lens/overlay        # In-app UI overlay (devtools panel)
 @3lens/react-bridge   # React/R3F integration
 @3lens/angular-bridge # Angular integration
 @3lens/vue-bridge     # Vue/TresJS integration
-@3lens/interactive    # Interactive inspector module (optional split)
 ```
 
 ---

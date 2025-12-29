@@ -526,30 +526,6 @@ if (import.meta.env.DEV) {
 
 ---
 
-## Browser Extension
-
-The 3Lens browser extension provides a DevTools panel that works with any three.js application, even without installing the npm packages.
-
-### How It Works
-
-1. Install the extension from [Chrome Web Store](#) (coming soon)
-2. Open DevTools (F12)
-3. Navigate to the "3Lens" panel
-4. The extension automatically detects three.js on the page
-
-### Manual Detection
-
-If automatic detection doesn't work, you can expose your probe:
-
-```typescript
-const probe = createProbe({ appName: 'My App' });
-
-// Make probe available for extension
-(window as any).__3LENS_PROBE__ = probe;
-```
-
----
-
 ## Troubleshooting
 
 ### Overlay Not Showing
