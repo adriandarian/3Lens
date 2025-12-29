@@ -128,6 +128,22 @@ export type {
   RuleViolationCallback,
 } from './config/ConfigLoader';
 
+// Logical Entities
+export { LogicalEntityManager } from './entities';
+export type {
+  EntityId,
+  ModuleId,
+  LogicalEntityOptions,
+  LogicalEntity as NewLogicalEntity,
+  ModuleInfo,
+  ModuleMetrics,
+  EntityFilter,
+  NavigationResult,
+  EntityEvent,
+  EntityEventType,
+  EntityEventCallback,
+} from './entities';
+
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
 

@@ -364,14 +364,14 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `registerLogicalEntity()` API | ⬜ | |
-| `updateLogicalEntity()` API | ⬜ | |
-| `unregisterLogicalEntity()` API | ⬜ | |
-| Module ID support | ⬜ | |
-| Component → Object mapping | ⬜ | |
-| Two-way navigation (component ↔ object) | ⬜ | |
-| Filter by module | ⬜ | |
-| Module-level metrics | ⬜ | |
+| `registerLogicalEntity()` API | ✅ | Full options: name, module, componentType, componentId, tags, metadata, parentEntityId |
+| `updateLogicalEntity()` API | ✅ | Partial updates, handles module/component tracking changes |
+| `unregisterLogicalEntity()` API | ✅ | With recursive option for child entities |
+| Module ID support | ✅ | Format: '@scope/library' or 'category/name', auto-tracked in moduleEntities Map |
+| Component → Object mapping | ✅ | addObjectToEntity/removeObjectFromEntity, stores __3lens_entity in userData |
+| Two-way navigation (component ↔ object) | ✅ | navigateFromObject/navigateFromComponent/navigateFromEntity with full NavigationResult |
+| Filter by module | ✅ | filterEntities() with module, modulePrefix, tags, anyTag, componentType, nameContains |
+| Module-level metrics | ✅ | getModuleInfo() with triangles, drawCalls, gpuMemory, texture/geometry/material counts |
 
 ## 3.3 Plugin System
 
@@ -593,9 +593,9 @@
 |-------|-------------|-----------|-------------|-----------|
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
-| Phase 3 | 72 | 14 | 0 | 58 |
+| Phase 3 | 72 | 22 | 0 | 50 |
 | Phase 4 | 44 | 0 | 0 | 44 |
-| **Total** | **238** | **136** | **0** | **102** |
+| **Total** | **238** | **144** | **0** | **94** |
 
 ## Timeline
 
