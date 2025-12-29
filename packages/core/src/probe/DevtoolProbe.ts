@@ -19,6 +19,7 @@ import { SelectionHelper } from '../helpers/SelectionHelper';
 import { InspectMode } from '../helpers/InspectMode';
 import { TransformGizmo, type TransformMode, type TransformSpace, type TransformHistoryEntry } from '../helpers/TransformGizmo';
 import { CameraController, type CameraInfo, type FlyToOptions } from '../helpers/CameraController';
+import { ResourceLifecycleTracker, type ResourceLifecycleEvent, type ResourceLifecycleSummary, type ResourceType, type LifecycleEventType } from '../tracking/ResourceLifecycleTracker';
 
 /**
  * Version of the probe
@@ -56,6 +57,10 @@ export class DevtoolProbe {
   > = [];
   private _frameStatsCallbacks: Array<(stats: FrameStats) => void> = [];
   private _commandCallbacks: Array<(command: DebugMessage) => void> = [];
+  private _resourceEventCallbacks: Array<(event: ResourceLifecycleEvent) => void> = [];
+  
+  // Global resource lifecycle tracker (aggregates from all scene observers)
+  private _globalLifecycleTracker: ResourceLifecycleTracker = new ResourceLifecycleTracker();
 
   constructor(config: ProbeConfig) {
     this.config = {
@@ -166,10 +171,25 @@ export class DevtoolProbe {
 
     const observer = new SceneObserver(scene, {
       onSceneChange: () => this.handleSceneChange(),
+      onResourceEvent: (event) => this.handleResourceEvent(event),
     });
 
     this._sceneObservers.set(scene, observer);
     this.log('Observing scene', { name: scene.name || '<unnamed>' });
+  }
+
+  /**
+   * Handle resource lifecycle event from scene observers
+   */
+  private handleResourceEvent(event: ResourceLifecycleEvent): void {
+    // Forward to callbacks
+    for (const callback of this._resourceEventCallbacks) {
+      try {
+        callback(event);
+      } catch (e) {
+        this.log('Error in resource event callback', { error: e });
+      }
+    }
   }
 
   /**
@@ -1856,6 +1876,182 @@ export class DevtoolProbe {
     }
     return null;
   }
+
+  // ─────────────────────────────────────────────────────────────────
+  // RESOURCE LIFECYCLE TRACKING
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Subscribe to resource lifecycle events (geometry, material, texture creation/disposal)
+   */
+  onResourceEvent(callback: (event: ResourceLifecycleEvent) => void): Unsubscribe {
+    this._resourceEventCallbacks.push(callback);
+    return () => {
+      const index = this._resourceEventCallbacks.indexOf(callback);
+      if (index !== -1) {
+        this._resourceEventCallbacks.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Get all resource lifecycle events
+   */
+  getResourceEvents(): ResourceLifecycleEvent[] {
+    const events: ResourceLifecycleEvent[] = [];
+    for (const observer of this._sceneObservers.values()) {
+      events.push(...observer.getLifecycleTracker().getEvents());
+    }
+    // Sort by timestamp
+    events.sort((a, b) => a.timestamp - b.timestamp);
+    return events;
+  }
+
+  /**
+   * Get resource lifecycle events filtered by resource type
+   */
+  getResourceEventsByType(resourceType: ResourceType): ResourceLifecycleEvent[] {
+    const events: ResourceLifecycleEvent[] = [];
+    for (const observer of this._sceneObservers.values()) {
+      events.push(...observer.getLifecycleTracker().getEventsByType(resourceType));
+    }
+    events.sort((a, b) => a.timestamp - b.timestamp);
+    return events;
+  }
+
+  /**
+   * Get resource lifecycle events filtered by event type
+   */
+  getResourceEventsByEventType(eventType: LifecycleEventType): ResourceLifecycleEvent[] {
+    const events: ResourceLifecycleEvent[] = [];
+    for (const observer of this._sceneObservers.values()) {
+      events.push(...observer.getLifecycleTracker().getEventsByEventType(eventType));
+    }
+    events.sort((a, b) => a.timestamp - b.timestamp);
+    return events;
+  }
+
+  /**
+   * Get resource lifecycle events within a time range
+   */
+  getResourceEventsInRange(startMs: number, endMs: number): ResourceLifecycleEvent[] {
+    const events: ResourceLifecycleEvent[] = [];
+    for (const observer of this._sceneObservers.values()) {
+      events.push(...observer.getLifecycleTracker().getEventsInRange(startMs, endMs));
+    }
+    events.sort((a, b) => a.timestamp - b.timestamp);
+    return events;
+  }
+
+  /**
+   * Get summary of resource lifecycle (created, disposed, active, potentially leaked)
+   */
+  getResourceLifecycleSummary(): ResourceLifecycleSummary {
+    // Aggregate summaries from all observers
+    const summary: ResourceLifecycleSummary = {
+      geometries: { created: 0, disposed: 0, active: 0, leaked: 0 },
+      materials: { created: 0, disposed: 0, active: 0, leaked: 0 },
+      textures: { created: 0, disposed: 0, active: 0, leaked: 0 },
+      totalEvents: 0,
+    };
+
+    for (const observer of this._sceneObservers.values()) {
+      const observerSummary = observer.getLifecycleTracker().getSummary();
+      
+      summary.geometries.created += observerSummary.geometries.created;
+      summary.geometries.disposed += observerSummary.geometries.disposed;
+      summary.geometries.active += observerSummary.geometries.active;
+      summary.geometries.leaked += observerSummary.geometries.leaked;
+      
+      summary.materials.created += observerSummary.materials.created;
+      summary.materials.disposed += observerSummary.materials.disposed;
+      summary.materials.active += observerSummary.materials.active;
+      summary.materials.leaked += observerSummary.materials.leaked;
+      
+      summary.textures.created += observerSummary.textures.created;
+      summary.textures.disposed += observerSummary.textures.disposed;
+      summary.textures.active += observerSummary.textures.active;
+      summary.textures.leaked += observerSummary.textures.leaked;
+      
+      summary.totalEvents += observerSummary.totalEvents;
+
+      // Track oldest active resource across all observers
+      if (observerSummary.oldestActiveResource) {
+        if (!summary.oldestActiveResource || 
+            observerSummary.oldestActiveResource.ageMs > summary.oldestActiveResource.ageMs) {
+          summary.oldestActiveResource = observerSummary.oldestActiveResource;
+        }
+      }
+    }
+
+    return summary;
+  }
+
+  /**
+   * Get potentially leaked resources (active resources older than threshold)
+   */
+  getPotentialResourceLeaks(): Array<{
+    type: ResourceType;
+    uuid: string;
+    name?: string;
+    subtype?: string;
+    ageMs: number;
+  }> {
+    const leaks: Array<{
+      type: ResourceType;
+      uuid: string;
+      name?: string;
+      subtype?: string;
+      ageMs: number;
+    }> = [];
+
+    for (const observer of this._sceneObservers.values()) {
+      leaks.push(...observer.getLifecycleTracker().getPotentialLeaks());
+    }
+
+    // Sort by age (oldest first) and deduplicate by UUID
+    const seen = new Set<string>();
+    return leaks
+      .sort((a, b) => b.ageMs - a.ageMs)
+      .filter(leak => {
+        if (seen.has(leak.uuid)) return false;
+        seen.add(leak.uuid);
+        return true;
+      });
+  }
+
+  /**
+   * Enable or disable stack trace capture for resource lifecycle events
+   * Note: This has a performance impact
+   */
+  setResourceStackTraceCapture(enabled: boolean): void {
+    for (const observer of this._sceneObservers.values()) {
+      observer.getLifecycleTracker().setStackTraceCapture(enabled);
+    }
+  }
+
+  /**
+   * Check if stack trace capture is enabled
+   */
+  isResourceStackTraceCaptureEnabled(): boolean {
+    for (const observer of this._sceneObservers.values()) {
+      return observer.getLifecycleTracker().isStackTraceCaptureEnabled();
+    }
+    return false;
+  }
+
+  /**
+   * Clear all resource lifecycle events
+   */
+  clearResourceEvents(): void {
+    for (const observer of this._sceneObservers.values()) {
+      observer.getLifecycleTracker().clear();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // PRIVATE UTILITIES
+  // ─────────────────────────────────────────────────────────────────
 
   private sendMessage(message: DebugMessage): void {
     if (this._transport?.isConnected()) {

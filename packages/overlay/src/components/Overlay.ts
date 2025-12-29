@@ -1,4 +1,4 @@
-import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics } from '@3lens/core';
+import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType } from '@3lens/core';
 import { calculateBenchmarkScore } from '@3lens/core';
 
 import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
@@ -92,7 +92,7 @@ export class ThreeLensOverlay {
   private resizeState: { panelId: string; startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
   private lastStatsUpdate = 0;
   private statsUpdateInterval = 500; // Update stats UI every 500ms (2x per second)
-  private statsTab: 'overview' | 'memory' | 'rendering' | 'timeline' = 'overview';
+  private statsTab: 'overview' | 'memory' | 'rendering' | 'timeline' | 'resources' = 'overview';
   
   // Timeline/Frames state
   private timelineZoom = 1.0;
@@ -1138,12 +1138,14 @@ export class ThreeLensOverlay {
         <button class="three-lens-tab ${this.statsTab === 'memory' ? 'active' : ''}" data-tab="memory">Memory</button>
         <button class="three-lens-tab ${this.statsTab === 'rendering' ? 'active' : ''}" data-tab="rendering">Rendering</button>
         <button class="three-lens-tab ${this.statsTab === 'timeline' ? 'active' : ''}" data-tab="timeline">Frames</button>
+        <button class="three-lens-tab ${this.statsTab === 'resources' ? 'active' : ''}" data-tab="resources">Resources</button>
       </div>
       <div class="three-lens-stats-tab-content" id="three-lens-stats-tab-content">
         ${this.statsTab === 'overview' ? this.renderOverviewTab(stats, benchmark, fps, fpsSmoothed, fps1Low) : ''}
         ${this.statsTab === 'memory' ? this.renderMemoryTab(stats) : ''}
         ${this.statsTab === 'rendering' ? this.renderRenderingTab(stats) : ''}
         ${this.statsTab === 'timeline' ? this.renderTimelineTab(stats) : ''}
+        ${this.statsTab === 'resources' ? this.renderResourcesTab() : ''}
       </div>
     `;
   }
@@ -2749,6 +2751,248 @@ export class ThreeLensOverlay {
     return spikes;
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // RESOURCES TAB (Lifecycle Tracking)
+  // ═══════════════════════════════════════════════════════════════
+
+  private renderResourcesTab(): string {
+    const summary = this.probe.getResourceLifecycleSummary();
+    const events = this.probe.getResourceEvents();
+    const potentialLeaks = this.probe.getPotentialResourceLeaks();
+    const stackTracesEnabled = this.probe.isResourceStackTraceCaptureEnabled();
+    
+    // Get recent events (last 50)
+    const recentEvents = events.slice(-50).reverse();
+    
+    return `
+      <div class="three-lens-resources-profiler">
+        ${this.renderResourceSummary(summary)}
+        ${this.renderResourceControls(stackTracesEnabled)}
+        ${potentialLeaks.length > 0 ? this.renderPotentialLeaks(potentialLeaks) : ''}
+        ${this.renderResourceTimeline(recentEvents)}
+        ${this.renderResourceEventList(recentEvents)}
+      </div>
+    `;
+  }
+
+  private renderResourceSummary(summary: ResourceLifecycleSummary): string {
+    return `
+      <div class="three-lens-resource-summary">
+        <div class="three-lens-resource-summary-title">Resource Lifecycle Summary</div>
+        <div class="three-lens-resource-summary-grid">
+          <div class="three-lens-resource-summary-item">
+            <div class="three-lens-resource-summary-icon geometry">📐</div>
+            <div class="three-lens-resource-summary-details">
+              <div class="three-lens-resource-summary-label">Geometries</div>
+              <div class="three-lens-resource-summary-stats">
+                <span class="created">${summary.geometries.created} created</span>
+                <span class="disposed">${summary.geometries.disposed} disposed</span>
+                <span class="active ${summary.geometries.active > 0 ? 'highlight' : ''}">${summary.geometries.active} active</span>
+                ${summary.geometries.leaked > 0 ? `<span class="leaked">⚠ ${summary.geometries.leaked} leaked?</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="three-lens-resource-summary-item">
+            <div class="three-lens-resource-summary-icon material">🎨</div>
+            <div class="three-lens-resource-summary-details">
+              <div class="three-lens-resource-summary-label">Materials</div>
+              <div class="three-lens-resource-summary-stats">
+                <span class="created">${summary.materials.created} created</span>
+                <span class="disposed">${summary.materials.disposed} disposed</span>
+                <span class="active ${summary.materials.active > 0 ? 'highlight' : ''}">${summary.materials.active} active</span>
+                ${summary.materials.leaked > 0 ? `<span class="leaked">⚠ ${summary.materials.leaked} leaked?</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="three-lens-resource-summary-item">
+            <div class="three-lens-resource-summary-icon texture">🖼</div>
+            <div class="three-lens-resource-summary-details">
+              <div class="three-lens-resource-summary-label">Textures</div>
+              <div class="three-lens-resource-summary-stats">
+                <span class="created">${summary.textures.created} created</span>
+                <span class="disposed">${summary.textures.disposed} disposed</span>
+                <span class="active ${summary.textures.active > 0 ? 'highlight' : ''}">${summary.textures.active} active</span>
+                ${summary.textures.leaked > 0 ? `<span class="leaked">⚠ ${summary.textures.leaked} leaked?</span>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="three-lens-resource-total-events">${summary.totalEvents} total events tracked</div>
+      </div>
+    `;
+  }
+
+  private renderResourceControls(stackTracesEnabled: boolean): string {
+    return `
+      <div class="three-lens-resource-controls">
+        <div class="three-lens-toggle-row" data-action="toggle-stack-traces">
+          <span class="three-lens-toggle-label">Capture Stack Traces</span>
+          <button class="three-lens-toggle-btn ${stackTracesEnabled ? 'active' : ''}" title="Capture stack traces for resource events (performance impact)">
+            <span class="three-lens-toggle-track">
+              <span class="three-lens-toggle-thumb"></span>
+            </span>
+          </button>
+        </div>
+        <button class="three-lens-action-btn" data-action="clear-resource-events" title="Clear all tracked events">
+          🗑 Clear Events
+        </button>
+      </div>
+    `;
+  }
+
+  private renderPotentialLeaks(leaks: Array<{ type: ResourceType; uuid: string; name?: string; subtype?: string; ageMs: number }>): string {
+    return `
+      <div class="three-lens-potential-leaks">
+        <div class="three-lens-potential-leaks-header">
+          <span class="three-lens-potential-leaks-icon">⚠</span>
+          <span>Potential Memory Leaks (${leaks.length})</span>
+        </div>
+        <div class="three-lens-potential-leaks-list">
+          ${leaks.slice(0, 5).map(leak => `
+            <div class="three-lens-leak-item">
+              <span class="three-lens-leak-type ${leak.type}">${this.getResourceIcon(leak.type)}</span>
+              <span class="three-lens-leak-name">${leak.name || leak.subtype || leak.uuid.substring(0, 8)}</span>
+              <span class="three-lens-leak-age">${this.formatAge(leak.ageMs)}</span>
+            </div>
+          `).join('')}
+          ${leaks.length > 5 ? `<div class="three-lens-leak-more">+ ${leaks.length - 5} more...</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderResourceTimeline(events: ResourceLifecycleEvent[]): string {
+    if (events.length === 0) {
+      return `<div class="three-lens-resource-timeline-empty">No resource events recorded yet</div>`;
+    }
+
+    // Group events into time buckets for visualization
+    const now = performance.now();
+    const timeWindowMs = 60000; // Last 60 seconds
+    const bucketCount = 30;
+    const bucketSizeMs = timeWindowMs / bucketCount;
+    
+    const buckets: Array<{ geometry: number; material: number; texture: number; disposed: number }> = [];
+    for (let i = 0; i < bucketCount; i++) {
+      buckets.push({ geometry: 0, material: 0, texture: 0, disposed: 0 });
+    }
+
+    for (const event of events) {
+      const age = now - event.timestamp;
+      if (age > timeWindowMs) continue;
+      
+      const bucketIndex = Math.floor((timeWindowMs - age) / bucketSizeMs);
+      if (bucketIndex >= 0 && bucketIndex < bucketCount) {
+        if (event.eventType === 'disposed') {
+          buckets[bucketIndex].disposed++;
+        } else if (event.eventType === 'created') {
+          const resType = event.resourceType as 'geometry' | 'material' | 'texture';
+          if (resType in buckets[bucketIndex]) {
+            buckets[bucketIndex][resType]++;
+          }
+        }
+      }
+    }
+
+    const maxValue = Math.max(1, ...buckets.map(b => b.geometry + b.material + b.texture + b.disposed));
+
+    return `
+      <div class="three-lens-resource-timeline">
+        <div class="three-lens-resource-timeline-header">
+          <span>Event Timeline (last 60s)</span>
+          <div class="three-lens-resource-timeline-legend">
+            <span class="geometry">📐 Geo</span>
+            <span class="material">🎨 Mat</span>
+            <span class="texture">🖼 Tex</span>
+            <span class="disposed">✕ Disposed</span>
+          </div>
+        </div>
+        <div class="three-lens-resource-timeline-chart">
+          ${buckets.map((bucket, i) => {
+            const totalHeight = ((bucket.geometry + bucket.material + bucket.texture + bucket.disposed) / maxValue * 100);
+            const geoHeight = (bucket.geometry / maxValue * 100);
+            const matHeight = (bucket.material / maxValue * 100);
+            const texHeight = (bucket.texture / maxValue * 100);
+            const dispHeight = (bucket.disposed / maxValue * 100);
+            
+            return `
+              <div class="three-lens-resource-timeline-bar" title="${bucket.geometry + bucket.material + bucket.texture} created, ${bucket.disposed} disposed">
+                <div class="three-lens-resource-bar-stack" style="height: ${totalHeight}%">
+                  ${geoHeight > 0 ? `<div class="three-lens-resource-bar-segment geometry" style="height: ${geoHeight / totalHeight * 100}%"></div>` : ''}
+                  ${matHeight > 0 ? `<div class="three-lens-resource-bar-segment material" style="height: ${matHeight / totalHeight * 100}%"></div>` : ''}
+                  ${texHeight > 0 ? `<div class="three-lens-resource-bar-segment texture" style="height: ${texHeight / totalHeight * 100}%"></div>` : ''}
+                  ${dispHeight > 0 ? `<div class="three-lens-resource-bar-segment disposed" style="height: ${dispHeight / totalHeight * 100}%"></div>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="three-lens-resource-timeline-labels">
+          <span>60s ago</span>
+          <span>now</span>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderResourceEventList(events: ResourceLifecycleEvent[]): string {
+    if (events.length === 0) {
+      return '';
+    }
+
+    return `
+      <div class="three-lens-resource-event-list">
+        <div class="three-lens-resource-event-list-header">Recent Events</div>
+        <div class="three-lens-resource-event-list-items">
+          ${events.slice(0, 20).map(event => `
+            <div class="three-lens-resource-event-item ${event.eventType}">
+              <span class="three-lens-resource-event-type ${event.resourceType}">${this.getResourceIcon(event.resourceType)}</span>
+              <span class="three-lens-resource-event-action ${event.eventType}">${this.getEventTypeLabel(event.eventType)}</span>
+              <span class="three-lens-resource-event-name">${event.resourceName || event.resourceSubtype || event.resourceUuid.substring(0, 8)}</span>
+              ${event.metadata?.textureSlot ? `<span class="three-lens-resource-event-slot">[${event.metadata.textureSlot}]</span>` : ''}
+              <span class="three-lens-resource-event-time">${this.formatEventTime(event.timestamp)}</span>
+            </div>
+          `).join('')}
+        </div>
+        ${events.length > 20 ? `<div class="three-lens-resource-event-more">${events.length - 20} more events...</div>` : ''}
+      </div>
+    `;
+  }
+
+  private getResourceIcon(type: string): string {
+    switch (type) {
+      case 'geometry': return '📐';
+      case 'material': return '🎨';
+      case 'texture': return '🖼';
+      default: return '📦';
+    }
+  }
+
+  private getEventTypeLabel(eventType: string): string {
+    switch (eventType) {
+      case 'created': return '+';
+      case 'disposed': return '✕';
+      case 'attached': return '→';
+      case 'detached': return '←';
+      default: return '?';
+    }
+  }
+
+  private formatAge(ms: number): string {
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+    if (ms < 3600000) return `${(ms / 60000).toFixed(1)}m`;
+    return `${(ms / 3600000).toFixed(1)}h`;
+  }
+
+  private formatEventTime(timestamp: number): string {
+    const age = performance.now() - timestamp;
+    if (age < 1000) return 'now';
+    if (age < 60000) return `${Math.round(age / 1000)}s ago`;
+    if (age < 3600000) return `${Math.round(age / 60000)}m ago`;
+    return `${Math.round(age / 3600000)}h ago`;
+  }
+
   private findNodeById(nodes: SceneNode[], id: string): SceneNode | null {
     for (const node of nodes) {
       if (node.ref.debugId === id) return node;
@@ -3345,6 +3589,8 @@ export class ThreeLensOverlay {
       } else if (this.statsTab === 'timeline') {
         this.attachTimelineEvents();
         this.renderTimelineChart();
+      } else if (this.statsTab === 'resources') {
+        this.attachResourceEvents();
       }
     }
     
@@ -3370,6 +3616,8 @@ export class ThreeLensOverlay {
         return this.renderRenderingTab(stats);
       case 'timeline':
         return this.renderTimelineTab(stats);
+      case 'resources':
+        return this.renderResourcesTab();
       default:
         return '';
     }
@@ -3378,7 +3626,7 @@ export class ThreeLensOverlay {
   private attachStatsTabEvents(container: HTMLElement): void {
     container.querySelectorAll('.three-lens-tab').forEach(tab => {
       tab.addEventListener('click', (e) => {
-        const tabName = (e.currentTarget as HTMLElement).dataset.tab as 'overview' | 'memory' | 'rendering' | 'timeline';
+        const tabName = (e.currentTarget as HTMLElement).dataset.tab as 'overview' | 'memory' | 'rendering' | 'timeline' | 'resources';
         if (tabName && tabName !== this.statsTab) {
           this.statsTab = tabName;
           // Update tab active states
@@ -3395,11 +3643,38 @@ export class ThreeLensOverlay {
             } else if (this.statsTab === 'timeline') {
               this.attachTimelineEvents();
               this.renderTimelineChart();
+            } else if (this.statsTab === 'resources') {
+              this.attachResourceEvents();
             }
           }
         }
       });
     });
+  }
+
+  private attachResourceEvents(): void {
+    // Toggle stack traces
+    const stackTraceToggle = document.querySelector('[data-action="toggle-stack-traces"]');
+    const stackTraceBtn = stackTraceToggle?.querySelector('.three-lens-toggle-btn');
+    stackTraceToggle?.addEventListener('click', () => {
+      const isEnabled = this.probe.isResourceStackTraceCaptureEnabled();
+      this.probe.setResourceStackTraceCapture(!isEnabled);
+      stackTraceBtn?.classList.toggle('active', !isEnabled);
+    });
+
+    // Clear events button
+    document.querySelector('[data-action="clear-resource-events"]')?.addEventListener('click', () => {
+      this.probe.clearResourceEvents();
+      this.updateResourcesView();
+    });
+  }
+
+  private updateResourcesView(): void {
+    const tabContent = document.getElementById('three-lens-stats-tab-content');
+    if (tabContent && this.statsTab === 'resources') {
+      tabContent.innerHTML = this.renderCurrentTabContent();
+      this.attachResourceEvents();
+    }
   }
 
   private updateScenePanel(): void {

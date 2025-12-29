@@ -25,9 +25,11 @@ import type {
   RenderTargetsSummary,
   RenderTargetUsage,
 } from '../types';
+import { ResourceLifecycleTracker, type ResourceLifecycleEvent } from '../tracking/ResourceLifecycleTracker';
 
 export interface SceneObserverOptions {
   onSceneChange?: () => void;
+  onResourceEvent?: (event: ResourceLifecycleEvent) => void;
 }
 
 /**
@@ -43,10 +45,20 @@ export class SceneObserver {
   private texturesByUuid: Map<string, THREE.Texture> = new Map();
   private originalAdd: typeof THREE.Object3D.prototype.add;
   private originalRemove: typeof THREE.Object3D.prototype.remove;
+  
+  // Resource lifecycle tracking
+  private lifecycleTracker: ResourceLifecycleTracker;
+  private trackedResourceUuids: Set<string> = new Set();
 
   constructor(scene: THREE.Scene, options: SceneObserverOptions = {}) {
     this.scene = scene;
     this.options = options;
+    
+    // Initialize lifecycle tracker
+    this.lifecycleTracker = new ResourceLifecycleTracker();
+    if (options.onResourceEvent) {
+      this.lifecycleTracker.onEvent(options.onResourceEvent);
+    }
 
     // Store original methods
     this.originalAdd = scene.add.bind(scene);
@@ -57,6 +69,13 @@ export class SceneObserver {
 
     // Initial traversal
     this.traverseScene();
+  }
+
+  /**
+   * Get the lifecycle tracker for this observer
+   */
+  getLifecycleTracker(): ResourceLifecycleTracker {
+    return this.lifecycleTracker;
   }
 
   /**
@@ -1422,6 +1441,11 @@ export class SceneObserver {
     this.objectRefs.set(obj, ref);
     this.debugIdToObject.set(ref.debugId, obj);
 
+    // Track resources (geometry, materials, textures) for meshes
+    if (this.isMesh(obj)) {
+      this.trackMeshResources(obj);
+    }
+
     // Track children
     for (const child of obj.children) {
       this.trackObject(child);
@@ -1435,10 +1459,175 @@ export class SceneObserver {
       this.objectRefs.delete(obj);
     }
 
+    // Track resource detachment for meshes
+    if (this.isMesh(obj)) {
+      this.untrackMeshResources(obj);
+    }
+
     // Untrack children
     for (const child of obj.children) {
       this.untrackObject(child);
     }
+  }
+
+  /**
+   * Track resources attached to a mesh
+   */
+  private trackMeshResources(mesh: THREE.Mesh): void {
+    const meshRef = this.getOrCreateRef(mesh);
+
+    // Track geometry
+    if (mesh.geometry) {
+      const geo = mesh.geometry;
+      if (!this.trackedResourceUuids.has(geo.uuid)) {
+        this.trackedResourceUuids.add(geo.uuid);
+        const posAttr = geo.attributes?.position as THREE.BufferAttribute | undefined;
+        const vertexCount = posAttr?.count ?? 0;
+        const faceCount = geo.index ? geo.index.count / 3 : vertexCount / 3;
+        
+        this.lifecycleTracker.recordCreation('geometry', geo.uuid, {
+          name: geo.name || undefined,
+          subtype: geo.type || 'BufferGeometry',
+          estimatedMemory: this.estimateGeometryMemory(geo),
+          vertexCount,
+          faceCount: Math.round(faceCount),
+        });
+      }
+      
+      this.lifecycleTracker.recordAttachment('geometry', geo.uuid, mesh.uuid, {
+        meshName: meshRef.name,
+      });
+    }
+
+    // Track materials
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of materials) {
+      if (!mat) continue;
+      
+      if (!this.trackedResourceUuids.has(mat.uuid)) {
+        this.trackedResourceUuids.add(mat.uuid);
+        this.lifecycleTracker.recordCreation('material', mat.uuid, {
+          name: mat.name || undefined,
+          subtype: mat.type || 'Material',
+        });
+      }
+      
+      this.lifecycleTracker.recordAttachment('material', mat.uuid, mesh.uuid, {
+        meshName: meshRef.name,
+      });
+
+      // Track textures from material
+      this.trackMaterialTextures(mat, mesh.uuid, meshRef.name);
+    }
+  }
+
+  /**
+   * Track textures from a material
+   */
+  private trackMaterialTextures(material: THREE.Material, meshUuid: string, meshName?: string): void {
+    const textureProps = [
+      'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
+      'emissiveMap', 'alphaMap', 'envMap', 'lightMap', 'bumpMap',
+      'displacementMap', 'specularMap', 'gradientMap'
+    ];
+
+    for (const prop of textureProps) {
+      const texture = (material as unknown as Record<string, THREE.Texture | undefined>)[prop];
+      if (!texture) continue;
+      
+      if (!this.trackedResourceUuids.has(texture.uuid)) {
+        this.trackedResourceUuids.add(texture.uuid);
+        this.lifecycleTracker.recordCreation('texture', texture.uuid, {
+          name: texture.name || undefined,
+          subtype: texture.constructor.name || 'Texture',
+          estimatedMemory: this.estimateTextureMemorySimple(texture),
+        });
+      }
+      
+      this.lifecycleTracker.recordAttachment('texture', texture.uuid, meshUuid, {
+        meshName,
+        textureSlot: prop,
+      });
+    }
+  }
+
+  /**
+   * Untrack resources when a mesh is removed
+   */
+  private untrackMeshResources(mesh: THREE.Mesh): void {
+    const meshRef = this.objectRefs.get(mesh);
+    const meshName = meshRef?.name;
+
+    // Record geometry detachment
+    if (mesh.geometry) {
+      this.lifecycleTracker.recordDetachment('geometry', mesh.geometry.uuid, mesh.uuid, {
+        meshName,
+      });
+    }
+
+    // Record material detachment
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of materials) {
+      if (!mat) continue;
+      
+      this.lifecycleTracker.recordDetachment('material', mat.uuid, mesh.uuid, {
+        meshName,
+      });
+
+      // Record texture detachments
+      const textureProps = [
+        'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
+        'emissiveMap', 'alphaMap', 'envMap', 'lightMap', 'bumpMap',
+        'displacementMap', 'specularMap', 'gradientMap'
+      ];
+
+      for (const prop of textureProps) {
+        const texture = (mat as unknown as Record<string, THREE.Texture | undefined>)[prop];
+        if (texture) {
+          this.lifecycleTracker.recordDetachment('texture', texture.uuid, mesh.uuid, {
+            meshName,
+            textureSlot: prop,
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Estimate geometry memory usage in bytes
+   */
+  private estimateGeometryMemory(geometry: THREE.BufferGeometry): number {
+    let bytes = 0;
+    
+    for (const name in geometry.attributes) {
+      const attr = geometry.attributes[name] as THREE.BufferAttribute;
+      if (attr.array) {
+        bytes += attr.array.byteLength;
+      }
+    }
+    
+    if (geometry.index?.array) {
+      bytes += geometry.index.array.byteLength;
+    }
+    
+    return bytes;
+  }
+
+  /**
+   * Estimate texture memory usage in bytes (simple version for lifecycle tracking)
+   */
+  private estimateTextureMemorySimple(texture: THREE.Texture): number {
+    const image = texture.image;
+    if (!image) return 0;
+    
+    const width = image.width || image.videoWidth || 256;
+    const height = image.height || image.videoHeight || 256;
+    const bytesPerPixel = 4; // RGBA
+    
+    // Account for mipmaps (roughly 1.33x base size)
+    const mipmapFactor = texture.generateMipmaps ? 1.33 : 1;
+    
+    return Math.round(width * height * bytesPerPixel * mipmapFactor);
   }
 
   private createRef(obj: THREE.Object3D): TrackedObjectRef {

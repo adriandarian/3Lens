@@ -102,6 +102,17 @@ export type {
   FlyToOptions,
 } from './helpers/CameraController';
 
+// Resource Tracking
+export { ResourceLifecycleTracker } from './tracking/ResourceLifecycleTracker';
+export type {
+  ResourceType,
+  LifecycleEventType,
+  ResourceLifecycleEvent,
+  ResourceLifecycleSummary,
+  ResourceTrackerOptions,
+  LifecycleEventCallback,
+} from './tracking/ResourceLifecycleTracker';
+
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
 
