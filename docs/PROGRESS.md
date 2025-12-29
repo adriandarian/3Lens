@@ -319,10 +319,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Orphaned resources warning | ⬜ | |
-| Undisposed resources after N frames | ⬜ | |
-| Memory growth alerts | ⬜ | |
-| Leak report generation | ⬜ | |
+| Orphaned resources warning | ✅ | Detects resources not attached to any mesh, shown in Resources tab |
+| Undisposed resources after N frames | ✅ | Configurable threshold (default 60s), generates alerts |
+| Memory growth alerts | ✅ | Tracks memory history, alerts on consistent growth >50MB |
+| Leak report generation | ✅ | Full report with stats, alerts, recommendations - outputs to console |
 
 ### Memory Panel
 

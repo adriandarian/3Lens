@@ -19,7 +19,7 @@ import { SelectionHelper } from '../helpers/SelectionHelper';
 import { InspectMode } from '../helpers/InspectMode';
 import { TransformGizmo, type TransformMode, type TransformSpace, type TransformHistoryEntry } from '../helpers/TransformGizmo';
 import { CameraController, type CameraInfo, type FlyToOptions } from '../helpers/CameraController';
-import { ResourceLifecycleTracker, type ResourceLifecycleEvent, type ResourceLifecycleSummary, type ResourceType, type LifecycleEventType } from '../tracking/ResourceLifecycleTracker';
+import { ResourceLifecycleTracker, type ResourceLifecycleEvent, type ResourceLifecycleSummary, type ResourceType, type LifecycleEventType, type LeakAlert, type LeakReport, type LeakAlertCallback } from '../tracking/ResourceLifecycleTracker';
 
 /**
  * Version of the probe
@@ -2047,6 +2047,144 @@ export class DevtoolProbe {
     for (const observer of this._sceneObservers.values()) {
       observer.getLifecycleTracker().clear();
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // LEAK DETECTION
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Subscribe to leak detection alerts
+   */
+  onLeakAlert(callback: LeakAlertCallback): Unsubscribe {
+    const unsubscribes: Array<() => void> = [];
+    for (const observer of this._sceneObservers.values()) {
+      unsubscribes.push(observer.getLifecycleTracker().onAlert(callback));
+    }
+    return () => {
+      for (const unsub of unsubscribes) {
+        unsub();
+      }
+    };
+  }
+
+  /**
+   * Run leak detection checks and return new alerts
+   */
+  runLeakDetection(): LeakAlert[] {
+    const allAlerts: LeakAlert[] = [];
+    for (const observer of this._sceneObservers.values()) {
+      allAlerts.push(...observer.getLifecycleTracker().runLeakDetection());
+    }
+    return allAlerts;
+  }
+
+  /**
+   * Get all leak alerts
+   */
+  getLeakAlerts(): LeakAlert[] {
+    const allAlerts: LeakAlert[] = [];
+    for (const observer of this._sceneObservers.values()) {
+      allAlerts.push(...observer.getLifecycleTracker().getAlerts());
+    }
+    return allAlerts.sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  /**
+   * Clear all leak alerts
+   */
+  clearLeakAlerts(): void {
+    for (const observer of this._sceneObservers.values()) {
+      observer.getLifecycleTracker().clearAlerts();
+    }
+  }
+
+  /**
+   * Get orphaned resources (not attached to any mesh)
+   */
+  getOrphanedResources(): Array<{
+    type: ResourceType;
+    uuid: string;
+    name?: string;
+    subtype?: string;
+    ageMs: number;
+  }> {
+    const orphans: Array<{
+      type: ResourceType;
+      uuid: string;
+      name?: string;
+      subtype?: string;
+      ageMs: number;
+    }> = [];
+
+    for (const observer of this._sceneObservers.values()) {
+      orphans.push(...observer.getLifecycleTracker().getOrphanedResources());
+    }
+
+    const seen = new Set<string>();
+    return orphans
+      .sort((a, b) => b.ageMs - a.ageMs)
+      .filter(o => {
+        if (seen.has(o.uuid)) return false;
+        seen.add(o.uuid);
+        return true;
+      });
+  }
+
+  /**
+   * Get estimated total memory usage of active resources
+   */
+  getEstimatedResourceMemory(): number {
+    let total = 0;
+    for (const observer of this._sceneObservers.values()) {
+      total += observer.getLifecycleTracker().getEstimatedMemory();
+    }
+    return total;
+  }
+
+  /**
+   * Get memory history for charting
+   */
+  getResourceMemoryHistory(): Array<{ timestamp: number; estimatedBytes: number }> {
+    // Merge and sort history from all observers
+    const allHistory: Array<{ timestamp: number; estimatedBytes: number }> = [];
+    for (const observer of this._sceneObservers.values()) {
+      allHistory.push(...observer.getLifecycleTracker().getMemoryHistory());
+    }
+    return allHistory.sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  /**
+   * Generate comprehensive leak detection report
+   */
+  generateLeakReport(): LeakReport {
+    // For now, use the first observer's report as base
+    // In a multi-scene setup, we might want to merge reports
+    for (const observer of this._sceneObservers.values()) {
+      return observer.getLifecycleTracker().generateLeakReport();
+    }
+
+    // Return empty report if no observers
+    const now = performance.now();
+    return {
+      generatedAt: now,
+      sessionDurationMs: 0,
+      summary: {
+        totalAlerts: 0,
+        criticalAlerts: 0,
+        warningAlerts: 0,
+        infoAlerts: 0,
+        estimatedLeakedMemoryBytes: 0,
+      },
+      alerts: [],
+      resourceStats: {
+        geometries: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
+        materials: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
+        textures: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
+      },
+      memoryHistory: [],
+      recommendations: [],
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────
