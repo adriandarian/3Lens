@@ -4364,4 +4364,265 @@ export const OVERLAY_STYLES = `
   text-align: center;
   padding: 4px 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LEAK DETECTION UI
+   ═══════════════════════════════════════════════════════════════ */
+
+.three-lens-resource-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--3lens-bg-tertiary);
+  border-radius: var(--3lens-radius-sm);
+}
+
+.three-lens-leak-controls-left {
+  display: flex;
+  gap: 4px;
+}
+
+.three-lens-leak-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.three-lens-action-btn.small {
+  padding: 2px 6px;
+  font-size: 10px;
+  min-width: unset;
+}
+
+.three-lens-toggle-row.compact {
+  gap: 4px;
+}
+
+.three-lens-toggle-row.compact .three-lens-toggle-label {
+  font-size: 9px;
+}
+
+/* Memory Usage */
+.three-lens-memory-usage {
+  padding: 6px 8px;
+  background: var(--3lens-bg-tertiary);
+  border-radius: var(--3lens-radius-sm);
+}
+
+.three-lens-memory-usage-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.three-lens-memory-usage-label {
+  font-size: 9px;
+  color: var(--3lens-text-secondary);
+}
+
+.three-lens-memory-usage-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--3lens-text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.three-lens-memory-trend {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.three-lens-memory-trend.growing {
+  color: var(--3lens-accent-red);
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.three-lens-memory-trend.shrinking {
+  color: var(--3lens-accent-green);
+  background: rgba(52, 211, 153, 0.2);
+}
+
+.three-lens-memory-trend.stable {
+  color: var(--3lens-text-tertiary);
+  background: var(--3lens-bg-secondary);
+}
+
+/* Leak Alerts */
+.three-lens-leak-alerts {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--3lens-radius-sm);
+  padding: 8px;
+}
+
+.three-lens-leak-alerts-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--3lens-accent-red);
+  margin-bottom: 6px;
+}
+
+.three-lens-leak-alerts-icon {
+  font-size: 12px;
+}
+
+.three-lens-alert-badge {
+  font-size: 8px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.three-lens-alert-badge.critical {
+  background: var(--3lens-accent-red);
+  color: white;
+}
+
+.three-lens-alert-badge.warning {
+  background: var(--3lens-accent-orange);
+  color: white;
+}
+
+.three-lens-leak-alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.three-lens-leak-alert-item {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--3lens-bg-secondary);
+  border-radius: var(--3lens-radius-sm);
+  border-left: 2px solid transparent;
+}
+
+.three-lens-leak-alert-item.critical {
+  border-left-color: var(--3lens-accent-red);
+}
+
+.three-lens-leak-alert-item.warning {
+  border-left-color: var(--3lens-accent-orange);
+}
+
+.three-lens-leak-alert-item.info {
+  border-left-color: var(--3lens-accent-blue);
+}
+
+.three-lens-alert-severity {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.three-lens-alert-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.three-lens-alert-message {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--3lens-text-primary);
+  margin-bottom: 2px;
+}
+
+.three-lens-alert-details {
+  font-size: 9px;
+  color: var(--3lens-text-secondary);
+  margin-bottom: 4px;
+}
+
+.three-lens-alert-suggestion {
+  font-size: 8px;
+  color: var(--3lens-accent-cyan);
+  background: rgba(34, 211, 238, 0.1);
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+/* Orphaned Resources */
+.three-lens-orphaned-resources {
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: var(--3lens-radius-sm);
+  padding: 8px;
+}
+
+.three-lens-orphaned-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a78bfa;
+  margin-bottom: 4px;
+}
+
+.three-lens-orphaned-icon {
+  font-size: 12px;
+}
+
+.three-lens-orphaned-hint {
+  font-size: 8px;
+  color: var(--3lens-text-tertiary);
+  margin-bottom: 6px;
+}
+
+.three-lens-orphaned-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.three-lens-orphan-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 2px;
+  font-size: 9px;
+}
+
+.three-lens-orphan-type {
+  font-size: 10px;
+}
+
+.three-lens-orphan-type.geometry { color: #60a5fa; }
+.three-lens-orphan-type.material { color: #a78bfa; }
+.three-lens-orphan-type.texture { color: #34d399; }
+
+.three-lens-orphan-name {
+  flex: 1;
+  color: var(--3lens-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.three-lens-orphan-age {
+  color: var(--3lens-text-tertiary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.three-lens-orphan-more {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  text-align: center;
+  padding: 4px 0;
+}
+
+.three-lens-leak-more {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  text-align: center;
+  padding: 4px 0;
+}
 `;

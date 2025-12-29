@@ -1,4 +1,4 @@
-import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType } from '@3lens/core';
+import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType, LeakAlert, LeakReport } from '@3lens/core';
 import { calculateBenchmarkScore } from '@3lens/core';
 
 import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
@@ -2759,7 +2759,10 @@ export class ThreeLensOverlay {
     const summary = this.probe.getResourceLifecycleSummary();
     const events = this.probe.getResourceEvents();
     const potentialLeaks = this.probe.getPotentialResourceLeaks();
+    const orphanedResources = this.probe.getOrphanedResources();
+    const leakAlerts = this.probe.getLeakAlerts();
     const stackTracesEnabled = this.probe.isResourceStackTraceCaptureEnabled();
+    const estimatedMemory = this.probe.getEstimatedResourceMemory();
     
     // Get recent events (last 50)
     const recentEvents = events.slice(-50).reverse();
@@ -2767,7 +2770,10 @@ export class ThreeLensOverlay {
     return `
       <div class="three-lens-resources-profiler">
         ${this.renderResourceSummary(summary)}
-        ${this.renderResourceControls(stackTracesEnabled)}
+        ${this.renderLeakDetectionControls(stackTracesEnabled)}
+        ${this.renderMemoryUsage(estimatedMemory)}
+        ${leakAlerts.length > 0 ? this.renderLeakAlerts(leakAlerts) : ''}
+        ${orphanedResources.length > 0 ? this.renderOrphanedResources(orphanedResources) : ''}
         ${potentialLeaks.length > 0 ? this.renderPotentialLeaks(potentialLeaks) : ''}
         ${this.renderResourceTimeline(recentEvents)}
         ${this.renderResourceEventList(recentEvents)}
@@ -2822,22 +2828,126 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderResourceControls(stackTracesEnabled: boolean): string {
+  private renderLeakDetectionControls(stackTracesEnabled: boolean): string {
     return `
       <div class="three-lens-resource-controls">
-        <div class="three-lens-toggle-row" data-action="toggle-stack-traces">
-          <span class="three-lens-toggle-label">Capture Stack Traces</span>
-          <button class="three-lens-toggle-btn ${stackTracesEnabled ? 'active' : ''}" title="Capture stack traces for resource events (performance impact)">
-            <span class="three-lens-toggle-track">
-              <span class="three-lens-toggle-thumb"></span>
-            </span>
+        <div class="three-lens-leak-controls-left">
+          <button class="three-lens-action-btn" data-action="run-leak-detection" title="Run leak detection checks">
+            🔍 Detect Leaks
+          </button>
+          <button class="three-lens-action-btn" data-action="generate-leak-report" title="Generate detailed leak report">
+            📋 Report
           </button>
         </div>
-        <button class="three-lens-action-btn" data-action="clear-resource-events" title="Clear all tracked events">
-          🗑 Clear Events
-        </button>
+        <div class="three-lens-leak-controls-right">
+          <div class="three-lens-toggle-row compact" data-action="toggle-stack-traces">
+            <span class="three-lens-toggle-label">Stacks</span>
+            <button class="three-lens-toggle-btn ${stackTracesEnabled ? 'active' : ''}" title="Capture stack traces (performance impact)">
+              <span class="three-lens-toggle-track">
+                <span class="three-lens-toggle-thumb"></span>
+              </span>
+            </button>
+          </div>
+          <button class="three-lens-action-btn small" data-action="clear-resource-events" title="Clear">
+            🗑
+          </button>
+        </div>
       </div>
     `;
+  }
+
+  private renderMemoryUsage(estimatedBytes: number): string {
+    const memoryHistory = this.probe.getResourceMemoryHistory();
+    const hasHistory = memoryHistory.length > 1;
+    
+    let trend = '';
+    let trendClass = '';
+    if (hasHistory) {
+      const first = memoryHistory[0].estimatedBytes;
+      const last = memoryHistory[memoryHistory.length - 1].estimatedBytes;
+      const diff = last - first;
+      if (diff > 1024 * 1024) { // > 1MB growth
+        trend = `↑ +${formatBytes(diff)}`;
+        trendClass = 'growing';
+      } else if (diff < -1024 * 1024) { // > 1MB decrease
+        trend = `↓ ${formatBytes(Math.abs(diff))}`;
+        trendClass = 'shrinking';
+      } else {
+        trend = '→ stable';
+        trendClass = 'stable';
+      }
+    }
+
+    return `
+      <div class="three-lens-memory-usage">
+        <div class="three-lens-memory-usage-header">
+          <span class="three-lens-memory-usage-label">Resource Memory</span>
+          <span class="three-lens-memory-usage-value">${formatBytes(estimatedBytes)}</span>
+          ${trend ? `<span class="three-lens-memory-trend ${trendClass}">${trend}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderLeakAlerts(alerts: LeakAlert[]): string {
+    const criticalAlerts = alerts.filter(a => a.severity === 'critical');
+    const warningAlerts = alerts.filter(a => a.severity === 'warning');
+    
+    return `
+      <div class="three-lens-leak-alerts">
+        <div class="three-lens-leak-alerts-header">
+          <span class="three-lens-leak-alerts-icon">🚨</span>
+          <span>Leak Alerts (${alerts.length})</span>
+          ${criticalAlerts.length > 0 ? `<span class="three-lens-alert-badge critical">${criticalAlerts.length} critical</span>` : ''}
+          ${warningAlerts.length > 0 ? `<span class="three-lens-alert-badge warning">${warningAlerts.length} warning</span>` : ''}
+          <button class="three-lens-action-btn small" data-action="clear-leak-alerts" title="Clear alerts">✕</button>
+        </div>
+        <div class="three-lens-leak-alerts-list">
+          ${alerts.slice(0, 5).map(alert => `
+            <div class="three-lens-leak-alert-item ${alert.severity}">
+              <span class="three-lens-alert-severity ${alert.severity}">${this.getSeverityIcon(alert.severity)}</span>
+              <div class="three-lens-alert-content">
+                <div class="three-lens-alert-message">${alert.message}</div>
+                <div class="three-lens-alert-details">${alert.details}</div>
+                <div class="three-lens-alert-suggestion">💡 ${alert.suggestion}</div>
+              </div>
+            </div>
+          `).join('')}
+          ${alerts.length > 5 ? `<div class="three-lens-leak-more">+ ${alerts.length - 5} more alerts...</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderOrphanedResources(orphans: Array<{ type: ResourceType; uuid: string; name?: string; subtype?: string; ageMs: number }>): string {
+    return `
+      <div class="three-lens-orphaned-resources">
+        <div class="three-lens-orphaned-header">
+          <span class="three-lens-orphaned-icon">👻</span>
+          <span>Orphaned Resources (${orphans.length})</span>
+        </div>
+        <div class="three-lens-orphaned-hint">Not attached to any mesh - consider disposing</div>
+        <div class="three-lens-orphaned-list">
+          ${orphans.slice(0, 5).map(orphan => `
+            <div class="three-lens-orphan-item">
+              <span class="three-lens-orphan-type ${orphan.type}">${this.getResourceIcon(orphan.type)}</span>
+              <span class="three-lens-orphan-name">${orphan.name || orphan.subtype || orphan.uuid.substring(0, 8)}</span>
+              <span class="three-lens-orphan-age">${this.formatAge(orphan.ageMs)}</span>
+            </div>
+          `).join('')}
+          ${orphans.length > 5 ? `<div class="three-lens-orphan-more">+ ${orphans.length - 5} more...</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private getSeverityIcon(severity: string): string {
+    switch (severity) {
+      case 'critical': return '🔴';
+      case 'warning': return '🟡';
+      case 'info': return '🔵';
+      default: return '⚪';
+    }
   }
 
   private renderPotentialLeaks(leaks: Array<{ type: ResourceType; uuid: string; name?: string; subtype?: string; ageMs: number }>): string {
@@ -3667,6 +3777,81 @@ export class ThreeLensOverlay {
       this.probe.clearResourceEvents();
       this.updateResourcesView();
     });
+
+    // Run leak detection button
+    document.querySelector('[data-action="run-leak-detection"]')?.addEventListener('click', () => {
+      this.probe.runLeakDetection();
+      this.updateResourcesView();
+    });
+
+    // Generate leak report button
+    document.querySelector('[data-action="generate-leak-report"]')?.addEventListener('click', () => {
+      const report = this.probe.generateLeakReport();
+      this.showLeakReport(report);
+    });
+
+    // Clear leak alerts button
+    document.querySelector('[data-action="clear-leak-alerts"]')?.addEventListener('click', () => {
+      this.probe.clearLeakAlerts();
+      this.updateResourcesView();
+    });
+  }
+
+  private showLeakReport(report: LeakReport): void {
+    // Create a modal or log the report
+    const formatBytes = (bytes: number): string => {
+      if (bytes < 1024) return `${bytes}B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+    };
+
+    const reportText = `
+═══════════════════════════════════════════════════════════════
+                    3LENS LEAK DETECTION REPORT
+═══════════════════════════════════════════════════════════════
+
+Session Duration: ${(report.sessionDurationMs / 1000 / 60).toFixed(1)} minutes
+Generated At: ${new Date().toISOString()}
+
+SUMMARY
+───────────────────────────────────────────────────────────────
+Total Alerts: ${report.summary.totalAlerts}
+  • Critical: ${report.summary.criticalAlerts}
+  • Warning: ${report.summary.warningAlerts}
+  • Info: ${report.summary.infoAlerts}
+
+Estimated Leaked Memory: ${formatBytes(report.summary.estimatedLeakedMemoryBytes)}
+
+RESOURCE STATISTICS
+───────────────────────────────────────────────────────────────
+Geometries: ${report.resourceStats.geometries.created} created, ${report.resourceStats.geometries.disposed} disposed, ${report.resourceStats.geometries.orphaned} orphaned, ${report.resourceStats.geometries.leaked} leaked
+Materials:  ${report.resourceStats.materials.created} created, ${report.resourceStats.materials.disposed} disposed, ${report.resourceStats.materials.orphaned} orphaned, ${report.resourceStats.materials.leaked} leaked
+Textures:   ${report.resourceStats.textures.created} created, ${report.resourceStats.textures.disposed} disposed, ${report.resourceStats.textures.orphaned} orphaned, ${report.resourceStats.textures.leaked} leaked
+
+${report.alerts.length > 0 ? `
+ALERTS
+───────────────────────────────────────────────────────────────
+${report.alerts.map(a => `[${a.severity.toUpperCase()}] ${a.message}
+   ${a.details}
+   💡 ${a.suggestion}
+`).join('\n')}
+` : ''}
+
+${report.recommendations.length > 0 ? `
+RECOMMENDATIONS
+───────────────────────────────────────────────────────────────
+${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
+` : ''}
+
+═══════════════════════════════════════════════════════════════
+`;
+    
+    // Log to console for easy copying
+    console.log('%c3Lens Leak Report', 'font-size: 16px; font-weight: bold; color: #60a5fa;');
+    console.log(reportText);
+    
+    // Also show a brief notification in the UI
+    alert(`Leak Report Generated!\n\nCheck the browser console for the full report.\n\nSummary:\n• ${report.summary.totalAlerts} alerts\n• ${formatBytes(report.summary.estimatedLeakedMemoryBytes)} estimated leaked memory\n• ${report.recommendations.length} recommendations`);
   }
 
   private updateResourcesView(): void {

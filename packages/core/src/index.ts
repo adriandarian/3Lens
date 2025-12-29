@@ -111,6 +111,11 @@ export type {
   ResourceLifecycleSummary,
   ResourceTrackerOptions,
   LifecycleEventCallback,
+  LeakAlertSeverity,
+  LeakAlertType,
+  LeakAlert,
+  LeakReport,
+  LeakAlertCallback,
 } from './tracking/ResourceLifecycleTracker';
 
 // Adapters

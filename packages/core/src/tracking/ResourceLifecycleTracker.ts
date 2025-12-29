@@ -75,6 +75,63 @@ export interface ResourceTrackerOptions {
   captureStackTraces?: boolean;  // Whether to capture stack traces (performance impact)
   maxEvents?: number;            // Maximum events to keep in history
   leakThresholdMs?: number;      // Time after which an undisposed resource is considered leaked
+  orphanCheckIntervalMs?: number; // How often to check for orphaned resources
+  memoryGrowthThresholdBytes?: number; // Alert threshold for memory growth
+}
+
+/**
+ * Leak detection alert severity
+ */
+export type LeakAlertSeverity = 'info' | 'warning' | 'critical';
+
+/**
+ * Types of leak alerts
+ */
+export type LeakAlertType = 
+  | 'orphaned_resource'     // Resource not attached to any mesh
+  | 'undisposed_resource'   // Resource older than threshold, not disposed
+  | 'memory_growth'         // Memory usage growing consistently
+  | 'resource_accumulation' // Too many resources of one type
+  | 'detached_not_disposed'; // Resource detached but never disposed
+
+/**
+ * A leak detection alert
+ */
+export interface LeakAlert {
+  id: string;
+  type: LeakAlertType;
+  severity: LeakAlertSeverity;
+  resourceType?: ResourceType;
+  resourceUuid?: string;
+  resourceName?: string;
+  message: string;
+  details: string;
+  timestamp: number;
+  stackTrace?: string;
+  suggestion: string;
+}
+
+/**
+ * Leak detection report
+ */
+export interface LeakReport {
+  generatedAt: number;
+  sessionDurationMs: number;
+  summary: {
+    totalAlerts: number;
+    criticalAlerts: number;
+    warningAlerts: number;
+    infoAlerts: number;
+    estimatedLeakedMemoryBytes: number;
+  };
+  alerts: LeakAlert[];
+  resourceStats: {
+    geometries: { created: number; disposed: number; orphaned: number; leaked: number };
+    materials: { created: number; disposed: number; orphaned: number; leaked: number };
+    textures: { created: number; disposed: number; orphaned: number; leaked: number };
+  };
+  memoryHistory: Array<{ timestamp: number; estimatedBytes: number }>;
+  recommendations: string[];
 }
 
 /**
@@ -83,21 +140,47 @@ export interface ResourceTrackerOptions {
 export type LifecycleEventCallback = (event: ResourceLifecycleEvent) => void;
 
 /**
+ * Callback for leak alerts
+ */
+export type LeakAlertCallback = (alert: LeakAlert) => void;
+
+/**
  * Tracks resource lifecycle events
  */
 export class ResourceLifecycleTracker {
   private events: ResourceLifecycleEvent[] = [];
-  private activeResources: Map<string, { type: ResourceType; createdAt: number; name?: string; subtype?: string }> = new Map();
+  private activeResources: Map<string, { 
+    type: ResourceType; 
+    createdAt: number; 
+    name?: string; 
+    subtype?: string;
+    estimatedMemory?: number;
+    attachedMeshes: Set<string>;  // Track which meshes this resource is attached to
+    lastAttachmentTime?: number;
+    detachedAt?: number;  // When it was last detached (if not disposed)
+  }> = new Map();
   private eventIdCounter = 0;
+  private alertIdCounter = 0;
   private callbacks: LifecycleEventCallback[] = [];
-  private options: Required<ResourceTrackerOptions>;
+  private alertCallbacks: LeakAlertCallback[] = [];
+  private alerts: LeakAlert[] = [];
+  private options: Required<Omit<ResourceTrackerOptions, 'orphanCheckIntervalMs' | 'memoryGrowthThresholdBytes'>> & {
+    orphanCheckIntervalMs: number;
+    memoryGrowthThresholdBytes: number;
+  };
+  private sessionStartTime: number;
+  private memoryHistory: Array<{ timestamp: number; estimatedBytes: number }> = [];
+  private lastMemoryCheck = 0;
 
   constructor(options: ResourceTrackerOptions = {}) {
     this.options = {
       captureStackTraces: options.captureStackTraces ?? false,
       maxEvents: options.maxEvents ?? 1000,
       leakThresholdMs: options.leakThresholdMs ?? 60000, // 1 minute default
+      orphanCheckIntervalMs: options.orphanCheckIntervalMs ?? 10000, // 10 seconds
+      memoryGrowthThresholdBytes: options.memoryGrowthThresholdBytes ?? 50 * 1024 * 1024, // 50MB
     };
+    this.sessionStartTime = performance.now();
   }
 
   /**
@@ -157,9 +240,12 @@ export class ResourceLifecycleTracker {
       createdAt: event.timestamp,
       name: options?.name,
       subtype: options?.subtype,
+      estimatedMemory: options?.estimatedMemory,
+      attachedMeshes: new Set(),
     });
 
     this.addEvent(event);
+    this.updateMemoryHistory();
   }
 
   /**
@@ -172,6 +258,7 @@ export class ResourceLifecycleTracker {
     this.activeResources.delete(resourceUuid);
 
     this.addEvent(event);
+    this.updateMemoryHistory();
   }
 
   /**
@@ -193,6 +280,14 @@ export class ResourceLifecycleTracker {
         textureSlot: options?.textureSlot,
       },
     });
+
+    // Track attachment
+    const resource = this.activeResources.get(resourceUuid);
+    if (resource) {
+      resource.attachedMeshes.add(meshUuid);
+      resource.lastAttachmentTime = event.timestamp;
+      resource.detachedAt = undefined; // Clear detached state
+    }
 
     this.addEvent(event);
   }
@@ -216,6 +311,15 @@ export class ResourceLifecycleTracker {
         textureSlot: options?.textureSlot,
       },
     });
+
+    // Track detachment
+    const resource = this.activeResources.get(resourceUuid);
+    if (resource) {
+      resource.attachedMeshes.delete(meshUuid);
+      if (resource.attachedMeshes.size === 0) {
+        resource.detachedAt = event.timestamp;
+      }
+    }
 
     this.addEvent(event);
   }
@@ -337,6 +441,441 @@ export class ResourceLifecycleTracker {
     return leaks;
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // LEAK DETECTION
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Subscribe to leak alerts
+   */
+  onAlert(callback: LeakAlertCallback): () => void {
+    this.alertCallbacks.push(callback);
+    return () => {
+      const index = this.alertCallbacks.indexOf(callback);
+      if (index !== -1) {
+        this.alertCallbacks.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Get all leak alerts
+   */
+  getAlerts(): LeakAlert[] {
+    return [...this.alerts];
+  }
+
+  /**
+   * Clear all alerts
+   */
+  clearAlerts(): void {
+    this.alerts = [];
+  }
+
+  /**
+   * Run leak detection checks
+   */
+  runLeakDetection(): LeakAlert[] {
+    const newAlerts: LeakAlert[] = [];
+    const now = performance.now();
+
+    // Check for orphaned resources (created but never attached)
+    newAlerts.push(...this.detectOrphanedResources(now));
+
+    // Check for undisposed resources after threshold
+    newAlerts.push(...this.detectUndisposedResources(now));
+
+    // Check for detached but not disposed resources
+    newAlerts.push(...this.detectDetachedNotDisposed(now));
+
+    // Check for resource accumulation
+    newAlerts.push(...this.detectResourceAccumulation());
+
+    // Check for memory growth
+    newAlerts.push(...this.detectMemoryGrowth());
+
+    // Add new alerts and notify callbacks
+    for (const alert of newAlerts) {
+      this.alerts.push(alert);
+      for (const callback of this.alertCallbacks) {
+        try {
+          callback(alert);
+        } catch (e) {
+          console.error('[3Lens] Error in leak alert callback:', e);
+        }
+      }
+    }
+
+    // Limit stored alerts
+    if (this.alerts.length > 100) {
+      this.alerts = this.alerts.slice(-100);
+    }
+
+    return newAlerts;
+  }
+
+  /**
+   * Detect orphaned resources (created but never attached to any mesh)
+   */
+  private detectOrphanedResources(now: number): LeakAlert[] {
+    const alerts: LeakAlert[] = [];
+    const orphanThresholdMs = 5000; // 5 seconds to get attached
+
+    for (const [uuid, resource] of this.activeResources) {
+      if (resource.attachedMeshes.size === 0 && 
+          !resource.lastAttachmentTime &&
+          now - resource.createdAt > orphanThresholdMs) {
+        
+        // Check if we already have an alert for this resource
+        if (this.alerts.some(a => a.resourceUuid === uuid && a.type === 'orphaned_resource')) {
+          continue;
+        }
+
+        alerts.push({
+          id: `alert_${++this.alertIdCounter}`,
+          type: 'orphaned_resource',
+          severity: 'warning',
+          resourceType: resource.type,
+          resourceUuid: uuid,
+          resourceName: resource.name,
+          message: `Orphaned ${resource.type}: ${resource.name || resource.subtype || uuid.substring(0, 8)}`,
+          details: `Created ${((now - resource.createdAt) / 1000).toFixed(1)}s ago but never attached to any mesh`,
+          timestamp: now,
+          suggestion: `Ensure this ${resource.type} is attached to a mesh or dispose it if unused`,
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  /**
+   * Detect resources that haven't been disposed after the threshold
+   */
+  private detectUndisposedResources(now: number): LeakAlert[] {
+    const alerts: LeakAlert[] = [];
+
+    for (const [uuid, resource] of this.activeResources) {
+      const ageMs = now - resource.createdAt;
+      
+      if (ageMs > this.options.leakThresholdMs) {
+        // Check if we already have an alert for this resource
+        if (this.alerts.some(a => a.resourceUuid === uuid && a.type === 'undisposed_resource')) {
+          continue;
+        }
+
+        const severity: LeakAlertSeverity = ageMs > this.options.leakThresholdMs * 3 ? 'critical' : 'warning';
+
+        alerts.push({
+          id: `alert_${++this.alertIdCounter}`,
+          type: 'undisposed_resource',
+          severity,
+          resourceType: resource.type,
+          resourceUuid: uuid,
+          resourceName: resource.name,
+          message: `Long-lived ${resource.type}: ${resource.name || resource.subtype || uuid.substring(0, 8)}`,
+          details: `Active for ${(ageMs / 1000).toFixed(1)}s (threshold: ${(this.options.leakThresholdMs / 1000).toFixed(0)}s)`,
+          timestamp: now,
+          suggestion: `Check if this ${resource.type} should be disposed. If it's intentionally persistent, you can ignore this alert.`,
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  /**
+   * Detect resources that were detached but never disposed
+   */
+  private detectDetachedNotDisposed(now: number): LeakAlert[] {
+    const alerts: LeakAlert[] = [];
+    const detachedThresholdMs = 10000; // 10 seconds after detachment
+
+    for (const [uuid, resource] of this.activeResources) {
+      if (resource.detachedAt && 
+          now - resource.detachedAt > detachedThresholdMs) {
+        
+        // Check if we already have an alert for this resource
+        if (this.alerts.some(a => a.resourceUuid === uuid && a.type === 'detached_not_disposed')) {
+          continue;
+        }
+
+        alerts.push({
+          id: `alert_${++this.alertIdCounter}`,
+          type: 'detached_not_disposed',
+          severity: 'warning',
+          resourceType: resource.type,
+          resourceUuid: uuid,
+          resourceName: resource.name,
+          message: `Detached but not disposed: ${resource.name || resource.subtype || uuid.substring(0, 8)}`,
+          details: `Detached ${((now - resource.detachedAt) / 1000).toFixed(1)}s ago but never disposed`,
+          timestamp: now,
+          suggestion: `Call .dispose() on this ${resource.type} to free GPU memory`,
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  /**
+   * Detect accumulation of too many resources
+   */
+  private detectResourceAccumulation(): LeakAlert[] {
+    const alerts: LeakAlert[] = [];
+    const thresholds = {
+      geometry: 100,
+      material: 200,
+      texture: 100,
+    };
+
+    const counts = { geometry: 0, material: 0, texture: 0 };
+    for (const resource of this.activeResources.values()) {
+      counts[resource.type]++;
+    }
+
+    for (const [type, count] of Object.entries(counts) as Array<[ResourceType, number]>) {
+      const threshold = thresholds[type];
+      if (count > threshold) {
+        // Check if we already have a recent accumulation alert for this type
+        const existingAlert = this.alerts.find(
+          a => a.type === 'resource_accumulation' && 
+               a.resourceType === type &&
+               performance.now() - a.timestamp < 30000 // Within last 30 seconds
+        );
+        if (existingAlert) continue;
+
+        const severity: LeakAlertSeverity = count > threshold * 2 ? 'critical' : 'warning';
+
+        alerts.push({
+          id: `alert_${++this.alertIdCounter}`,
+          type: 'resource_accumulation',
+          severity,
+          resourceType: type,
+          message: `High ${type} count: ${count}`,
+          details: `${count} active ${type}s exceeds threshold of ${threshold}`,
+          timestamp: performance.now(),
+          suggestion: `Review your ${type} management. Consider reusing ${type}s or disposing unused ones.`,
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  /**
+   * Detect consistent memory growth
+   */
+  private detectMemoryGrowth(): LeakAlert[] {
+    const alerts: LeakAlert[] = [];
+    
+    if (this.memoryHistory.length < 10) return alerts; // Need enough samples
+
+    const recentHistory = this.memoryHistory.slice(-10);
+    const firstSample = recentHistory[0];
+    const lastSample = recentHistory[recentHistory.length - 1];
+    const growth = lastSample.estimatedBytes - firstSample.estimatedBytes;
+    const timeDelta = lastSample.timestamp - firstSample.timestamp;
+
+    // Check if memory is consistently growing
+    let isGrowing = true;
+    for (let i = 1; i < recentHistory.length; i++) {
+      if (recentHistory[i].estimatedBytes < recentHistory[i - 1].estimatedBytes) {
+        isGrowing = false;
+        break;
+      }
+    }
+
+    if (isGrowing && growth > this.options.memoryGrowthThresholdBytes) {
+      // Check if we already have a recent memory growth alert
+      const existingAlert = this.alerts.find(
+        a => a.type === 'memory_growth' && 
+             performance.now() - a.timestamp < 60000 // Within last minute
+      );
+      if (!existingAlert) {
+        const growthRate = (growth / timeDelta) * 1000; // bytes per second
+
+        alerts.push({
+          id: `alert_${++this.alertIdCounter}`,
+          type: 'memory_growth',
+          severity: 'critical',
+          message: `Memory growing: +${this.formatBytes(growth)}`,
+          details: `Memory increased by ${this.formatBytes(growth)} over ${(timeDelta / 1000).toFixed(1)}s (${this.formatBytes(growthRate)}/s)`,
+          timestamp: performance.now(),
+          suggestion: 'Review resource creation patterns. Ensure resources are being disposed when no longer needed.',
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  /**
+   * Update memory history tracking
+   */
+  private updateMemoryHistory(): void {
+    const now = performance.now();
+    
+    // Only update every second to avoid performance impact
+    if (now - this.lastMemoryCheck < 1000) return;
+    this.lastMemoryCheck = now;
+
+    let totalBytes = 0;
+    for (const resource of this.activeResources.values()) {
+      totalBytes += resource.estimatedMemory || 0;
+    }
+
+    this.memoryHistory.push({ timestamp: now, estimatedBytes: totalBytes });
+
+    // Keep last 60 samples (1 minute of history)
+    if (this.memoryHistory.length > 60) {
+      this.memoryHistory = this.memoryHistory.slice(-60);
+    }
+  }
+
+  /**
+   * Get estimated total memory of active resources
+   */
+  getEstimatedMemory(): number {
+    let total = 0;
+    for (const resource of this.activeResources.values()) {
+      total += resource.estimatedMemory || 0;
+    }
+    return total;
+  }
+
+  /**
+   * Get memory history for charting
+   */
+  getMemoryHistory(): Array<{ timestamp: number; estimatedBytes: number }> {
+    return [...this.memoryHistory];
+  }
+
+  /**
+   * Get orphaned resources (not attached to any mesh)
+   */
+  getOrphanedResources(): Array<{
+    type: ResourceType;
+    uuid: string;
+    name?: string;
+    subtype?: string;
+    ageMs: number;
+  }> {
+    const now = performance.now();
+    const orphans: Array<{
+      type: ResourceType;
+      uuid: string;
+      name?: string;
+      subtype?: string;
+      ageMs: number;
+    }> = [];
+
+    for (const [uuid, resource] of this.activeResources) {
+      if (resource.attachedMeshes.size === 0) {
+        orphans.push({
+          type: resource.type,
+          uuid,
+          name: resource.name,
+          subtype: resource.subtype,
+          ageMs: now - resource.createdAt,
+        });
+      }
+    }
+
+    return orphans.sort((a, b) => b.ageMs - a.ageMs);
+  }
+
+  /**
+   * Generate comprehensive leak report
+   */
+  generateLeakReport(): LeakReport {
+    const now = performance.now();
+    
+    // Run leak detection to ensure alerts are up to date
+    this.runLeakDetection();
+
+    // Calculate stats
+    const resourceStats = {
+      geometries: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
+      materials: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
+      textures: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
+    };
+
+    // Count events
+    for (const event of this.events) {
+      const key = `${event.resourceType}s` as 'geometries' | 'materials' | 'textures';
+      if (event.eventType === 'created') resourceStats[key].created++;
+      if (event.eventType === 'disposed') resourceStats[key].disposed++;
+    }
+
+    // Count orphaned and leaked
+    for (const resource of this.activeResources.values()) {
+      const key = `${resource.type}s` as 'geometries' | 'materials' | 'textures';
+      if (resource.attachedMeshes.size === 0) {
+        resourceStats[key].orphaned++;
+      }
+      if (now - resource.createdAt > this.options.leakThresholdMs) {
+        resourceStats[key].leaked++;
+      }
+    }
+
+    // Calculate estimated leaked memory
+    let estimatedLeakedMemory = 0;
+    for (const resource of this.activeResources.values()) {
+      if (now - resource.createdAt > this.options.leakThresholdMs) {
+        estimatedLeakedMemory += resource.estimatedMemory || 0;
+      }
+    }
+
+    // Generate recommendations
+    const recommendations: string[] = [];
+    
+    if (resourceStats.geometries.orphaned > 0) {
+      recommendations.push(`Dispose ${resourceStats.geometries.orphaned} orphaned geometries to free memory`);
+    }
+    if (resourceStats.materials.orphaned > 0) {
+      recommendations.push(`Dispose ${resourceStats.materials.orphaned} orphaned materials`);
+    }
+    if (resourceStats.textures.orphaned > 0) {
+      recommendations.push(`Dispose ${resourceStats.textures.orphaned} orphaned textures`);
+    }
+    
+    const criticalAlerts = this.alerts.filter(a => a.severity === 'critical');
+    if (criticalAlerts.length > 0) {
+      recommendations.push('Address critical alerts immediately to prevent memory issues');
+    }
+
+    if (this.memoryHistory.length > 1) {
+      const first = this.memoryHistory[0].estimatedBytes;
+      const last = this.memoryHistory[this.memoryHistory.length - 1].estimatedBytes;
+      if (last > first * 1.5) {
+        recommendations.push('Memory usage has increased significantly. Review resource lifecycle.');
+      }
+    }
+
+    return {
+      generatedAt: now,
+      sessionDurationMs: now - this.sessionStartTime,
+      summary: {
+        totalAlerts: this.alerts.length,
+        criticalAlerts: this.alerts.filter(a => a.severity === 'critical').length,
+        warningAlerts: this.alerts.filter(a => a.severity === 'warning').length,
+        infoAlerts: this.alerts.filter(a => a.severity === 'info').length,
+        estimatedLeakedMemoryBytes: estimatedLeakedMemory,
+      },
+      alerts: this.alerts,
+      resourceStats,
+      memoryHistory: this.memoryHistory,
+      recommendations,
+    };
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  }
+
   /**
    * Clear all tracked events
    */
@@ -344,6 +883,9 @@ export class ResourceLifecycleTracker {
     this.events = [];
     this.activeResources.clear();
     this.eventIdCounter = 0;
+    this.alerts = [];
+    this.alertIdCounter = 0;
+    this.memoryHistory = [];
   }
 
   /**
