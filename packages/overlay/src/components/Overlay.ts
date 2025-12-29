@@ -1,4 +1,4 @@
-import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType, LeakAlert, LeakReport, RuleViolation } from '@3lens/core';
+import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType, LeakAlert, LeakReport, RuleViolation, PluginManager, DevtoolPlugin, PluginId, PanelDefinition as CorePanelDefinition, ToolbarActionDefinition } from '@3lens/core';
 import { calculateBenchmarkScore } from '@3lens/core';
 
 import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
@@ -109,6 +109,10 @@ export class ThreeLensOverlay {
   private frameBufferSize = 300; // Configurable buffer size (default 5 seconds at 60fps)
   private panelDefinitions: Map<string, OverlayPanelDefinition> = new Map();
   private panelContexts: Map<string, OverlayPanelContext> = new Map();
+  
+  // Plugin system
+  private pluginPanelUnsubscribers: Map<string, () => void> = new Map();
+  private pluginToolbarActions: Array<{ key: string; pluginId: PluginId; action: ToolbarActionDefinition }> = [];
   
   // Shared UI state for Materials, Geometry, Textures panels
   private uiState: UIState = createDefaultUIState();
@@ -312,6 +316,173 @@ export class ThreeLensOverlay {
     document.addEventListener('mousemove', this.handleMouseMove.bind(this));
     document.addEventListener('mouseup', this.handleMouseUp.bind(this));
     document.addEventListener('keydown', this.handleKeyDown.bind(this));
+    
+    // Setup plugin manager integration
+    this.initializePluginIntegration();
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PLUGIN INTEGRATION
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Initialize the plugin system integration
+   */
+  private initializePluginIntegration(): void {
+    const pluginManager = this.probe.getPluginManager();
+    
+    // Set toast callback
+    pluginManager.setToastCallback((message, type) => {
+      this.showToast(message, type);
+    });
+    
+    // Set render request callback
+    pluginManager.setRenderRequestCallback((pluginId) => {
+      this.refreshPluginPanel(pluginId);
+    });
+  }
+
+  /**
+   * Register a plugin and create overlay panels for it
+   */
+  public registerAndActivatePlugin(plugin: DevtoolPlugin): Promise<void> {
+    const pluginManager = this.probe.getPluginManager();
+    
+    // Register the plugin
+    pluginManager.registerPlugin(plugin);
+    
+    // Create overlay panels for plugin panels
+    if (plugin.panels) {
+      for (const panel of plugin.panels) {
+        this.registerPluginPanel(plugin.metadata.id, panel);
+      }
+    }
+    
+    // Sync toolbar actions
+    this.syncPluginToolbarActions();
+    
+    // Activate the plugin
+    return pluginManager.activatePlugin(plugin.metadata.id);
+  }
+
+  /**
+   * Unregister a plugin and remove its panels
+   */
+  public async unregisterAndDeactivatePlugin(pluginId: PluginId): Promise<void> {
+    const pluginManager = this.probe.getPluginManager();
+    
+    // Deactivate first
+    await pluginManager.deactivatePlugin(pluginId);
+    
+    // Remove overlay panels
+    for (const [key, unsubscribe] of this.pluginPanelUnsubscribers) {
+      if (key.startsWith(`${pluginId}:`)) {
+        unsubscribe();
+        this.pluginPanelUnsubscribers.delete(key);
+      }
+    }
+    
+    // Sync toolbar actions
+    this.syncPluginToolbarActions();
+    
+    // Unregister
+    await pluginManager.unregisterPlugin(pluginId);
+  }
+
+  /**
+   * Register a plugin panel as an overlay panel
+   */
+  private registerPluginPanel(pluginId: PluginId, corePanel: CorePanelDefinition): void {
+    const panelKey = `${pluginId}:${corePanel.id}`;
+    const pluginManager = this.probe.getPluginManager();
+    
+    const overlayPanel: OverlayPanelDefinition = {
+      id: panelKey,
+      title: corePanel.name,
+      icon: corePanel.icon ?? '🔌',
+      iconClass: 'plugin',
+      defaultWidth: 400,
+      defaultHeight: 300,
+      render: (context) => {
+        // Render plugin panel content
+        return pluginManager.renderPanel(panelKey);
+      },
+      onMount: (context) => {
+        // Mount the plugin panel
+        pluginManager.mountPanel(panelKey, context.container);
+      },
+      onDestroy: (context) => {
+        // Unmount the plugin panel
+        pluginManager.unmountPanel(panelKey);
+      },
+    };
+    
+    const unsubscribe = this.registerPanel(overlayPanel);
+    this.pluginPanelUnsubscribers.set(panelKey, unsubscribe);
+  }
+
+  /**
+   * Sync toolbar actions from plugin manager
+   */
+  private syncPluginToolbarActions(): void {
+    const pluginManager = this.probe.getPluginManager();
+    this.pluginToolbarActions = pluginManager.getToolbarActions();
+    
+    // Re-render FAB and menu if visible
+    if (this.menuVisible) {
+      this.updateMenu();
+    }
+  }
+
+  /**
+   * Refresh a specific plugin panel
+   */
+  private refreshPluginPanel(pluginId: PluginId): void {
+    for (const [panelKey] of this.pluginPanelUnsubscribers) {
+      if (panelKey.startsWith(`${pluginId}:`)) {
+        this.updatePanelContent(panelKey);
+      }
+    }
+  }
+
+  /**
+   * Show a toast notification
+   */
+  public showToast(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info'): void {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `three-lens-toast three-lens-toast-${type}`;
+    toast.innerHTML = `
+      <span class="three-lens-toast-icon">${type === 'success' ? '✓' : type === 'warning' ? '⚠' : type === 'error' ? '✕' : 'ℹ'}</span>
+      <span class="three-lens-toast-message">${message}</span>
+    `;
+    
+    // Add to root
+    let container = this.root.querySelector('.three-lens-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'three-lens-toast-container';
+      this.root.appendChild(container);
+    }
+    container.appendChild(toast);
+    
+    // Animate in
+    requestAnimationFrame(() => {
+      toast.classList.add('visible');
+    });
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      toast.classList.remove('visible');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  /**
+   * Get the plugin manager for external access
+   */
+  public getPluginManager(): PluginManager {
+    return this.probe.getPluginManager();
   }
 
   private injectStyles(): void {
@@ -694,6 +865,27 @@ export class ThreeLensOverlay {
       overlay: this,
       state: state ?? (this.openPanels.get(panelId) as PanelState),
     };
+  }
+
+  /**
+   * Update the content of a panel (for plugin panels)
+   */
+  private updatePanelContent(panelId: string): void {
+    const definition = this.panelDefinitions.get(panelId);
+    const context = this.panelContexts.get(panelId);
+    if (!definition || !context) return;
+
+    // For panels with render functions (e.g. plugin panels)
+    if (definition.render) {
+      const result = definition.render(context);
+      if (typeof result === 'string') {
+        context.container.innerHTML = result;
+      } else if (result instanceof HTMLElement) {
+        context.container.innerHTML = '';
+        context.container.appendChild(result);
+      }
+      // If void, assume the render function handles DOM manipulation directly
+    }
   }
 
   private destroyPanel(panelId: string): void {
@@ -1275,16 +1467,16 @@ export class ThreeLensOverlay {
             ${summary.warnings > 0 ? `<span class="three-lens-violation-badge warning">${summary.warnings}</span>` : ''}
           </div>
           <button class="three-lens-action-btn small" data-action="clear-violations" title="Clear violations">✕</button>
-        </div>
+          </div>
         <div class="three-lens-rule-violations-list">
           ${recentViolations.map(v => `
             <div class="three-lens-violation-item ${v.severity}">
               <span class="three-lens-violation-severity">${this.getViolationIcon(v.severity)}</span>
               <span class="three-lens-violation-message">${v.message}</span>
               <span class="three-lens-violation-time">${this.formatViolationTime(v.timestamp)}</span>
-            </div>
-          `).join('')}
         </div>
+          `).join('')}
+      </div>
         ${violations.length > 10 ? `<div class="three-lens-violations-more">+ ${violations.length - 10} more violations...</div>` : ''}
       </div>
     `;

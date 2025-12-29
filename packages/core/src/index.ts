@@ -144,6 +144,27 @@ export type {
   EntityEventCallback,
 } from './entities';
 
+// Plugin System
+export { PluginManager } from './plugins';
+export type {
+  PluginId,
+  PluginState,
+  PluginMetadata,
+  PanelDefinition,
+  PanelRenderContext,
+  ToolbarActionDefinition,
+  ContextMenuItemDefinition,
+  ContextMenuContext,
+  PluginMessage,
+  PluginMessageHandler,
+  DevtoolContext,
+  DevtoolPlugin,
+  PluginSettingType,
+  PluginSettingField,
+  PluginSettingsSchema,
+  RegisteredPlugin,
+} from './plugins';
+
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
 
