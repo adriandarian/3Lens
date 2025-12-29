@@ -118,6 +118,16 @@ export type {
   LeakAlertCallback,
 } from './tracking/ResourceLifecycleTracker';
 
+// Configuration
+export { ConfigLoader, DEFAULT_THRESHOLDS, DEFAULT_SAMPLING } from './config/ConfigLoader';
+export type {
+  ViolationSeverity,
+  RuleViolation,
+  ConfigValidationResult,
+  RuleCheckResult,
+  RuleViolationCallback,
+} from './config/ConfigLoader';
+
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
 

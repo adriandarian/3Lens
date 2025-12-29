@@ -4625,4 +4625,108 @@ export const OVERLAY_STYLES = `
   text-align: center;
   padding: 4px 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   RULE VIOLATIONS UI
+   ═══════════════════════════════════════════════════════════════ */
+
+.three-lens-rule-violations {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--3lens-radius-sm);
+  padding: 8px;
+  margin-top: 8px;
+}
+
+.three-lens-rule-violations-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.three-lens-rule-violations-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--3lens-accent-red);
+}
+
+.three-lens-rule-violations-badges {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.three-lens-violation-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.three-lens-violation-badge.error {
+  background: var(--3lens-accent-red);
+  color: white;
+}
+
+.three-lens-violation-badge.warning {
+  background: var(--3lens-accent-orange);
+  color: white;
+}
+
+.three-lens-rule-violations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.three-lens-violation-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--3lens-bg-secondary);
+  border-radius: var(--3lens-radius-sm);
+  border-left: 2px solid transparent;
+  font-size: 9px;
+}
+
+.three-lens-violation-item.error {
+  border-left-color: var(--3lens-accent-red);
+}
+
+.three-lens-violation-item.warning {
+  border-left-color: var(--3lens-accent-orange);
+}
+
+.three-lens-violation-item.info {
+  border-left-color: var(--3lens-accent-blue);
+}
+
+.three-lens-violation-severity {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.three-lens-violation-message {
+  flex: 1;
+  color: var(--3lens-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.three-lens-violation-time {
+  font-size: 8px;
+  color: var(--3lens-text-tertiary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.three-lens-violations-more {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  text-align: center;
+  padding: 4px 0;
+  margin-top: 4px;
+}
 `;

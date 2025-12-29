@@ -1,4 +1,4 @@
-import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType, LeakAlert, LeakReport } from '@3lens/core';
+import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType, LeakAlert, LeakReport, RuleViolation } from '@3lens/core';
 import { calculateBenchmarkScore } from '@3lens/core';
 
 import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
@@ -1249,8 +1249,61 @@ export class ThreeLensOverlay {
       <!-- Session Statistics -->
       ${this.renderSessionStatistics()}
       
+      <!-- Rule Violations -->
+      ${this.renderRuleViolations()}
+      
       ${benchmark && benchmark.topIssues.length > 0 ? this.renderIssues(benchmark) : ''}
     `;
+  }
+
+  private renderRuleViolations(): string {
+    const violations = this.probe.getRecentViolations();
+    const summary = this.probe.getViolationSummary();
+    
+    if (violations.length === 0) {
+      return '';
+    }
+
+    const recentViolations = violations.slice(-10).reverse();
+    
+    return `
+      <div class="three-lens-rule-violations">
+        <div class="three-lens-rule-violations-header">
+          <span class="three-lens-rule-violations-title">⚠ Rule Violations</span>
+          <div class="three-lens-rule-violations-badges">
+            ${summary.errors > 0 ? `<span class="three-lens-violation-badge error">${summary.errors}</span>` : ''}
+            ${summary.warnings > 0 ? `<span class="three-lens-violation-badge warning">${summary.warnings}</span>` : ''}
+          </div>
+          <button class="three-lens-action-btn small" data-action="clear-violations" title="Clear violations">✕</button>
+        </div>
+        <div class="three-lens-rule-violations-list">
+          ${recentViolations.map(v => `
+            <div class="three-lens-violation-item ${v.severity}">
+              <span class="three-lens-violation-severity">${this.getViolationIcon(v.severity)}</span>
+              <span class="three-lens-violation-message">${v.message}</span>
+              <span class="three-lens-violation-time">${this.formatViolationTime(v.timestamp)}</span>
+            </div>
+          `).join('')}
+        </div>
+        ${violations.length > 10 ? `<div class="three-lens-violations-more">+ ${violations.length - 10} more violations...</div>` : ''}
+      </div>
+    `;
+  }
+
+  private getViolationIcon(severity: string): string {
+    switch (severity) {
+      case 'error': return '🔴';
+      case 'warning': return '🟡';
+      case 'info': return '🔵';
+      default: return '⚪';
+    }
+  }
+
+  private formatViolationTime(timestamp: number): string {
+    const age = performance.now() - timestamp;
+    if (age < 1000) return 'now';
+    if (age < 60000) return `${Math.round(age / 1000)}s`;
+    return `${Math.round(age / 60000)}m`;
   }
   
   private renderFpsHistogram(): string {
@@ -4230,6 +4283,18 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     document.getElementById('three-lens-chart-zoom-in')?.addEventListener('click', () => this.handleChartZoomIn());
     document.getElementById('three-lens-chart-zoom-out')?.addEventListener('click', () => this.handleChartZoomOut());
     document.getElementById('three-lens-chart-reset')?.addEventListener('click', () => this.handleChartReset());
+
+    // Clear violations button
+    document.querySelector('[data-action="clear-violations"]')?.addEventListener('click', () => {
+      this.probe.clearViolations();
+      // Re-render the tab content
+      const tabContent = document.getElementById('three-lens-stats-tab-content');
+      if (tabContent) {
+        tabContent.innerHTML = this.renderCurrentTabContent();
+        this.attachChartEvents();
+        this.renderChart();
+      }
+    });
 
     // Mouse wheel zoom
     container.addEventListener('wheel', (e) => {
