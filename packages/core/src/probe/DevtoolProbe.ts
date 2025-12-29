@@ -21,6 +21,7 @@ import { TransformGizmo, type TransformMode, type TransformSpace, type Transform
 import { CameraController, type CameraInfo, type FlyToOptions } from '../helpers/CameraController';
 import { ResourceLifecycleTracker, type ResourceLifecycleEvent, type ResourceLifecycleSummary, type ResourceType, type LifecycleEventType, type LeakAlert, type LeakReport, type LeakAlertCallback } from '../tracking/ResourceLifecycleTracker';
 import { ConfigLoader, type RuleViolation, type RuleCheckResult, type RuleViolationCallback, type ViolationSeverity } from '../config/ConfigLoader';
+import { LogicalEntityManager, type LogicalEntityOptions, type LogicalEntity as NewLogicalEntity, type EntityId, type ModuleId, type ModuleInfo, type EntityFilter, type NavigationResult, type EntityEventCallback } from '../entities';
 
 /**
  * Version of the probe
@@ -40,7 +41,8 @@ export class DevtoolProbe {
   private _registeredRenderTargets: Map<string, { rt: THREE.WebGLRenderTarget; usage: import('../types').RenderTargetUsage }> = new Map();
   private _selectedObject: THREE.Object3D | null = null;
   private _hoveredObject: THREE.Object3D | null = null;
-  private _logicalEntities: Map<string, LogicalEntity> = new Map();
+  private _logicalEntities: Map<string, LogicalEntity> = new Map(); // Legacy
+  private _entityManager: LogicalEntityManager = new LogicalEntityManager();
   private _frameStatsHistory: FrameStats[] = [];
   private _frameStatsHistoryIndex = 0;
   private _maxHistorySize = 300;
@@ -1068,47 +1070,254 @@ export class DevtoolProbe {
   // ─────────────────────────────────────────────────────────────────
 
   /**
-   * Register a logical entity (component ↔ three.js mapping)
+   * Get the logical entity manager for advanced operations
    */
-  registerLogicalEntity(entity: LogicalEntity): void {
-    this._logicalEntities.set(entity.id, entity);
-    this.log('Registered logical entity', { id: entity.id, label: entity.label });
+  getEntityManager(): LogicalEntityManager {
+    return this._entityManager;
+  }
+
+  /**
+   * Register a logical entity (component ↔ three.js mapping)
+   * 
+   * @param options Entity registration options
+   * @returns The entity ID
+   * 
+   * @example
+   * ```typescript
+   * const playerId = probe.registerLogicalEntity({
+   *   name: 'Player',
+   *   module: '@game/feature-player',
+   *   componentType: 'PlayerComponent',
+   *   tags: ['controllable', 'saveable'],
+   *   metadata: { health: 100 },
+   * });
+   * 
+   * probe.addObjectToEntity(playerId, playerMesh);
+   * ```
+   */
+  registerLogicalEntity(options: LogicalEntityOptions): EntityId;
+  /**
+   * @deprecated Use the options object form instead
+   */
+  registerLogicalEntity(entity: LogicalEntity): void;
+  registerLogicalEntity(optionsOrEntity: LogicalEntityOptions | LogicalEntity): EntityId | void {
+    // Handle legacy LogicalEntity format
+    if ('label' in optionsOrEntity) {
+      const legacy = optionsOrEntity as LogicalEntity;
+      this._logicalEntities.set(legacy.id, legacy);
+      this.log('Registered logical entity (legacy)', { id: legacy.id, label: legacy.label });
+      
+      // Also register in new system
+      const entityId = this._entityManager.registerLogicalEntity({
+        id: legacy.id,
+        name: legacy.label,
+        module: legacy.moduleId,
+        componentId: legacy.componentId,
+        metadata: legacy.metadata,
+      });
+      
+      // Add objects
+      for (const obj of legacy.objects) {
+        this._entityManager.addObjectToEntity(entityId, obj);
+      }
+      
+      return;
+    }
+    
+    // New format
+    const entityId = this._entityManager.registerLogicalEntity(optionsOrEntity);
+    this.log('Registered logical entity', { id: entityId, name: optionsOrEntity.name });
+    return entityId;
   }
 
   /**
    * Update an existing logical entity
+   * 
+   * @param entityId Entity ID
+   * @param updates Updates to apply
    */
-  updateLogicalEntity(id: string, updates: Partial<LogicalEntity>): void {
-    const entity = this._logicalEntities.get(id);
-    if (entity) {
-      Object.assign(entity, updates);
+  updateLogicalEntity(entityId: EntityId, updates: Partial<Omit<LogicalEntityOptions, 'id'>>): void {
+    // Handle legacy format
+    const legacyEntity = this._logicalEntities.get(entityId);
+    if (legacyEntity) {
+      Object.assign(legacyEntity, updates);
+    }
+    
+    // Update in new system
+    try {
+      this._entityManager.updateLogicalEntity(entityId, updates);
+    } catch {
+      // Entity might not exist in new system
     }
   }
 
   /**
    * Unregister a logical entity
+   * 
+   * @param entityId Entity ID
+   * @param recursive Whether to also unregister child entities
    */
-  unregisterLogicalEntity(id: string): void {
-    this._logicalEntities.delete(id);
+  unregisterLogicalEntity(entityId: EntityId, recursive = false): void {
+    this._logicalEntities.delete(entityId);
+    this._entityManager.unregisterLogicalEntity(entityId, recursive);
+    this.log('Unregistered logical entity', { id: entityId });
+  }
+
+  /**
+   * Add a Three.js object to an entity
+   * 
+   * @param entityId Entity ID
+   * @param object Three.js object to add
+   */
+  addObjectToEntity(entityId: EntityId, object: THREE.Object3D): void {
+    this._entityManager.addObjectToEntity(entityId, object);
+    
+    // Also update legacy
+    const legacyEntity = this._logicalEntities.get(entityId);
+    if (legacyEntity && !legacyEntity.objects.includes(object)) {
+      legacyEntity.objects.push(object);
+    }
+  }
+
+  /**
+   * Remove a Three.js object from an entity
+   * 
+   * @param entityId Entity ID
+   * @param object Three.js object to remove
+   */
+  removeObjectFromEntity(entityId: EntityId, object: THREE.Object3D): void {
+    this._entityManager.removeObjectFromEntity(entityId, object);
+    
+    // Also update legacy
+    const legacyEntity = this._logicalEntities.get(entityId);
+    if (legacyEntity) {
+      const index = legacyEntity.objects.indexOf(object);
+      if (index !== -1) {
+        legacyEntity.objects.splice(index, 1);
+      }
+    }
   }
 
   /**
    * Get all registered logical entities
    */
-  getLogicalEntities(): LogicalEntity[] {
-    return Array.from(this._logicalEntities.values());
+  getLogicalEntities(): NewLogicalEntity[] {
+    return this._entityManager.getAllEntities();
   }
 
   /**
-   * Find entity by three.js object
+   * Get a logical entity by ID
    */
-  findEntityByObject(obj: THREE.Object3D): LogicalEntity | null {
-    for (const entity of this._logicalEntities.values()) {
-      if (entity.objects.includes(obj)) {
-        return entity;
-      }
-    }
-    return null;
+  getLogicalEntity(entityId: EntityId): NewLogicalEntity | undefined {
+    return this._entityManager.getEntity(entityId);
+  }
+
+  /**
+   * Find entity by Three.js object
+   */
+  findEntityByObject(obj: THREE.Object3D): NewLogicalEntity | null {
+    return this._entityManager.getEntityByObject(obj) ?? null;
+  }
+
+  /**
+   * Find entity by component ID
+   */
+  findEntityByComponentId(componentId: string): NewLogicalEntity | null {
+    return this._entityManager.getEntityByComponentId(componentId) ?? null;
+  }
+
+  /**
+   * Filter entities by criteria
+   * 
+   * @example
+   * ```typescript
+   * // Get all entities in the game module
+   * const gameEntities = probe.filterEntities({ modulePrefix: '@game/' });
+   * 
+   * // Get all controllable entities
+   * const controllables = probe.filterEntities({ tags: ['controllable'] });
+   * ```
+   */
+  filterEntities(filter: EntityFilter): NewLogicalEntity[] {
+    return this._entityManager.filterEntities(filter);
+  }
+
+  /**
+   * Get all registered modules
+   */
+  getAllModules(): ModuleId[] {
+    return this._entityManager.getAllModules();
+  }
+
+  /**
+   * Get module information with aggregated metrics
+   * 
+   * @param moduleId Module ID
+   * @returns Module info with entity count, object count, and metrics
+   */
+  getModuleInfo(moduleId: ModuleId): ModuleInfo | undefined {
+    return this._entityManager.getModuleInfo(moduleId);
+  }
+
+  /**
+   * Get all modules with their info
+   */
+  getAllModuleInfo(): ModuleInfo[] {
+    return this._entityManager.getAllModuleInfo();
+  }
+
+  /**
+   * Navigate from an object to its entity and related info
+   * 
+   * @param object Three.js object
+   * @returns Navigation result with entity, module, ancestors, and children
+   */
+  navigateFromObject(object: THREE.Object3D): NavigationResult {
+    return this._entityManager.navigateFromObject(object);
+  }
+
+  /**
+   * Navigate from a component ID to its entity and related info
+   * 
+   * @param componentId Component instance ID
+   * @returns Navigation result with entity, module, ancestors, and children
+   */
+  navigateFromComponent(componentId: string): NavigationResult {
+    return this._entityManager.navigateFromComponent(componentId);
+  }
+
+  /**
+   * Navigate from an entity ID to full navigation info
+   * 
+   * @param entityId Entity ID
+   * @returns Navigation result with entity, module, ancestors, and children
+   */
+  navigateFromEntity(entityId: EntityId): NavigationResult {
+    return this._entityManager.navigateFromEntity(entityId);
+  }
+
+  /**
+   * Subscribe to entity lifecycle events
+   * 
+   * @param callback Event callback
+   * @returns Unsubscribe function
+   */
+  onEntityEvent(callback: EntityEventCallback): Unsubscribe {
+    return this._entityManager.onEntityEvent(callback);
+  }
+
+  /**
+   * Get entity count
+   */
+  get entityCount(): number {
+    return this._entityManager.entityCount;
+  }
+
+  /**
+   * Get module count
+   */
+  get moduleCount(): number {
+    return this._entityManager.moduleCount;
   }
 
   // ─────────────────────────────────────────────────────────────────
