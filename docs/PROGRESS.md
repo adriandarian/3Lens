@@ -2,7 +2,7 @@
 
 > **Last Updated:** December 29, 2025  
 > **Current Phase:** Phase 3 - Enterprise Features  
-> **Overall Progress:** ██████████████░░░░░░ 70%
+> **Overall Progress:** ███████████████░░░░░ 75%
 
 ---
 
@@ -12,7 +12,7 @@
 |-------|--------|----------|
 | Phase 1: Foundation (MVP) | ✅ Complete | ██████████ 100% |
 | Phase 2: Core Features | ✅ Complete | ██████████ 100% |
-| Phase 3: Enterprise Features | 🔄 In Progress | ████████░░ 75% |
+| Phase 3: Enterprise Features | 🔄 In Progress | █████████░ 85% |
 | Phase 4: Ecosystem & Polish | ⚪ Not Started | ░░░░░░░░░░ 0% |
 
 ---
@@ -416,9 +416,15 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Detect `WebGPURenderer` | ⬜ | |
-| Frame stats collection | ⬜ | |
-| Resource tracking | ⬜ | |
+| Detect `WebGPURenderer` | ✅ | Uses `isWebGPURenderer` property per Three.js docs |
+| Frame stats collection | ✅ | CPU time, draw calls, triangles, memory via renderer.info |
+| Resource tracking | ✅ | Textures, geometries, materials, pipelines |
+| `createWebGPUAdapter()` | ✅ | Full adapter matching WebGL adapter API |
+| `isWebGPURenderer()` helper | ✅ | Type guard for WebGPURenderer detection |
+| `getWebGPUCapabilities()` | ✅ | Device limits, features, timestamp query support |
+| Auto-detect in `observeRenderer()` | ✅ | Probe automatically uses correct adapter |
+| Pipeline tracking | ✅ | Track render/compute pipelines via backend cache |
+| Async render support | ✅ | Wraps `renderAsync()` for stats collection |
 
 ### WebGPU-Specific UI
 

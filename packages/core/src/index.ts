@@ -184,6 +184,8 @@ export type {
 
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
+export { createWebGPUAdapter, isWebGPURenderer, getWebGPUCapabilities } from './adapters/webgpu-adapter';
+export type { WebGPUCapabilities } from './adapters/webgpu-adapter';
 
 // Transport
 export { createPostMessageTransport } from './transport/postmessage-transport';
