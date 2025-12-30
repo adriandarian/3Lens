@@ -14,6 +14,7 @@ import type {
   Unsubscribe,
 } from '../types';
 import { createWebGLAdapter } from '../adapters/webgl-adapter';
+import { createWebGPUAdapter, isWebGPURenderer } from '../adapters/webgpu-adapter';
 import { SceneObserver } from '../observers/SceneObserver';
 import { SelectionHelper } from '../helpers/SelectionHelper';
 import { InspectMode } from '../helpers/InspectMode';
@@ -108,16 +109,52 @@ export class DevtoolProbe {
 
   /**
    * Observe a three.js renderer (auto-detects WebGL/WebGPU)
+   * 
+   * Supports both WebGLRenderer and WebGPURenderer from Three.js.
+   * WebGPURenderer is detected via the `isWebGPURenderer` property.
+   * 
+   * @see https://threejs.org/docs/?q=renderer#WebGPURenderer.isWebGPURenderer
    */
-  observeRenderer(renderer: THREE.WebGLRenderer): void {
+  observeRenderer(renderer: THREE.WebGLRenderer | THREE.Renderer): void {
     // Detect three.js version
     this._threeVersion = (renderer as unknown as { version?: string }).version ?? null;
     
-    // Create appropriate adapter
-    const adapter = createWebGLAdapter(renderer);
-    this.attachRendererAdapter(adapter);
+    // Create appropriate adapter based on renderer type
+    let adapter: RendererAdapter;
     
+    if (isWebGPURenderer(renderer)) {
+      // WebGPU renderer detected
+      adapter = createWebGPUAdapter(renderer);
+      this.log('Detected WebGPU renderer');
+    } else {
+      // Assume WebGL renderer
+      adapter = createWebGLAdapter(renderer as THREE.WebGLRenderer);
+      this.log('Detected WebGL renderer');
+    }
+    
+    this.attachRendererAdapter(adapter);
     this.log('Observing renderer', { type: adapter.kind });
+  }
+
+  /**
+   * Check if the current renderer is WebGPU
+   */
+  isWebGPU(): boolean {
+    return this._rendererAdapter?.kind === 'webgpu';
+  }
+
+  /**
+   * Check if the current renderer is WebGL
+   */
+  isWebGL(): boolean {
+    return this._rendererAdapter?.kind === 'webgl';
+  }
+
+  /**
+   * Get the renderer backend type
+   */
+  getRendererKind(): 'webgl' | 'webgpu' | null {
+    return this._rendererAdapter?.kind ?? null;
   }
 
   /**
