@@ -12,6 +12,39 @@ export type {
   OverlayPanelState,
 } from './components/Overlay';
 
+// Theme system
+export {
+  ThemeManager,
+  PRESET_THEMES,
+} from './utils/theme';
+export type {
+  ThemeMode,
+  ResolvedTheme,
+  CustomTheme,
+  ThemeChangeEvent,
+} from './utils/theme';
+
+// Keyboard shortcuts
+export {
+  KeyboardManager,
+  getDefaultShortcuts,
+} from './utils/keyboard';
+export type {
+  KeyModifiers,
+  KeyboardShortcut,
+  ShortcutGroup,
+} from './utils/keyboard';
+
+// Command palette
+export {
+  CommandPalette,
+  getDefaultCommands,
+} from './utils/command-palette';
+export type {
+  Command,
+  CommandGroup,
+} from './utils/command-palette';
+
 
 // Convenience function
 import type { DevtoolProbe, ProbeConfig } from '@3lens/core';
