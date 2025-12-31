@@ -512,7 +512,7 @@
 | Transform gizmo demo | ✅ | `examples/feature-showcase/transform-gizmo` |
 | Custom plugin example | ✅ | `examples/feature-showcase/custom-plugin` |
 | Configuration rules example | ✅ | `examples/feature-showcase/configuration-rules` |
-| WebGPU features example | ⬜ | `examples/feature-showcase/webgpu-features` |
+| WebGPU features example | ✅ | `examples/feature-showcase/webgpu-features` |
 | Camera controls showcase | ⬜ | `examples/feature-showcase/camera-controls` |
 | Visual overlays demo | ⬜ | `examples/feature-showcase/visual-overlays` |
 | Cost analysis visualization | ⬜ | `examples/feature-showcase/cost-analysis` |
