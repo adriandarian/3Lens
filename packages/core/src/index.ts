@@ -72,6 +72,19 @@ export type {
 export type {
   RendererAdapter,
   RendererKind,
+  RenderTargetInfo,
+  TextureInfo,
+  GeometryInfo,
+  MaterialInfo,
+  ProgramInfo,
+  PipelineInfo,
+  VertexBufferLayoutInfo,
+  VertexAttributeInfo,
+  BindGroupLayoutInfo,
+  BindGroupLayoutEntryInfo,
+  BindGroupInfo,
+  BindGroupEntryInfo,
+  GpuTimingInfo,
 } from './types/adapter';
 
 export type {
@@ -184,8 +197,16 @@ export type {
 
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
-export { createWebGPUAdapter, isWebGPURenderer, getWebGPUCapabilities } from './adapters/webgpu-adapter';
-export type { WebGPUCapabilities } from './adapters/webgpu-adapter';
+export { createWebGPUAdapter, createExtendedWebGPUAdapter, isWebGPURenderer, getWebGPUCapabilities } from './adapters/webgpu-adapter';
+export type {
+  WebGPUCapabilities,
+  WebGPURendererAdapter,
+  DetailedPipelineInfo,
+  ShaderStageInfo,
+  BindGroupLayoutEntryDetail,
+  WebGPUBindGroupInfo,
+  WebGPUBindGroupEntryInfo,
+} from './adapters/webgpu-adapter';
 
 // Transport
 export { createPostMessageTransport } from './transport/postmessage-transport';

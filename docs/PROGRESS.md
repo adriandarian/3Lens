@@ -327,7 +327,7 @@
 
 **Goal:** Add features for teams and production debugging workflows.  
 **Target Duration:** 3-4 months  
-**Status:** ⚪ Not Started
+**Status:** 🟡 In Progress (~70% complete)
 
 ## 3.1 Framework Bridges
 
@@ -430,9 +430,9 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Pipelines panel | ⬜ | |
-| Bind groups view | ⬜ | |
-| WGSL shader viewer | ⬜ | |
+| Pipelines panel | ✅ | Render/compute pipeline list with details |
+| Bind groups view | ✅ | Bind group types overview, resource layout info |
+| WGSL shader viewer | ✅ | Shader list with stage badges, link to pipeline details |
 
 ### GPU Timing (WebGPU)
 
