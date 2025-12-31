@@ -486,7 +486,7 @@
 | React Three Fiber example | ✅ | `examples/react-three-fiber` with full R3F integration |
 | Angular + three.js example | ✅ | `examples/angular-threejs` with full Angular integration |
 | Vue + TresJS example | ✅ | `examples/vue-tresjs` with full TresJS integration |
-| Performance debugging example | ⬜ | |
+| Performance debugging example | ✅ | `examples/performance-debugging` with interactive issue lab |
 
 ## 4.4 Community
 
