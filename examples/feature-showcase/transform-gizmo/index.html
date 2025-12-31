@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3Lens - Transform Gizmo Demo</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0f;
+      }
+      #app {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+      .control-panel {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 100;
+        max-width: 340px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+      .control-panel h2 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        color: #f39c12;
+      }
+      .control-panel h3 {
+        margin: 16px 0 8px 0;
+        font-size: 14px;
+        color: #3498db;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 12px;
+      }
+      .control-panel p {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+      .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .button-row {
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      button.toggle {
+        background: #2a2a3e;
+        color: #888;
+      }
+      button.toggle:hover {
+        background: #3a3a4e;
+        color: #aaa;
+      }
+      button.toggle.active {
+        background: #f39c12;
+        color: #000;
+      }
+      button.action {
+        background: #3498db;
+        color: white;
+      }
+      button.action:hover {
+        background: #2980b9;
+      }
+      button.action:disabled {
+        background: #1a1a2e;
+        color: #555;
+        cursor: not-allowed;
+      }
+      button.danger {
+        background: #c0392b;
+        color: white;
+      }
+      button.danger:hover {
+        background: #a93226;
+      }
+      .mode-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .mode-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 12px 8px;
+        background: #2a2a3e;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        color: #888;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .mode-btn:hover {
+        background: #3a3a4e;
+        color: #aaa;
+      }
+      .mode-btn.active {
+        background: rgba(243, 156, 18, 0.15);
+        border-color: #f39c12;
+        color: #f39c12;
+      }
+      .mode-btn .icon {
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+      .mode-btn .label {
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .mode-btn .shortcut {
+        font-size: 9px;
+        color: #666;
+        margin-top: 2px;
+      }
+      .transform-display {
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 12px;
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 11px;
+      }
+      .transform-display h4 {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      .transform-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      .transform-row:last-child {
+        border-bottom: none;
+      }
+      .transform-label {
+        color: #888;
+      }
+      .transform-value {
+        color: #fff;
+      }
+      .transform-value.x { color: #e74c3c; }
+      .transform-value.y { color: #2ecc71; }
+      .transform-value.z { color: #3498db; }
+      .history-display {
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 8px;
+      }
+      .history-display h4 {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 8px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 4px;
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+      .history-item:last-child {
+        margin-bottom: 0;
+      }
+      .history-item.current {
+        background: rgba(243, 156, 18, 0.15);
+        border: 1px solid rgba(243, 156, 18, 0.3);
+      }
+      .history-action {
+        color: #fff;
+      }
+      .history-target {
+        color: #888;
+      }
+      .snap-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 8px 0;
+      }
+      .snap-controls label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #888;
+        cursor: pointer;
+      }
+      .snap-controls input[type="checkbox"] {
+        accent-color: #f39c12;
+      }
+      .snap-controls input[type="number"] {
+        width: 60px;
+        padding: 4px 8px;
+        background: #2a2a3e;
+        border: 1px solid #3a3a4e;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 12px;
+      }
+      .space-toggle {
+        display: flex;
+        background: #1a1a2e;
+        border-radius: 6px;
+        padding: 4px;
+        margin: 8px 0;
+      }
+      .space-btn {
+        flex: 1;
+        padding: 8px;
+        background: transparent;
+        border: none;
+        border-radius: 4px;
+        color: #888;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .space-btn.active {
+        background: #f39c12;
+        color: #000;
+      }
+      .info-box {
+        background: rgba(243, 156, 18, 0.15);
+        border: 1px solid rgba(243, 156, 18, 0.3);
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 12px;
+        font-size: 11px;
+        color: #f5d89a;
+        line-height: 1.5;
+      }
+      .keyboard-hints {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+        margin-top: 8px;
+      }
+      .key-hint {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #888;
+      }
+      .key {
+        display: inline-block;
+        padding: 2px 6px;
+        background: #2a2a3e;
+        border: 1px solid #3a3a4e;
+        border-radius: 3px;
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 10px;
+        color: #fff;
+      }
+      .object-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 8px 0;
+      }
+      .object-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background: #2a2a3e;
+        border: 2px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .object-item:hover {
+        background: #3a3a4e;
+      }
+      .object-item.selected {
+        border-color: #f39c12;
+        background: rgba(243, 156, 18, 0.1);
+      }
+      .object-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+      }
+      .object-name {
+        flex: 1;
+        font-size: 12px;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    
+    <div class="control-panel">
+      <h2>🔧 Transform Gizmo Demo</h2>
+      <p>
+        Select objects and use transform gizmos to move, rotate, and scale them.
+        Full undo/redo support with keyboard shortcuts.
+      </p>
+
+      <h3>Transform Mode</h3>
+      <div class="mode-buttons">
+        <div class="mode-btn active" id="mode-translate">
+          <span class="icon">↔</span>
+          <span class="label">Translate</span>
+          <span class="shortcut">W</span>
+        </div>
+        <div class="mode-btn" id="mode-rotate">
+          <span class="icon">↻</span>
+          <span class="label">Rotate</span>
+          <span class="shortcut">E</span>
+        </div>
+        <div class="mode-btn" id="mode-scale">
+          <span class="icon">⤢</span>
+          <span class="label">Scale</span>
+          <span class="shortcut">R</span>
+        </div>
+      </div>
+
+      <h3>Coordinate Space</h3>
+      <div class="space-toggle">
+        <button class="space-btn active" id="space-world">World</button>
+        <button class="space-btn" id="space-local">Local</button>
+      </div>
+
+      <h3>Snap Settings</h3>
+      <div class="snap-controls">
+        <label>
+          <input type="checkbox" id="snap-enabled">
+          Enable Snap
+        </label>
+      </div>
+      <div class="snap-controls">
+        <label>
+          Position:
+          <input type="number" id="snap-translate" value="1" min="0.1" step="0.1">
+        </label>
+        <label>
+          Rotation:
+          <input type="number" id="snap-rotate" value="15" min="1" step="1">°
+        </label>
+        <label>
+          Scale:
+          <input type="number" id="snap-scale" value="0.1" min="0.01" step="0.01">
+        </label>
+      </div>
+
+      <h3>Scene Objects</h3>
+      <div class="object-list" id="object-list">
+        <!-- Populated by JS -->
+      </div>
+
+      <h3>History</h3>
+      <div class="button-row">
+        <button class="action" id="btn-undo" disabled>↩ Undo</button>
+        <button class="action" id="btn-redo" disabled>↪ Redo</button>
+      </div>
+      <div class="history-display" id="history-display">
+        <h4>Recent Actions</h4>
+        <div id="history-list" style="color: #666; font-size: 11px;">No history yet</div>
+      </div>
+
+      <div class="transform-display" id="transform-display" style="display: none;">
+        <h4>Selected Object Transform</h4>
+        <div class="transform-row">
+          <span class="transform-label">Position</span>
+          <span>
+            <span class="transform-value x" id="pos-x">0.00</span>,
+            <span class="transform-value y" id="pos-y">0.00</span>,
+            <span class="transform-value z" id="pos-z">0.00</span>
+          </span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-label">Rotation</span>
+          <span>
+            <span class="transform-value x" id="rot-x">0°</span>,
+            <span class="transform-value y" id="rot-y">0°</span>,
+            <span class="transform-value z" id="rot-z">0°</span>
+          </span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-label">Scale</span>
+          <span>
+            <span class="transform-value x" id="scale-x">1.00</span>,
+            <span class="transform-value y" id="scale-y">1.00</span>,
+            <span class="transform-value z" id="scale-z">1.00</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <strong>Keyboard Shortcuts:</strong>
+        <div class="keyboard-hints">
+          <div class="key-hint"><span class="key">W</span> Translate</div>
+          <div class="key-hint"><span class="key">E</span> Rotate</div>
+          <div class="key-hint"><span class="key">R</span> Scale</div>
+          <div class="key-hint"><span class="key">Q</span> Toggle Space</div>
+          <div class="key-hint"><span class="key">Ctrl+Z</span> Undo</div>
+          <div class="key-hint"><span class="key">Ctrl+Shift+Z</span> Redo</div>
+          <div class="key-hint"><span class="key">Esc</span> Deselect</div>
+          <div class="key-hint"><span class="key">Del</span> Reset Transform</div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

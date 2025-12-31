@@ -509,7 +509,7 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Transform gizmo demo | ⬜ | `examples/feature-showcase/transform-gizmo` |
+| Transform gizmo demo | ✅ | `examples/feature-showcase/transform-gizmo` |
 | Custom plugin example | ⬜ | `examples/feature-showcase/custom-plugin` |
 | Configuration rules example | ⬜ | `examples/feature-showcase/configuration-rules` |
 | WebGPU features example | ⬜ | `examples/feature-showcase/webgpu-features` |
