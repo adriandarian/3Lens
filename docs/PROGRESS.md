@@ -484,37 +484,81 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Vanilla three.js example | ✅ | `examples/vanilla-threejs` with full demo |
-| React Three Fiber example | ✅ | `examples/react-three-fiber` with full R3F integration |
-| Angular + three.js example | ✅ | `examples/angular-threejs` with full Angular integration |
-| Vue + TresJS example | ✅ | `examples/vue-tresjs` with full TresJS integration |
+| Vanilla three.js example | ✅ | `examples/framework-integration/vanilla-threejs` |
+| React Three Fiber example | ✅ | `examples/framework-integration/react-three-fiber` |
+| Angular + three.js example | ✅ | `examples/framework-integration/angular-threejs` |
+| Vue + TresJS example | ✅ | `examples/framework-integration/vue-tresjs` |
+| Svelte Threlte example | ⬜ | `examples/framework-integration/svelte-threlte` |
+| Next.js SSR example | ⬜ | `examples/framework-integration/nextjs-ssr` |
+| Electron desktop app | ⬜ | `examples/framework-integration/electron-desktop` |
 
 ### Debugging & Profiling Examples
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Performance debugging example | ✅ | `examples/performance-debugging` with interactive issue lab |
-| Memory leak detection example | ⬜ | Demonstrate leak detection and resource lifecycle tracking |
-| Large scene optimization example | ⬜ | LOD, instancing, spatial partitioning techniques |
-| Shader debugging example | ⬜ | GLSL/WGSL debugging with uniform inspection |
+| Performance debugging example | ✅ | `examples/debugging-profiling/performance-debugging` |
+| Memory leak detection example | ⬜ | `examples/debugging-profiling/memory-leak-detection` |
+| Large scene optimization example | ⬜ | `examples/debugging-profiling/large-scene-optimization` |
+| Shader debugging example | ⬜ | `examples/debugging-profiling/shader-debugging` |
+| Draw call batching example | ⬜ | `examples/debugging-profiling/draw-call-batching` |
+| Texture optimization example | ⬜ | `examples/debugging-profiling/texture-optimization` |
+| Animation profiling example | ⬜ | `examples/debugging-profiling/animation-profiling` |
+| Raycasting debugger | ⬜ | `examples/debugging-profiling/raycasting-debugger` |
 
 ### Feature Showcase Examples
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Transform gizmo demo | ⬜ | Interactive object manipulation with undo/redo |
-| Custom plugin example | ⬜ | Building a plugin from scratch |
-| Configuration rules example | ⬜ | Setting up custom performance rules and thresholds |
-| WebGPU features example | ⬜ | WebGPU-specific debugging with pipelines and timing |
+| Transform gizmo demo | ⬜ | `examples/feature-showcase/transform-gizmo` |
+| Custom plugin example | ⬜ | `examples/feature-showcase/custom-plugin` |
+| Configuration rules example | ⬜ | `examples/feature-showcase/configuration-rules` |
+| WebGPU features example | ⬜ | `examples/feature-showcase/webgpu-features` |
+| Camera controls showcase | ⬜ | `examples/feature-showcase/camera-controls` |
+| Visual overlays demo | ⬜ | `examples/feature-showcase/visual-overlays` |
+| Cost analysis visualization | ⬜ | `examples/feature-showcase/cost-analysis` |
+| Timeline recording demo | ⬜ | `examples/feature-showcase/timeline-recording` |
 
 ### Real-World Scenarios
 
 | Task | Status | Notes |
 |------|--------|-------|
-| 3D model viewer | ⬜ | GLTF loading with texture/material inspection |
-| Particle system debugger | ⬜ | High-count particle debugging and optimization |
-| Physics scene inspector | ⬜ | Integration with physics engines (Cannon, Rapier) |
-| Post-processing analyzer | ⬜ | Effect composer debugging with pass breakdown |
+| 3D model viewer | ⬜ | `examples/real-world-scenarios/3d-model-viewer` |
+| Particle system debugger | ⬜ | `examples/real-world-scenarios/particle-system` |
+| Physics scene inspector | ⬜ | `examples/real-world-scenarios/physics-inspector` |
+| Post-processing analyzer | ⬜ | `examples/real-world-scenarios/post-processing` |
+| VR/XR debugging example | ⬜ | `examples/real-world-scenarios/vr-xr-debugging` |
+| Multi-scene management | ⬜ | `examples/real-world-scenarios/multi-scene-management` |
+| Procedural generation debugger | ⬜ | `examples/real-world-scenarios/procedural-generation` |
+| Audio visualization scene | ⬜ | `examples/real-world-scenarios/audio-visualization` |
+
+### Game Development Examples
+
+| Task | Status | Notes |
+|------|--------|-------|
+| First-person shooter demo | ⬜ | `examples/game-development/first-person-shooter` |
+| Top-down RPG example | ⬜ | `examples/game-development/top-down-rpg` |
+| Racing game profiler | ⬜ | `examples/game-development/racing-game` |
+| Platformer physics debug | ⬜ | `examples/game-development/platformer-physics` |
+
+### Data Visualization Examples
+
+| Task | Status | Notes |
+|------|--------|-------|
+| 3D chart visualization | ⬜ | `examples/data-visualization/3d-charts` |
+| Geographic data viewer | ⬜ | `examples/data-visualization/geographic-data` |
+| Scientific visualization | ⬜ | `examples/data-visualization/scientific-viz` |
+| Real-time data streaming | ⬜ | `examples/data-visualization/realtime-streaming` |
+
+### Advanced Techniques Examples
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Custom render pipeline | ⬜ | `examples/advanced-techniques/custom-render-pipeline` |
+| Compute shader debugging | ⬜ | `examples/advanced-techniques/compute-shaders` |
+| Shadow technique comparison | ⬜ | `examples/advanced-techniques/shadow-comparison` |
+| Environment mapping debug | ⬜ | `examples/advanced-techniques/environment-mapping` |
+| Skinned mesh inspector | ⬜ | `examples/advanced-techniques/skinned-mesh-inspector` |
+| Morph target analyzer | ⬜ | `examples/advanced-techniques/morph-target-analyzer` |
 
 ## 4.4 Community
 
