@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3Lens - Shader Debugging Example</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        background: #0d1117;
+        color: #c9d1d9;
+        overflow: hidden;
+      }
+
+      #app {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+      }
+
+      #sidebar {
+        width: 380px;
+        background: #161b22;
+        border-right: 1px solid #30363d;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      #sidebar h2 {
+        padding: 16px 20px;
+        font-size: 14px;
+        color: #58a6ff;
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .shader-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .shader-item {
+        padding: 12px;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .shader-item:hover {
+        border-color: #58a6ff;
+      }
+
+      .shader-item.active {
+        border-color: #58a6ff;
+        background: #161b22;
+      }
+
+      .shader-item h3 {
+        font-size: 13px;
+        color: #fff;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .shader-item p {
+        font-size: 11px;
+        color: #8b949e;
+        line-height: 1.4;
+      }
+
+      .shader-badge {
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        text-transform: uppercase;
+      }
+
+      .badge-vertex { background: #238636; color: #fff; }
+      .badge-fragment { background: #a371f7; color: #fff; }
+      .badge-both { background: #58a6ff; color: #fff; }
+
+      .shader-editor {
+        padding: 12px;
+        border-top: 1px solid #30363d;
+        background: #0d1117;
+      }
+
+      .shader-editor h4 {
+        font-size: 11px;
+        color: #8b949e;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+
+      .editor-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+
+      .editor-tab {
+        padding: 6px 12px;
+        font-size: 11px;
+        background: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 4px 4px 0 0;
+        color: #8b949e;
+        cursor: pointer;
+      }
+
+      .editor-tab.active {
+        background: #161b22;
+        color: #fff;
+        border-bottom-color: transparent;
+      }
+
+      textarea {
+        width: 100%;
+        height: 200px;
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        padding: 12px;
+        font-family: inherit;
+        font-size: 11px;
+        color: #c9d1d9;
+        resize: none;
+        line-height: 1.5;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #58a6ff;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      button {
+        padding: 8px 14px;
+        font-size: 11px;
+        font-weight: 500;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: #238636;
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        background: #2ea043;
+      }
+
+      .btn-secondary {
+        background: #21262d;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+      }
+
+      .btn-secondary:hover {
+        background: #30363d;
+      }
+
+      .btn-danger {
+        background: #da3633;
+        color: #fff;
+      }
+
+      .btn-danger:hover {
+        background: #f85149;
+      }
+
+      #canvas-container {
+        flex: 1;
+        position: relative;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      #error-panel {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(218, 54, 51, 0.95);
+        color: #fff;
+        padding: 16px;
+        font-size: 12px;
+        max-height: 200px;
+        overflow-y: auto;
+        display: none;
+      }
+
+      #error-panel.visible {
+        display: block;
+      }
+
+      #error-panel h4 {
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #error-panel pre {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      #info-panel {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(22, 27, 34, 0.95);
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 16px;
+        min-width: 200px;
+      }
+
+      #info-panel h3 {
+        font-size: 12px;
+        color: #58a6ff;
+        margin-bottom: 12px;
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        margin-bottom: 6px;
+      }
+
+      .info-label { color: #8b949e; }
+      .info-value { color: #fff; }
+
+      .uniform-section {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #30363d;
+      }
+
+      .uniform-section h4 {
+        font-size: 10px;
+        color: #8b949e;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .uniform-control {
+        margin-bottom: 8px;
+      }
+
+      .uniform-control label {
+        display: block;
+        font-size: 10px;
+        color: #8b949e;
+        margin-bottom: 4px;
+      }
+
+      .uniform-control input[type="range"] {
+        width: 100%;
+        height: 4px;
+        -webkit-appearance: none;
+        background: #30363d;
+        border-radius: 2px;
+      }
+
+      .uniform-control input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 12px;
+        height: 12px;
+        background: #58a6ff;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+
+      .uniform-control input[type="color"] {
+        width: 100%;
+        height: 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .tip-box {
+        margin-top: 12px;
+        padding: 10px;
+        background: rgba(88, 166, 255, 0.1);
+        border: 1px solid rgba(88, 166, 255, 0.3);
+        border-radius: 4px;
+        font-size: 10px;
+        color: #58a6ff;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="sidebar">
+        <h2>🎨 Shader Gallery</h2>
+        
+        <div class="shader-list" id="shader-list">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <div class="shader-editor">
+          <h4>Live Editor</h4>
+          <div class="editor-tabs">
+            <div class="editor-tab active" data-tab="vertex">Vertex</div>
+            <div class="editor-tab" data-tab="fragment">Fragment</div>
+          </div>
+          <textarea id="shader-code" spellcheck="false"></textarea>
+          <div class="btn-group">
+            <button class="btn-primary" id="btn-compile">▶ Compile</button>
+            <button class="btn-secondary" id="btn-reset">↺ Reset</button>
+            <button class="btn-danger" id="btn-break">💥 Break It</button>
+          </div>
+          <div class="tip-box">
+            💡 <strong>Tip:</strong> Press ~ to open 3Lens and view shader analysis in the WebGPU/Shaders panel.
+          </div>
+        </div>
+      </div>
+
+      <div id="canvas-container">
+        <div id="info-panel">
+          <h3>📊 Shader Info</h3>
+          <div class="info-row">
+            <span class="info-label">Name:</span>
+            <span class="info-value" id="info-name">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Type:</span>
+            <span class="info-value" id="info-type">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Uniforms:</span>
+            <span class="info-value" id="info-uniforms">0</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Varyings:</span>
+            <span class="info-value" id="info-varyings">0</span>
+          </div>
+          
+          <div class="uniform-section" id="uniform-controls">
+            <h4>Uniform Controls</h4>
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <div id="error-panel">
+          <h4>⚠️ Shader Compilation Error</h4>
+          <pre id="error-message"></pre>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+
