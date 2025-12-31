@@ -516,7 +516,7 @@
 | Camera controls showcase | ✅ | `examples/feature-showcase/camera-controls` |
 | Visual overlays demo | ✅ | `examples/feature-showcase/visual-overlays` |
 | Cost analysis visualization | ✅ | `examples/feature-showcase/cost-analysis` |
-| Timeline recording demo | ⬜ | `examples/feature-showcase/timeline-recording` |
+| Timeline recording demo | ✅ | `examples/feature-showcase/timeline-recording` |
 
 ### Real-World Scenarios
 

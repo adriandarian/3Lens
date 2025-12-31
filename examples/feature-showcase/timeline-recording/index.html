@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timeline Recording Demo - 3Lens DevTools</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0a;
+        color: #e5e5e5;
+        overflow: hidden;
+      }
+
+      #app {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      /* Control Panel */
+      .control-panel {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        background: rgba(23, 23, 23, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 16px;
+        width: 340px;
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+        backdrop-filter: blur(10px);
+        z-index: 100;
+      }
+
+      .panel-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #22d3ee;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .panel-title svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .section {
+        margin-bottom: 16px;
+      }
+
+      .section-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #737373;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+
+      .description {
+        font-size: 12px;
+        color: #a3a3a3;
+        line-height: 1.5;
+        margin-bottom: 12px;
+      }
+
+      /* Info Box */
+      .info-box {
+        background: rgba(34, 211, 238, 0.1);
+        border: 1px solid rgba(34, 211, 238, 0.2);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 16px;
+      }
+
+      .info-box p {
+        font-size: 11px;
+        color: #22d3ee;
+        line-height: 1.5;
+      }
+
+      kbd {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-family: monospace;
+      }
+
+      /* Stats Display */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 10px 8px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #22d3ee;
+      }
+
+      .stat-value.warning {
+        color: #eab308;
+      }
+
+      .stat-value.error {
+        color: #ef4444;
+      }
+
+      .stat-label {
+        font-size: 9px;
+        color: #737373;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-top: 2px;
+      }
+
+      /* Timeline Mini Chart */
+      .timeline-mini {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 16px;
+      }
+
+      .timeline-mini-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .timeline-mini-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #a3a3a3;
+      }
+
+      .timeline-mini-fps {
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .timeline-mini-canvas {
+        width: 100%;
+        height: 60px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.3);
+      }
+
+      .timeline-legend {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+        font-size: 10px;
+        color: #737373;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+      }
+
+      .legend-dot.cpu { background: #60a5fa; }
+      .legend-dot.gpu { background: #22c55e; }
+      .legend-dot.spike { background: #ef4444; }
+      .legend-dot.target { background: #22d3ee; }
+
+      /* Buttons */
+      .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 14px;
+        font-size: 12px;
+        font-weight: 500;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex: 1;
+      }
+
+      .btn-primary {
+        background: #22d3ee;
+        color: #0a0a0a;
+      }
+
+      .btn-primary:hover {
+        background: #06b6d4;
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e5e5e5;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .btn-danger {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+
+      .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.3);
+      }
+
+      .btn-warning {
+        background: rgba(234, 179, 8, 0.2);
+        color: #eab308;
+        border: 1px solid rgba(234, 179, 8, 0.3);
+      }
+
+      .btn-warning:hover {
+        background: rgba(234, 179, 8, 0.3);
+      }
+
+      .btn-success {
+        background: rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+
+      .btn-success:hover {
+        background: rgba(34, 197, 94, 0.3);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Spike Indicator */
+      .spike-indicator {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .spike-indicator.hidden {
+        display: none;
+      }
+
+      .spike-icon {
+        font-size: 16px;
+      }
+
+      .spike-text {
+        font-size: 11px;
+        color: #ef4444;
+      }
+
+      .spike-count {
+        font-weight: 700;
+      }
+
+      /* Load Controls */
+      .load-control {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .load-control-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .load-control-title {
+        font-size: 12px;
+        font-weight: 500;
+        color: #e5e5e5;
+      }
+
+      .load-control-value {
+        font-size: 12px;
+        font-weight: 600;
+        color: #22d3ee;
+      }
+
+      .load-slider {
+        width: 100%;
+        height: 4px;
+        -webkit-appearance: none;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        outline: none;
+      }
+
+      .load-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        background: #22d3ee;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+
+      /* Scenario Buttons */
+      .scenario-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .scenario-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 12px 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .scenario-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .scenario-btn.active {
+        background: rgba(34, 211, 238, 0.1);
+        border-color: rgba(34, 211, 238, 0.3);
+      }
+
+      .scenario-icon {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+
+      .scenario-name {
+        font-size: 11px;
+        font-weight: 500;
+        color: #e5e5e5;
+      }
+
+      /* Footer hint */
+      .hint {
+        font-size: 10px;
+        color: #525252;
+        text-align: center;
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      /* Scrollbar */
+      .control-panel::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .control-panel::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .control-panel::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="control-panel">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12,6 12,12 16,14"/>
+          </svg>
+          Timeline Recording Demo
+        </div>
+
+        <div class="info-box">
+          <p>
+            This demo showcases 3Lens performance timeline features.
+            Use the controls to simulate various performance scenarios
+            and watch the timeline respond in real-time.
+            Press <kbd>F9</kbd> to open 3Lens DevTools → Performance → Timeline tab.
+          </p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Live Performance</div>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="fps">60</div>
+              <div class="stat-label">FPS</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="cpu-time">0.0</div>
+              <div class="stat-label">CPU (ms)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="draw-calls">0</div>
+              <div class="stat-label">Draw Calls</div>
+            </div>
+          </div>
+
+          <div class="spike-indicator hidden" id="spike-indicator">
+            <span class="spike-icon">⚠️</span>
+            <span class="spike-text">
+              <span class="spike-count" id="spike-count">0</span> frame spikes detected (>33ms)
+            </span>
+          </div>
+
+          <div class="timeline-mini">
+            <div class="timeline-mini-header">
+              <span class="timeline-mini-title">Frame Time History (last 60 frames)</span>
+              <span class="timeline-mini-fps" id="avg-fps">60 fps avg</span>
+            </div>
+            <canvas class="timeline-mini-canvas" id="mini-timeline"></canvas>
+            <div class="timeline-legend">
+              <div class="legend-item">
+                <span class="legend-dot cpu"></span>
+                <span>CPU</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot spike"></span>
+                <span>Spike</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot target"></span>
+                <span>16.67ms (60fps)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Performance Load</div>
+          
+          <div class="load-control">
+            <div class="load-control-header">
+              <span class="load-control-title">Object Count</span>
+              <span class="load-control-value" id="object-count-value">100</span>
+            </div>
+            <input type="range" class="load-slider" id="object-count" min="10" max="2000" value="100" />
+          </div>
+
+          <div class="load-control">
+            <div class="load-control-header">
+              <span class="load-control-title">Animation Complexity</span>
+              <span class="load-control-value" id="anim-complexity-value">Low</span>
+            </div>
+            <input type="range" class="load-slider" id="anim-complexity" min="1" max="3" value="1" />
+          </div>
+
+          <div class="load-control">
+            <div class="load-control-header">
+              <span class="load-control-title">Shadow Quality</span>
+              <span class="load-control-value" id="shadow-quality-value">Off</span>
+            </div>
+            <input type="range" class="load-slider" id="shadow-quality" min="0" max="3" value="0" />
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Simulate Scenarios</div>
+          <div class="scenario-grid">
+            <div class="scenario-btn" id="scenario-smooth" data-scenario="smooth">
+              <div class="scenario-icon">🟢</div>
+              <div class="scenario-name">Smooth 60fps</div>
+            </div>
+            <div class="scenario-btn" id="scenario-heavy" data-scenario="heavy">
+              <div class="scenario-icon">🟠</div>
+              <div class="scenario-name">Heavy Load</div>
+            </div>
+            <div class="scenario-btn" id="scenario-spikes" data-scenario="spikes">
+              <div class="scenario-icon">🔴</div>
+              <div class="scenario-name">Random Spikes</div>
+            </div>
+            <div class="scenario-btn" id="scenario-gc" data-scenario="gc">
+              <div class="scenario-icon">🗑️</div>
+              <div class="scenario-name">GC Pressure</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Actions</div>
+          <div class="btn-group">
+            <div class="btn-row">
+              <button class="btn btn-danger" id="trigger-spike">
+                ⚡ Trigger Spike
+              </button>
+              <button class="btn btn-warning" id="trigger-gc">
+                🗑️ Force GC
+              </button>
+            </div>
+            <button class="btn btn-secondary" id="reset-scene">
+              ↺ Reset to Default
+            </button>
+          </div>
+        </div>
+
+        <div class="hint">
+          Open 3Lens DevTools (F9) → Performance → Timeline to see detailed recording
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
