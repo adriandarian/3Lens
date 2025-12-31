@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Performance debugging example demonstrating 3Lens profiling capabilities",
   "scripts": {
-    "dev": "vite --port 3006",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },

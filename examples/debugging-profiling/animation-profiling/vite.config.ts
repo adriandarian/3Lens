@@ -3,7 +3,6 @@ import { resolve } from 'path';
 
 export default defineConfig({
   server: {
-    port: 3012,
     open: true,
   },
   resolve: {

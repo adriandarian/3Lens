@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Large scene optimization example demonstrating 3Lens performance analysis",
   "scripts": {
-    "dev": "vite --port 3012",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
