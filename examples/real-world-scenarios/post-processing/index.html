@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post-Processing Analyzer - 3Lens Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0e14;
+      color: #e6e6e6;
+      overflow: hidden;
+    }
+
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      background: rgba(20, 25, 35, 0.95);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .control-panel h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #22c55e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Effect Toggle */
+    .effect-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+    }
+
+    .effect-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .effect-item.disabled {
+      opacity: 0.5;
+    }
+
+    .effect-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .effect-name {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .effect-cost {
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    .effect-cost.low { color: #22c55e; }
+    .effect-cost.medium { color: #f59e0b; }
+    .effect-cost.high { color: #ef4444; }
+
+    /* Toggle Switch */
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: #333;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle.active {
+      background: #22c55e;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle.active::after {
+      transform: translateX(20px);
+    }
+
+    /* Sliders */
+    .slider-group {
+      margin-bottom: 12px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 6px;
+      color: #aaa;
+    }
+
+    .slider-value {
+      color: #22c55e;
+      font-family: monospace;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #22c55e;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Preset Buttons */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .preset-btn {
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #e6e6e6;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #22c55e;
+    }
+
+    .preset-btn.active {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: #22c55e;
+      color: #22c55e;
+    }
+
+    /* View Mode Buttons */
+    .view-modes {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .view-btn {
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: #e6e6e6;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .view-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: #3b82f6;
+      color: #3b82f6;
+    }
+
+    /* Stats Panel */
+    .stats-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 240px;
+      background: rgba(20, 25, 35, 0.95);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+
+    .stats-panel h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #3b82f6;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: #888;
+    }
+
+    .stat-value {
+      color: #e6e6e6;
+      font-family: monospace;
+    }
+
+    .stat-value.good { color: #22c55e; }
+    .stat-value.warn { color: #f59e0b; }
+    .stat-value.bad { color: #ef4444; }
+
+    /* Pass List */
+    .pass-list {
+      margin-top: 12px;
+    }
+
+    .pass-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+
+    .pass-name {
+      color: #aaa;
+    }
+
+    .pass-time {
+      color: #22c55e;
+      font-family: monospace;
+    }
+
+    /* Color Picker */
+    .color-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .color-input label {
+      font-size: 12px;
+      color: #aaa;
+      flex: 1;
+    }
+
+    .color-input input[type="color"] {
+      width: 40px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+    }
+
+    /* Help Text */
+    .help-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      line-height: 1.5;
+    }
+
+    kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: monospace;
+    }
+
+    /* Comparison Slider */
+    .comparison-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 25, 35, 0.95);
+      border-radius: 8px;
+      padding: 12px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: none;
+      z-index: 100;
+    }
+
+    .comparison-container.visible {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .comparison-label {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .comparison-slider {
+      width: 200px;
+    }
+
+    /* Scrollbar */
+    .control-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .control-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .control-panel::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- Control Panel -->
+  <div class="control-panel">
+    <h2>🎨 Post-Processing Analyzer</h2>
+
+    <!-- Preset Selection -->
+    <div class="section">
+      <div class="section-title">Presets</div>
+      <div class="preset-grid">
+        <button class="preset-btn active" data-preset="cinematic">Cinematic</button>
+        <button class="preset-btn" data-preset="retro">Retro</button>
+        <button class="preset-btn" data-preset="dream">Dream</button>
+        <button class="preset-btn" data-preset="noir">Noir</button>
+        <button class="preset-btn" data-preset="vibrant">Vibrant</button>
+        <button class="preset-btn" data-preset="minimal">Minimal</button>
+      </div>
+    </div>
+
+    <!-- Effect Toggles -->
+    <div class="section">
+      <div class="section-title">Effects</div>
+      
+      <div class="effect-item" data-effect="bloom">
+        <div class="effect-info">
+          <span class="effect-name">Bloom</span>
+          <span class="effect-cost medium">~0.8ms GPU</span>
+        </div>
+        <div class="toggle active" id="toggle-bloom"></div>
+      </div>
+
+      <div class="effect-item" data-effect="ssao">
+        <div class="effect-info">
+          <span class="effect-name">SSAO</span>
+          <span class="effect-cost high">~2.1ms GPU</span>
+        </div>
+        <div class="toggle" id="toggle-ssao"></div>
+      </div>
+
+      <div class="effect-item" data-effect="dof">
+        <div class="effect-info">
+          <span class="effect-name">Depth of Field</span>
+          <span class="effect-cost medium">~1.2ms GPU</span>
+        </div>
+        <div class="toggle" id="toggle-dof"></div>
+      </div>
+
+      <div class="effect-item" data-effect="vignette">
+        <div class="effect-info">
+          <span class="effect-name">Vignette</span>
+          <span class="effect-cost low">~0.1ms GPU</span>
+        </div>
+        <div class="toggle active" id="toggle-vignette"></div>
+      </div>
+
+      <div class="effect-item" data-effect="chromatic">
+        <div class="effect-info">
+          <span class="effect-name">Chromatic Aberration</span>
+          <span class="effect-cost low">~0.2ms GPU</span>
+        </div>
+        <div class="toggle" id="toggle-chromatic"></div>
+      </div>
+
+      <div class="effect-item" data-effect="noise">
+        <div class="effect-info">
+          <span class="effect-name">Film Grain</span>
+          <span class="effect-cost low">~0.1ms GPU</span>
+        </div>
+        <div class="toggle" id="toggle-noise"></div>
+      </div>
+
+      <div class="effect-item" data-effect="colorgrade">
+        <div class="effect-info">
+          <span class="effect-name">Color Grading</span>
+          <span class="effect-cost low">~0.2ms GPU</span>
+        </div>
+        <div class="toggle active" id="toggle-colorgrade"></div>
+      </div>
+
+      <div class="effect-item" data-effect="fxaa">
+        <div class="effect-info">
+          <span class="effect-name">FXAA</span>
+          <span class="effect-cost low">~0.3ms GPU</span>
+        </div>
+        <div class="toggle active" id="toggle-fxaa"></div>
+      </div>
+    </div>
+
+    <!-- Effect Parameters -->
+    <div class="section" id="params-section">
+      <div class="section-title">Parameters</div>
+      
+      <div class="slider-group" id="param-bloom-intensity">
+        <div class="slider-label">
+          <span>Bloom Intensity</span>
+          <span class="slider-value" id="bloom-intensity-value">1.0</span>
+        </div>
+        <input type="range" id="bloom-intensity" min="0" max="3" step="0.1" value="1.0">
+      </div>
+
+      <div class="slider-group" id="param-bloom-threshold">
+        <div class="slider-label">
+          <span>Bloom Threshold</span>
+          <span class="slider-value" id="bloom-threshold-value">0.8</span>
+        </div>
+        <input type="range" id="bloom-threshold" min="0" max="1" step="0.05" value="0.8">
+      </div>
+
+      <div class="slider-group" id="param-dof-focus">
+        <div class="slider-label">
+          <span>Focus Distance</span>
+          <span class="slider-value" id="dof-focus-value">5.0</span>
+        </div>
+        <input type="range" id="dof-focus" min="1" max="20" step="0.5" value="5.0">
+      </div>
+
+      <div class="slider-group" id="param-dof-aperture">
+        <div class="slider-label">
+          <span>Aperture</span>
+          <span class="slider-value" id="dof-aperture-value">2.8</span>
+        </div>
+        <input type="range" id="dof-aperture" min="0.5" max="16" step="0.1" value="2.8">
+      </div>
+
+      <div class="slider-group" id="param-vignette-darkness">
+        <div class="slider-label">
+          <span>Vignette Darkness</span>
+          <span class="slider-value" id="vignette-darkness-value">0.5</span>
+        </div>
+        <input type="range" id="vignette-darkness" min="0" max="1" step="0.05" value="0.5">
+      </div>
+
+      <div class="slider-group" id="param-chromatic-offset">
+        <div class="slider-label">
+          <span>Chromatic Offset</span>
+          <span class="slider-value" id="chromatic-offset-value">0.002</span>
+        </div>
+        <input type="range" id="chromatic-offset" min="0" max="0.01" step="0.0005" value="0.002">
+      </div>
+
+      <div class="slider-group" id="param-noise-intensity">
+        <div class="slider-label">
+          <span>Film Grain</span>
+          <span class="slider-value" id="noise-intensity-value">0.15</span>
+        </div>
+        <input type="range" id="noise-intensity" min="0" max="0.5" step="0.01" value="0.15">
+      </div>
+
+      <div class="color-input" id="param-tint-color">
+        <label>Color Tint</label>
+        <input type="color" id="tint-color" value="#ffffff">
+      </div>
+
+      <div class="slider-group" id="param-saturation">
+        <div class="slider-label">
+          <span>Saturation</span>
+          <span class="slider-value" id="saturation-value">1.0</span>
+        </div>
+        <input type="range" id="saturation" min="0" max="2" step="0.05" value="1.0">
+      </div>
+
+      <div class="slider-group" id="param-contrast">
+        <div class="slider-label">
+          <span>Contrast</span>
+          <span class="slider-value" id="contrast-value">1.0</span>
+        </div>
+        <input type="range" id="contrast" min="0.5" max="2" step="0.05" value="1.0">
+      </div>
+
+      <div class="slider-group" id="param-brightness">
+        <div class="slider-label">
+          <span>Brightness</span>
+          <span class="slider-value" id="brightness-value">0.0</span>
+        </div>
+        <input type="range" id="brightness" min="-0.5" max="0.5" step="0.02" value="0.0">
+      </div>
+    </div>
+
+    <!-- View Mode -->
+    <div class="section">
+      <div class="section-title">Debug View</div>
+      <div class="view-modes">
+        <button class="view-btn active" data-view="final">Final</button>
+        <button class="view-btn" data-view="scene">Scene Only</button>
+        <button class="view-btn" data-view="depth">Depth</button>
+        <button class="view-btn" data-view="normals">Normals</button>
+        <button class="view-btn" data-view="bloom-only">Bloom</button>
+        <button class="view-btn" data-view="compare">Compare</button>
+      </div>
+    </div>
+
+    <div class="help-text">
+      <kbd>Space</kbd> Toggle all effects<br>
+      <kbd>1-8</kbd> Toggle individual effects<br>
+      <kbd>C</kbd> Compare mode<br>
+      <kbd>Ctrl+Shift+D</kbd> Toggle devtools
+    </div>
+  </div>
+
+  <!-- Stats Panel -->
+  <div class="stats-panel">
+    <h3>📊 Performance</h3>
+    <div class="stat-row">
+      <span class="stat-label">FPS</span>
+      <span class="stat-value" id="stat-fps">60</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Frame Time</span>
+      <span class="stat-value" id="stat-frametime">16.67ms</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Post-Process</span>
+      <span class="stat-value" id="stat-postprocess">4.2ms</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Active Effects</span>
+      <span class="stat-value" id="stat-effects">4</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Render Targets</span>
+      <span class="stat-value" id="stat-rendertargets">6</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Shader Passes</span>
+      <span class="stat-value" id="stat-passes">8</span>
+    </div>
+
+    <div class="pass-list" id="pass-list">
+      <!-- Populated dynamically -->
+    </div>
+  </div>
+
+  <!-- Comparison Slider -->
+  <div class="comparison-container" id="comparison-container">
+    <span class="comparison-label">Original</span>
+    <input type="range" class="comparison-slider" id="comparison-slider" min="0" max="100" value="50">
+    <span class="comparison-label">Processed</span>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

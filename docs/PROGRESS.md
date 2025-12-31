@@ -525,7 +525,7 @@
 | 3D model viewer | ✅ | `examples/real-world-scenarios/3d-model-viewer` |
 | Particle system debugger | ✅ | `examples/real-world-scenarios/particle-system` |
 | Physics scene inspector | ✅ | `examples/real-world-scenarios/physics-inspector` |
-| Post-processing analyzer | ⬜ | `examples/real-world-scenarios/post-processing` |
+| Post-processing analyzer | ✅ | `examples/real-world-scenarios/post-processing` |
 | VR/XR debugging example | ⬜ | `examples/real-world-scenarios/vr-xr-debugging` |
 | Multi-scene management | ⬜ | `examples/real-world-scenarios/multi-scene-management` |
 | Procedural generation debugger | ⬜ | `examples/real-world-scenarios/procedural-generation` |
