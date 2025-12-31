@@ -327,7 +327,7 @@
 
 **Goal:** Add features for teams and production debugging workflows.  
 **Target Duration:** 3-4 months  
-**Status:** 🟡 In Progress (~80% complete)
+**Status:** ✅ Complete
 
 ## 3.1 Framework Bridges
 
@@ -448,22 +448,22 @@
 
 **Goal:** Polish UX, build community, and prepare for stable release.  
 **Target Duration:** 2-3 months  
-**Status:** ⚪ Not Started
+**Status:** 🟡 In Progress
 
 ## 4.1 UX Polish
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Light theme | ⬜ | |
-| Dark theme | ⬜ | |
-| Auto theme detection | ⬜ | |
-| Custom theme API | ⬜ | |
-| Panel resizing improvements | ⬜ | |
-| Mobile-friendly overlay | ⬜ | |
-| Keyboard shortcuts | ⬜ | |
-| Command palette | ⬜ | |
-| Screen reader support | ⬜ | |
-| Keyboard navigation | ⬜ | |
+| Light theme | ✅ | Full light theme with proper colors |
+| Dark theme | ✅ | Formalized default dark theme |
+| Auto theme detection | ✅ | ThemeManager with prefers-color-scheme |
+| Custom theme API | ✅ | registerCustomTheme(), preset themes (Monokai, Dracula, Nord, GitHub) |
+| Panel resizing improvements | ✅ | Already implemented in overlay |
+| Mobile-friendly overlay | ⬜ | Touch-friendly targets added via CSS |
+| Keyboard shortcuts | ✅ | KeyboardManager with configurable shortcuts |
+| Command palette | ✅ | Full command palette with search, categories, fuzzy match |
+| Screen reader support | ✅ | ARIA labels, focus management, sr-only class |
+| Keyboard navigation | ✅ | Focus trap, tab navigation, arrow keys |
 
 ## 4.2 Documentation
 
@@ -539,9 +539,9 @@
 |-------|-------------|-----------|-------------|-----------|
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
-| Phase 3 | 72 | 22 | 0 | 50 |
-| Phase 4 | 44 | 0 | 0 | 44 |
-| **Total** | **238** | **144** | **0** | **94** |
+| Phase 3 | 72 | 72 | 0 | 0 |
+| Phase 4 | 44 | 9 | 0 | 35 |
+| **Total** | **238** | **203** | **0** | **35** |
 
 ## Timeline
 
