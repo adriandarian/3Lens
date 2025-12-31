@@ -139,7 +139,7 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | Basic README with installation | ✅ | Enhanced with quickstart, config, examples |
-| Simple vanilla three.js example | ✅ | `examples/basic` created |
+| Simple vanilla three.js example | ✅ | `examples/vanilla-threejs` created |
 | API documentation (partial) | ✅ | `docs/API.md` with full usage guide |
 | Package READMEs | ✅ | Added to `@3lens/core` and `@3lens/overlay` |
 
@@ -482,7 +482,7 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Vanilla three.js example | ⬜ | |
+| Vanilla three.js example | ✅ | `examples/vanilla-threejs` with full demo |
 | React Three Fiber example | ⬜ | |
 | Angular + three.js example | ⬜ | |
 | Vue + TresJS example | ⬜ | |

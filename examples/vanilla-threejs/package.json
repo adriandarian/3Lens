@@ -1,8 +1,9 @@
 {
-  "name": "@3lens/example-basic",
+  "name": "@3lens/example-vanilla-threejs",
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "description": "Vanilla Three.js example with 3Lens devtool integration",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
