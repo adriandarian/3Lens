@@ -327,7 +327,7 @@
 
 **Goal:** Add features for teams and production debugging workflows.  
 **Target Duration:** 3-4 months  
-**Status:** 🟡 In Progress (~70% complete)
+**Status:** 🟡 In Progress (~80% complete)
 
 ## 3.1 Framework Bridges
 
@@ -438,9 +438,9 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Timestamp queries setup | ⬜ | |
-| Per-pass breakdown | ⬜ | |
-| Query result readback | ⬜ | |
+| Timestamp queries setup | ✅ | WebGpuTimingManager with query set creation |
+| Per-pass breakdown | ✅ | Pass-level timing with type categorization |
+| Query result readback | ✅ | Async readback with triple buffering |
 
 ---
 

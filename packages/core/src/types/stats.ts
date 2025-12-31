@@ -451,7 +451,7 @@ export interface WebGPUFrameExtras {
   buffersUsed: number;
 
   /**
-   * GPU timestamp breakdown by pass
+   * GPU timestamp breakdown by pass (legacy)
    */
   timestampBreakdown?: Record<string, number>;
 
@@ -466,6 +466,11 @@ export interface WebGPUFrameExtras {
   renderPasses?: number;
 
   /**
+   * Detailed GPU timing from timestamp queries
+   */
+  gpuTiming?: WebGPUDetailedTiming;
+
+  /**
    * GPU adapter info
    */
   adapterInfo?: {
@@ -474,6 +479,41 @@ export interface WebGPUFrameExtras {
     device: string;
     description: string;
   };
+}
+
+/**
+ * Detailed GPU timing from WebGPU timestamp queries
+ */
+export interface WebGPUDetailedTiming {
+  /**
+   * Total GPU time in milliseconds
+   */
+  totalMs: number;
+
+  /**
+   * Individual pass timings
+   */
+  passes: WebGPUPassTiming[];
+
+  /**
+   * Breakdown by pass name/type (name -> milliseconds)
+   */
+  breakdown: Record<string, number>;
+}
+
+/**
+ * Individual GPU pass timing
+ */
+export interface WebGPUPassTiming {
+  /**
+   * Pass name (e.g., "shadow", "opaque", "transparent")
+   */
+  name: string;
+
+  /**
+   * Duration in milliseconds
+   */
+  durationMs: number;
 }
 
 /**

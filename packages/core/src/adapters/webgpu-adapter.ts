@@ -14,6 +14,8 @@ import type {
   RenderingStats,
 } from '../types';
 
+import { WebGpuTimingManager, type GpuFrameTiming } from './webgpu-timing';
+
 /**
  * WebGPU Renderer type from Three.js
  * 
@@ -172,13 +174,34 @@ export function createWebGPUAdapter(
   // Current scene reference
   let currentScene: THREE.Scene | null = null;
 
-  // GPU timing (WebGPU has better timestamp query support)
+  // GPU timing with timestamp queries
   let lastGpuTime = 0;
   let gpuTimingEnabled = false;
+  let gpuTimingManager: WebGpuTimingManager | null = null;
+  let gpuTimingInitialized = false;
+  let lastGpuTiming: GpuFrameTiming | null = null;
 
-  // Try to detect if timestamp queries are available
+  // Try to detect if timestamp queries are available and initialize timing
   const backend = renderer.backend;
-  if (backend?.hasTimestampQuery) {
+  const device = backend?.device;
+  
+  if (device?.features.has('timestamp-query')) {
+    gpuTimingEnabled = true;
+    gpuTimingManager = new WebGpuTimingManager({
+      maxHistorySize: 120,
+      maxPassesPerFrame: 16,
+    });
+    
+    // Initialize async
+    gpuTimingManager.initialize(device).then((success) => {
+      gpuTimingInitialized = success;
+      if (success) {
+        console.log('[3Lens WebGPU] GPU timing initialized with timestamp queries');
+      }
+    }).catch(() => {
+      gpuTimingInitialized = false;
+    });
+  } else if (backend?.hasTimestampQuery) {
     gpuTimingEnabled = true;
   }
 
@@ -223,11 +246,15 @@ export function createWebGPUAdapter(
     // Camera info
     const cameraInfo = extractCameraInfo(camera);
 
+    // Get GPU timing from timestamp queries
+    const gpuTiming = lastGpuTiming;
+    const gpuTimeMs = gpuTiming?.totalMs ?? (lastGpuTime > 0 ? lastGpuTime : undefined);
+
     const stats: FrameStats = {
       timestamp: now,
       frameNumber: frameCount,
       cpuTimeMs,
-      gpuTimeMs: lastGpuTime > 0 ? lastGpuTime : undefined,
+      gpuTimeMs,
       drawCalls: info.render.calls,
       triangles: info.render.triangles,
       points: info.render.points,
@@ -242,11 +269,21 @@ export function createWebGPUAdapter(
         fpsMax: minFrameTime > 0 && minFrameTime < Infinity ? 1000 / minFrameTime : 0,
       },
       camera: cameraInfo,
-      webgpu: {
-        pipelineCount: cachedPipelines.length,
-        computePassCount: 0, // Would need deeper instrumentation
-        renderPassCount: 1, // At minimum, the main render pass
-        bindGroupCount: 0, // Would need deeper instrumentation
+      backend: 'webgpu' as const,
+      webgpuExtras: {
+        pipelinesUsed: cachedPipelines.length,
+        bindGroupsUsed: 0, // Would need deeper instrumentation
+        buffersUsed: 0, // Would need deeper instrumentation
+        computePasses: 0, // Would need deeper instrumentation
+        renderPasses: 1, // At minimum, the main render pass
+        gpuTiming: gpuTiming ? {
+          totalMs: gpuTiming.totalMs,
+          passes: gpuTiming.passes.map(p => ({
+            name: p.name,
+            durationMs: p.durationMs,
+          })),
+          breakdown: gpuTiming.breakdown,
+        } : undefined,
       },
     };
 

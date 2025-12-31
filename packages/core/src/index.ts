@@ -208,6 +208,15 @@ export type {
   WebGPUBindGroupEntryInfo,
 } from './adapters/webgpu-adapter';
 
+// WebGPU GPU Timing
+export { WebGpuTimingManager, createTimestampWrites, categorizePass } from './adapters/webgpu-timing';
+export type {
+  GpuPassTiming,
+  GpuFrameTiming,
+  GpuPassType,
+  GpuTimingConfig,
+} from './adapters/webgpu-timing';
+
 // Transport
 export { createPostMessageTransport } from './transport/postmessage-transport';
 export { createDirectTransport } from './transport/direct-transport';
