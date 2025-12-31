@@ -500,7 +500,7 @@
 | Memory leak detection example | ✅ | `examples/debugging-profiling/memory-leak-detection` |
 | Large scene optimization example | ✅ | `examples/debugging-profiling/large-scene-optimization` |
 | Shader debugging example | ✅ | `examples/debugging-profiling/shader-debugging` |
-| Draw call batching example | ⬜ | `examples/debugging-profiling/draw-call-batching` |
+| Draw call batching example | ✅ | `examples/debugging-profiling/draw-call-batching` |
 | Texture optimization example | ⬜ | `examples/debugging-profiling/texture-optimization` |
 | Animation profiling example | ⬜ | `examples/debugging-profiling/animation-profiling` |
 | Raycasting debugger | ⬜ | `examples/debugging-profiling/raycasting-debugger` |
