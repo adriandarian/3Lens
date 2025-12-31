@@ -484,7 +484,7 @@
 |------|--------|-------|
 | Vanilla three.js example | ✅ | `examples/vanilla-threejs` with full demo |
 | React Three Fiber example | ✅ | `examples/react-three-fiber` with full R3F integration |
-| Angular + three.js example | ⬜ | |
+| Angular + three.js example | ✅ | `examples/angular-threejs` with full Angular integration |
 | Vue + TresJS example | ⬜ | |
 | Performance debugging example | ⬜ | |
 
