@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configuration Rules Example - 3Lens</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0f;
+        color: #e0e0e0;
+        overflow: hidden;
+      }
+
+      #app {
+        width: 100vw;
+        height: 100vh;
+      }
+
+      /* Control Panel */
+      .control-panel {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background: rgba(20, 20, 30, 0.95);
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 16px;
+        width: 340px;
+        z-index: 100;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+
+      .panel-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #61dafb;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .panel-section {
+        margin-bottom: 16px;
+      }
+
+      .section-header {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #888;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+      }
+
+      /* Threshold Controls */
+      .threshold-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #252535;
+      }
+
+      .threshold-item:last-child {
+        border-bottom: none;
+      }
+
+      .threshold-label {
+        font-size: 12px;
+        color: #b0b0b0;
+      }
+
+      .threshold-input {
+        width: 80px;
+        background: #1a1a2a;
+        border: 1px solid #333;
+        color: #e0e0e0;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        text-align: right;
+      }
+
+      .threshold-input:focus {
+        outline: none;
+        border-color: #61dafb;
+      }
+
+      /* Buttons */
+      .btn {
+        background: #2a2a3a;
+        border: 1px solid #444;
+        color: #e0e0e0;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .btn:hover {
+        background: #3a3a4a;
+        border-color: #555;
+      }
+
+      .btn.active {
+        background: #61dafb;
+        color: #000;
+        border-color: #61dafb;
+      }
+
+      .btn.danger {
+        background: #5a2d2d;
+        border-color: #8b4444;
+      }
+
+      .btn.danger:hover {
+        background: #6a3d3d;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+
+      /* Violations Display */
+      .violations-container {
+        background: #1a1a2a;
+        border-radius: 4px;
+        padding: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .violation-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 8px;
+        border-bottom: 1px solid #252535;
+        font-size: 12px;
+      }
+
+      .violation-item:last-child {
+        border-bottom: none;
+      }
+
+      .violation-icon {
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+
+      .violation-content {
+        flex: 1;
+      }
+
+      .violation-name {
+        font-weight: 500;
+        margin-bottom: 2px;
+      }
+
+      .violation-message {
+        color: #888;
+        font-size: 11px;
+      }
+
+      .violation-severity {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        text-transform: uppercase;
+      }
+
+      .severity-error {
+        background: #5a2d2d;
+        color: #FF6B6B;
+      }
+
+      .severity-warning {
+        background: #4a3a1a;
+        color: #FFD700;
+      }
+
+      .severity-info {
+        background: #1a3a5a;
+        color: #61dafb;
+      }
+
+      /* Custom Rules */
+      .custom-rule-item {
+        background: #1a1a2a;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 8px;
+      }
+
+      .custom-rule-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+
+      .custom-rule-name {
+        font-weight: 500;
+        font-size: 12px;
+      }
+
+      .custom-rule-id {
+        font-size: 10px;
+        color: #666;
+        font-family: monospace;
+      }
+
+      .custom-rule-status {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+      }
+
+      .status-passing {
+        background: #1a4a2a;
+        color: #90EE90;
+      }
+
+      .status-failing {
+        background: #5a2d2d;
+        color: #FF6B6B;
+      }
+
+      /* Stats Summary */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .stat-item {
+        background: #1a1a2a;
+        padding: 10px;
+        border-radius: 4px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      .stat-value.error {
+        color: #FF6B6B;
+      }
+
+      .stat-value.warning {
+        color: #FFD700;
+      }
+
+      .stat-value.ok {
+        color: #90EE90;
+      }
+
+      .stat-label {
+        font-size: 10px;
+        color: #888;
+        text-transform: uppercase;
+      }
+
+      /* Scene Controls */
+      .scene-controls {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .scene-btn {
+        background: #2a2a3a;
+        border: 1px solid #444;
+        color: #e0e0e0;
+        padding: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+        text-align: center;
+        transition: all 0.2s;
+      }
+
+      .scene-btn:hover {
+        background: #3a3a4a;
+        border-color: #555;
+      }
+
+      .scene-btn .icon {
+        font-size: 20px;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      /* Info Box */
+      .info-box {
+        background: #1a2a3a;
+        border: 1px solid #2a4a6a;
+        border-radius: 4px;
+        padding: 12px;
+        margin-top: 12px;
+        font-size: 11px;
+        color: #8ab4f8;
+      }
+
+      .info-box .title {
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      /* Config Preview */
+      .config-preview {
+        background: #1a1a2a;
+        border-radius: 4px;
+        padding: 10px;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 10px;
+        line-height: 1.5;
+        overflow-x: auto;
+        white-space: pre;
+        color: #a0a0b0;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+
+      .config-preview .key {
+        color: #9cdcfe;
+      }
+
+      .config-preview .value {
+        color: #ce9178;
+      }
+
+      .config-preview .number {
+        color: #b5cea8;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div class="control-panel">
+      <div class="panel-title">
+        <span>⚙️</span>
+        Configuration Rules Example
+      </div>
+
+      <div class="panel-section">
+        <div class="section-header">Violation Summary</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value error" id="error-count">0</div>
+            <div class="stat-label">Errors</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value warning" id="warning-count">0</div>
+            <div class="stat-label">Warnings</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value ok" id="passing-count">0</div>
+            <div class="stat-label">Passing</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-header">Scene Complexity (trigger violations)</div>
+        <div class="scene-controls">
+          <button class="scene-btn" id="add-objects">
+            <span class="icon">📦</span>
+            Add 50 Objects
+          </button>
+          <button class="scene-btn" id="add-textures">
+            <span class="icon">🖼️</span>
+            Add Heavy Textures
+          </button>
+          <button class="scene-btn" id="add-lights">
+            <span class="icon">💡</span>
+            Add 5 Lights
+          </button>
+          <button class="scene-btn" id="reset-scene">
+            <span class="icon">🔄</span>
+            Reset Scene
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-header">Performance Thresholds</div>
+        <div class="threshold-item">
+          <span class="threshold-label">Max Draw Calls</span>
+          <input type="number" class="threshold-input" id="threshold-drawcalls" value="100" min="1">
+        </div>
+        <div class="threshold-item">
+          <span class="threshold-label">Max Triangles</span>
+          <input type="number" class="threshold-input" id="threshold-triangles" value="50000" min="100">
+        </div>
+        <div class="threshold-item">
+          <span class="threshold-label">Max Lights</span>
+          <input type="number" class="threshold-input" id="threshold-lights" value="5" min="1">
+        </div>
+        <div class="threshold-item">
+          <span class="threshold-label">Min FPS</span>
+          <input type="number" class="threshold-input" id="threshold-fps" value="30" min="1">
+        </div>
+        <div class="btn-row" style="margin-top: 8px;">
+          <button class="btn" id="apply-thresholds">Apply Thresholds</button>
+          <button class="btn" id="reset-thresholds">Reset Defaults</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-header">Custom Rules</div>
+        <div id="custom-rules-list">
+          <!-- Populated by JS -->
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="add-custom-rule">+ Add Custom Rule</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-header">Recent Violations</div>
+        <div class="violations-container" id="violations-list">
+          <div style="color: #666; text-align: center; padding: 20px;">
+            No violations yet
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top: 8px;">
+          <button class="btn" id="clear-violations">Clear History</button>
+          <button class="btn" id="export-config">Export Config</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-header">Current Config Preview</div>
+        <div class="config-preview" id="config-preview">
+// 3lens.config.js
+export default {
+  appName: 'ConfigRulesDemo',
+  rules: {
+    maxDrawCalls: 100,
+    maxTriangles: 50000,
+    maxLights: 5,
+    minFps: 30,
+  }
+};</div>
+      </div>
+
+      <div class="info-box">
+        <div class="title">💡 About Configuration Rules</div>
+        3Lens can monitor your scene against configurable thresholds
+        and custom rules. Violations are displayed in the overlay 
+        and can trigger callbacks for CI integration.
+        <br><br>
+        Press <kbd>Ctrl+Shift+D</kbd> to open the 3Lens overlay and
+        see violations in the Overview panel.
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
