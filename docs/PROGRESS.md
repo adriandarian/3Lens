@@ -529,7 +529,7 @@
 | VR/XR debugging example | ✅ | `examples/real-world-scenarios/vr-xr-debugging` |
 | Multi-scene management | ✅ | `examples/real-world-scenarios/multi-scene-management` |
 | Procedural generation debugger | ✅ | `examples/real-world-scenarios/procedural-generation` |
-| Audio visualization scene | ⬜ | `examples/real-world-scenarios/audio-visualization` |
+| Audio visualization scene | ✅ | `examples/real-world-scenarios/audio-visualization` |
 
 ### Game Development Examples
 
