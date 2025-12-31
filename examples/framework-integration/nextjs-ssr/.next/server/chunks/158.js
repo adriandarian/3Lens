@@ -1,0 +1,1 @@
+"use strict";exports.id=158,exports.ids=[158],exports.modules={4158:(e,s,r)=>{r.r(s),r.d(s,{default:()=>t});let t=(0,r(846).createProxy)(String.raw`/Users/dariana/personal/3Lens/examples/framework-integration/nextjs-ssr/src/components/Scene3D.tsx#default`)}};
