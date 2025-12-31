@@ -64,6 +64,7 @@ export class DevtoolProbe {
     (obj: THREE.Object3D | null, meta?: ObjectMeta) => void
   > = [];
   private _frameStatsCallbacks: Array<(stats: FrameStats) => void> = [];
+  private _snapshotCallbacks: Array<(snapshot: SceneSnapshot) => void> = [];
   private _commandCallbacks: Array<(command: DebugMessage) => void> = [];
   private _resourceEventCallbacks: Array<(event: ResourceLifecycleEvent) => void> = [];
   
@@ -525,6 +526,15 @@ export class DevtoolProbe {
       trigger: 'manual',
       snapshot,
     });
+
+    // Notify snapshot callbacks
+    for (const callback of this._snapshotCallbacks) {
+      try {
+        callback(snapshot);
+      } catch (e) {
+        this.log('Snapshot callback error', e, 'warn');
+      }
+    }
 
     return snapshot;
   }
@@ -1607,6 +1617,19 @@ export class DevtoolProbe {
       const index = this._frameStatsCallbacks.indexOf(callback);
       if (index > -1) {
         this._frameStatsCallbacks.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Subscribe to scene snapshot updates
+   */
+  onSnapshot(callback: (snapshot: SceneSnapshot) => void): Unsubscribe {
+    this._snapshotCallbacks.push(callback);
+    return () => {
+      const index = this._snapshotCallbacks.indexOf(callback);
+      if (index > -1) {
+        this._snapshotCallbacks.splice(index, 1);
       }
     };
   }
