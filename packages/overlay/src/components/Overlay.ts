@@ -69,6 +69,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   { id: 'geometry', title: 'Geometry', icon: '📐', iconClass: 'inspector', defaultWidth: 750, defaultHeight: 500 },
   { id: 'textures', title: 'Textures', icon: '🖼️', iconClass: 'textures', defaultWidth: 800, defaultHeight: 520 },
   { id: 'render-targets', title: 'Render Targets', icon: '🎯', iconClass: 'render-targets', defaultWidth: 850, defaultHeight: 550 },
+  { id: 'webgpu', title: 'WebGPU', icon: '🔷', iconClass: 'webgpu', defaultWidth: 700, defaultHeight: 500 },
   { id: 'plugins', title: 'Plugins', icon: '🔌', iconClass: 'plugin', defaultWidth: 420, defaultHeight: 480 },
 ];
 
@@ -758,6 +759,8 @@ export class ThreeLensOverlay {
         return this.renderTexturesContent();
       case 'render-targets':
         return this.renderRenderTargetsContent();
+      case 'webgpu':
+        return this.renderWebGPUContent();
       case 'plugins':
         return this.renderPluginsContent();
       default:
@@ -1162,6 +1165,420 @@ export class ThreeLensOverlay {
     this.attachPluginsPanelEvents(content);
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // WEBGPU PANEL
+  // ═══════════════════════════════════════════════════════════════
+
+  private webgpuTab: 'pipelines' | 'bindgroups' | 'shaders' | 'capabilities' = 'pipelines';
+  private selectedPipelineId: string | null = null;
+  private selectedBindGroupId: string | null = null;
+
+  private renderWebGPUContent(): string {
+    // Check if WebGPU is being used
+    if (!this.probe.isWebGPU()) {
+      return `
+        <div class="webgpu-panel">
+          <div class="webgpu-not-available">
+            <div class="webgpu-not-available-icon">🔷</div>
+            <div class="webgpu-not-available-title">WebGPU Not Active</div>
+            <div class="webgpu-not-available-desc">
+              The current renderer is using WebGL. This panel provides debugging tools 
+              specifically for Three.js WebGPURenderer.
+            </div>
+            <div class="webgpu-not-available-hint">
+              To use WebGPU, initialize your app with <code>WebGPURenderer</code> from 
+              <code>three/webgpu</code>.
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="webgpu-panel">
+        <div class="webgpu-tabs">
+          <button class="webgpu-tab ${this.webgpuTab === 'pipelines' ? 'active' : ''}" data-tab="pipelines">Pipelines</button>
+          <button class="webgpu-tab ${this.webgpuTab === 'bindgroups' ? 'active' : ''}" data-tab="bindgroups">Bind Groups</button>
+          <button class="webgpu-tab ${this.webgpuTab === 'shaders' ? 'active' : ''}" data-tab="shaders">Shaders</button>
+          <button class="webgpu-tab ${this.webgpuTab === 'capabilities' ? 'active' : ''}" data-tab="capabilities">Capabilities</button>
+        </div>
+        <div class="webgpu-tab-content">
+          ${this.renderWebGPUTabContent()}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderWebGPUTabContent(): string {
+    switch (this.webgpuTab) {
+      case 'pipelines': return this.renderWebGPUPipelinesTab();
+      case 'bindgroups': return this.renderWebGPUBindGroupsTab();
+      case 'shaders': return this.renderWebGPUShadersTab();
+      case 'capabilities': return this.renderWebGPUCapabilitiesTab();
+      default: return '';
+    }
+  }
+
+  private renderWebGPUPipelinesTab(): string {
+    const adapter = this.probe.getRendererAdapter();
+    const pipelines = adapter?.getPipelines?.() ?? [];
+
+    if (pipelines.length === 0) {
+      return `
+        <div class="webgpu-empty">
+          <p>No pipelines detected yet.</p>
+          <p class="webgpu-hint">Pipelines are created when materials are compiled for rendering.</p>
+        </div>
+      `;
+    }
+
+    const renderPipelines = pipelines.filter(p => p.type === 'render');
+    const computePipelines = pipelines.filter(p => p.type === 'compute');
+
+    return `
+      <div class="webgpu-pipelines">
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">
+            <span>Render Pipelines</span>
+            <span class="webgpu-badge">${renderPipelines.length}</span>
+          </div>
+          <div class="webgpu-pipeline-list">
+            ${renderPipelines.length === 0 
+              ? '<div class="webgpu-empty-small">No render pipelines</div>'
+              : renderPipelines.map(p => this.renderPipelineItem(p)).join('')
+            }
+          </div>
+        </div>
+        
+        ${computePipelines.length > 0 ? `
+          <div class="webgpu-section">
+            <div class="webgpu-section-header">
+              <span>Compute Pipelines</span>
+              <span class="webgpu-badge">${computePipelines.length}</span>
+            </div>
+            <div class="webgpu-pipeline-list">
+              ${computePipelines.map(p => this.renderPipelineItem(p)).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${this.selectedPipelineId ? this.renderPipelineDetails(this.selectedPipelineId, pipelines) : ''}
+      </div>
+    `;
+  }
+
+  private renderPipelineItem(pipeline: { id: string; type: string; label?: string; usedByMaterials: string[]; usageCount?: number }): string {
+    const isSelected = this.selectedPipelineId === pipeline.id;
+    const icon = pipeline.type === 'render' ? '🎨' : '⚡';
+    const label = pipeline.label ?? pipeline.id;
+    
+    return `
+      <div class="webgpu-pipeline-item ${isSelected ? 'selected' : ''}" data-pipeline-id="${pipeline.id}">
+        <span class="webgpu-pipeline-icon">${icon}</span>
+        <span class="webgpu-pipeline-name">${this.escapeHtml(label)}</span>
+        <span class="webgpu-pipeline-type">${pipeline.type}</span>
+        ${pipeline.usageCount ? `<span class="webgpu-pipeline-usage">${pipeline.usageCount} uses</span>` : ''}
+      </div>
+    `;
+  }
+
+  private renderPipelineDetails(pipelineId: string, pipelines: Array<{ id: string; type: string; label?: string; vertexStage?: string; fragmentStage?: string; computeStage?: string; usedByMaterials: string[] }>): string {
+    const pipeline = pipelines.find(p => p.id === pipelineId);
+    if (!pipeline) return '';
+
+    return `
+      <div class="webgpu-pipeline-details">
+        <div class="webgpu-details-header">
+          <span class="webgpu-details-title">${pipeline.type === 'render' ? '🎨' : '⚡'} ${this.escapeHtml(pipeline.label ?? pipeline.id)}</span>
+          <button class="webgpu-close-btn" data-action="close-pipeline-details">×</button>
+        </div>
+        
+        <div class="webgpu-details-content">
+          <div class="webgpu-detail-row">
+            <span class="webgpu-detail-label">Type</span>
+            <span class="webgpu-detail-value">${pipeline.type}</span>
+          </div>
+          <div class="webgpu-detail-row">
+            <span class="webgpu-detail-label">ID</span>
+            <span class="webgpu-detail-value mono">${pipeline.id}</span>
+          </div>
+          ${pipeline.usedByMaterials.length > 0 ? `
+            <div class="webgpu-detail-row">
+              <span class="webgpu-detail-label">Materials</span>
+              <span class="webgpu-detail-value">${pipeline.usedByMaterials.length} material(s)</span>
+            </div>
+          ` : ''}
+          
+          ${pipeline.vertexStage ? `
+            <div class="webgpu-shader-stage">
+              <div class="webgpu-shader-stage-header">Vertex Stage</div>
+              <div class="webgpu-shader-stage-entry">${pipeline.vertexStage}</div>
+            </div>
+          ` : ''}
+          
+          ${pipeline.fragmentStage ? `
+            <div class="webgpu-shader-stage">
+              <div class="webgpu-shader-stage-header">Fragment Stage</div>
+              <div class="webgpu-shader-stage-entry">${pipeline.fragmentStage}</div>
+            </div>
+          ` : ''}
+          
+          ${pipeline.computeStage ? `
+            <div class="webgpu-shader-stage">
+              <div class="webgpu-shader-stage-header">Compute Stage</div>
+              <div class="webgpu-shader-stage-entry">${pipeline.computeStage}</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderWebGPUBindGroupsTab(): string {
+    // Bind groups would need deeper tracking - show placeholder for now
+    return `
+      <div class="webgpu-bindgroups">
+        <div class="webgpu-info">
+          <div class="webgpu-info-icon">📦</div>
+          <div class="webgpu-info-title">Bind Groups</div>
+          <div class="webgpu-info-desc">
+            Bind groups contain resources (buffers, textures, samplers) that are bound to shaders.
+            Deep bind group tracking requires additional instrumentation.
+          </div>
+        </div>
+        
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">Common Bind Group Types</div>
+          <div class="webgpu-bindgroup-types">
+            <div class="webgpu-bindgroup-type">
+              <span class="webgpu-bindgroup-type-icon">📐</span>
+              <span class="webgpu-bindgroup-type-name">Camera Uniforms</span>
+              <span class="webgpu-bindgroup-type-desc">View, projection, camera position</span>
+            </div>
+            <div class="webgpu-bindgroup-type">
+              <span class="webgpu-bindgroup-type-icon">🎨</span>
+              <span class="webgpu-bindgroup-type-name">Material Properties</span>
+              <span class="webgpu-bindgroup-type-desc">Color, roughness, metalness, textures</span>
+            </div>
+            <div class="webgpu-bindgroup-type">
+              <span class="webgpu-bindgroup-type-icon">💡</span>
+              <span class="webgpu-bindgroup-type-name">Lighting Data</span>
+              <span class="webgpu-bindgroup-type-desc">Light positions, colors, shadow maps</span>
+            </div>
+            <div class="webgpu-bindgroup-type">
+              <span class="webgpu-bindgroup-type-icon">🦴</span>
+              <span class="webgpu-bindgroup-type-name">Skeleton/Morph</span>
+              <span class="webgpu-bindgroup-type-desc">Bone matrices, morph targets</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderWebGPUShadersTab(): string {
+    const adapter = this.probe.getRendererAdapter();
+    const pipelines = adapter?.getPipelines?.() ?? [];
+    
+    // Group by shader stage availability
+    const withShaders = pipelines.filter(p => p.vertexStage || p.fragmentStage || p.computeStage);
+
+    return `
+      <div class="webgpu-shaders">
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">
+            <span>WGSL Shaders</span>
+            <span class="webgpu-badge">${withShaders.length}</span>
+          </div>
+          
+          ${withShaders.length === 0 ? `
+            <div class="webgpu-empty">
+              <p>No shader sources available.</p>
+              <p class="webgpu-hint">Shader source inspection requires additional instrumentation of the WebGPU backend.</p>
+            </div>
+          ` : `
+            <div class="webgpu-shader-list">
+              ${withShaders.map(p => `
+                <div class="webgpu-shader-item" data-pipeline-id="${p.id}">
+                  <span class="webgpu-shader-icon">${p.type === 'compute' ? '⚡' : '🎨'}</span>
+                  <span class="webgpu-shader-name">${this.escapeHtml(p.label ?? p.id)}</span>
+                  <span class="webgpu-shader-stages">
+                    ${p.vertexStage ? '<span class="webgpu-stage-badge vs">VS</span>' : ''}
+                    ${p.fragmentStage ? '<span class="webgpu-stage-badge fs">FS</span>' : ''}
+                    ${p.computeStage ? '<span class="webgpu-stage-badge cs">CS</span>' : ''}
+                  </span>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+        
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">About WGSL</div>
+          <div class="webgpu-info-box">
+            <p><strong>WGSL</strong> (WebGPU Shading Language) is the shader language for WebGPU.</p>
+            <p>Unlike GLSL, WGSL is designed specifically for the web with:</p>
+            <ul>
+              <li>Rust-like syntax</li>
+              <li>Explicit types</li>
+              <li>Memory safety features</li>
+              <li>Consistent behavior across browsers</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderWebGPUCapabilitiesTab(): string {
+    const stats = this.latestStats;
+    const webgpu = stats?.webgpu;
+
+    return `
+      <div class="webgpu-capabilities">
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">Current Frame Stats</div>
+          <div class="webgpu-stats-grid">
+            <div class="webgpu-stat">
+              <span class="webgpu-stat-value">${webgpu?.pipelineCount ?? '—'}</span>
+              <span class="webgpu-stat-label">Pipelines</span>
+            </div>
+            <div class="webgpu-stat">
+              <span class="webgpu-stat-value">${webgpu?.renderPassCount ?? '—'}</span>
+              <span class="webgpu-stat-label">Render Passes</span>
+            </div>
+            <div class="webgpu-stat">
+              <span class="webgpu-stat-value">${webgpu?.computePassCount ?? '—'}</span>
+              <span class="webgpu-stat-label">Compute Passes</span>
+            </div>
+            <div class="webgpu-stat">
+              <span class="webgpu-stat-value">${webgpu?.bindGroupCount ?? '—'}</span>
+              <span class="webgpu-stat-label">Bind Groups</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">Device Limits</div>
+          <div class="webgpu-limits-info">
+            <p class="webgpu-hint">
+              Device limits are available via <code>getWebGPUCapabilities(renderer)</code>.
+            </p>
+          </div>
+          <div class="webgpu-limits-grid">
+            ${this.renderWebGPULimitsGrid()}
+          </div>
+        </div>
+        
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">WebGPU vs WebGL</div>
+          <div class="webgpu-comparison">
+            <div class="webgpu-compare-row header">
+              <span>Feature</span>
+              <span>WebGL</span>
+              <span>WebGPU</span>
+            </div>
+            <div class="webgpu-compare-row">
+              <span>Compute Shaders</span>
+              <span class="no">❌</span>
+              <span class="yes">✅</span>
+            </div>
+            <div class="webgpu-compare-row">
+              <span>Explicit Binding</span>
+              <span class="no">❌</span>
+              <span class="yes">✅</span>
+            </div>
+            <div class="webgpu-compare-row">
+              <span>Pipeline State Objects</span>
+              <span class="no">❌</span>
+              <span class="yes">✅</span>
+            </div>
+            <div class="webgpu-compare-row">
+              <span>Multi-threaded Commands</span>
+              <span class="no">❌</span>
+              <span class="yes">✅</span>
+            </div>
+            <div class="webgpu-compare-row">
+              <span>Timestamp Queries</span>
+              <span class="partial">⚠️</span>
+              <span class="yes">✅</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderWebGPULimitsGrid(): string {
+    // These would come from getWebGPUCapabilities if available
+    const limits = [
+      { name: 'Max Texture Size 2D', value: '16384' },
+      { name: 'Max Bind Groups', value: '4' },
+      { name: 'Max Bindings/Group', value: '1000' },
+      { name: 'Max Uniform Buffer', value: '64KB' },
+      { name: 'Max Storage Buffer', value: '128MB' },
+      { name: 'Max Vertex Buffers', value: '8' },
+      { name: 'Max Vertex Attributes', value: '16' },
+      { name: 'Max Compute Workgroup', value: '256' },
+    ];
+
+    return limits.map(l => `
+      <div class="webgpu-limit">
+        <span class="webgpu-limit-name">${l.name}</span>
+        <span class="webgpu-limit-value">${l.value}</span>
+      </div>
+    `).join('');
+  }
+
+  private attachWebGPUPanelEvents(container: HTMLElement): void {
+    // Tab switching
+    container.querySelectorAll('.webgpu-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        this.webgpuTab = (tab as HTMLElement).dataset.tab as typeof this.webgpuTab;
+        this.updateWebGPUPanel();
+      });
+    });
+
+    // Pipeline selection
+    container.querySelectorAll('.webgpu-pipeline-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const pipelineId = (item as HTMLElement).dataset.pipelineId;
+        this.selectedPipelineId = this.selectedPipelineId === pipelineId ? null : pipelineId ?? null;
+        this.updateWebGPUPanel();
+      });
+    });
+
+    // Close pipeline details
+    container.querySelector('[data-action="close-pipeline-details"]')?.addEventListener('click', () => {
+      this.selectedPipelineId = null;
+      this.updateWebGPUPanel();
+    });
+
+    // Shader item click
+    container.querySelectorAll('.webgpu-shader-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const pipelineId = (item as HTMLElement).dataset.pipelineId;
+        if (pipelineId) {
+          this.webgpuTab = 'pipelines';
+          this.selectedPipelineId = pipelineId;
+          this.updateWebGPUPanel();
+        }
+      });
+    });
+  }
+
+  private updateWebGPUPanel(): void {
+    const content = document.getElementById('three-lens-content-webgpu');
+    if (!content) return;
+    
+    content.innerHTML = this.renderWebGPUContent();
+    this.attachWebGPUPanelEvents(content);
+  }
+
+  private escapeHtml(str: string): string {
+    return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+  }
+
   private mountPanel(panelId: string, panelElement: HTMLElement): void {
     const definition = this.panelDefinitions.get(panelId);
     const container = panelElement.querySelector(`#three-lens-content-${panelId}`) as HTMLElement | null;
@@ -1178,6 +1595,8 @@ export class ThreeLensOverlay {
     // Attach panel-specific events
     if (panelId === 'plugins') {
       this.attachPluginsPanelEvents(container);
+    } else if (panelId === 'webgpu') {
+      this.attachWebGPUPanelEvents(container);
     }
   }
 
@@ -1555,6 +1974,7 @@ export class ThreeLensOverlay {
       case 'geometry': return this.renderGeometryContent();
       case 'textures': return this.renderTexturesContent();
       case 'render-targets': return this.renderRenderTargetsContent();
+      case 'webgpu': return this.renderWebGPUContent();
       case 'plugins': return this.renderPluginsContent();
       default: {
         const definition = this.panelDefinitions.get(panelId);

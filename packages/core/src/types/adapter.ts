@@ -135,6 +135,119 @@ export interface PipelineInfo {
   fragmentStage?: string;
   computeStage?: string;
   usedByMaterials: string[];
+
+  /**
+   * Pipeline label (if set)
+   */
+  label?: string;
+
+  /**
+   * Vertex buffer layouts
+   */
+  vertexBuffers?: VertexBufferLayoutInfo[];
+
+  /**
+   * Bind group layouts
+   */
+  bindGroupLayouts?: BindGroupLayoutInfo[];
+
+  /**
+   * Render pipeline specific
+   */
+  renderState?: {
+    topology?: string;
+    cullMode?: string;
+    frontFace?: string;
+    depthWriteEnabled?: boolean;
+    depthCompare?: string;
+    colorFormats?: string[];
+    depthStencilFormat?: string;
+    sampleCount?: number;
+  };
+
+  /**
+   * Compute pipeline specific
+   */
+  computeState?: {
+    workgroupSize?: [number, number, number];
+  };
+
+  /**
+   * Shader source (WGSL)
+   */
+  shaderSource?: string;
+
+  /**
+   * When this pipeline was created
+   */
+  createdAt?: number;
+
+  /**
+   * Usage count this frame
+   */
+  usageCount?: number;
+}
+
+/**
+ * Vertex buffer layout information
+ */
+export interface VertexBufferLayoutInfo {
+  arrayStride: number;
+  stepMode: 'vertex' | 'instance';
+  attributes: VertexAttributeInfo[];
+}
+
+/**
+ * Vertex attribute information
+ */
+export interface VertexAttributeInfo {
+  format: string;
+  offset: number;
+  shaderLocation: number;
+}
+
+/**
+ * Bind group layout information
+ */
+export interface BindGroupLayoutInfo {
+  index: number;
+  entries: BindGroupLayoutEntryInfo[];
+}
+
+/**
+ * Bind group layout entry information
+ */
+export interface BindGroupLayoutEntryInfo {
+  binding: number;
+  visibility: string[];
+  type: 'buffer' | 'sampler' | 'texture' | 'storageTexture' | 'externalTexture';
+  bufferType?: 'uniform' | 'storage' | 'read-only-storage';
+  samplerType?: 'filtering' | 'non-filtering' | 'comparison';
+  textureType?: string;
+  textureSampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+}
+
+/**
+ * Bind group information
+ */
+export interface BindGroupInfo {
+  id: string;
+  layoutId: string;
+  label?: string;
+  entries: BindGroupEntryInfo[];
+  usedByPipelines: string[];
+}
+
+/**
+ * Bind group entry information
+ */
+export interface BindGroupEntryInfo {
+  binding: number;
+  type: 'buffer' | 'sampler' | 'texture';
+  resourceId: string;
+  resourceLabel?: string;
+  bufferOffset?: number;
+  bufferSize?: number;
 }
 
 /**

@@ -5732,4 +5732,580 @@ export const OVERLAY_STYLES = `
   color: var(--3lens-text-secondary);
   font-size: 12px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   WEBGPU PANEL STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+.webgpu-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.webgpu-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 8px 0;
+  background: var(--3lens-bg-secondary);
+  border-bottom: 1px solid var(--3lens-border);
+}
+
+.webgpu-tab {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--3lens-text-secondary);
+  font-size: 10px;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.15s ease;
+}
+
+.webgpu-tab:hover {
+  color: var(--3lens-text-primary);
+  background: var(--3lens-bg-tertiary);
+}
+
+.webgpu-tab.active {
+  background: var(--3lens-bg-primary);
+  color: var(--3lens-accent);
+  font-weight: 500;
+}
+
+.webgpu-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+/* Not Available State */
+.webgpu-not-available {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.webgpu-not-available-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.webgpu-not-available-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--3lens-text-primary);
+  margin-bottom: 8px;
+}
+
+.webgpu-not-available-desc {
+  font-size: 11px;
+  color: var(--3lens-text-secondary);
+  max-width: 300px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.webgpu-not-available-hint {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+  background: var(--3lens-bg-secondary);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.webgpu-not-available-hint code {
+  background: var(--3lens-bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: 'SF Mono', Monaco, monospace;
+  color: var(--3lens-accent);
+}
+
+/* Section */
+.webgpu-section {
+  margin-bottom: 16px;
+}
+
+.webgpu-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--3lens-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--3lens-border);
+}
+
+.webgpu-badge {
+  background: var(--3lens-accent);
+  color: #000;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* Pipeline List */
+.webgpu-pipeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.webgpu-pipeline-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.webgpu-pipeline-item:hover {
+  background: var(--3lens-bg-tertiary);
+}
+
+.webgpu-pipeline-item.selected {
+  background: var(--3lens-accent);
+  color: #000;
+}
+
+.webgpu-pipeline-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.webgpu-pipeline-name {
+  flex: 1;
+  font-size: 10px;
+  font-family: 'SF Mono', Monaco, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webgpu-pipeline-type {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  text-transform: uppercase;
+}
+
+.webgpu-pipeline-item.selected .webgpu-pipeline-type {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.webgpu-pipeline-usage {
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+}
+
+.webgpu-pipeline-item.selected .webgpu-pipeline-usage {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Pipeline Details */
+.webgpu-pipeline-details {
+  margin-top: 16px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--3lens-border);
+  overflow: hidden;
+}
+
+.webgpu-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--3lens-bg-tertiary);
+  border-bottom: 1px solid var(--3lens-border);
+}
+
+.webgpu-details-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--3lens-text-primary);
+}
+
+.webgpu-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--3lens-text-tertiary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.webgpu-close-btn:hover {
+  color: var(--3lens-text-primary);
+}
+
+.webgpu-details-content {
+  padding: 12px;
+}
+
+.webgpu-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 10px;
+}
+
+.webgpu-detail-label {
+  color: var(--3lens-text-secondary);
+}
+
+.webgpu-detail-value {
+  color: var(--3lens-text-primary);
+}
+
+.webgpu-detail-value.mono {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 9px;
+}
+
+.webgpu-shader-stage {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--3lens-border);
+}
+
+.webgpu-shader-stage-header {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--3lens-text-secondary);
+  margin-bottom: 6px;
+}
+
+.webgpu-shader-stage-entry {
+  font-size: 10px;
+  font-family: 'SF Mono', Monaco, monospace;
+  color: var(--3lens-accent);
+  background: var(--3lens-bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Bind Groups */
+.webgpu-bindgroups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.webgpu-info {
+  text-align: center;
+  padding: 20px;
+}
+
+.webgpu-info-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+.webgpu-info-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--3lens-text-primary);
+  margin-bottom: 8px;
+}
+
+.webgpu-info-desc {
+  font-size: 11px;
+  color: var(--3lens-text-secondary);
+  line-height: 1.5;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.webgpu-bindgroup-types {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.webgpu-bindgroup-type {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 6px;
+}
+
+.webgpu-bindgroup-type-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.webgpu-bindgroup-type-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--3lens-text-primary);
+  min-width: 120px;
+}
+
+.webgpu-bindgroup-type-desc {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+}
+
+/* Shaders */
+.webgpu-shaders {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.webgpu-shader-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.webgpu-shader-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.webgpu-shader-item:hover {
+  background: var(--3lens-bg-tertiary);
+}
+
+.webgpu-shader-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.webgpu-shader-name {
+  flex: 1;
+  font-size: 10px;
+  font-family: 'SF Mono', Monaco, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webgpu-shader-stages {
+  display: flex;
+  gap: 4px;
+}
+
+.webgpu-stage-badge {
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.webgpu-stage-badge.vs {
+  background: rgba(96, 165, 250, 0.2);
+  color: #60A5FA;
+}
+
+.webgpu-stage-badge.fs {
+  background: rgba(251, 146, 60, 0.2);
+  color: #FB923C;
+}
+
+.webgpu-stage-badge.cs {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34D399;
+}
+
+.webgpu-info-box {
+  background: var(--3lens-bg-secondary);
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 10px;
+  color: var(--3lens-text-secondary);
+  line-height: 1.5;
+}
+
+.webgpu-info-box p {
+  margin: 0 0 8px;
+}
+
+.webgpu-info-box p:last-child {
+  margin-bottom: 0;
+}
+
+.webgpu-info-box strong {
+  color: var(--3lens-accent);
+}
+
+.webgpu-info-box ul {
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+
+.webgpu-info-box li {
+  margin-bottom: 4px;
+}
+
+/* Capabilities */
+.webgpu-capabilities {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.webgpu-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.webgpu-stat {
+  text-align: center;
+  padding: 12px 8px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 6px;
+}
+
+.webgpu-stat-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--3lens-accent);
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.webgpu-stat-label {
+  display: block;
+  font-size: 9px;
+  color: var(--3lens-text-tertiary);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.webgpu-limits-info {
+  margin-bottom: 8px;
+}
+
+.webgpu-limits-info code {
+  background: var(--3lens-bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 9px;
+  color: var(--3lens-accent);
+}
+
+.webgpu-limits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.webgpu-limit {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.webgpu-limit-name {
+  color: var(--3lens-text-secondary);
+}
+
+.webgpu-limit-value {
+  color: var(--3lens-text-primary);
+  font-family: 'SF Mono', Monaco, monospace;
+  font-weight: 500;
+}
+
+/* Comparison Table */
+.webgpu-comparison {
+  background: var(--3lens-bg-secondary);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.webgpu-compare-row {
+  display: grid;
+  grid-template-columns: 1fr 60px 60px;
+  padding: 8px 12px;
+  font-size: 10px;
+  border-bottom: 1px solid var(--3lens-border);
+}
+
+.webgpu-compare-row:last-child {
+  border-bottom: none;
+}
+
+.webgpu-compare-row.header {
+  background: var(--3lens-bg-tertiary);
+  font-weight: 600;
+  color: var(--3lens-text-secondary);
+  text-transform: uppercase;
+  font-size: 9px;
+}
+
+.webgpu-compare-row span:nth-child(2),
+.webgpu-compare-row span:nth-child(3) {
+  text-align: center;
+}
+
+.webgpu-compare-row .yes {
+  color: var(--3lens-success);
+}
+
+.webgpu-compare-row .no {
+  color: var(--3lens-text-tertiary);
+}
+
+.webgpu-compare-row .partial {
+  color: var(--3lens-warning);
+}
+
+/* Empty States */
+.webgpu-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--3lens-text-secondary);
+}
+
+.webgpu-empty p {
+  margin: 0 0 8px;
+  font-size: 11px;
+}
+
+.webgpu-empty-small {
+  padding: 12px;
+  text-align: center;
+  color: var(--3lens-text-tertiary);
+  font-size: 10px;
+  font-style: italic;
+}
+
+.webgpu-hint {
+  font-size: 10px;
+  color: var(--3lens-text-tertiary);
+  font-style: italic;
+}
 `;

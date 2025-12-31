@@ -749,3 +749,231 @@ export interface WebGPUCapabilities {
   hasTimestampQuery: boolean;
 }
 
+/**
+ * Extended WebGPU adapter interface with additional WebGPU-specific methods
+ */
+export interface WebGPURendererAdapter extends RendererAdapter {
+  kind: 'webgpu';
+  
+  /**
+   * Get detailed pipeline information
+   */
+  getDetailedPipelines(): DetailedPipelineInfo[];
+  
+  /**
+   * Get bind group information
+   */
+  getBindGroups(): WebGPUBindGroupInfo[];
+  
+  /**
+   * Get shader source for a pipeline
+   */
+  getShaderSource(pipelineId: string): string | null;
+  
+  /**
+   * Get the WebGPU device
+   */
+  getDevice(): GPUDevice | null;
+  
+  /**
+   * Get WebGPU capabilities
+   */
+  getCapabilities(): WebGPUCapabilities | null;
+}
+
+/**
+ * Detailed pipeline info with WGSL source
+ */
+export interface DetailedPipelineInfo {
+  id: string;
+  label: string;
+  type: 'render' | 'compute';
+  
+  // Shader info
+  vertexShader?: ShaderStageInfo;
+  fragmentShader?: ShaderStageInfo;
+  computeShader?: ShaderStageInfo;
+  
+  // Render state
+  primitive?: {
+    topology: string;
+    cullMode: string;
+    frontFace: string;
+  };
+  
+  depthStencil?: {
+    format: string;
+    depthWriteEnabled: boolean;
+    depthCompare: string;
+  };
+  
+  colorTargets?: Array<{
+    format: string;
+    blend?: {
+      color: string;
+      alpha: string;
+    };
+  }>;
+  
+  multisample?: {
+    count: number;
+    mask: number;
+    alphaToCoverageEnabled: boolean;
+  };
+  
+  // Bind groups
+  bindGroupLayouts: Array<{
+    index: number;
+    entries: BindGroupLayoutEntryDetail[];
+  }>;
+  
+  // Stats
+  usageCount: number;
+  lastUsedFrame: number;
+  createdAt: number;
+}
+
+/**
+ * Shader stage info
+ */
+export interface ShaderStageInfo {
+  entryPoint: string;
+  source?: string;
+  constants?: Record<string, number>;
+}
+
+/**
+ * Bind group layout entry detail
+ */
+export interface BindGroupLayoutEntryDetail {
+  binding: number;
+  visibility: ('VERTEX' | 'FRAGMENT' | 'COMPUTE')[];
+  resourceType: 'buffer' | 'sampler' | 'texture' | 'storageTexture' | 'externalTexture';
+  
+  // Buffer specifics
+  bufferType?: 'uniform' | 'storage' | 'read-only-storage';
+  bufferHasDynamicOffset?: boolean;
+  bufferMinBindingSize?: number;
+  
+  // Sampler specifics
+  samplerType?: 'filtering' | 'non-filtering' | 'comparison';
+  
+  // Texture specifics
+  textureSampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+  textureViewDimension?: string;
+  textureMultisampled?: boolean;
+  
+  // Storage texture specifics
+  storageTextureAccess?: 'write-only' | 'read-only' | 'read-write';
+  storageTextureFormat?: string;
+}
+
+/**
+ * WebGPU bind group info
+ */
+export interface WebGPUBindGroupInfo {
+  id: string;
+  label: string;
+  layoutIndex: number;
+  entries: WebGPUBindGroupEntryInfo[];
+  usedByPipelines: string[];
+}
+
+/**
+ * WebGPU bind group entry info
+ */
+export interface WebGPUBindGroupEntryInfo {
+  binding: number;
+  resourceType: 'buffer' | 'sampler' | 'texture';
+  
+  // Buffer info
+  buffer?: {
+    label: string;
+    size: number;
+    usage: string[];
+    offset: number;
+    bindingSize: number;
+  };
+  
+  // Sampler info
+  sampler?: {
+    label: string;
+    addressModeU: string;
+    addressModeV: string;
+    addressModeW: string;
+    magFilter: string;
+    minFilter: string;
+    mipmapFilter: string;
+    compare?: string;
+    maxAnisotropy: number;
+  };
+  
+  // Texture info
+  textureView?: {
+    label: string;
+    format: string;
+    dimension: string;
+    baseMipLevel: number;
+    mipLevelCount: number;
+    baseArrayLayer: number;
+    arrayLayerCount: number;
+  };
+}
+
+/**
+ * Create an extended WebGPU adapter with detailed pipeline/bind group tracking
+ */
+export function createExtendedWebGPUAdapter(
+  renderer: { isWebGPURenderer: true; backend?: WebGPUBackend; info: WebGPURendererInfo } & THREE.Renderer
+): WebGPURendererAdapter {
+  // Get the base adapter
+  const baseAdapter = createWebGPUAdapter(renderer as unknown as Parameters<typeof createWebGPUAdapter>[0]);
+  
+  // Track detailed pipeline info
+  const detailedPipelines = new Map<string, DetailedPipelineInfo>();
+  const bindGroups = new Map<string, WebGPUBindGroupInfo>();
+  const shaderSources = new Map<string, string>();
+  
+  // Extended adapter
+  const extendedAdapter: WebGPURendererAdapter = {
+    ...baseAdapter,
+    kind: 'webgpu',
+    
+    getDetailedPipelines(): DetailedPipelineInfo[] {
+      // Collect from backend if available
+      const backend = renderer.backend;
+      if (!backend?.pipelines) {
+        // Return basic info from base adapter
+        return baseAdapter.getPipelines?.()?.map(p => ({
+          id: p.id,
+          label: p.label ?? p.id,
+          type: p.type,
+          bindGroupLayouts: [],
+          usageCount: p.usageCount ?? 0,
+          lastUsedFrame: 0,
+          createdAt: p.createdAt ?? Date.now(),
+        })) ?? [];
+      }
+      
+      return Array.from(detailedPipelines.values());
+    },
+    
+    getBindGroups(): WebGPUBindGroupInfo[] {
+      return Array.from(bindGroups.values());
+    },
+    
+    getShaderSource(pipelineId: string): string | null {
+      return shaderSources.get(pipelineId) ?? null;
+    },
+    
+    getDevice(): GPUDevice | null {
+      return renderer.backend?.device ?? null;
+    },
+    
+    getCapabilities(): WebGPUCapabilities | null {
+      return getWebGPUCapabilities(renderer as unknown as Parameters<typeof getWebGPUCapabilities>[0]);
+    },
+  };
+  
+  return extendedAdapter;
+}
