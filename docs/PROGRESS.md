@@ -488,7 +488,7 @@
 | React Three Fiber example | ✅ | `examples/framework-integration/react-three-fiber` |
 | Angular + three.js example | ✅ | `examples/framework-integration/angular-threejs` |
 | Vue + TresJS example | ✅ | `examples/framework-integration/vue-tresjs` |
-| Svelte Threlte example | ⬜ | `examples/framework-integration/svelte-threlte` |
+| Svelte Threlte example | ✅ | `examples/framework-integration/svelte-threlte` |
 | Next.js SSR example | ⬜ | `examples/framework-integration/nextjs-ssr` |
 | Electron desktop app | ⬜ | `examples/framework-integration/electron-desktop` |
 
