@@ -1169,7 +1169,7 @@ export class ThreeLensOverlay {
   // WEBGPU PANEL
   // ═══════════════════════════════════════════════════════════════
 
-  private webgpuTab: 'pipelines' | 'bindgroups' | 'shaders' | 'capabilities' = 'pipelines';
+  private webgpuTab: 'pipelines' | 'bindgroups' | 'shaders' | 'timing' | 'capabilities' = 'pipelines';
   private selectedPipelineId: string | null = null;
   private selectedBindGroupId: string | null = null;
 
@@ -1200,6 +1200,7 @@ export class ThreeLensOverlay {
           <button class="webgpu-tab ${this.webgpuTab === 'pipelines' ? 'active' : ''}" data-tab="pipelines">Pipelines</button>
           <button class="webgpu-tab ${this.webgpuTab === 'bindgroups' ? 'active' : ''}" data-tab="bindgroups">Bind Groups</button>
           <button class="webgpu-tab ${this.webgpuTab === 'shaders' ? 'active' : ''}" data-tab="shaders">Shaders</button>
+          <button class="webgpu-tab ${this.webgpuTab === 'timing' ? 'active' : ''}" data-tab="timing">GPU Timing</button>
           <button class="webgpu-tab ${this.webgpuTab === 'capabilities' ? 'active' : ''}" data-tab="capabilities">Capabilities</button>
         </div>
         <div class="webgpu-tab-content">
@@ -1214,6 +1215,7 @@ export class ThreeLensOverlay {
       case 'pipelines': return this.renderWebGPUPipelinesTab();
       case 'bindgroups': return this.renderWebGPUBindGroupsTab();
       case 'shaders': return this.renderWebGPUShadersTab();
+      case 'timing': return this.renderWebGPUTimingTab();
       case 'capabilities': return this.renderWebGPUCapabilitiesTab();
       default: return '';
     }
@@ -1430,9 +1432,171 @@ export class ThreeLensOverlay {
     `;
   }
 
+  private renderWebGPUTimingTab(): string {
+    const stats = this.latestStats;
+    const gpuTiming = stats?.webgpuExtras?.gpuTiming;
+    const gpuTimeMs = stats?.gpuTimeMs;
+
+    // Check if timestamp queries are available
+    const hasTimestampQueries = gpuTiming && gpuTiming.passes.length > 0;
+
+    if (!hasTimestampQueries) {
+      return `
+        <div class="webgpu-timing">
+          <div class="webgpu-info">
+            <div class="webgpu-info-icon">⏱️</div>
+            <div class="webgpu-info-title">GPU Timing</div>
+            <div class="webgpu-info-desc">
+              GPU timing via timestamp queries provides accurate per-pass breakdown of GPU execution time.
+            </div>
+          </div>
+          
+          ${gpuTimeMs !== undefined ? `
+            <div class="webgpu-section">
+              <div class="webgpu-section-header">Estimated GPU Time</div>
+              <div class="webgpu-timing-summary">
+                <div class="webgpu-timing-total">
+                  <span class="webgpu-timing-value">${gpuTimeMs.toFixed(2)}</span>
+                  <span class="webgpu-timing-unit">ms</span>
+                </div>
+                <p class="webgpu-hint">This is an estimate. Enable timestamp queries for accurate per-pass breakdown.</p>
+              </div>
+            </div>
+          ` : ''}
+          
+          <div class="webgpu-section">
+            <div class="webgpu-section-header">Timestamp Query Requirements</div>
+            <div class="webgpu-info-box">
+              <p><strong>Requirements:</strong></p>
+              <ul>
+                <li>WebGPU device with <code>timestamp-query</code> feature</li>
+                <li>Browser support (Chrome 113+, Edge 113+)</li>
+                <li>Renderer must be initialized with timestamp queries enabled</li>
+              </ul>
+              <p><strong>Note:</strong> Some browsers may require a flag to enable timestamp queries for privacy reasons.</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Calculate totals and percentages
+    const totalMs = gpuTiming.totalMs;
+    const passes = gpuTiming.passes;
+    const breakdown = gpuTiming.breakdown;
+
+    // Sort passes by duration
+    const sortedPasses = [...passes].sort((a, b) => b.durationMs - a.durationMs);
+
+    // Get pass type colors
+    const passColors: Record<string, string> = {
+      'shadow': '#9333EA',
+      'opaque': '#3B82F6',
+      'transparent': '#10B981',
+      'post-process': '#F59E0B',
+      'compute': '#EF4444',
+      'copy': '#6B7280',
+    };
+
+    const getPassColor = (name: string): string => {
+      const lowerName = name.toLowerCase();
+      for (const [key, color] of Object.entries(passColors)) {
+        if (lowerName.includes(key)) return color;
+      }
+      return '#8B5CF6'; // Default purple
+    };
+
+    return `
+      <div class="webgpu-timing">
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">
+            <span>GPU Frame Time</span>
+            <span class="webgpu-timing-badge">${totalMs.toFixed(2)} ms</span>
+          </div>
+          
+          <div class="webgpu-timing-bar-container">
+            <div class="webgpu-timing-bar">
+              ${sortedPasses.map((pass, i) => {
+                const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
+                const color = getPassColor(pass.name);
+                return `<div class="webgpu-timing-bar-segment" style="width: ${pct}%; background: ${color};" title="${pass.name}: ${pass.durationMs.toFixed(2)}ms"></div>`;
+              }).join('')}
+            </div>
+          </div>
+          
+          <div class="webgpu-timing-legend">
+            ${sortedPasses.map(pass => {
+              const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
+              const color = getPassColor(pass.name);
+              return `
+                <div class="webgpu-timing-legend-item">
+                  <span class="webgpu-timing-legend-color" style="background: ${color};"></span>
+                  <span class="webgpu-timing-legend-name">${this.escapeHtml(pass.name)}</span>
+                  <span class="webgpu-timing-legend-value">${pass.durationMs.toFixed(2)} ms</span>
+                  <span class="webgpu-timing-legend-pct">${pct.toFixed(1)}%</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+        
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">Pass Breakdown</div>
+          <div class="webgpu-timing-passes">
+            ${sortedPasses.map(pass => {
+              const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
+              const color = getPassColor(pass.name);
+              const isHot = pass.durationMs > totalMs * 0.3; // > 30% is considered hot
+              return `
+                <div class="webgpu-timing-pass ${isHot ? 'hot' : ''}">
+                  <div class="webgpu-timing-pass-header">
+                    <span class="webgpu-timing-pass-color" style="background: ${color};"></span>
+                    <span class="webgpu-timing-pass-name">${this.escapeHtml(pass.name)}</span>
+                    <span class="webgpu-timing-pass-time">${pass.durationMs.toFixed(2)} ms</span>
+                  </div>
+                  <div class="webgpu-timing-pass-bar">
+                    <div class="webgpu-timing-pass-fill" style="width: ${pct}%; background: ${color};"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+        
+        <div class="webgpu-section">
+          <div class="webgpu-section-header">Timing Analysis</div>
+          <div class="webgpu-timing-analysis">
+            <div class="webgpu-analysis-row">
+              <span class="webgpu-analysis-label">Total GPU Time</span>
+              <span class="webgpu-analysis-value">${totalMs.toFixed(2)} ms</span>
+            </div>
+            <div class="webgpu-analysis-row">
+              <span class="webgpu-analysis-label">Target (60 FPS)</span>
+              <span class="webgpu-analysis-value ${totalMs > 16.67 ? 'over' : 'ok'}">16.67 ms</span>
+            </div>
+            <div class="webgpu-analysis-row">
+              <span class="webgpu-analysis-label">Budget Used</span>
+              <span class="webgpu-analysis-value ${totalMs > 16.67 ? 'over' : 'ok'}">${((totalMs / 16.67) * 100).toFixed(0)}%</span>
+            </div>
+            <div class="webgpu-analysis-row">
+              <span class="webgpu-analysis-label">Number of Passes</span>
+              <span class="webgpu-analysis-value">${passes.length}</span>
+            </div>
+            ${sortedPasses.length > 0 ? `
+              <div class="webgpu-analysis-row">
+                <span class="webgpu-analysis-label">Slowest Pass</span>
+                <span class="webgpu-analysis-value">${this.escapeHtml(sortedPasses[0].name)}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private renderWebGPUCapabilitiesTab(): string {
     const stats = this.latestStats;
-    const webgpu = stats?.webgpu;
+    const webgpuExtras = stats?.webgpuExtras;
 
     return `
       <div class="webgpu-capabilities">
@@ -1440,19 +1604,19 @@ export class ThreeLensOverlay {
           <div class="webgpu-section-header">Current Frame Stats</div>
           <div class="webgpu-stats-grid">
             <div class="webgpu-stat">
-              <span class="webgpu-stat-value">${webgpu?.pipelineCount ?? '—'}</span>
+              <span class="webgpu-stat-value">${webgpuExtras?.pipelinesUsed ?? '—'}</span>
               <span class="webgpu-stat-label">Pipelines</span>
             </div>
             <div class="webgpu-stat">
-              <span class="webgpu-stat-value">${webgpu?.renderPassCount ?? '—'}</span>
+              <span class="webgpu-stat-value">${webgpuExtras?.renderPasses ?? '—'}</span>
               <span class="webgpu-stat-label">Render Passes</span>
             </div>
             <div class="webgpu-stat">
-              <span class="webgpu-stat-value">${webgpu?.computePassCount ?? '—'}</span>
+              <span class="webgpu-stat-value">${webgpuExtras?.computePasses ?? '—'}</span>
               <span class="webgpu-stat-label">Compute Passes</span>
             </div>
             <div class="webgpu-stat">
-              <span class="webgpu-stat-value">${webgpu?.bindGroupCount ?? '—'}</span>
+              <span class="webgpu-stat-value">${webgpuExtras?.bindGroupsUsed ?? '—'}</span>
               <span class="webgpu-stat-label">Bind Groups</span>
             </div>
           </div>

@@ -6308,4 +6308,204 @@ export const OVERLAY_STYLES = `
   color: var(--3lens-text-tertiary);
   font-style: italic;
 }
+
+/* GPU Timing Tab */
+.webgpu-timing {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.webgpu-timing-badge {
+  background: var(--3lens-accent);
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.webgpu-timing-summary {
+  text-align: center;
+  padding: 16px;
+}
+
+.webgpu-timing-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.webgpu-timing-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--3lens-accent);
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.webgpu-timing-unit {
+  font-size: 14px;
+  color: var(--3lens-text-secondary);
+}
+
+/* Timing Bar */
+.webgpu-timing-bar-container {
+  padding: 8px 0;
+}
+
+.webgpu-timing-bar {
+  display: flex;
+  height: 20px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--3lens-bg-tertiary);
+}
+
+.webgpu-timing-bar-segment {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.webgpu-timing-bar-segment:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.webgpu-timing-bar-segment:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+/* Timing Legend */
+.webgpu-timing-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.webgpu-timing-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 10px;
+}
+
+.webgpu-timing-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.webgpu-timing-legend-name {
+  flex: 1;
+  color: var(--3lens-text-primary);
+}
+
+.webgpu-timing-legend-value {
+  color: var(--3lens-text-secondary);
+  font-family: 'SF Mono', Monaco, monospace;
+  min-width: 60px;
+  text-align: right;
+}
+
+.webgpu-timing-legend-pct {
+  color: var(--3lens-text-tertiary);
+  font-family: 'SF Mono', Monaco, monospace;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Timing Passes */
+.webgpu-timing-passes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.webgpu-timing-pass {
+  background: var(--3lens-bg-secondary);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.webgpu-timing-pass.hot {
+  border-left: 3px solid var(--3lens-error);
+}
+
+.webgpu-timing-pass-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.webgpu-timing-pass-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.webgpu-timing-pass-name {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--3lens-text-primary);
+}
+
+.webgpu-timing-pass-time {
+  font-size: 10px;
+  font-family: 'SF Mono', Monaco, monospace;
+  color: var(--3lens-accent);
+}
+
+.webgpu-timing-pass-bar {
+  height: 4px;
+  background: var(--3lens-bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.webgpu-timing-pass-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Timing Analysis */
+.webgpu-timing-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.webgpu-analysis-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--3lens-bg-secondary);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.webgpu-analysis-label {
+  color: var(--3lens-text-secondary);
+}
+
+.webgpu-analysis-value {
+  color: var(--3lens-text-primary);
+  font-family: 'SF Mono', Monaco, monospace;
+  font-weight: 500;
+}
+
+.webgpu-analysis-value.over {
+  color: var(--3lens-error);
+}
+
+.webgpu-analysis-value.ok {
+  color: var(--3lens-success);
+}
 `;
