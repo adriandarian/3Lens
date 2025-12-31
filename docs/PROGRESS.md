@@ -480,13 +480,41 @@
 
 ## 4.3 Example Projects
 
+### Framework Integration Examples
+
 | Task | Status | Notes |
 |------|--------|-------|
 | Vanilla three.js example | ✅ | `examples/vanilla-threejs` with full demo |
 | React Three Fiber example | ✅ | `examples/react-three-fiber` with full R3F integration |
 | Angular + three.js example | ✅ | `examples/angular-threejs` with full Angular integration |
 | Vue + TresJS example | ✅ | `examples/vue-tresjs` with full TresJS integration |
+
+### Debugging & Profiling Examples
+
+| Task | Status | Notes |
+|------|--------|-------|
 | Performance debugging example | ✅ | `examples/performance-debugging` with interactive issue lab |
+| Memory leak detection example | ⬜ | Demonstrate leak detection and resource lifecycle tracking |
+| Large scene optimization example | ⬜ | LOD, instancing, spatial partitioning techniques |
+| Shader debugging example | ⬜ | GLSL/WGSL debugging with uniform inspection |
+
+### Feature Showcase Examples
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Transform gizmo demo | ⬜ | Interactive object manipulation with undo/redo |
+| Custom plugin example | ⬜ | Building a plugin from scratch |
+| Configuration rules example | ⬜ | Setting up custom performance rules and thresholds |
+| WebGPU features example | ⬜ | WebGPU-specific debugging with pipelines and timing |
+
+### Real-World Scenarios
+
+| Task | Status | Notes |
+|------|--------|-------|
+| 3D model viewer | ⬜ | GLTF loading with texture/material inspection |
+| Particle system debugger | ⬜ | High-count particle debugging and optimization |
+| Physics scene inspector | ⬜ | Integration with physics engines (Cannon, Rapier) |
+| Post-processing analyzer | ⬜ | Effect composer debugging with pass breakdown |
 
 ## 4.4 Community
 
