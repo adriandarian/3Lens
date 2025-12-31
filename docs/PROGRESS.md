@@ -522,7 +522,7 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| 3D model viewer | ⬜ | `examples/real-world-scenarios/3d-model-viewer` |
+| 3D model viewer | ✅ | `examples/real-world-scenarios/3d-model-viewer` |
 | Particle system debugger | ⬜ | `examples/real-world-scenarios/particle-system` |
 | Physics scene inspector | ⬜ | `examples/real-world-scenarios/physics-inspector` |
 | Post-processing analyzer | ⬜ | `examples/real-world-scenarios/post-processing` |
