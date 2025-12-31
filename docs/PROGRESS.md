@@ -497,7 +497,7 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | Performance debugging example | ✅ | `examples/debugging-profiling/performance-debugging` |
-| Memory leak detection example | ⬜ | `examples/debugging-profiling/memory-leak-detection` |
+| Memory leak detection example | ✅ | `examples/debugging-profiling/memory-leak-detection` |
 | Large scene optimization example | ⬜ | `examples/debugging-profiling/large-scene-optimization` |
 | Shader debugging example | ⬜ | `examples/debugging-profiling/shader-debugging` |
 | Draw call batching example | ⬜ | `examples/debugging-profiling/draw-call-batching` |

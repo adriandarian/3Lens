@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3Lens - Memory Leak Detection Example</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0a;
+        color: #fff;
+        overflow: hidden;
+      }
+
+      #app {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #controls {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.85);
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 20px;
+        max-width: 380px;
+        backdrop-filter: blur(10px);
+      }
+
+      #controls h2 {
+        font-size: 18px;
+        margin-bottom: 8px;
+        color: #ff6b6b;
+      }
+
+      #controls p {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 16px;
+        line-height: 1.5;
+      }
+
+      .leak-section {
+        margin-bottom: 16px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        border-left: 3px solid #ff6b6b;
+      }
+
+      .leak-section h3 {
+        font-size: 13px;
+        color: #fff;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .leak-section h3 .icon {
+        font-size: 16px;
+      }
+
+      .leak-section p {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 10px;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn-leak {
+        background: #ff6b6b;
+        color: #fff;
+      }
+
+      .btn-leak:hover {
+        background: #ff5252;
+        transform: translateY(-1px);
+      }
+
+      .btn-fix {
+        background: #4caf50;
+        color: #fff;
+      }
+
+      .btn-fix:hover {
+        background: #43a047;
+        transform: translateY(-1px);
+      }
+
+      .btn-info {
+        background: #2196f3;
+        color: #fff;
+      }
+
+      .btn-info:hover {
+        background: #1e88e5;
+        transform: translateY(-1px);
+      }
+
+      .btn-warn {
+        background: #ff9800;
+        color: #fff;
+      }
+
+      .btn-warn:hover {
+        background: #f57c00;
+        transform: translateY(-1px);
+      }
+
+      #stats-display {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.85);
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 16px;
+        min-width: 200px;
+        backdrop-filter: blur(10px);
+      }
+
+      #stats-display h3 {
+        font-size: 14px;
+        color: #4caf50;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        margin-bottom: 6px;
+        padding: 4px 0;
+      }
+
+      .stat-label {
+        color: #888;
+      }
+
+      .stat-value {
+        color: #fff;
+        font-weight: 500;
+        font-family: 'Monaco', monospace;
+      }
+
+      .stat-value.warning {
+        color: #ff9800;
+      }
+
+      .stat-value.danger {
+        color: #ff6b6b;
+      }
+
+      .stat-value.good {
+        color: #4caf50;
+      }
+
+      #canvas-container {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      .divider {
+        height: 1px;
+        background: #333;
+        margin: 12px 0;
+      }
+
+      .leak-counter {
+        display: inline-block;
+        background: #ff6b6b;
+        color: #fff;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 8px;
+      }
+
+      .warning-banner {
+        background: rgba(255, 107, 107, 0.1);
+        border: 1px solid #ff6b6b;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 16px;
+        font-size: 11px;
+        color: #ff6b6b;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="controls">
+        <h2>🔴 Memory Leak Simulator</h2>
+        <p>
+          This example demonstrates common memory leak patterns in Three.js and
+          how 3Lens detects them. Open the 3Lens panel (press <kbd>~</kbd>) and
+          go to <strong>Resources</strong> tab to see leaks.
+        </p>
+
+        <div class="warning-banner">
+          ⚠️ These buttons intentionally create memory leaks for educational purposes.
+        </div>
+
+        <div class="leak-section">
+          <h3><span class="icon">📦</span> Geometry Leaks</h3>
+          <p>Create geometries without disposing them when removed from scene.</p>
+          <div class="btn-group">
+            <button class="btn-leak" id="leak-geometry">Create Leak</button>
+            <button class="btn-fix" id="fix-geometry">Dispose All</button>
+          </div>
+        </div>
+
+        <div class="leak-section">
+          <h3><span class="icon">🎨</span> Material Leaks</h3>
+          <p>Create materials that are never disposed after use.</p>
+          <div class="btn-group">
+            <button class="btn-leak" id="leak-material">Create Leak</button>
+            <button class="btn-fix" id="fix-material">Dispose All</button>
+          </div>
+        </div>
+
+        <div class="leak-section">
+          <h3><span class="icon">🖼️</span> Texture Leaks</h3>
+          <p>Load textures that accumulate without cleanup.</p>
+          <div class="btn-group">
+            <button class="btn-leak" id="leak-texture">Create Leak</button>
+            <button class="btn-fix" id="fix-texture">Dispose All</button>
+          </div>
+        </div>
+
+        <div class="leak-section">
+          <h3><span class="icon">🔗</span> Event Listener Leaks</h3>
+          <p>Add event listeners without removing them.</p>
+          <div class="btn-group">
+            <button class="btn-leak" id="leak-events">Create Leak</button>
+            <button class="btn-fix" id="fix-events">Remove All</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="btn-group">
+          <button class="btn-warn" id="chaos-mode">🌪️ Chaos Mode</button>
+          <button class="btn-info" id="gc-hint">🧹 Force GC Hint</button>
+          <button class="btn-fix" id="cleanup-all">✨ Cleanup Everything</button>
+        </div>
+      </div>
+
+      <div id="stats-display">
+        <h3>📊 Memory Stats</h3>
+        <div class="stat-row">
+          <span class="stat-label">Geometries:</span>
+          <span class="stat-value" id="stat-geometries">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Materials:</span>
+          <span class="stat-value" id="stat-materials">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Textures:</span>
+          <span class="stat-value" id="stat-textures">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Event Listeners:</span>
+          <span class="stat-value" id="stat-events">0</span>
+        </div>
+        <div class="divider"></div>
+        <div class="stat-row">
+          <span class="stat-label">Orphaned:</span>
+          <span class="stat-value" id="stat-orphaned">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Leak Alerts:</span>
+          <span class="stat-value" id="stat-alerts">0</span>
+        </div>
+        <div class="divider"></div>
+        <div class="stat-row">
+          <span class="stat-label">JS Heap:</span>
+          <span class="stat-value" id="stat-heap">0 MB</span>
+        </div>
+      </div>
+
+      <div id="canvas-container"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+
