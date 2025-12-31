@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3Lens - Raycasting Debugger Example</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0f;
+      }
+      #app {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+      .control-panel {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 100;
+        max-width: 380px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+      .control-panel h2 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        color: #e74c3c;
+      }
+      .control-panel h3 {
+        margin: 16px 0 8px 0;
+        font-size: 14px;
+        color: #3498db;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 12px;
+      }
+      .control-panel p {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+      .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .button-row {
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      button.toggle {
+        background: #2a2a3e;
+        color: #888;
+      }
+      button.toggle:hover {
+        background: #3a3a4e;
+        color: #aaa;
+      }
+      button.toggle.active {
+        background: #e74c3c;
+        color: white;
+      }
+      button.action {
+        background: #3498db;
+        color: white;
+      }
+      button.action:hover {
+        background: #2980b9;
+      }
+      button.danger {
+        background: #c0392b;
+        color: white;
+      }
+      button.danger:hover {
+        background: #a93226;
+      }
+      .stats-display {
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 12px;
+      }
+      .stats-display h4 {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      .stat-row:last-child {
+        border-bottom: none;
+      }
+      .stat-label {
+        color: #888;
+      }
+      .stat-value {
+        color: #fff;
+        font-weight: 500;
+        font-family: 'Monaco', 'Consolas', monospace;
+      }
+      .stat-value.warning {
+        color: #f39c12;
+      }
+      .stat-value.danger {
+        color: #e74c3c;
+      }
+      .stat-value.good {
+        color: #2ecc71;
+      }
+      .slider-group {
+        margin: 8px 0;
+      }
+      .slider-group label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+      }
+      .slider-group input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #2a2a3e;
+        outline: none;
+        -webkit-appearance: none;
+      }
+      .slider-group input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #e74c3c;
+        cursor: pointer;
+      }
+      .info-box {
+        background: rgba(231, 76, 60, 0.15);
+        border: 1px solid rgba(231, 76, 60, 0.3);
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 12px;
+        font-size: 11px;
+        color: #e8a9a1;
+        line-height: 1.5;
+      }
+      .issue-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-left: 8px;
+      }
+      .issue-badge.high {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+      }
+      .issue-badge.medium {
+        background: rgba(243, 156, 18, 0.2);
+        color: #f39c12;
+      }
+      .issue-badge.low {
+        background: rgba(52, 152, 219, 0.2);
+        color: #3498db;
+      }
+      .hit-list {
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
+        padding: 8px;
+        margin-top: 8px;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+      .hit-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 8px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 4px;
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+      .hit-item:last-child {
+        margin-bottom: 0;
+      }
+      .hit-name {
+        color: #fff;
+        font-weight: 500;
+      }
+      .hit-distance {
+        color: #888;
+        font-family: 'Monaco', 'Consolas', monospace;
+      }
+      .hit-item.first {
+        background: rgba(46, 204, 113, 0.15);
+        border: 1px solid rgba(46, 204, 113, 0.3);
+      }
+      .ray-info {
+        background: rgba(52, 152, 219, 0.1);
+        border: 1px solid rgba(52, 152, 219, 0.2);
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 8px;
+        font-size: 11px;
+        font-family: 'Monaco', 'Consolas', monospace;
+      }
+      .ray-info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 0;
+      }
+      .ray-info-label {
+        color: #3498db;
+      }
+      .ray-info-value {
+        color: #fff;
+      }
+      .checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 8px 0;
+      }
+      .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #888;
+      }
+      .checkbox-item input {
+        accent-color: #e74c3c;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    
+    <div class="control-panel">
+      <h2>🎯 Raycasting Debugger</h2>
+      <p>
+        Click anywhere in the scene to cast rays. Visualize intersections, 
+        debug hit detection, and analyze raycasting performance.
+      </p>
+
+      <h3>Ray Mode</h3>
+      <div class="button-group">
+        <div class="button-row">
+          <button class="toggle active" id="btn-mouse-ray">Mouse Ray</button>
+          <button class="toggle" id="btn-camera-ray">Camera Center</button>
+        </div>
+        <div class="button-row">
+          <button class="toggle" id="btn-custom-ray">Custom Origin</button>
+          <button class="toggle" id="btn-multi-ray">Multi-Ray Grid</button>
+        </div>
+      </div>
+
+      <h3>Visualization <span class="issue-badge medium">TOGGLE</span></h3>
+      <div class="checkbox-group">
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-show-ray" checked>
+          Show Ray Line
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-show-hits" checked>
+          Show Hit Points
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-show-normals" checked>
+          Show Normals
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-show-all-hits">
+          All Intersections
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-persistent">
+          Persistent Rays
+        </label>
+      </div>
+
+      <h3>Raycast Options</h3>
+      <div class="slider-group">
+        <label>
+          <span>Max Distance:</span>
+          <span id="distance-display">100</span>
+        </label>
+        <input type="range" id="ray-distance" min="10" max="500" value="100">
+      </div>
+      <div class="checkbox-group">
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-recursive" checked>
+          Recursive (children)
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-backface">
+          Include Backfaces
+        </label>
+      </div>
+
+      <h3>Scene Complexity <span class="issue-badge low">TEST</span></h3>
+      <p>Add objects to test raycasting performance with complex scenes.</p>
+      <div class="button-group">
+        <div class="button-row">
+          <button class="toggle" id="btn-add-cubes">+100 Cubes</button>
+          <button class="toggle" id="btn-add-spheres">+50 Spheres</button>
+        </div>
+        <div class="button-row">
+          <button class="toggle" id="btn-add-nested">Nested Groups</button>
+          <button class="toggle" id="btn-add-bvh">BVH Mesh</button>
+        </div>
+        <div class="button-row">
+          <button class="danger" id="btn-clear-scene">Clear Added Objects</button>
+        </div>
+      </div>
+
+      <div class="stats-display">
+        <h4>Raycast Stats</h4>
+        <div class="stat-row">
+          <span class="stat-label">Objects Tested</span>
+          <span class="stat-value" id="stat-tested">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Intersections</span>
+          <span class="stat-value" id="stat-hits">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Raycast Time</span>
+          <span class="stat-value" id="stat-time">0.00 ms</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Rays/Frame</span>
+          <span class="stat-value" id="stat-rays">0</span>
+        </div>
+      </div>
+
+      <div class="ray-info" id="ray-info" style="display: none;">
+        <div class="ray-info-row">
+          <span class="ray-info-label">Origin:</span>
+          <span class="ray-info-value" id="ray-origin">-</span>
+        </div>
+        <div class="ray-info-row">
+          <span class="ray-info-label">Direction:</span>
+          <span class="ray-info-value" id="ray-direction">-</span>
+        </div>
+      </div>
+
+      <h4 style="font-size: 12px; color: #666; margin-top: 12px; margin-bottom: 8px;">Hit Results</h4>
+      <div class="hit-list" id="hit-list">
+        <div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">
+          Click in scene to cast ray
+        </div>
+      </div>
+
+      <div class="info-box">
+        💡 <strong>Tip:</strong> Enable "All Intersections" to see every object 
+        the ray passes through. Use "Persistent Rays" to compare multiple casts.
+        Watch the raycast time increase with scene complexity.
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
