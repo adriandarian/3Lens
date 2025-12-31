@@ -502,7 +502,7 @@
 | Shader debugging example | ✅ | `examples/debugging-profiling/shader-debugging` |
 | Draw call batching example | ✅ | `examples/debugging-profiling/draw-call-batching` |
 | Texture optimization example | ✅ | `examples/debugging-profiling/texture-optimization` |
-| Animation profiling example | ⬜ | `examples/debugging-profiling/animation-profiling` |
+| Animation profiling example | ✅ | `examples/debugging-profiling/animation-profiling` |
 | Raycasting debugger | ⬜ | `examples/debugging-profiling/raycasting-debugger` |
 
 ### Feature Showcase Examples
