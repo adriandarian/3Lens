@@ -10,7 +10,7 @@ pnpm install
 pnpm --filter @3lens/example-animation-profiling dev
 ```
 
-Then open http://localhost:3012 in your browser.
+Then open http://localhost:5173 in your browser (Vite's default port).
 
 ## Animation Issues Demonstrated
 

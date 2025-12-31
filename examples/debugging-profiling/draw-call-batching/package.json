@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Draw call batching example demonstrating instancing and geometry merging with 3Lens",
   "scripts": {
-    "dev": "vite --port 3012",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
