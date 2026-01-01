@@ -1,4 +1,5 @@
 @import './theme.css';
+@import './mobile.css';
 
 /* Reset for overlay container */
 .three-lens-overlay,

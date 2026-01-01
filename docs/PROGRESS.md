@@ -459,7 +459,7 @@
 | Auto theme detection | ✅ | ThemeManager with prefers-color-scheme |
 | Custom theme API | ✅ | registerCustomTheme(), preset themes (Monokai, Dracula, Nord, GitHub) |
 | Panel resizing improvements | ✅ | Already implemented in overlay |
-| Mobile-friendly overlay | ⬜ | Touch-friendly targets added via CSS |
+| Mobile-friendly overlay | ✅ | Touch-friendly targets (44px min), responsive bottom sheet on mobile, safe area insets, gesture support |
 | Keyboard shortcuts | ✅ | KeyboardManager with configurable shortcuts |
 | Command palette | ✅ | Full command palette with search, categories, fuzzy match |
 | Screen reader support | ✅ | ARIA labels, focus management, sr-only class |
