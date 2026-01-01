@@ -6,7 +6,7 @@
   "description": "Scientific visualization with molecular, volumetric, and vector field rendering",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {

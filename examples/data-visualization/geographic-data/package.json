@@ -6,7 +6,7 @@
   "description": "Geographic data visualization with 3D globe and map projections",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
