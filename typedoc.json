@@ -1,0 +1,44 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "./packages/core/src/index.ts",
+    "./packages/overlay/src/index.ts",
+    "./packages/react-bridge/src/index.ts",
+    "./packages/angular-bridge/src/index.ts",
+    "./packages/vue-bridge/src/index.ts"
+  ],
+  "out": "./docs/api",
+  "name": "3Lens API Reference",
+  "readme": "./docs/guides/GETTING-STARTED.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "hideGenerator": false,
+  "searchInComments": true,
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Core",
+    "Probe",
+    "Types",
+    "React",
+    "Angular", 
+    "Vue",
+    "Plugins",
+    "Other"
+  ],
+  "sort": ["source-order", "alphabetical"],
+  "visibilityFilters": {
+    "protected": true,
+    "@internal": false
+  },
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "gitRevision": "main",
+  "sourceLinkTemplate": "https://github.com/adriandarian/3Lens/blob/{gitRevision}/{path}#L{line}",
+  "customCss": "./docs/api-styles.css"
+}

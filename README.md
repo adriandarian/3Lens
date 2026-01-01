@@ -157,7 +157,7 @@ function App() {
 ### Clone and Install
 
 ```bash
-git clone https://github.com/3lens/3lens.git
+git clone https://github.com/adriandarian/3Lens.git
 cd 3lens
 pnpm install
 ```
