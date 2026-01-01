@@ -34,15 +34,37 @@ interface ExtendedRendererInfo {
 }
 
 /**
+ * Options for WebGL adapter
+ */
+export interface WebGLAdapterOptions {
+  /**
+   * Enable GPU timing via EXT_disjoint_timer_query
+   * @default true
+   */
+  gpuTiming?: boolean;
+  
+  /**
+   * Interval for resource scanning (ms)
+   * @default 2000
+   */
+  resourceScanInterval?: number;
+}
+
+/**
  * Create a WebGL renderer adapter with comprehensive metrics
  * Optimized for minimal overhead when not actively being queried
  */
 export function createWebGLAdapter(
-  renderer: THREE.WebGLRenderer
+  renderer: THREE.WebGLRenderer,
+  options: WebGLAdapterOptions = {}
 ): RendererAdapter {
   const frameCallbacks: Array<(stats: FrameStats) => void> = [];
   let frameCount = 0;
   let disposed = false;
+  
+  // Options with defaults
+  const gpuTimingEnabled = options.gpuTiming ?? true;
+  const resourceScanInterval = options.resourceScanInterval ?? 2000;
 
   // Minimal performance tracking
   let lastFrameTime = performance.now();
@@ -62,12 +84,12 @@ export function createWebGLAdapter(
   let cachedGeometries: GeometryInfo[] = [];
   let cachedMaterials: MaterialInfo[] = [];
   let lastResourceScan = 0;
-  const resourceScanInterval = 2000; // Scan resources every 2 seconds
   
-  // GPU timing support
+  // GPU timing support - only initialize if enabled
   const gl = renderer.getContext();
-  const timerQueryExt = gl.getExtension('EXT_disjoint_timer_query_webgl2') 
-    || gl.getExtension('EXT_disjoint_timer_query');
+  const timerQueryExt = gpuTimingEnabled 
+    ? (gl.getExtension('EXT_disjoint_timer_query_webgl2') || gl.getExtension('EXT_disjoint_timer_query'))
+    : null;
   let pendingQuery: WebGLQuery | null = null;
   let lastGpuTime = 0;
 

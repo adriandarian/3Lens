@@ -574,7 +574,7 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | Lazy initialization | ✅ | SelectionHelper, InspectMode, TransformGizmo, CameraController, LogicalEntityManager use lazy getters |
-| Sampling optimization | ⬜ | |
+| Sampling optimization | ✅ | N-frame sampling, adaptive sampling (auto-reduces rate when stable), delta compression, GPU timing toggle |
 | Memory pooling | ⬜ | |
 | Virtual scrolling for large trees | ⬜ | |
 | Memoization | ⬜ | |
@@ -610,8 +610,8 @@
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
 | Phase 3 | 72 | 72 | 0 | 0 |
-| Phase 4 | 42 | 13 | 0 | 29 |
-| **Total** | **236** | **207** | **0** | **29** |
+| Phase 4 | 42 | 14 | 0 | 28 |
+| **Total** | **236** | **208** | **0** | **28** |
 
 ## Timeline
 

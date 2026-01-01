@@ -77,6 +77,14 @@ export class DevtoolProbe {
   private _ruleCheckEnabled = true;
   private _lastRuleCheck = 0;
   private _ruleCheckIntervalMs = 1000; // Check rules every second (not every frame)
+  
+  // Sampling optimization state
+  private _framesSinceLastSample = 0;
+  private _lastSampledStats: FrameStats | null = null;
+  private _adaptiveSamplingEnabled = true;
+  private _adaptiveSamplingRate = 1; // Dynamically adjusted based on stability
+  private _stableFrameCount = 0;
+  private _lastFps = 0;
 
   constructor(config: ProbeConfig) {
     this.config = {
@@ -179,6 +187,9 @@ export class DevtoolProbe {
     // Detect three.js version
     this._threeVersion = (renderer as unknown as { version?: string }).version ?? null;
     
+    // Get sampling config for adapter options
+    const gpuTimingEnabled = this.config.sampling?.gpuTiming ?? true;
+    
     // Create appropriate adapter based on renderer type
     let adapter: RendererAdapter;
     
@@ -187,9 +198,11 @@ export class DevtoolProbe {
       adapter = createWebGPUAdapter(renderer);
       this.log('Detected WebGPU renderer');
     } else {
-      // Assume WebGL renderer
-      adapter = createWebGLAdapter(renderer as THREE.WebGLRenderer);
-      this.log('Detected WebGL renderer');
+      // Assume WebGL renderer - pass options
+      adapter = createWebGLAdapter(renderer as THREE.WebGLRenderer, {
+        gpuTiming: gpuTimingEnabled,
+      });
+      this.log('Detected WebGL renderer', { gpuTiming: gpuTimingEnabled });
     }
     
     this.attachRendererAdapter(adapter);
@@ -1809,14 +1822,120 @@ export class DevtoolProbe {
   // PRIVATE METHODS
   // ─────────────────────────────────────────────────────────────────
 
+  /**
+   * Check if this frame should be sampled based on config
+   * Returns true if stats should be collected and broadcast
+   */
+  private shouldSampleFrame(): boolean {
+    const samplingConfig = this.config.sampling?.frameStats ?? 'every-frame';
+    
+    // On-demand mode - never auto-sample
+    if (samplingConfig === 'on-demand') {
+      return false;
+    }
+    
+    // Every-frame mode
+    if (samplingConfig === 'every-frame') {
+      // Apply adaptive sampling when enabled and performance is stable
+      if (this._adaptiveSamplingEnabled && this._adaptiveSamplingRate > 1) {
+        this._framesSinceLastSample++;
+        if (this._framesSinceLastSample < this._adaptiveSamplingRate) {
+          return false;
+        }
+        this._framesSinceLastSample = 0;
+      }
+      return true;
+    }
+    
+    // N-frames mode (number)
+    if (typeof samplingConfig === 'number' && samplingConfig > 0) {
+      this._framesSinceLastSample++;
+      if (this._framesSinceLastSample >= samplingConfig) {
+        this._framesSinceLastSample = 0;
+        return true;
+      }
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Update adaptive sampling rate based on FPS stability
+   * Reduces sampling when performance is stable, increases when variable
+   */
+  private updateAdaptiveSampling(stats: FrameStats): void {
+    if (!this._adaptiveSamplingEnabled) return;
+    
+    const currentFps = stats.performance?.fps ?? 60;
+    const fpsDiff = Math.abs(currentFps - this._lastFps);
+    this._lastFps = currentFps;
+    
+    // Consider performance "stable" if FPS varies less than 5%
+    const isStable = fpsDiff < currentFps * 0.05;
+    
+    if (isStable) {
+      this._stableFrameCount++;
+      // After 60 stable frames, reduce sampling rate (max 4x reduction)
+      if (this._stableFrameCount > 60 && this._adaptiveSamplingRate < 4) {
+        this._adaptiveSamplingRate = Math.min(4, this._adaptiveSamplingRate + 1);
+        this._stableFrameCount = 0;
+        this.log('Adaptive sampling: reducing rate', { rate: this._adaptiveSamplingRate });
+      }
+    } else {
+      // Any instability resets to full sampling
+      if (this._adaptiveSamplingRate > 1) {
+        this._adaptiveSamplingRate = 1;
+        this.log('Adaptive sampling: reset to full rate due to FPS variance');
+      }
+      this._stableFrameCount = 0;
+    }
+  }
+
+  /**
+   * Check if stats have changed significantly enough to broadcast
+   * Reduces bandwidth by skipping duplicate/similar stats
+   */
+  private hasSignificantChange(stats: FrameStats): boolean {
+    if (!this._lastSampledStats) return true;
+    
+    const last = this._lastSampledStats;
+    
+    // Check for significant changes in key metrics
+    const fpsChange = Math.abs((stats.performance?.fps ?? 0) - (last.performance?.fps ?? 0));
+    const drawCallChange = Math.abs(stats.drawCalls - last.drawCalls);
+    const triangleChange = Math.abs(stats.triangles - last.triangles);
+    const memoryChange = Math.abs(
+      (stats.memory?.totalGpuMemory ?? 0) - (last.memory?.totalGpuMemory ?? 0)
+    );
+    
+    // Significant if: FPS changed by 2+, draw calls by 10+, triangles by 1000+, or memory by 1MB+
+    return fpsChange >= 2 || 
+           drawCallChange >= 10 || 
+           triangleChange >= 1000 ||
+           memoryChange >= 1024 * 1024;
+  }
+
   private handleFrameStats(stats: FrameStats): void {
-    // Store in history using circular buffer (O(1) instead of O(n) with shift)
+    // Always store in history using circular buffer (O(1) instead of O(n) with shift)
     if (this._frameStatsHistory.length < this._maxHistorySize) {
       this._frameStatsHistory.push(stats);
     } else {
       this._frameStatsHistory[this._frameStatsHistoryIndex] = stats;
       this._frameStatsHistoryIndex = (this._frameStatsHistoryIndex + 1) % this._maxHistorySize;
     }
+
+    // Check sampling configuration - may skip this frame
+    if (!this.shouldSampleFrame()) {
+      // Still update selection highlight even when not sampling
+      if (this._selectedObject) {
+        this.selectionHelper.update();
+      }
+      return;
+    }
+
+    // Update adaptive sampling based on FPS stability
+    this.updateAdaptiveSampling(stats);
 
     // Skip expensive operations if nothing is listening
     const hasListeners = this._frameStatsCallbacks.length > 0 || this._transport?.isConnected();
@@ -1853,13 +1972,16 @@ export class DevtoolProbe {
       }
     }
 
-    // Only send message if transport is connected
+    // Only send message if transport is connected AND stats changed significantly
     if (this._transport?.isConnected()) {
-      this.sendMessage({
-        type: 'frame-stats',
-        timestamp: stats.timestamp,
-        stats,
-      });
+      if (this.hasSignificantChange(stats)) {
+        this._lastSampledStats = stats;
+        this.sendMessage({
+          type: 'frame-stats',
+          timestamp: stats.timestamp,
+          stats,
+        });
+      }
     }
   }
 
@@ -2648,6 +2770,73 @@ export class DevtoolProbe {
    */
   setRuleCheckInterval(intervalMs: number): void {
     this._ruleCheckIntervalMs = Math.max(100, intervalMs); // Minimum 100ms
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // SAMPLING CONTROL
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Enable or disable adaptive sampling
+   * When enabled, sampling rate automatically adjusts based on performance stability
+   */
+  setAdaptiveSamplingEnabled(enabled: boolean): void {
+    this._adaptiveSamplingEnabled = enabled;
+    if (!enabled) {
+      this._adaptiveSamplingRate = 1;
+    }
+    this.log('Adaptive sampling', { enabled });
+  }
+
+  /**
+   * Check if adaptive sampling is enabled
+   */
+  isAdaptiveSamplingEnabled(): boolean {
+    return this._adaptiveSamplingEnabled;
+  }
+
+  /**
+   * Get the current adaptive sampling rate
+   * 1 = every frame, 2 = every other frame, etc.
+   */
+  getAdaptiveSamplingRate(): number {
+    return this._adaptiveSamplingRate;
+  }
+
+  /**
+   * Update sampling configuration at runtime
+   * @param config Partial sampling config to merge
+   */
+  updateSamplingConfig(config: Partial<import('../types').SamplingConfig>): void {
+    if (this.config.sampling) {
+      Object.assign(this.config.sampling, config);
+    }
+    
+    // Reset sampling state when config changes
+    this._framesSinceLastSample = 0;
+    this._adaptiveSamplingRate = 1;
+    
+    this.log('Sampling config updated', config);
+  }
+
+  /**
+   * Get current sampling configuration
+   */
+  getSamplingConfig(): Required<import('../types').SamplingConfig> {
+    return {
+      frameStats: this.config.sampling?.frameStats ?? 'every-frame',
+      snapshots: this.config.sampling?.snapshots ?? 'on-change',
+      gpuTiming: this.config.sampling?.gpuTiming ?? true,
+      resourceTracking: this.config.sampling?.resourceTracking ?? true,
+    };
+  }
+
+  /**
+   * Manually request a frame stats sample
+   * Useful when frameStats is set to 'on-demand'
+   */
+  requestFrameStatsSample(): FrameStats | null {
+    return this.getLatestStats();
   }
 
   /**
