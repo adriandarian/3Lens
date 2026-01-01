@@ -285,3 +285,28 @@ export type {
   MemoStats,
   MemoizedFunction,
 } from './utils/Memoization';
+
+// Web Worker Processing
+export {
+  WorkerProcessor,
+  getWorkerProcessor,
+  resetWorkerProcessor,
+} from './utils/WorkerProcessor';
+export type {
+  WorkerTaskType,
+  WorkerRequest,
+  WorkerResponse,
+  BenchmarkPayload,
+  LeakAnalysisPayload,
+  SerializedLifecycleEvent,
+  SerializedActiveResource,
+  StatsAggregationPayload,
+  StatsAggregationResult,
+  PercentilePayload,
+  PercentileResult,
+  TrendAnalysisPayload,
+  TrendAnalysisResult,
+  CustomTaskPayload,
+  WorkerProcessorOptions,
+  WorkerStats,
+} from './utils/WorkerProcessor';
