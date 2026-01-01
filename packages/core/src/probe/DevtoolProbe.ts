@@ -44,17 +44,18 @@ export class DevtoolProbe {
   private _selectedObject: THREE.Object3D | null = null;
   private _hoveredObject: THREE.Object3D | null = null;
   private _logicalEntities: Map<string, LogicalEntity> = new Map(); // Legacy
-  private _entityManager: LogicalEntityManager = new LogicalEntityManager();
   private _pluginManager: PluginManager | null = null;
   private _pluginLoader: PluginLoader | null = null;
   private _pluginRegistry: PluginRegistry | null = null;
   private _frameStatsHistory: FrameStats[] = [];
   private _frameStatsHistoryIndex = 0;
   private _maxHistorySize = 300;
-  private _selectionHelper: SelectionHelper = new SelectionHelper();
-  private _inspectMode: InspectMode = new InspectMode(this);
-  private _transformGizmo: TransformGizmo = new TransformGizmo(this);
-  private _cameraController: CameraController = new CameraController(this);
+  // Lazy-initialized helpers (created on first use)
+  private _selectionHelper: SelectionHelper | null = null;
+  private _inspectMode: InspectMode | null = null;
+  private _transformGizmo: TransformGizmo | null = null;
+  private _cameraController: CameraController | null = null;
+  private _entityManager: LogicalEntityManager | null = null;
   private _threeRef: typeof import('three') | null = null;
   private _visualizationHelpers: Map<string, THREE.Object3D> = new Map();
   private _globalWireframe = false;
@@ -95,6 +96,64 @@ export class DevtoolProbe {
     this._configLoader = new ConfigLoader(this.config);
 
     this.log('Probe initialized', { appName: config.appName });
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // LAZY GETTERS (Deferred initialization for performance)
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Get selection helper (lazy initialized)
+   */
+  private get selectionHelper(): SelectionHelper {
+    if (!this._selectionHelper) {
+      this._selectionHelper = new SelectionHelper();
+      // Auto-initialize if THREE reference is already set
+      if (this._threeRef) {
+        this._selectionHelper.initialize(this._threeRef);
+      }
+    }
+    return this._selectionHelper;
+  }
+
+  /**
+   * Get inspect mode (lazy initialized)
+   */
+  private get inspectMode(): InspectMode {
+    if (!this._inspectMode) {
+      this._inspectMode = new InspectMode(this);
+    }
+    return this._inspectMode;
+  }
+
+  /**
+   * Get transform gizmo (lazy initialized)
+   */
+  private get transformGizmo(): TransformGizmo {
+    if (!this._transformGizmo) {
+      this._transformGizmo = new TransformGizmo(this);
+    }
+    return this._transformGizmo;
+  }
+
+  /**
+   * Get camera controller (lazy initialized)
+   */
+  private get cameraController(): CameraController {
+    if (!this._cameraController) {
+      this._cameraController = new CameraController(this);
+    }
+    return this._cameraController;
+  }
+
+  /**
+   * Get entity manager (lazy initialized)
+   */
+  private get entityManager(): LogicalEntityManager {
+    if (!this._entityManager) {
+      this._entityManager = new LogicalEntityManager();
+    }
+    return this._entityManager;
   }
 
   /**
@@ -336,7 +395,7 @@ export class DevtoolProbe {
    */
   setThreeReference(three: typeof import('three')): void {
     this._threeRef = three;
-    this._selectionHelper.initialize(three);
+    this.selectionHelper.initialize(three);
     this.log('THREE.js reference set for selection highlighting');
   }
 
@@ -344,7 +403,7 @@ export class DevtoolProbe {
    * Update selection highlight (call this in your animation loop for moving objects)
    */
   updateSelectionHighlight(): void {
-    this._selectionHelper.update();
+    this.selectionHelper.update();
   }
 
   /**
@@ -556,7 +615,7 @@ export class DevtoolProbe {
     const selectedMeta = obj ? this.getObjectMeta(obj) : null;
 
     // Update visual highlight in the 3D scene
-    this._selectionHelper.highlight(obj);
+    this.selectionHelper.highlight(obj);
 
     // Notify callbacks
     for (const callback of this._selectionCallbacks) {
@@ -706,11 +765,11 @@ export class DevtoolProbe {
     domElement: HTMLElement,
     three: typeof import('three')
   ): void {
-    this._transformGizmo.initialize(scene, camera, domElement, three);
+    this.transformGizmo.initialize(scene, camera, domElement, three);
     
     // Subscribe to selection changes to update gizmo attachment
     this.onSelectionChanged(() => {
-      this._transformGizmo.onSelectionChanged();
+      this.transformGizmo.onSelectionChanged();
     });
     
     this.log('Transform gizmo initialized');
@@ -720,140 +779,140 @@ export class DevtoolProbe {
    * Enable the transform gizmo
    */
   async enableTransformGizmo(): Promise<void> {
-    await this._transformGizmo.enable();
+    await this.transformGizmo.enable();
   }
 
   /**
    * Disable the transform gizmo
    */
   disableTransformGizmo(): void {
-    this._transformGizmo.disable();
+    this.transformGizmo.disable();
   }
 
   /**
    * Check if the transform gizmo is enabled
    */
   isTransformGizmoEnabled(): boolean {
-    return this._transformGizmo.isEnabled();
+    return this.transformGizmo.isEnabled();
   }
 
   /**
    * Set the transform mode (translate, rotate, scale)
    */
   setTransformMode(mode: TransformMode): void {
-    this._transformGizmo.setMode(mode);
+    this.transformGizmo.setMode(mode);
   }
 
   /**
    * Get the current transform mode
    */
   getTransformMode(): TransformMode {
-    return this._transformGizmo.getMode();
+    return this.transformGizmo.getMode();
   }
 
   /**
    * Set the transform space (world or local)
    */
   setTransformSpace(space: TransformSpace): void {
-    this._transformGizmo.setSpace(space);
+    this.transformGizmo.setSpace(space);
   }
 
   /**
    * Get the current transform space
    */
   getTransformSpace(): TransformSpace {
-    return this._transformGizmo.getSpace();
+    return this.transformGizmo.getSpace();
   }
 
   /**
    * Toggle between world and local space
    */
   toggleTransformSpace(): TransformSpace {
-    return this._transformGizmo.toggleSpace();
+    return this.transformGizmo.toggleSpace();
   }
 
   /**
    * Enable or disable snapping
    */
   setTransformSnapEnabled(enabled: boolean): void {
-    this._transformGizmo.setSnapEnabled(enabled);
+    this.transformGizmo.setSnapEnabled(enabled);
   }
 
   /**
    * Check if snapping is enabled
    */
   isTransformSnapEnabled(): boolean {
-    return this._transformGizmo.isSnapEnabled();
+    return this.transformGizmo.isSnapEnabled();
   }
 
   /**
    * Set snap values
    */
   setTransformSnapValues(translation?: number, rotation?: number, scale?: number): void {
-    this._transformGizmo.setSnapValues(translation, rotation, scale);
+    this.transformGizmo.setSnapValues(translation, rotation, scale);
   }
 
   /**
    * Get snap values
    */
   getTransformSnapValues(): { translation: number; rotation: number; scale: number } {
-    return this._transformGizmo.getSnapValues();
+    return this.transformGizmo.getSnapValues();
   }
 
   /**
    * Undo the last transform
    */
   undoTransform(): boolean {
-    return this._transformGizmo.undo();
+    return this.transformGizmo.undo();
   }
 
   /**
    * Redo the last undone transform
    */
   redoTransform(): boolean {
-    return this._transformGizmo.redo();
+    return this.transformGizmo.redo();
   }
 
   /**
    * Check if undo is available
    */
   canUndoTransform(): boolean {
-    return this._transformGizmo.canUndo();
+    return this.transformGizmo.canUndo();
   }
 
   /**
    * Check if redo is available
    */
   canRedoTransform(): boolean {
-    return this._transformGizmo.canRedo();
+    return this.transformGizmo.canRedo();
   }
 
   /**
    * Get the transform history
    */
   getTransformHistory(): TransformHistoryEntry[] {
-    return this._transformGizmo.getHistory();
+    return this.transformGizmo.getHistory();
   }
 
   /**
    * Clear the transform history
    */
   clearTransformHistory(): void {
-    this._transformGizmo.clearHistory();
+    this.transformGizmo.clearHistory();
   }
 
   /**
    * Subscribe to transform gizmo dragging state changes
    */
   onTransformDraggingChanged(callback: (isDragging: boolean) => void): () => void {
-    return this._transformGizmo.onDraggingChanged(callback);
+    return this.transformGizmo.onDraggingChanged(callback);
   }
 
   /**
    * Subscribe to transform changes
    */
   onTransformChanged(callback: (entry: TransformHistoryEntry) => void): () => void {
-    return this._transformGizmo.onTransformChanged(callback);
+    return this.transformGizmo.onTransformChanged(callback);
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -869,7 +928,7 @@ export class DevtoolProbe {
     three: typeof import('three'),
     orbitTarget?: { x: number; y: number; z: number }
   ): void {
-    this._cameraController.initialize(camera, three, orbitTarget);
+    this.cameraController.initialize(camera, three, orbitTarget);
     this.log('Camera controller initialized');
   }
 
@@ -877,133 +936,133 @@ export class DevtoolProbe {
    * Get information about the current camera
    */
   getCameraInfo(): CameraInfo | null {
-    return this._cameraController.getCameraInfo();
+    return this.cameraController.getCameraInfo();
   }
 
   /**
    * Get all available cameras in the scene
    */
   getAvailableCameras(): CameraInfo[] {
-    return this._cameraController.getAvailableCameras();
+    return this.cameraController.getAvailableCameras();
   }
 
   /**
    * Focus instantly on an object
    */
   focusOnObject(object: THREE.Object3D, padding = 1.5): void {
-    this._cameraController.focusOnObject(object, padding);
+    this.cameraController.focusOnObject(object, padding);
   }
 
   /**
    * Focus instantly on the currently selected object
    */
   focusOnSelected(padding = 1.5): boolean {
-    return this._cameraController.focusOnSelected(padding);
+    return this.cameraController.focusOnSelected(padding);
   }
 
   /**
    * Fly the camera to an object with animation
    */
   flyToObject(object: THREE.Object3D, options?: FlyToOptions): void {
-    this._cameraController.flyToObject(object, options);
+    this.cameraController.flyToObject(object, options);
   }
 
   /**
    * Fly the camera to the currently selected object
    */
   flyToSelected(options?: FlyToOptions): boolean {
-    return this._cameraController.flyToSelected(options);
+    return this.cameraController.flyToSelected(options);
   }
 
   /**
    * Stop any running camera animation
    */
   stopCameraAnimation(): void {
-    this._cameraController.stopAnimation();
+    this.cameraController.stopAnimation();
   }
 
   /**
    * Check if a camera animation is running
    */
   isCameraAnimating(): boolean {
-    return this._cameraController.isAnimating();
+    return this.cameraController.isAnimating();
   }
 
   /**
    * Switch to a camera by index
    */
   switchToCamera(index: number): boolean {
-    return this._cameraController.switchToCamera(index);
+    return this.cameraController.switchToCamera(index);
   }
 
   /**
    * Switch to a camera by UUID
    */
   switchToCameraByUuid(uuid: string): boolean {
-    return this._cameraController.switchToCameraByUuid(uuid);
+    return this.cameraController.switchToCameraByUuid(uuid);
   }
 
   /**
    * Get the index of the active camera
    */
   getActiveCameraIndex(): number {
-    return this._cameraController.getActiveCameraIndex();
+    return this.cameraController.getActiveCameraIndex();
   }
 
   /**
    * Set the orbit target (point the camera looks at)
    */
   setOrbitTarget(target: { x: number; y: number; z: number }): void {
-    this._cameraController.setOrbitTarget(target);
+    this.cameraController.setOrbitTarget(target);
   }
 
   /**
    * Get the orbit target
    */
   getOrbitTarget(): { x: number; y: number; z: number } {
-    return this._cameraController.getOrbitTarget();
+    return this.cameraController.getOrbitTarget();
   }
 
   /**
    * Subscribe to camera change events
    */
   onCameraChanged(callback: (camera: THREE.Camera, info: CameraInfo) => void): () => void {
-    return this._cameraController.onCameraChanged(callback);
+    return this.cameraController.onCameraChanged(callback);
   }
 
   /**
    * Subscribe to camera animation complete events
    */
   onCameraAnimationComplete(callback: () => void): () => void {
-    return this._cameraController.onAnimationComplete(callback);
+    return this.cameraController.onAnimationComplete(callback);
   }
 
   /**
    * Reset camera to home position (instant)
    */
   goHome(): void {
-    this._cameraController.goHome();
+    this.cameraController.goHome();
   }
 
   /**
    * Fly camera back to home position with animation
    */
   flyHome(options?: Omit<FlyToOptions, 'padding'>): void {
-    this._cameraController.flyHome(options);
+    this.cameraController.flyHome(options);
   }
 
   /**
    * Save the current camera position as the new home position
    */
   saveCurrentCameraAsHome(): void {
-    this._cameraController.saveCurrentAsHome();
+    this.cameraController.saveCurrentAsHome();
   }
 
   /**
    * Check if a home position is set
    */
   hasHomePosition(): boolean {
-    return this._cameraController.hasHomePosition();
+    return this.cameraController.hasHomePosition();
   }
 
   /**
@@ -1041,7 +1100,7 @@ export class DevtoolProbe {
    */
   setHoveredObject(obj: THREE.Object3D | null): void {
     this._hoveredObject = obj;
-    this._selectionHelper.highlightHover(obj);
+    this.selectionHelper.highlightHover(obj);
   }
 
   /**
@@ -1079,7 +1138,7 @@ export class DevtoolProbe {
     camera: THREE.Camera,
     three: typeof import('three')
   ): void {
-    this._inspectMode.initialize(canvas, camera, three);
+    this.inspectMode.initialize(canvas, camera, three);
     this.log('Inspect mode initialized');
   }
 
@@ -1089,7 +1148,7 @@ export class DevtoolProbe {
    * and hover to see highlights
    */
   setInspectModeEnabled(enabled: boolean): void {
-    this._inspectMode.setEnabled(enabled);
+    this.inspectMode.setEnabled(enabled);
     this.log(enabled ? 'Inspect mode enabled' : 'Inspect mode disabled');
   }
 
@@ -1097,7 +1156,7 @@ export class DevtoolProbe {
    * Check if inspect mode is currently enabled
    */
   isInspectModeEnabled(): boolean {
-    return this._inspectMode.isEnabled();
+    return this.inspectMode.isEnabled();
   }
 
   /**
@@ -1105,7 +1164,7 @@ export class DevtoolProbe {
    * Useful when camera changes during runtime (e.g., camera switching)
    */
   setInspectModeCamera(camera: THREE.Camera): void {
-    this._inspectMode.setCamera(camera);
+    this.inspectMode.setCamera(camera);
   }
 
   /**
@@ -1113,7 +1172,7 @@ export class DevtoolProbe {
    * If not set, all meshes in observed scenes will be pickable
    */
   setInspectModePickableObjects(objects: THREE.Object3D[]): void {
-    this._inspectMode.setPickableObjects(objects);
+    this.inspectMode.setPickableObjects(objects);
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -1124,7 +1183,7 @@ export class DevtoolProbe {
    * Get the logical entity manager for advanced operations
    */
   getEntityManager(): LogicalEntityManager {
-    return this._entityManager;
+    return this.entityManager;
   }
 
   /**
@@ -1159,7 +1218,7 @@ export class DevtoolProbe {
       this.log('Registered logical entity (legacy)', { id: legacy.id, label: legacy.label });
       
       // Also register in new system
-      const entityId = this._entityManager.registerLogicalEntity({
+      const entityId = this.entityManager.registerLogicalEntity({
         id: legacy.id,
         name: legacy.label,
         module: legacy.moduleId,
@@ -1169,14 +1228,14 @@ export class DevtoolProbe {
       
       // Add objects
       for (const obj of legacy.objects) {
-        this._entityManager.addObjectToEntity(entityId, obj);
+        this.entityManager.addObjectToEntity(entityId, obj);
       }
       
       return;
     }
     
     // New format
-    const entityId = this._entityManager.registerLogicalEntity(optionsOrEntity);
+    const entityId = this.entityManager.registerLogicalEntity(optionsOrEntity);
     this.log('Registered logical entity', { id: entityId, name: optionsOrEntity.name });
     return entityId;
   }
@@ -1196,7 +1255,7 @@ export class DevtoolProbe {
     
     // Update in new system
     try {
-      this._entityManager.updateLogicalEntity(entityId, updates);
+      this.entityManager.updateLogicalEntity(entityId, updates);
     } catch {
       // Entity might not exist in new system
     }
@@ -1210,7 +1269,7 @@ export class DevtoolProbe {
    */
   unregisterLogicalEntity(entityId: EntityId, recursive = false): void {
     this._logicalEntities.delete(entityId);
-    this._entityManager.unregisterLogicalEntity(entityId, recursive);
+    this.entityManager.unregisterLogicalEntity(entityId, recursive);
     this.log('Unregistered logical entity', { id: entityId });
   }
 
@@ -1221,7 +1280,7 @@ export class DevtoolProbe {
    * @param object Three.js object to add
    */
   addObjectToEntity(entityId: EntityId, object: THREE.Object3D): void {
-    this._entityManager.addObjectToEntity(entityId, object);
+    this.entityManager.addObjectToEntity(entityId, object);
     
     // Also update legacy
     const legacyEntity = this._logicalEntities.get(entityId);
@@ -1237,7 +1296,7 @@ export class DevtoolProbe {
    * @param object Three.js object to remove
    */
   removeObjectFromEntity(entityId: EntityId, object: THREE.Object3D): void {
-    this._entityManager.removeObjectFromEntity(entityId, object);
+    this.entityManager.removeObjectFromEntity(entityId, object);
     
     // Also update legacy
     const legacyEntity = this._logicalEntities.get(entityId);
@@ -1253,28 +1312,28 @@ export class DevtoolProbe {
    * Get all registered logical entities
    */
   getLogicalEntities(): NewLogicalEntity[] {
-    return this._entityManager.getAllEntities();
+    return this.entityManager.getAllEntities();
   }
 
   /**
    * Get a logical entity by ID
    */
   getLogicalEntity(entityId: EntityId): NewLogicalEntity | undefined {
-    return this._entityManager.getEntity(entityId);
+    return this.entityManager.getEntity(entityId);
   }
 
   /**
    * Find entity by Three.js object
    */
   findEntityByObject(obj: THREE.Object3D): NewLogicalEntity | null {
-    return this._entityManager.getEntityByObject(obj) ?? null;
+    return this.entityManager.getEntityByObject(obj) ?? null;
   }
 
   /**
    * Find entity by component ID
    */
   findEntityByComponentId(componentId: string): NewLogicalEntity | null {
-    return this._entityManager.getEntityByComponentId(componentId) ?? null;
+    return this.entityManager.getEntityByComponentId(componentId) ?? null;
   }
 
   /**
@@ -1290,14 +1349,14 @@ export class DevtoolProbe {
    * ```
    */
   filterEntities(filter: EntityFilter): NewLogicalEntity[] {
-    return this._entityManager.filterEntities(filter);
+    return this.entityManager.filterEntities(filter);
   }
 
   /**
    * Get all registered modules
    */
   getAllModules(): ModuleId[] {
-    return this._entityManager.getAllModules();
+    return this.entityManager.getAllModules();
   }
 
   /**
@@ -1307,14 +1366,14 @@ export class DevtoolProbe {
    * @returns Module info with entity count, object count, and metrics
    */
   getModuleInfo(moduleId: ModuleId): ModuleInfo | undefined {
-    return this._entityManager.getModuleInfo(moduleId);
+    return this.entityManager.getModuleInfo(moduleId);
   }
 
   /**
    * Get all modules with their info
    */
   getAllModuleInfo(): ModuleInfo[] {
-    return this._entityManager.getAllModuleInfo();
+    return this.entityManager.getAllModuleInfo();
   }
 
   /**
@@ -1324,7 +1383,7 @@ export class DevtoolProbe {
    * @returns Navigation result with entity, module, ancestors, and children
    */
   navigateFromObject(object: THREE.Object3D): NavigationResult {
-    return this._entityManager.navigateFromObject(object);
+    return this.entityManager.navigateFromObject(object);
   }
 
   /**
@@ -1334,7 +1393,7 @@ export class DevtoolProbe {
    * @returns Navigation result with entity, module, ancestors, and children
    */
   navigateFromComponent(componentId: string): NavigationResult {
-    return this._entityManager.navigateFromComponent(componentId);
+    return this.entityManager.navigateFromComponent(componentId);
   }
 
   /**
@@ -1344,7 +1403,7 @@ export class DevtoolProbe {
    * @returns Navigation result with entity, module, ancestors, and children
    */
   navigateFromEntity(entityId: EntityId): NavigationResult {
-    return this._entityManager.navigateFromEntity(entityId);
+    return this.entityManager.navigateFromEntity(entityId);
   }
 
   /**
@@ -1354,21 +1413,21 @@ export class DevtoolProbe {
    * @returns Unsubscribe function
    */
   onEntityEvent(callback: EntityEventCallback): Unsubscribe {
-    return this._entityManager.onEntityEvent(callback);
+    return this.entityManager.onEntityEvent(callback);
   }
 
   /**
    * Get entity count
    */
   get entityCount(): number {
-    return this._entityManager.entityCount;
+    return this.entityManager.entityCount;
   }
 
   /**
    * Get module count
    */
   get moduleCount(): number {
-    return this._entityManager.moduleCount;
+    return this.entityManager.moduleCount;
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -1697,11 +1756,11 @@ export class DevtoolProbe {
    * Dispose of the probe and clean up
    */
   dispose(): void {
-    // Dispose selection helper
-    this._selectionHelper.dispose();
+    // Dispose selection helper (only if initialized)
+    this._selectionHelper?.dispose();
 
-    // Dispose inspect mode
-    this._inspectMode.dispose();
+    // Dispose inspect mode (only if initialized)
+    this._inspectMode?.dispose();
 
     // Dispose visualization helpers
     for (const [, helper] of this._visualizationHelpers) {
@@ -1784,7 +1843,7 @@ export class DevtoolProbe {
 
     // Only update selection highlight if there's a selected object
     if (this._selectedObject) {
-      this._selectionHelper.update();
+      this.selectionHelper.update();
     }
 
     // Notify callbacks only if there are any
@@ -1879,7 +1938,7 @@ export class DevtoolProbe {
     if (!message.debugId) {
       // Clear hover highlight
       this._hoveredObject = null;
-      this._selectionHelper.highlightHover(null);
+      this.selectionHelper.highlightHover(null);
       return;
     }
 
@@ -1888,7 +1947,7 @@ export class DevtoolProbe {
       const obj = observer.findObjectByDebugId(message.debugId);
       if (obj) {
         this._hoveredObject = obj;
-        this._selectionHelper.highlightHover(obj);
+        this.selectionHelper.highlightHover(obj);
         return;
       }
     }
