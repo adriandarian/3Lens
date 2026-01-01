@@ -556,7 +556,7 @@
 | Custom render pipeline | ✅ | `examples/advanced-techniques/custom-render-pipeline` |
 | Compute shader debugging | ✅ | `examples/advanced-techniques/compute-shaders` |
 | Shadow technique comparison | ✅ | `examples/advanced-techniques/shadow-comparison` |
-| Environment mapping debug | ⬜ | `examples/advanced-techniques/environment-mapping` |
+| Environment mapping debug | ✅ | `examples/advanced-techniques/environment-mapping` |
 | Skinned mesh inspector | ⬜ | `examples/advanced-techniques/skinned-mesh-inspector` |
 | Morph target analyzer | ⬜ | `examples/advanced-techniques/morph-target-analyzer` |
 
