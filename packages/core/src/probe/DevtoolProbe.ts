@@ -2854,6 +2854,63 @@ export class DevtoolProbe {
   }
 
   // ─────────────────────────────────────────────────────────────────
+  // MEMORY POOLING
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Get the memory pool manager instance
+   * Provides access to object pools used internally for reducing GC pressure
+   */
+  getPoolManager(): import('../utils/ObjectPool').PoolManager {
+    return import('../utils/ObjectPool').then(m => m.getPoolManager()) as unknown as import('../utils/ObjectPool').PoolManager;
+  }
+
+  /**
+   * Get statistics for all memory pools
+   * Useful for debugging and monitoring memory pool efficiency
+   */
+  getPoolStats(): Record<string, import('../utils/ObjectPool').PoolStats | { available: number; totalCreated: number; acquireCount: number; releaseCount: number }> {
+    // Dynamically import to avoid circular dependencies
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getPoolManager } = require('../utils/ObjectPool');
+      return getPoolManager().getAllStats();
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Clear all memory pools
+   * This releases all pooled objects back to GC
+   * Call this sparingly, as it defeats the purpose of pooling
+   */
+  clearPools(): void {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getPoolManager } = require('../utils/ObjectPool');
+      getPoolManager().clearAll();
+      this.log('Memory pools cleared');
+    } catch {
+      // Pool module not available
+    }
+  }
+
+  /**
+   * Log memory pool statistics to console
+   * Useful for debugging pool efficiency
+   */
+  logPoolStats(): void {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getPoolManager } = require('../utils/ObjectPool');
+      getPoolManager().logStats();
+    } catch {
+      console.log('[3Lens] Memory pools not initialized');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
   // PRIVATE UTILITIES
   // ─────────────────────────────────────────────────────────────────
 
