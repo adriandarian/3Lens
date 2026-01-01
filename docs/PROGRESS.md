@@ -546,8 +546,8 @@
 |------|--------|-------|
 | 3D chart visualization | ✅ | `examples/data-visualization/3d-charts` |
 | Geographic data viewer | ✅ | `examples/data-visualization/geographic-data` |
-| Scientific visualization | ⬜ | `examples/data-visualization/scientific-viz` |
-| Real-time data streaming | ⬜ | `examples/data-visualization/realtime-streaming` |
+| Scientific visualization | ✅ | `examples/data-visualization/scientific-viz` |
+| Real-time data streaming | ✅ | `examples/data-visualization/realtime-streaming` |
 
 ### Advanced Techniques Examples
 
