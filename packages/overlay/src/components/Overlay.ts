@@ -3,6 +3,7 @@ import { calculateBenchmarkScore } from '@3lens/core';
 
 import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
 import { OVERLAY_STYLES } from '../styles/styles';
+import { VirtualScroller, type FlattenedNode, VIRTUAL_SCROLL_STYLES, countTreeNodes } from '../utils/virtual-scroll';
 import { 
   renderMaterialsPanel, attachMaterialsEvents,
   renderGeometryPanel, attachGeometryEvents,
@@ -176,6 +177,11 @@ export class ThreeLensOverlay {
     antialias: boolean;
     powerPreference: string;
   } | null = null;
+
+  // Virtual scrolling for large scene trees
+  private virtualScrollThreshold = 100; // Use virtual scroll when tree has more than this many nodes
+  private virtualScroller: VirtualScroller<SceneNode> | null = null;
+  private virtualScrollContainer: HTMLElement | null = null;
 
   constructor(options: OverlayOptions) {
     this.probe = options.probe;
@@ -491,8 +497,8 @@ export class ThreeLensOverlay {
     if (document.getElementById('three-lens-styles')) return;
     const style = document.createElement('style');
     style.id = 'three-lens-styles';
-    // Combine overlay styles with shared panel styles
-    style.textContent = OVERLAY_STYLES + '\n' + getSharedStyles();
+    // Combine overlay styles with shared panel styles and virtual scroll styles
+    style.textContent = OVERLAY_STYLES + '\n' + getSharedStyles() + '\n' + VIRTUAL_SCROLL_STYLES;
     document.head.appendChild(style);
   }
 
@@ -1823,6 +1829,13 @@ export class ThreeLensOverlay {
     }
     this.panelContexts.delete(panelId);
 
+    // Clean up virtual scroller when scene panel is closed
+    if (panelId === 'scene' && this.virtualScroller) {
+      this.virtualScroller.destroy();
+      this.virtualScroller = null;
+      this.virtualScrollContainer = null;
+    }
+
     const el = document.getElementById(`three-lens-panel-${panelId}`);
     if (el) el.remove();
     this.openPanels.delete(panelId);
@@ -2175,7 +2188,27 @@ export class ThreeLensOverlay {
       ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
       : null;
 
-    // Always show split view - inspector on right shows object details or global tools
+    // Count total nodes to decide if virtual scrolling is needed
+    const totalNodes = snapshot.scenes.reduce((sum, scene) => sum + countTreeNodes(scene), 0);
+    const useVirtualScroll = totalNodes > this.virtualScrollThreshold;
+
+    if (useVirtualScroll) {
+      // Use virtual scrolling for large trees
+      return `
+        <div class="three-lens-split-view">
+          <div class="three-lens-tree-pane">
+            <div class="three-lens-virtual-scroll-container" id="three-lens-virtual-tree">
+              <div class="three-lens-virtual-scroll-content"></div>
+            </div>
+          </div>
+          <div class="three-lens-inspector-pane">
+          ${selectedNode ? this.renderNodeInspector(selectedNode) : this.renderGlobalTools()}
+          </div>
+        </div>
+      `;
+    }
+
+    // Standard rendering for smaller trees
       return `
         <div class="three-lens-split-view">
           <div class="three-lens-tree-pane">
@@ -2184,6 +2217,73 @@ export class ThreeLensOverlay {
           <div class="three-lens-inspector-pane">
           ${selectedNode ? this.renderNodeInspector(selectedNode) : this.renderGlobalTools()}
           </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Initialize virtual scrolling for scene tree after DOM is ready
+   */
+  private initVirtualScroller(): void {
+    const container = document.getElementById('three-lens-virtual-tree');
+    if (!container) return;
+
+    // Get current snapshot
+    const snapshot = this.probe.takeSnapshot();
+    if (snapshot.scenes.length === 0) return;
+
+    // Create virtual scroller if not exists
+    if (!this.virtualScroller) {
+      this.virtualScroller = new VirtualScroller<SceneNode>({
+        container,
+        rootNodes: snapshot.scenes,
+        getChildren: (node) => node.children,
+        getId: (node) => node.ref.debugId,
+        isExpanded: (node) => this.expandedNodes.has(node.ref.debugId),
+        renderRow: (flatNode) => this.renderVirtualTreeNode(flatNode),
+        rowHeight: 28,
+        overscan: 5,
+      });
+    } else {
+      // Update with new data
+      this.virtualScroller.setRootNodes(snapshot.scenes);
+    }
+
+    this.virtualScrollContainer = container;
+  }
+
+  /**
+   * Render a single tree node for virtual scrolling
+   */
+  private renderVirtualTreeNode(flatNode: FlattenedNode<SceneNode>): string {
+    const node = flatNode.data;
+    const hasChildren = node.children.length > 0;
+    const isExpanded = this.expandedNodes.has(node.ref.debugId);
+    const isSelected = this.selectedNodeId === node.ref.debugId;
+    const isVisible = node.visible;
+    
+    // Get cost level for heatmap coloring (only for meshes)
+    const costLevel = node.meshData?.costData?.costLevel || '';
+    const costClass = costLevel ? `cost-${costLevel}` : '';
+
+    // Calculate indentation based on depth
+    const indentPx = flatNode.depth * 16;
+
+    return `
+      <div class="three-lens-virtual-row" data-id="${node.ref.debugId}" data-depth="${flatNode.depth}" style="padding-left: ${indentPx}px;">
+        <div class="three-lens-node-header ${isSelected ? 'selected' : ''} ${!isVisible ? 'hidden-object' : ''} ${costClass}">
+          <span class="three-lens-node-toggle ${hasChildren ? (isExpanded ? 'expanded' : '') : 'hidden'}">
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1L6 4L2 7z"/></svg>
+          </span>
+          <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${getObjectIcon(node.ref.type)}</span>
+          <span class="three-lens-node-name ${!node.ref.name ? 'unnamed' : ''}">${node.ref.name || 'unnamed'}</span>
+          ${costLevel ? `<span class="three-lens-cost-indicator ${costClass}" title="Cost: ${costLevel}">${this.getCostIcon(costLevel)}</span>` : ''}
+          <button class="three-lens-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">
+            ${isVisible ? this.getEyeOpenIcon() : this.getEyeClosedIcon()}
+          </button>
+          <span class="three-lens-node-spacer"></span>
+          <span class="three-lens-node-type">${node.ref.type}</span>
+        </div>
       </div>
     `;
   }
@@ -5047,6 +5147,12 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       const panel = document.getElementById('three-lens-panel-scene');
       if (panel) this.attachTreeEvents(panel);
       
+      // Initialize virtual scroller if needed (after DOM is ready)
+      requestAnimationFrame(() => {
+        this.initVirtualScroller();
+        this.attachVirtualTreeEvents();
+      });
+      
       // Restore scroll position
       if (scrollTop > 0) {
         const newInspectorPane = content.querySelector('.three-lens-inspector-pane');
@@ -5313,6 +5419,90 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     // Update UI
     this.updateScenePanel();
     this.updateInspectorPanel();
+  }
+
+  /**
+   * Attach event handlers for virtual scrolling tree
+   * Uses event delegation on the container for efficiency
+   */
+  private attachVirtualTreeEvents(): void {
+    const container = document.getElementById('three-lens-virtual-tree');
+    if (!container) return;
+
+    // Use event delegation - attach handlers to the container, not individual rows
+    // This is more efficient as rows are dynamically created/destroyed during scrolling
+    container.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      
+      // Handle visibility button clicks
+      const visibilityBtn = target.closest('.three-lens-visibility-btn') as HTMLElement;
+      if (visibilityBtn) {
+        const id = visibilityBtn.dataset.id;
+        if (id) {
+          this.toggleObjectVisibility(id);
+        }
+        return;
+      }
+
+      // Handle row/header clicks
+      const row = target.closest('.three-lens-virtual-row') as HTMLElement;
+      if (!row) return;
+
+      const id = row.dataset.id;
+      if (!id) return;
+
+      // Handle toggle expand/collapse
+      const toggle = target.closest('.three-lens-node-toggle') as HTMLElement;
+      if (toggle && !toggle.classList.contains('hidden')) {
+        if (this.expandedNodes.has(id)) {
+          this.expandedNodes.delete(id);
+        } else {
+          this.expandedNodes.add(id);
+        }
+        // Update virtual scroller with new expanded state
+        if (this.virtualScroller) {
+          this.virtualScroller.refresh();
+        }
+        // Also update inspector if needed
+        this.updateInspectorPane();
+        return;
+      }
+
+      // Handle node selection
+      if (this.selectedNodeId === id) {
+        // Deselect
+        this.probe.selectObject(null);
+      } else {
+        // Select the object
+        this.probe.selectByDebugId(id);
+      }
+    });
+  }
+
+  /**
+   * Update only the inspector pane without re-rendering the tree
+   */
+  private updateInspectorPane(): void {
+    const content = document.getElementById('three-lens-content-scene');
+    if (!content) return;
+
+    const inspectorPane = content.querySelector('.three-lens-inspector-pane');
+    if (!inspectorPane) return;
+
+    // Find selected node
+    const snapshot = this.probe.takeSnapshot();
+    const selectedNode = this.selectedNodeId 
+      ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
+      : null;
+
+    // Update inspector content
+    inspectorPane.innerHTML = selectedNode 
+      ? this.renderNodeInspector(selectedNode) 
+      : this.renderGlobalTools();
+
+    // Re-attach inspector events
+    const panel = document.getElementById('three-lens-panel-scene');
+    if (panel) this.attachTreeEvents(panel);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -5942,6 +6132,11 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
   // ═══════════════════════════════════════════════════════════════
 
   destroy(): void {
+    // Clean up virtual scroller if it exists
+    if (this.virtualScroller) {
+      this.virtualScroller.destroy();
+      this.virtualScroller = null;
+    }
     this.root.remove();
     document.getElementById('three-lens-styles')?.remove();
   }
