@@ -694,7 +694,7 @@ function setVisualizationMode(mode: VisualizationMode): void {
       showBindPoseComparison();
       break;
     case 'axes':
-      showBoneAxes();
+      displayBoneAxes();
       break;
   }
 }
@@ -742,7 +742,7 @@ function showBindPoseComparison(): void {
   // For now, just show the skeleton
 }
 
-function showBoneAxes(): void {
+function displayBoneAxes(): void {
   skeleton.bones.forEach(bone => {
     const axesHelper = new THREE.AxesHelper(0.1 * boneSize);
     bone.add(axesHelper);

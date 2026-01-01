@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DevtoolProbe, type CameraInfo, type FlyToOptions } from '@3lens/core';
-import { createDevtoolOverlay } from '@3lens/overlay';
+import { createOverlay } from '@3lens/overlay';
 
 // State
 let probe: DevtoolProbe;
@@ -215,11 +215,10 @@ function initDevtools(): void {
   });
   
   // Create overlay
-  const overlay = createDevtoolOverlay(probe, {
-    defaultPosition: { x: 10, y: 10 },
-    defaultTab: 'scene'
+  const overlay = createOverlay(probe, {
+    defaultWidth: 350
   });
-  overlay.show();
+  overlay.showPanel('scene');
   
   // Subscribe to camera changes
   probe.onCameraChanged((camera, info) => {

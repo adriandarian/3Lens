@@ -12,8 +12,8 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { DevtoolProbe } from '@3lens/core';
-import { DevtoolOverlay } from '@3lens/overlay';
+import { createProbe } from '@3lens/core';
+import { createOverlay } from '@3lens/overlay';
 
 // ============================================================================
 // Scene Setup
@@ -1064,7 +1064,7 @@ function updateAnimation(deltaTime: number): void {
 // 3Lens Integration
 // ============================================================================
 
-const probe = new DevtoolProbe();
+const probe = createProbe({ appName: 'Morph Target Analyzer' });
 probe.observeScene(scene);
 probe.observeRenderer(renderer);
 
@@ -1086,9 +1086,7 @@ probe.registerEntity(deltaMesh, {
   tags: ['helper', 'debug']
 });
 
-const overlay = new DevtoolOverlay(probe, {
-  theme: 'dark',
-  position: 'right',
+const overlay = createOverlay(probe, {
   defaultWidth: 400
 });
 

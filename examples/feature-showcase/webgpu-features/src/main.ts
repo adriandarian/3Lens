@@ -17,7 +17,7 @@ import {
   type WebGPUCapabilities,
   type FrameStats
 } from '@3lens/core';
-import { createDevtoolOverlay } from '@3lens/overlay';
+import { createOverlay } from '@3lens/overlay';
 
 // Type declarations for WebGPU renderer
 interface WebGPURenderer extends THREE.Renderer {
@@ -240,11 +240,10 @@ function initDevtools(): void {
   }
   
   // Create overlay
-  const overlay = createDevtoolOverlay(probe, {
-    defaultPosition: { x: 10, y: 10 },
-    defaultTab: 'overview'
+  const overlay = createOverlay(probe, {
+    defaultWidth: 400
   });
-  overlay.show();
+  overlay.showPanel('stats');
   
   // Subscribe to frame stats
   const adapter = (probe as any).rendererAdapter;

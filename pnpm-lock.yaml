@@ -48,6 +48,305 @@ importers:
         specifier: ^1.0.0
         version: 1.6.1(@types/node@20.19.27)
 
+  examples/advanced-techniques/compute-shaders:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      '@webgpu/types':
+        specifier: ^0.1.0
+        version: 0.1.68
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/advanced-techniques/custom-render-pipeline:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/advanced-techniques/environment-mapping:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/advanced-techniques/morph-target-analyzer:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/advanced-techniques/shadow-comparison:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/advanced-techniques/skinned-mesh-inspector:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/data-visualization/3d-charts:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/data-visualization/geographic-data:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/data-visualization/realtime-streaming:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/data-visualization/scientific-viz:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/debugging-profiling/animation-profiling:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/debugging-profiling/draw-call-batching:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/debugging-profiling/large-scene-optimization:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/debugging-profiling/memory-leak-detection:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
   examples/debugging-profiling/performance-debugging:
     dependencies:
       '@3lens/core':
@@ -63,6 +362,251 @@ importers:
       '@types/three':
         specifier: ^0.160.0
         version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/debugging-profiling/raycasting-debugger:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/debugging-profiling/shader-debugging:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/debugging-profiling/texture-optimization:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/feature-showcase/camera-controls:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/feature-showcase/configuration-rules:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/feature-showcase/cost-analysis:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/feature-showcase/custom-plugin:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/feature-showcase/timeline-recording:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/feature-showcase/transform-gizmo:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/feature-showcase/visual-overlays:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/feature-showcase/webgpu-features:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.170.0
+        version: 0.170.0
+    devDependencies:
+      '@types/three':
+        specifier: ^0.170.0
+        version: 0.170.0
+      '@webgpu/types':
+        specifier: ^0.1.0
+        version: 0.1.68
       typescript:
         specifier: ^5.3.0
         version: 5.3.3
@@ -343,6 +887,252 @@ importers:
       vue-tsc:
         specifier: ^1.8.0
         version: 1.8.27(typescript@5.3.3)
+
+  examples/game-development/first-person-shooter:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/game-development/platformer-physics:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/game-development/racing-game:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/game-development/top-down-rpg:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/real-world-scenarios/3d-model-viewer:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/real-world-scenarios/audio-visualization:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/real-world-scenarios/multi-scene-management:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/real-world-scenarios/particle-system:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/real-world-scenarios/physics-inspector:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.160.0
+        version: 0.160.0
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/real-world-scenarios/post-processing:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      postprocessing:
+        specifier: ^6.34.1
+        version: 6.38.2(three@0.160.1)
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/real-world-scenarios/procedural-generation:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
+
+  examples/real-world-scenarios/vr-xr-debugging:
+    dependencies:
+      '@3lens/core':
+        specifier: workspace:*
+        version: link:../../../packages/core
+      '@3lens/overlay':
+        specifier: workspace:*
+        version: link:../../../packages/overlay
+      three:
+        specifier: ^0.160.0
+        version: 0.160.1
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.3.3
+      vite:
+        specifier: ^5.0.0
+        version: 5.4.21(@types/node@20.19.27)(less@4.2.0)(sass@1.71.1)(terser@5.29.1)
 
   packages/angular-bridge:
     dependencies:
@@ -3391,6 +4181,10 @@ packages:
       minimatch: 9.0.5
     dev: true
 
+  /@tweenjs/tween.js@23.1.3:
+    resolution: {integrity: sha512-vJmvvwFxYuGnF2axRtPYocag6Clbb5YS7kLL+SO/TeVFzHqDIWrNKYtcsPMibjDx9O+bu+psAy9NKfWklassUA==}
+    dev: true
+
   /@types/babel__core@7.20.5:
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
     dependencies:
@@ -3662,6 +4456,17 @@ packages:
       '@types/webxr': 0.5.24
       fflate: 0.6.10
       meshoptimizer: 0.18.1
+
+  /@types/three@0.170.0:
+    resolution: {integrity: sha512-CUm2uckq+zkCY7ZbFpviRttY+6f9fvwm6YqSqPfA5K22s9w7R4VnA3rzJse8kHVvuzLcTx+CjNCs2NYe0QFAyg==}
+    dependencies:
+      '@tweenjs/tween.js': 23.1.3
+      '@types/stats.js': 0.17.4
+      '@types/webxr': 0.5.24
+      '@webgpu/types': 0.1.68
+      fflate: 0.8.2
+      meshoptimizer: 0.18.1
+    dev: true
 
   /@types/verror@1.10.11:
     resolution: {integrity: sha512-RlDm9K7+o5stv0Co8i8ZRGxDbrTxhJtgjqjFyVh/tXQyl/rYtTKlnTvZ88oSTeYREWurwx20Js4kTuKCsFkUtg==}
@@ -4218,6 +5023,10 @@ packages:
     dependencies:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
+    dev: true
+
+  /@webgpu/types@0.1.68:
+    resolution: {integrity: sha512-3ab1B59Ojb6RwjOspYLsTpCzbNB3ZaamIAxBMmvnNkiDoLTZUOBXZ9p5nAYVEkQlDdf6qAZWi1pqj9+ypiqznA==}
     dev: true
 
   /@xmldom/xmldom@0.8.11:
@@ -6494,6 +7303,10 @@ packages:
 
   /fflate@0.6.10:
     resolution: {integrity: sha512-IQrh3lEPM93wVCEczc9SaAOvkmcoQn/G8Bo1e8ZPlY3X3bnAxWaBdvTdvM1hP62iZp0BXWDy4vTAy4fF0+Dlpg==}
+
+  /fflate@0.8.2:
+    resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
+    dev: true
 
   /figures@3.2.0:
     resolution: {integrity: sha512-yaduQFRKLXYOGgEn6AZau90j3ggSOyiqXU0F9JZfeXYhNa+Jk4X+s45A2zg5jns87GAFa34BBm2kXw4XpNcbdg==}
@@ -9164,6 +9977,14 @@ packages:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  /postprocessing@6.38.2(three@0.160.1):
+    resolution: {integrity: sha512-7DwuT7Tkst41ZjSj287g7C9c5/D3Xx5rMgBosg0dadbUPoZD2HNzkadKPol1d2PJAoI9f+Jeh1/v9YfLzpFGVw==}
+    peerDependencies:
+      three: '>= 0.157.0 < 0.183.0'
+    dependencies:
+      three: 0.160.1
+    dev: false
+
   /potpack@1.0.2:
     resolution: {integrity: sha512-choctRBIV9EMT9WGAZHn3V7t0Z2pMQyl0EZE6pFc/6ml3ssw7Dlf/oAOvFwjm1HVsqfQN8GfeFyJ+d8tRzqueQ==}
     dev: false
@@ -10580,6 +11401,10 @@ packages:
 
   /three@0.160.1:
     resolution: {integrity: sha512-Bgl2wPJypDOZ1stAxwfWAcJ0WQf7QzlptsxkjYiURPz+n5k4RBDLsq+6f9Y75TYxn6aHLcWz+JNmwTOXWrQTBQ==}
+
+  /three@0.170.0:
+    resolution: {integrity: sha512-FQK+LEpYc0fBD+J8g6oSEyyNzjp+Q7Ks1C568WWaoMRLW+TkNNWmenWeGgJjV105Gd+p/2ql1ZcjYvNiPZBhuQ==}
+    dev: false
 
   /through2@0.6.5:
     resolution: {integrity: sha512-RkK/CCESdTKQZHdmKICijdKKsCRVHs5KsLZ6pACAmF/1GPUQhonHSXWNERctxEp7RmvjdNbZTL5z9V7nSCXKcg==}

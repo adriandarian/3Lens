@@ -6,7 +6,7 @@
   "description": "Example demonstrating 3Lens camera controls: focus on object, fly-to animation, camera switching, and camera info display",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
