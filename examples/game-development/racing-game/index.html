@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Racing Game Profiler - 3Lens Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    #app {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* Racing HUD */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+
+    /* Speedometer */
+    #speedometer {
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 100%);
+      border-radius: 50%;
+      border: 3px solid #ff4444;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #speed-value {
+      font-size: 48px;
+      font-weight: bold;
+      color: #ff4444;
+      text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+    }
+
+    #speed-unit {
+      font-size: 14px;
+      color: #888;
+      margin-top: -5px;
+    }
+
+    #gear {
+      position: absolute;
+      bottom: 10px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #44ff44;
+    }
+
+    /* RPM Bar */
+    #rpm-container {
+      position: absolute;
+      bottom: 260px;
+      right: 40px;
+      width: 200px;
+    }
+
+    #rpm-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    #rpm-bar {
+      height: 20px;
+      background: #333;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #rpm-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #44ff44 0%, #ffff44 60%, #ff4444 100%);
+      transition: width 0.05s;
+    }
+
+    /* Lap Info */
+    #lap-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px 20px;
+      border-radius: 8px;
+      min-width: 200px;
+    }
+
+    #lap-info h3 {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .lap-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .lap-label {
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .lap-value {
+      font-size: 14px;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+    }
+
+    #current-lap {
+      color: #44ff44;
+    }
+
+    #best-lap {
+      color: #ff44ff;
+    }
+
+    #lap-count {
+      color: #44aaff;
+    }
+
+    /* Position */
+    #position-display {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px 25px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    #position-number {
+      font-size: 48px;
+      font-weight: bold;
+      color: #ffd700;
+    }
+
+    #position-suffix {
+      font-size: 24px;
+      color: #ffd700;
+      vertical-align: super;
+    }
+
+    #position-total {
+      font-size: 14px;
+      color: #888;
+    }
+
+    /* Minimap */
+    #minimap {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      width: 180px;
+      height: 180px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      border: 2px solid #444;
+      overflow: hidden;
+    }
+
+    #minimap-track {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+    }
+
+    /* Countdown */
+    #countdown {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 120px;
+      font-weight: bold;
+      color: #ff4444;
+      text-shadow: 0 0 30px rgba(255, 68, 68, 0.8);
+      display: none;
+    }
+
+    #countdown.go {
+      color: #44ff44;
+      text-shadow: 0 0 30px rgba(68, 255, 68, 0.8);
+    }
+
+    /* Race Status */
+    #race-status {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 36px;
+      font-weight: bold;
+      text-align: center;
+      display: none;
+    }
+
+    #race-status.finished {
+      color: #ffd700;
+    }
+
+    /* Controls Help */
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #888;
+    }
+
+    #controls span {
+      margin: 0 10px;
+    }
+
+    #controls kbd {
+      background: #444;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #fff;
+    }
+
+    /* Debug Panel */
+    #debug-panel {
+      position: absolute;
+      top: 150px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      min-width: 220px;
+      border: 1px solid #444;
+    }
+
+    #debug-panel h4 {
+      color: #44aaff;
+      margin-bottom: 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .debug-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      color: #aaa;
+    }
+
+    .debug-row span:last-child {
+      color: #fff;
+    }
+
+    /* Damage Indicator */
+    #damage-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle, transparent 50%, rgba(255, 0, 0, 0.3) 100%);
+      transition: opacity 0.1s;
+    }
+
+    /* Nitro Bar */
+    #nitro-container {
+      position: absolute;
+      bottom: 300px;
+      right: 40px;
+      width: 200px;
+    }
+
+    #nitro-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    #nitro-bar {
+      height: 12px;
+      background: #333;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #nitro-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #4444ff, #44ffff);
+      transition: width 0.1s;
+    }
+
+    /* Checkpoint notification */
+    #checkpoint {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      font-weight: bold;
+      color: #44ff44;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Three.js canvas will be inserted here -->
+
+    <div id="hud">
+      <!-- Damage overlay -->
+      <div id="damage-overlay"></div>
+
+      <!-- Position -->
+      <div id="position-display">
+        <span id="position-number">1</span><span id="position-suffix">st</span>
+        <div id="position-total">/ 8</div>
+      </div>
+
+      <!-- Lap Info -->
+      <div id="lap-info">
+        <h3>Lap Times</h3>
+        <div class="lap-row">
+          <span class="lap-label">Current:</span>
+          <span class="lap-value" id="current-lap">0:00.000</span>
+        </div>
+        <div class="lap-row">
+          <span class="lap-label">Best:</span>
+          <span class="lap-value" id="best-lap">--:--.---</span>
+        </div>
+        <div class="lap-row">
+          <span class="lap-label">Lap:</span>
+          <span class="lap-value" id="lap-count">0 / 3</span>
+        </div>
+      </div>
+
+      <!-- Nitro Bar -->
+      <div id="nitro-container">
+        <div id="nitro-label">NITRO</div>
+        <div id="nitro-bar">
+          <div id="nitro-fill"></div>
+        </div>
+      </div>
+
+      <!-- RPM Bar -->
+      <div id="rpm-container">
+        <div id="rpm-label">RPM</div>
+        <div id="rpm-bar">
+          <div id="rpm-fill"></div>
+        </div>
+      </div>
+
+      <!-- Speedometer -->
+      <div id="speedometer">
+        <div id="speed-value">0</div>
+        <div id="speed-unit">KM/H</div>
+        <div id="gear">N</div>
+      </div>
+
+      <!-- Minimap -->
+      <div id="minimap">
+        <svg id="minimap-track" viewBox="0 0 160 160">
+          <!-- Track outline will be drawn here -->
+        </svg>
+      </div>
+
+      <!-- Countdown -->
+      <div id="countdown">3</div>
+
+      <!-- Race Status -->
+      <div id="race-status"></div>
+
+      <!-- Checkpoint notification -->
+      <div id="checkpoint">CHECKPOINT</div>
+
+      <!-- Controls -->
+      <div id="controls">
+        <span><kbd>W</kbd> / <kbd>↑</kbd> Accelerate</span>
+        <span><kbd>S</kbd> / <kbd>↓</kbd> Brake</span>
+        <span><kbd>A</kbd> / <kbd>←</kbd> Left</span>
+        <span><kbd>D</kbd> / <kbd>→</kbd> Right</span>
+        <span><kbd>Space</kbd> Nitro</span>
+        <span><kbd>R</kbd> Reset</span>
+      </div>
+
+      <!-- Debug Panel -->
+      <div id="debug-panel">
+        <h4>🔧 Vehicle Debug</h4>
+        <div class="debug-row">
+          <span>Velocity:</span>
+          <span id="debug-velocity">0.00</span>
+        </div>
+        <div class="debug-row">
+          <span>Acceleration:</span>
+          <span id="debug-acceleration">0.00</span>
+        </div>
+        <div class="debug-row">
+          <span>Steering:</span>
+          <span id="debug-steering">0.00</span>
+        </div>
+        <div class="debug-row">
+          <span>Drift Angle:</span>
+          <span id="debug-drift">0.00°</span>
+        </div>
+        <div class="debug-row">
+          <span>Grip:</span>
+          <span id="debug-grip">100%</span>
+        </div>
+        <div class="debug-row">
+          <span>Surface:</span>
+          <span id="debug-surface">Asphalt</span>
+        </div>
+        <div class="debug-row">
+          <span>Collision:</span>
+          <span id="debug-collision">None</span>
+        </div>
+        <div class="debug-row">
+          <span>Checkpoint:</span>
+          <span id="debug-checkpoint">0 / 0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
