@@ -260,3 +260,28 @@ export type {
   PooledVector3,
   PooledTransformData,
 } from './utils/ObjectPool';
+
+// Memoization
+export {
+  LRUCache,
+  memoize,
+  memoizeOne,
+  FrameMemoizer,
+  getFrameMemoizer,
+  resetFrameMemoizer,
+  formatPropertyPath,
+  formatNumber,
+  formatBytes,
+  getTypeName,
+  getObjectId,
+  weakMemoize,
+  MemoizationManager,
+  getMemoizationManager,
+  resetMemoizationManager,
+  MemoizeMethod,
+} from './utils/Memoization';
+export type {
+  MemoizeOptions,
+  MemoStats,
+  MemoizedFunction,
+} from './utils/Memoization';

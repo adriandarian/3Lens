@@ -1,7 +1,32 @@
 /**
- * Format a number for display (1234 -> 1.2K)
+ * Simple memoization helper for formatting functions
+ * Uses a Map cache with bounded size
  */
-export function formatNumber(num: number): string {
+function createMemoizedFormatter<T extends string | number, R>(
+  fn: (arg: T) => R,
+  maxSize = 500
+): (arg: T) => R {
+  const cache = new Map<T, R>();
+  return (arg: T): R => {
+    if (cache.has(arg)) {
+      return cache.get(arg)!;
+    }
+    const result = fn(arg);
+    if (cache.size >= maxSize) {
+      // Evict oldest entry
+      const firstKey = cache.keys().next().value;
+      cache.delete(firstKey);
+    }
+    cache.set(arg, result);
+    return result;
+  };
+}
+
+/**
+ * Format a number for display (1234 -> 1.2K)
+ * Memoized for performance in hot render paths
+ */
+export const formatNumber = createMemoizedFormatter((num: number): string => {
   if (num >= 1000000) {
     return (num / 1000000).toFixed(1) + 'M';
   }
@@ -9,12 +34,13 @@ export function formatNumber(num: number): string {
     return (num / 1000).toFixed(1) + 'K';
   }
   return num.toString();
-}
+});
 
 /**
  * Format bytes for display
+ * Memoized for performance in hot render paths
  */
-export function formatBytes(bytes: number): string {
+export const formatBytes = createMemoizedFormatter((bytes: number): string => {
   if (bytes >= 1073741824) {
     return (bytes / 1073741824).toFixed(2) + ' GB';
   }
@@ -25,12 +51,13 @@ export function formatBytes(bytes: number): string {
     return (bytes / 1024).toFixed(2) + ' KB';
   }
   return bytes + ' B';
-}
+});
 
 /**
  * Get CSS class for object type
+ * Memoized since the same types are queried repeatedly
  */
-export function getObjectClass(type: string): string {
+export const getObjectClass = createMemoizedFormatter((type: string): string => {
   const lower = type.toLowerCase();
   if (lower.includes('scene')) return 'scene';
   if (lower.includes('mesh')) return 'mesh';
@@ -39,12 +66,13 @@ export function getObjectClass(type: string): string {
   if (lower.includes('camera')) return 'camera';
   if (lower.includes('bone')) return 'bone';
   return 'object';
-}
+}, 100);
 
 /**
  * Get icon letter for object type
+ * Memoized since the same types are queried repeatedly
  */
-export function getObjectIcon(type: string): string {
+export const getObjectIcon = createMemoizedFormatter((type: string): string => {
   const lower = type.toLowerCase();
   if (lower.includes('scene')) return 'S';
   if (lower.includes('mesh')) return 'M';
@@ -53,5 +81,4 @@ export function getObjectIcon(type: string): string {
   if (lower.includes('camera')) return 'C';
   if (lower.includes('bone')) return 'B';
   return 'O';
-}
-
+}, 100);

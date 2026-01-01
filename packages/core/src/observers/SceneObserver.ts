@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { memoize } from '../utils/Memoization';
 
 import type {
   TrackedObjectRef,
@@ -26,6 +27,129 @@ import type {
   RenderTargetUsage,
 } from '../types';
 import { ResourceLifecycleTracker, type ResourceLifecycleEvent } from '../tracking/ResourceLifecycleTracker';
+
+// ============================================================================
+// Memoized lookup functions for WebGL/texture constants
+// These are called frequently during scene observation and benefit from caching
+// ============================================================================
+
+/** Lookup table for texture format names */
+const FORMAT_NAMES: Record<number, string> = {
+  6406: 'Alpha',
+  6407: 'RGB',
+  6408: 'RGBA',
+  6409: 'Luminance',
+  6410: 'LuminanceAlpha',
+  6402: 'Depth',
+  34041: 'DepthStencil',
+  6403: 'Red',
+  33319: 'RG',
+  33320: 'RedInteger',
+  33321: 'RGInteger',
+  36244: 'RGBInteger',
+  36249: 'RGBAInteger',
+  33776: 'RGB_S3TC_DXT1',
+  33777: 'RGBA_S3TC_DXT1',
+  33778: 'RGBA_S3TC_DXT3',
+  33779: 'RGBA_S3TC_DXT5',
+};
+
+/** Lookup table for data type names */
+const DATA_TYPE_NAMES: Record<number, string> = {
+  5121: 'UnsignedByte',
+  5120: 'Byte',
+  5122: 'Short',
+  5123: 'UnsignedShort',
+  5124: 'Int',
+  5125: 'UnsignedInt',
+  5126: 'Float',
+  36193: 'HalfFloat',
+  33635: 'UnsignedShort_4_4_4_4',
+  32819: 'UnsignedShort_5_5_5_1',
+  32820: 'UnsignedShort_5_6_5',
+};
+
+/** Lookup table for wrap mode names */
+const WRAP_NAMES: Record<number, string> = {
+  10497: 'Repeat',
+  33071: 'ClampToEdge',
+  33648: 'MirroredRepeat',
+};
+
+/** Lookup table for filter names */
+const FILTER_NAMES: Record<number, string> = {
+  9728: 'Nearest',
+  9729: 'Linear',
+  9984: 'NearestMipmapNearest',
+  9985: 'LinearMipmapNearest',
+  9986: 'NearestMipmapLinear',
+  9987: 'LinearMipmapLinear',
+};
+
+/** Lookup table for buffer usage names */
+const USAGE_NAMES: Record<number, string> = {
+  35044: 'StaticDraw',
+  35048: 'DynamicDraw',
+  35040: 'StreamDraw',
+  35045: 'StaticRead',
+  35049: 'DynamicRead',
+  35041: 'StreamRead',
+  35046: 'StaticCopy',
+  35050: 'DynamicCopy',
+  35042: 'StreamCopy',
+};
+
+/** Lookup table for compression format names */
+const COMPRESSION_NAMES: Record<number, string> = {
+  33776: 'DXT1 (RGB)',
+  33777: 'DXT1 (RGBA)',
+  33778: 'DXT3',
+  33779: 'DXT5',
+  35916: 'ETC1',
+  36196: 'PVRTC_4bpp_RGB',
+  35840: 'PVRTC_4bpp_RGBA',
+  35841: 'PVRTC_2bpp_RGB',
+  35842: 'PVRTC_2bpp_RGBA',
+  37492: 'ASTC_4x4',
+  37496: 'ASTC_5x5',
+  37808: 'BPTC',
+};
+
+/** Memoized format name lookup */
+const getFormatNameMemo = memoize(
+  (format: number): string => FORMAT_NAMES[format] || `Format(${format})`,
+  { maxSize: 50, name: 'formatNameLookup' }
+);
+
+/** Memoized data type name lookup */
+const getDataTypeNameMemo = memoize(
+  (type: number): string => DATA_TYPE_NAMES[type] || `Type(${type})`,
+  { maxSize: 30, name: 'dataTypeNameLookup' }
+);
+
+/** Memoized wrap mode name lookup */
+const getWrapNameMemo = memoize(
+  (wrap: number): string => WRAP_NAMES[wrap] || `Wrap(${wrap})`,
+  { maxSize: 10, name: 'wrapNameLookup' }
+);
+
+/** Memoized filter name lookup */
+const getFilterNameMemo = memoize(
+  (filter: number): string => FILTER_NAMES[filter] || `Filter(${filter})`,
+  { maxSize: 10, name: 'filterNameLookup' }
+);
+
+/** Memoized usage name lookup */
+const getUsageNameMemo = memoize(
+  (usage: number): string => USAGE_NAMES[usage] || `Usage(${usage})`,
+  { maxSize: 15, name: 'usageNameLookup' }
+);
+
+/** Memoized compression format name lookup */
+const getCompressionFormatMemo = memoize(
+  (format: number): string => COMPRESSION_NAMES[format] || `Compressed(${format})`,
+  { maxSize: 20, name: 'compressionFormatLookup' }
+);
 
 export interface SceneObserverOptions {
   onSceneChange?: () => void;
@@ -926,98 +1050,38 @@ export class SceneObserver {
   }
 
   /**
-   * Get human-readable format name
+   * Get human-readable format name (delegates to memoized function)
    */
   private getFormatName(format: number): string {
-    const formatNames: Record<number, string> = {
-      6406: 'Alpha',
-      6407: 'RGB',
-      6408: 'RGBA',
-      6409: 'Luminance',
-      6410: 'LuminanceAlpha',
-      6402: 'Depth',
-      34041: 'DepthStencil',
-      6403: 'Red',
-      33319: 'RG',
-      33320: 'RedInteger',
-      33321: 'RGInteger',
-      36244: 'RGBInteger',
-      36249: 'RGBAInteger',
-      // Compressed formats
-      33776: 'RGB_S3TC_DXT1',
-      33777: 'RGBA_S3TC_DXT1',
-      33778: 'RGBA_S3TC_DXT3',
-      33779: 'RGBA_S3TC_DXT5',
-    };
-    return formatNames[format] || `Format(${format})`;
+    return getFormatNameMemo(format);
   }
 
   /**
-   * Get human-readable data type name
+   * Get human-readable data type name (delegates to memoized function)
    */
   private getDataTypeName(type: number): string {
-    const typeNames: Record<number, string> = {
-      5121: 'UnsignedByte',
-      5120: 'Byte',
-      5122: 'Short',
-      5123: 'UnsignedShort',
-      5124: 'Int',
-      5125: 'UnsignedInt',
-      5126: 'Float',
-      36193: 'HalfFloat',
-      33635: 'UnsignedShort_4_4_4_4',
-      32819: 'UnsignedShort_5_5_5_1',
-      32820: 'UnsignedShort_5_6_5',
-    };
-    return typeNames[type] || `Type(${type})`;
+    return getDataTypeNameMemo(type);
   }
 
   /**
-   * Get human-readable wrap mode name
+   * Get human-readable wrap mode name (delegates to memoized function)
    */
   private getWrapName(wrap: number): string {
-    const wrapNames: Record<number, string> = {
-      10497: 'Repeat',
-      33071: 'ClampToEdge',
-      33648: 'MirroredRepeat',
-    };
-    return wrapNames[wrap] || `Wrap(${wrap})`;
+    return getWrapNameMemo(wrap);
   }
 
   /**
-   * Get human-readable filter name
+   * Get human-readable filter name (delegates to memoized function)
    */
   private getFilterName(filter: number): string {
-    const filterNames: Record<number, string> = {
-      9728: 'Nearest',
-      9729: 'Linear',
-      9984: 'NearestMipmapNearest',
-      9985: 'LinearMipmapNearest',
-      9986: 'NearestMipmapLinear',
-      9987: 'LinearMipmapLinear',
-    };
-    return filterNames[filter] || `Filter(${filter})`;
+    return getFilterNameMemo(filter);
   }
 
   /**
-   * Get compression format name
+   * Get compression format name (delegates to memoized function)
    */
   private getCompressionFormat(format: number): string {
-    const compressionNames: Record<number, string> = {
-      33776: 'DXT1 (RGB)',
-      33777: 'DXT1 (RGBA)',
-      33778: 'DXT3',
-      33779: 'DXT5',
-      35916: 'ETC1',
-      36196: 'PVRTC_4bpp_RGB',
-      35840: 'PVRTC_4bpp_RGBA',
-      35841: 'PVRTC_2bpp_RGB',
-      35842: 'PVRTC_2bpp_RGBA',
-      37492: 'ASTC_4x4',
-      37496: 'ASTC_5x5',
-      37808: 'BPTC',
-    };
-    return compressionNames[format] || `Compressed(${format})`;
+    return getCompressionFormatMemo(format);
   }
 
   /**
@@ -1178,22 +1242,10 @@ export class SceneObserver {
   }
 
   /**
-   * Get human-readable name for buffer usage
+   * Get human-readable name for buffer usage (delegates to memoized function)
    */
   private getUsageName(usage: number): string {
-    // WebGL usage constants
-    const usageNames: Record<number, string> = {
-      35044: 'StaticDraw',
-      35048: 'DynamicDraw',
-      35040: 'StreamDraw',
-      35045: 'StaticRead',
-      35049: 'DynamicRead',
-      35041: 'StreamRead',
-      35046: 'StaticCopy',
-      35050: 'DynamicCopy',
-      35042: 'StreamCopy',
-    };
-    return usageNames[usage] || `Usage(${usage})`;
+    return getUsageNameMemo(usage);
   }
 
   /**
