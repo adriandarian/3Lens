@@ -577,7 +577,7 @@
 | Sampling optimization | ✅ | N-frame sampling, adaptive sampling (auto-reduces rate when stable), delta compression, GPU timing toggle |
 | Memory pooling | ✅ | ObjectPool, ArrayPool, PoolManager with typed pools for FrameStats, Vector3, arrays; 23 unit tests |
 | Virtual scrolling for large trees | ✅ | VirtualScroller utility with flattening, overscan, RAF-throttled rendering; automatic threshold activation (>100 nodes); 6 unit tests |
-| Memoization | ⬜ | |
+| Memoization | ✅ | LRUCache, memoize, memoizeOne, weakMemoize, FrameMemoizer, MemoizationManager; built-in formatters; decorator support; 60 unit tests |
 | Web Worker for processing | ⬜ | |
 
 ## 4.6 Testing & Quality
@@ -610,8 +610,8 @@
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
 | Phase 3 | 72 | 72 | 0 | 0 |
-| Phase 4 | 42 | 16 | 0 | 26 |
-| **Total** | **236** | **210** | **0** | **26** |
+| Phase 4 | 42 | 17 | 0 | 25 |
+| **Total** | **236** | **211** | **0** | **25** |
 
 ## Timeline
 
