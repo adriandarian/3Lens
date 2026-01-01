@@ -1,0 +1,88 @@
+/* Custom styles for TypeDoc API documentation */
+
+:root {
+  --color-primary: #6366f1;
+  --color-primary-dark: #4f46e5;
+  --color-accent: #10b981;
+}
+
+/* Enhance code blocks */
+pre {
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* Better navigation styling */
+.tsd-navigation {
+  font-size: 14px;
+}
+
+.tsd-navigation a {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.tsd-navigation a:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+/* Package badges */
+.tsd-page-title h1::before {
+  content: "📦 ";
+}
+
+/* Method badges */
+.tsd-kind-method .tsd-kind-icon::before {
+  content: "ƒ";
+  color: var(--color-primary);
+  font-weight: bold;
+}
+
+/* Property badges */
+.tsd-kind-property .tsd-kind-icon::before {
+  content: "•";
+  color: var(--color-accent);
+}
+
+/* Interface badges */
+.tsd-kind-interface .tsd-kind-icon::before {
+  content: "I";
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+/* Better signature display */
+.tsd-signature {
+  font-family: 'Fira Code', 'SF Mono', Monaco, monospace;
+  font-size: 13px;
+}
+
+/* Parameters table */
+.tsd-parameters-title {
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+/* Returns section */
+.tsd-returns-title {
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+/* Type aliases */
+.tsd-kind-type-alias {
+  border-left: 3px solid var(--color-primary);
+  padding-left: 8px;
+}
+
+/* Better mobile responsiveness */
+@media (max-width: 768px) {
+  .tsd-navigation {
+    font-size: 16px;
+  }
+  
+  .tsd-signature {
+    font-size: 12px;
+    overflow-x: auto;
+  }
+}
