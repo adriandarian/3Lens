@@ -536,7 +536,7 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | First-person shooter demo | ✅ | `examples/game-development/first-person-shooter` |
-| Top-down RPG example | ⬜ | `examples/game-development/top-down-rpg` |
+| Top-down RPG example | ✅ | `examples/game-development/top-down-rpg` |
 | Racing game profiler | ⬜ | `examples/game-development/racing-game` |
 | Platformer physics debug | ⬜ | `examples/game-development/platformer-physics` |
 
