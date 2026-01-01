@@ -1,0 +1,97 @@
+name: ❓ Question / Help
+description: Ask a question or get help with 3Lens
+title: "[Question]: "
+labels: ["question", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Need help with 3Lens? We're here to assist!
+        
+        **Before submitting**, please consider:
+        - 📖 Check the [documentation](https://github.com/adriandarian/3Lens/tree/main/docs)
+        - 💬 Ask in [GitHub Discussions](https://github.com/adriandarian/3Lens/discussions) for general questions
+        - 🔍 Search [existing issues](https://github.com/adriandarian/3Lens/issues) for similar questions
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+      placeholder: Describe your question clearly...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Provide context about what you're trying to accomplish.
+      placeholder: |
+        I'm trying to...
+        My setup includes...
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-tried
+    attributes:
+      label: What I've Tried
+      description: Describe what you've already attempted.
+      placeholder: |
+        1. I tried reading the docs about...
+        2. I attempted to use...
+        3. I searched for...
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code Sample (Optional)
+      description: If relevant, provide a code sample showing your current approach.
+      placeholder: |
+        ```typescript
+        // Your code here
+        ```
+      render: typescript
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic Area
+      description: What area does your question relate to?
+      options:
+        - Getting started / Installation
+        - Basic usage
+        - Scene inspection
+        - Performance profiling
+        - Memory tracking
+        - Plugin development
+        - React integration
+        - Angular integration
+        - Vue integration
+        - WebGPU
+        - Configuration
+        - API usage
+        - Best practices
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 3Lens Version
+      description: What version of 3Lens are you using?
+      placeholder: "e.g., 1.0.0"
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked the documentation
+          required: true
+        - label: I have searched existing issues and discussions
+          required: true

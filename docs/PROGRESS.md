@@ -564,12 +564,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Plugin template repository | ⬜ | |
-| Community plugins directory | ⬜ | |
-| Discord server | ⬜ | |
-| GitHub Discussions setup | ⬜ | |
-| Issue templates | ⬜ | |
-| PR templates | ⬜ | |
+| Community plugins directory | ✅ | Integrated into GitHub Discussions "Show and Tell" category |
+| GitHub Discussions setup | ✅ | DISCUSSIONS.md with categories, guidelines, and usage guide |
+| Issue templates | ✅ | Bug report, feature request, question templates with YAML forms |
+| PR templates | ✅ | Comprehensive PR template with checklists and categories |
 
 ## 4.5 Performance Optimization
 
@@ -612,8 +610,8 @@
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
 | Phase 3 | 72 | 72 | 0 | 0 |
-| Phase 4 | 44 | 9 | 0 | 35 |
-| **Total** | **238** | **203** | **0** | **35** |
+| Phase 4 | 42 | 12 | 0 | 30 |
+| **Total** | **236** | **206** | **0** | **30** |
 
 ## Timeline
 
