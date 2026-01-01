@@ -197,6 +197,7 @@ export type {
 
 // Adapters
 export { createWebGLAdapter } from './adapters/webgl-adapter';
+export type { WebGLAdapterOptions } from './adapters/webgl-adapter';
 export { createWebGPUAdapter, createExtendedWebGPUAdapter, isWebGPURenderer, getWebGPUCapabilities } from './adapters/webgpu-adapter';
 export type {
   WebGPUCapabilities,
