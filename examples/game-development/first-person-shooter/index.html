@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>First-Person Shooter Demo - 3Lens Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow: hidden;
+      background: #0a0e14;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    canvas {
+      display: block;
+    }
+
+    /* HUD Overlay */
+    .hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Crosshair */
+    .crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px;
+    }
+
+    .crosshair::before,
+    .crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .crosshair::before {
+      width: 2px;
+      height: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .crosshair::after {
+      width: 100%;
+      height: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .crosshair.hit::before,
+    .crosshair.hit::after {
+      background: #ff4444;
+    }
+
+    /* Health Bar */
+    .health-bar {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    .health-icon {
+      font-size: 28px;
+    }
+
+    .health-container {
+      width: 200px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .health-fill {
+      height: 100%;
+      background: linear-gradient(to right, #22c55e, #4ade80);
+      transition: width 0.3s ease;
+    }
+
+    .health-fill.low {
+      background: linear-gradient(to right, #ef4444, #f87171);
+    }
+
+    .health-fill.medium {
+      background: linear-gradient(to right, #f59e0b, #fbbf24);
+    }
+
+    .health-text {
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Ammo Display */
+    .ammo-display {
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      pointer-events: auto;
+    }
+
+    .ammo-current {
+      color: white;
+      font-size: 48px;
+      font-weight: 700;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .ammo-separator {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 24px;
+    }
+
+    .ammo-reserve {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 24px;
+      font-weight: 500;
+    }
+
+    /* Score Display */
+    .score-display {
+      position: absolute;
+      top: 20px;
+      right: 40px;
+      text-align: right;
+      pointer-events: auto;
+    }
+
+    .score-label {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .score-value {
+      color: white;
+      font-size: 36px;
+      font-weight: 700;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Wave Info */
+    .wave-info {
+      position: absolute;
+      top: 20px;
+      left: 40px;
+      pointer-events: auto;
+    }
+
+    .wave-label {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .wave-value {
+      color: #60a5fa;
+      font-size: 28px;
+      font-weight: 700;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .enemies-remaining {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 16px;
+      margin-top: 4px;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      position: fixed;
+      top: 100px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      width: 260px;
+      z-index: 150;
+      pointer-events: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-title {
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-section {
+      margin-bottom: 12px;
+    }
+
+    .section-label {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      color: white;
+      font-size: 13px;
+      padding: 4px 0;
+    }
+
+    .stat-value {
+      color: #60a5fa;
+      font-weight: 500;
+    }
+
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+    }
+
+    .toggle-label {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+    }
+
+    .toggle-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .toggle-btn.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+    }
+
+    /* Slider */
+    .slider-container {
+      padding: 4px 0;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .slider-label {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+    }
+
+    .slider-value {
+      color: #60a5fa;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #3b82f6;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      border-color: #3b82f6;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      border-color: #ef4444;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    /* Hit Marker */
+    .hit-marker {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 32px;
+      height: 32px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .hit-marker.show {
+      animation: hitMarker 0.2s ease-out;
+    }
+
+    .hit-marker::before,
+    .hit-marker::after {
+      content: '';
+      position: absolute;
+      background: #ff4444;
+      opacity: 0.9;
+    }
+
+    .hit-marker::before {
+      width: 2px;
+      height: 100%;
+      left: 50%;
+      transform: translateX(-50%) rotate(45deg);
+    }
+
+    .hit-marker::after {
+      width: 100%;
+      height: 2px;
+      top: 50%;
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    @keyframes hitMarker {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+    }
+
+    /* Damage Overlay */
+    .damage-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(ellipse at center, transparent 50%, rgba(255, 0, 0, 0.4) 100%);
+      transition: opacity 0.1s;
+    }
+
+    .damage-overlay.show {
+      opacity: 1;
+    }
+
+    /* Start Screen */
+    .start-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      transition: opacity 0.5s;
+    }
+
+    .start-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .start-title {
+      color: white;
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .start-subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 18px;
+      margin-bottom: 40px;
+    }
+
+    .start-btn {
+      background: #3b82f6;
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+      padding: 16px 48px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .start-btn:hover {
+      background: #2563eb;
+      transform: scale(1.05);
+    }
+
+    .controls-help {
+      margin-top: 40px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .controls-help kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin: 0 4px;
+    }
+
+    /* Game Over Screen */
+    .game-over-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+
+    .game-over-screen.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .game-over-title {
+      color: #ef4444;
+      font-size: 64px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .final-score {
+      color: white;
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .final-wave {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 18px;
+      margin-bottom: 40px;
+    }
+
+    /* Kill Feed */
+    .kill-feed {
+      position: absolute;
+      top: 100px;
+      right: 40px;
+      width: 250px;
+      pointer-events: none;
+    }
+
+    .kill-entry {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      color: white;
+      font-size: 13px;
+      animation: killFeed 3s ease-out forwards;
+      border-left: 3px solid #22c55e;
+    }
+
+    .kill-entry.headshot {
+      border-left-color: #f59e0b;
+    }
+
+    @keyframes killFeed {
+      0% { opacity: 0; transform: translateX(20px); }
+      10% { opacity: 1; transform: translateX(0); }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  
+  <!-- HUD -->
+  <div class="hud">
+    <div class="crosshair" id="crosshair"></div>
+    <div class="hit-marker" id="hit-marker"></div>
+    <div class="damage-overlay" id="damage-overlay"></div>
+    
+    <div class="health-bar">
+      <span class="health-icon">❤️</span>
+      <div class="health-container">
+        <div class="health-fill" id="health-fill"></div>
+      </div>
+      <span class="health-text" id="health-text">100</span>
+    </div>
+    
+    <div class="ammo-display">
+      <span class="ammo-current" id="ammo-current">30</span>
+      <span class="ammo-separator">/</span>
+      <span class="ammo-reserve" id="ammo-reserve">90</span>
+    </div>
+    
+    <div class="score-display">
+      <div class="score-label">Score</div>
+      <div class="score-value" id="score-value">0</div>
+    </div>
+    
+    <div class="wave-info">
+      <div class="wave-label">Wave</div>
+      <div class="wave-value" id="wave-value">1</div>
+      <div class="enemies-remaining" id="enemies-remaining">Enemies: 0</div>
+    </div>
+
+    <div class="kill-feed" id="kill-feed"></div>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="control-panel" id="control-panel">
+    <div class="panel-title">🎮 Debug Controls</div>
+    
+    <div class="panel-section">
+      <div class="section-label">Player Stats</div>
+      <div class="stat-row">
+        <span>Position</span>
+        <span class="stat-value" id="player-pos">0, 0, 0</span>
+      </div>
+      <div class="stat-row">
+        <span>Velocity</span>
+        <span class="stat-value" id="player-vel">0</span>
+      </div>
+      <div class="stat-row">
+        <span>Accuracy</span>
+        <span class="stat-value" id="accuracy">0%</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Visualization</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Enemy Paths</span>
+        <button class="toggle-btn" id="toggle-paths">Show</button>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Hitboxes</span>
+        <button class="toggle-btn" id="toggle-hitboxes">Show</button>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Bullet Trails</span>
+        <button class="toggle-btn active" id="toggle-trails">On</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Game Settings</div>
+      <div class="slider-container">
+        <div class="slider-header">
+          <span class="slider-label">Enemy Speed</span>
+          <span class="slider-value" id="enemy-speed-value">1.0x</span>
+        </div>
+        <input type="range" id="enemy-speed" min="0.5" max="2" step="0.1" value="1">
+      </div>
+      <div class="slider-container">
+        <div class="slider-header">
+          <span class="slider-label">Enemy Count</span>
+          <span class="slider-value" id="enemy-count-value">5</span>
+        </div>
+        <input type="range" id="enemy-count" min="1" max="15" step="1" value="5">
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" id="spawn-enemy">Spawn Enemy</button>
+      <button class="btn btn-primary" id="refill-ammo">Refill Ammo</button>
+    </div>
+    <div class="btn-group">
+      <button class="btn" id="god-mode">God Mode</button>
+      <button class="btn btn-danger" id="restart-game">Restart</button>
+    </div>
+  </div>
+
+  <!-- Start Screen -->
+  <div class="start-screen" id="start-screen">
+    <div class="start-title">🎯 FPS DEMO</div>
+    <div class="start-subtitle">3Lens Debugging Integration</div>
+    <button class="start-btn" id="start-btn">Click to Play</button>
+    <div class="controls-help">
+      <div><kbd>WASD</kbd> Move &nbsp; <kbd>Space</kbd> Jump &nbsp; <kbd>Shift</kbd> Sprint</div>
+      <div><kbd>Mouse</kbd> Look &nbsp; <kbd>Click</kbd> Shoot &nbsp; <kbd>R</kbd> Reload</div>
+      <div><kbd>~</kbd> Toggle 3Lens Overlay</div>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div class="game-over-screen" id="game-over-screen">
+    <div class="game-over-title">GAME OVER</div>
+    <div class="final-score">Final Score: <span id="final-score">0</span></div>
+    <div class="final-wave">Reached Wave <span id="final-wave">1</span></div>
+    <button class="start-btn" id="retry-btn">Try Again</button>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
