@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shadow Technique Comparison - 3Lens Example</title>
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a24;
+      --border-color: #2a2a3a;
+      --text-primary: #e0e0e0;
+      --text-secondary: #888;
+      --accent-shadow: #8b5cf6;
+      --accent-light: #fbbf24;
+      --accent-quality: #22c55e;
+      --accent-perf: #ef4444;
+      --accent-info: #3b82f6;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* Left Panel */
+    .ui-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 13px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .panel-header {
+      background: linear-gradient(135deg, var(--accent-shadow), var(--accent-light));
+      padding: 16px;
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-header svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .panel-section {
+      padding: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .panel-section:last-child {
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    /* Shadow Type Selection */
+    .shadow-types {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .shadow-type-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .shadow-type-btn:hover {
+      border-color: var(--accent-shadow);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .shadow-type-btn.active {
+      border-color: var(--accent-shadow);
+      background: rgba(139, 92, 246, 0.15);
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+    }
+
+    .shadow-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .shadow-info {
+      flex: 1;
+    }
+
+    .shadow-name {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .shadow-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .shadow-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .badge-quality {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--accent-quality);
+    }
+
+    .badge-perf {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--accent-perf);
+    }
+
+    .badge-balanced {
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--accent-info);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-value.shadow { color: var(--accent-shadow); }
+    .stat-value.light { color: var(--accent-light); }
+    .stat-value.quality { color: var(--accent-quality); }
+    .stat-value.perf { color: var(--accent-perf); }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Shadow Map Preview */
+    .shadow-map-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .shadow-map-preview {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .shadow-map-preview:hover {
+      border-color: var(--accent-shadow);
+    }
+
+    .shadow-map-preview.selected {
+      border-color: var(--accent-light);
+    }
+
+    .shadow-map-canvas {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #000;
+    }
+
+    .shadow-map-label {
+      padding: 6px 8px;
+      font-size: 10px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Controls */
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .control-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      width: 100px;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-shadow);
+      cursor: pointer;
+    }
+
+    .slider-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent-shadow);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    /* Toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+
+    .toggle-switch {
+      width: 40px;
+      height: 22px;
+      background: var(--bg-tertiary);
+      border-radius: 11px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-switch.active {
+      background: var(--accent-shadow);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      top: 2px;
+      left: 2px;
+      transition: all 0.2s;
+    }
+
+    .toggle-switch.active::after {
+      left: 20px;
+    }
+
+    /* Quality Comparison */
+    .comparison-bar {
+      margin-bottom: 12px;
+    }
+
+    .comparison-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .comparison-label {
+      color: var(--text-secondary);
+    }
+
+    .comparison-value {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .comparison-track {
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .comparison-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .fill-quality {
+      background: linear-gradient(90deg, var(--accent-quality), #4ade80);
+    }
+
+    .fill-perf {
+      background: linear-gradient(90deg, var(--accent-perf), #f87171);
+    }
+
+    .fill-memory {
+      background: linear-gradient(90deg, var(--accent-info), #60a5fa);
+    }
+
+    /* Right Panel - Details */
+    .details-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 360px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 13px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .details-header {
+      background: linear-gradient(135deg, var(--accent-light), #f59e0b);
+      padding: 14px 16px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #000;
+    }
+
+    /* Technique Details */
+    .technique-detail {
+      padding: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .technique-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .technique-description {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .technique-props {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .prop-item {
+      background: var(--bg-tertiary);
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .prop-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .prop-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent-shadow);
+    }
+
+    /* Artifacts List */
+    .artifacts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .artifact-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+    }
+
+    .artifact-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .artifact-info {
+      flex: 1;
+    }
+
+    .artifact-name {
+      font-weight: 500;
+      font-size: 12px;
+    }
+
+    .artifact-desc {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .artifact-severity {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .severity-low {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--accent-quality);
+    }
+
+    .severity-medium {
+      background: rgba(251, 191, 36, 0.2);
+      color: var(--accent-light);
+    }
+
+    .severity-high {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--accent-perf);
+    }
+
+    /* Bottom Bar */
+    .bottom-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 20px;
+      display: flex;
+      gap: 24px;
+      z-index: 100;
+    }
+
+    .bar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .bar-icon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .bar-icon.shadow { background: var(--accent-shadow); }
+    .bar-icon.light { background: var(--accent-light); }
+
+    .bar-label {
+      color: var(--text-secondary);
+    }
+
+    .bar-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-primary);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Left Panel - Shadow Types -->
+  <div class="ui-panel">
+    <div class="panel-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+      </svg>
+      Shadow Technique Comparison
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Shadow Mapping Type</div>
+      <div class="shadow-types">
+        <button class="shadow-type-btn active" data-type="basic">
+          <div class="shadow-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">📦</div>
+          <div class="shadow-info">
+            <div class="shadow-name">Basic Shadow Map</div>
+            <div class="shadow-desc">Standard depth-based shadows</div>
+          </div>
+          <span class="shadow-badge badge-perf">Fast</span>
+        </button>
+        <button class="shadow-type-btn" data-type="pcf">
+          <div class="shadow-icon" style="background: linear-gradient(135deg, #22c55e, #4ade80);">🔲</div>
+          <div class="shadow-info">
+            <div class="shadow-name">PCF Soft Shadows</div>
+            <div class="shadow-desc">Percentage-closer filtering</div>
+          </div>
+          <span class="shadow-badge badge-balanced">Balanced</span>
+        </button>
+        <button class="shadow-type-btn" data-type="pcss">
+          <div class="shadow-icon" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);">🌅</div>
+          <div class="shadow-info">
+            <div class="shadow-name">PCSS Shadows</div>
+            <div class="shadow-desc">Percentage-closer soft shadows</div>
+          </div>
+          <span class="shadow-badge badge-quality">Quality</span>
+        </button>
+        <button class="shadow-type-btn" data-type="vsm">
+          <div class="shadow-icon" style="background: linear-gradient(135deg, #ef4444, #f87171);">📊</div>
+          <div class="shadow-info">
+            <div class="shadow-name">VSM Shadows</div>
+            <div class="shadow-desc">Variance shadow mapping</div>
+          </div>
+          <span class="shadow-badge badge-quality">Quality</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Performance Metrics</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value shadow" id="shadow-time">0.8</div>
+          <div class="stat-label">Shadow Pass (ms)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value light" id="light-count">3</div>
+          <div class="stat-label">Shadow Lights</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value quality" id="map-resolution">1024</div>
+          <div class="stat-label">Map Resolution</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value perf" id="memory-usage">4.0</div>
+          <div class="stat-label">Memory (MB)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Shadow Map Previews</div>
+      <div class="shadow-map-grid">
+        <div class="shadow-map-preview selected" data-light="0">
+          <canvas class="shadow-map-canvas" id="shadow-preview-0"></canvas>
+          <div class="shadow-map-label">
+            <span>Directional</span>
+            <span>1024²</span>
+          </div>
+        </div>
+        <div class="shadow-map-preview" data-light="1">
+          <canvas class="shadow-map-canvas" id="shadow-preview-1"></canvas>
+          <div class="shadow-map-label">
+            <span>Spot 1</span>
+            <span>512²</span>
+          </div>
+        </div>
+        <div class="shadow-map-preview" data-light="2">
+          <canvas class="shadow-map-canvas" id="shadow-preview-2"></canvas>
+          <div class="shadow-map-label">
+            <span>Spot 2</span>
+            <span>512²</span>
+          </div>
+        </div>
+        <div class="shadow-map-preview" data-light="3">
+          <canvas class="shadow-map-canvas" id="shadow-preview-3"></canvas>
+          <div class="shadow-map-label">
+            <span>Point</span>
+            <span>256²</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Shadow Settings</div>
+      <div class="control-row">
+        <span class="control-label">Map Resolution</span>
+        <div class="slider-container">
+          <input type="range" id="resolution-slider" min="8" max="12" value="10">
+          <span class="slider-value" id="resolution-value">1024</span>
+        </div>
+      </div>
+      <div class="control-row">
+        <span class="control-label">Shadow Bias</span>
+        <div class="slider-container">
+          <input type="range" id="bias-slider" min="0" max="100" value="5">
+          <span class="slider-value" id="bias-value">0.0005</span>
+        </div>
+      </div>
+      <div class="control-row">
+        <span class="control-label">Normal Bias</span>
+        <div class="slider-container">
+          <input type="range" id="normal-bias-slider" min="0" max="100" value="2">
+          <span class="slider-value" id="normal-bias-value">0.02</span>
+        </div>
+      </div>
+      <div class="control-row">
+        <span class="control-label">Blur Radius (PCF)</span>
+        <div class="slider-container">
+          <input type="range" id="blur-slider" min="0" max="10" value="1">
+          <span class="slider-value" id="blur-value">1</span>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <span class="control-label">Auto-rotate Light</span>
+        <div class="toggle-switch active" id="rotate-toggle"></div>
+      </div>
+      <div class="toggle-row">
+        <span class="control-label">Show Frustum</span>
+        <div class="toggle-switch" id="frustum-toggle"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel - Details -->
+  <div class="details-panel">
+    <div class="details-header">
+      <span>Technique Details</span>
+      <span id="technique-name">Basic Shadow Map</span>
+    </div>
+
+    <div class="technique-detail">
+      <div class="technique-title">
+        📖 Description
+      </div>
+      <div class="technique-description" id="technique-desc">
+        Standard shadow mapping using a single depth sample per pixel. Produces hard-edged shadows with potential aliasing artifacts. Best for performance-critical applications.
+      </div>
+      <div class="technique-props">
+        <div class="prop-item">
+          <div class="prop-label">Samples/Pixel</div>
+          <div class="prop-value" id="samples-pixel">1</div>
+        </div>
+        <div class="prop-item">
+          <div class="prop-label">Filter Type</div>
+          <div class="prop-value" id="filter-type">None</div>
+        </div>
+        <div class="prop-item">
+          <div class="prop-label">Soft Edges</div>
+          <div class="prop-value" id="soft-edges">No</div>
+        </div>
+        <div class="prop-item">
+          <div class="prop-label">GPU Cost</div>
+          <div class="prop-value" id="gpu-cost">Low</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Quality Comparison</div>
+      <div class="comparison-bar">
+        <div class="comparison-header">
+          <span class="comparison-label">Visual Quality</span>
+          <span class="comparison-value" id="quality-percent">40%</span>
+        </div>
+        <div class="comparison-track">
+          <div class="comparison-fill fill-quality" id="quality-bar" style="width: 40%;"></div>
+        </div>
+      </div>
+      <div class="comparison-bar">
+        <div class="comparison-header">
+          <span class="comparison-label">Performance</span>
+          <span class="comparison-value" id="perf-percent">95%</span>
+        </div>
+        <div class="comparison-track">
+          <div class="comparison-fill fill-perf" id="perf-bar" style="width: 95%;"></div>
+        </div>
+      </div>
+      <div class="comparison-bar">
+        <div class="comparison-header">
+          <span class="comparison-label">Memory Usage</span>
+          <span class="comparison-value" id="mem-percent">20%</span>
+        </div>
+        <div class="comparison-track">
+          <div class="comparison-fill fill-memory" id="mem-bar" style="width: 20%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Common Artifacts</div>
+      <div class="artifacts-list" id="artifacts-list">
+        <div class="artifact-item">
+          <div class="artifact-icon" style="background: rgba(239, 68, 68, 0.2);">⚡</div>
+          <div class="artifact-info">
+            <div class="artifact-name">Shadow Acne</div>
+            <div class="artifact-desc">Self-shadowing artifacts from depth precision</div>
+          </div>
+          <span class="artifact-severity severity-high">High</span>
+        </div>
+        <div class="artifact-item">
+          <div class="artifact-icon" style="background: rgba(251, 191, 36, 0.2);">🔳</div>
+          <div class="artifact-info">
+            <div class="artifact-name">Aliasing</div>
+            <div class="artifact-desc">Jagged shadow edges from undersampling</div>
+          </div>
+          <span class="artifact-severity severity-medium">Medium</span>
+        </div>
+        <div class="artifact-item">
+          <div class="artifact-icon" style="background: rgba(34, 197, 94, 0.2);">📐</div>
+          <div class="artifact-info">
+            <div class="artifact-name">Peter Panning</div>
+            <div class="artifact-desc">Shadows detached from objects</div>
+          </div>
+          <span class="artifact-severity severity-low">Low</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Recommendations</div>
+      <div class="technique-description" id="recommendations">
+        • Increase shadow map resolution for better edge quality<br>
+        • Adjust bias to reduce shadow acne<br>
+        • Consider PCF for smoother shadows with minimal cost<br>
+        • Use cascaded shadow maps for large outdoor scenes
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Status Bar -->
+  <div class="bottom-bar">
+    <div class="bar-item">
+      <div class="bar-icon shadow"></div>
+      <span class="bar-label">Shadow Type</span>
+      <span class="bar-value" id="current-type">Basic</span>
+    </div>
+    <div class="bar-item">
+      <div class="bar-icon light"></div>
+      <span class="bar-label">Active Lights</span>
+      <span class="bar-value" id="active-lights">3</span>
+    </div>
+    <div class="bar-item">
+      <span class="bar-label">Draw Calls</span>
+      <span class="bar-value" id="draw-calls">12</span>
+    </div>
+    <div class="bar-item">
+      <span class="bar-label">FPS</span>
+      <span class="bar-value" id="fps">60</span>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
