@@ -575,7 +575,7 @@
 |------|--------|-------|
 | Lazy initialization | ✅ | SelectionHelper, InspectMode, TransformGizmo, CameraController, LogicalEntityManager use lazy getters |
 | Sampling optimization | ✅ | N-frame sampling, adaptive sampling (auto-reduces rate when stable), delta compression, GPU timing toggle |
-| Memory pooling | ⬜ | |
+| Memory pooling | ✅ | ObjectPool, ArrayPool, PoolManager with typed pools for FrameStats, Vector3, arrays; 23 unit tests |
 | Virtual scrolling for large trees | ⬜ | |
 | Memoization | ⬜ | |
 | Web Worker for processing | ⬜ | |
@@ -610,8 +610,8 @@
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
 | Phase 3 | 72 | 72 | 0 | 0 |
-| Phase 4 | 42 | 14 | 0 | 28 |
-| **Total** | **236** | **208** | **0** | **28** |
+| Phase 4 | 42 | 15 | 0 | 27 |
+| **Total** | **236** | **209** | **0** | **27** |
 
 ## Timeline
 

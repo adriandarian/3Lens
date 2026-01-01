@@ -237,3 +237,26 @@ export type {
   OverheadBenchmarkOptions,
   OverheadBenchmarkResult,
 } from './utils/overhead-benchmark';
+
+// Memory Pooling
+export {
+  ObjectPool,
+  ArrayPool,
+  PoolManager,
+  getPoolManager,
+  acquireFrameStats,
+  releaseFrameStats,
+  acquireVector3,
+  releaseVector3,
+  acquireArray,
+  releaseArray,
+} from './utils/ObjectPool';
+export type {
+  PoolFactory,
+  PoolReset,
+  ObjectPoolOptions,
+  PoolStats,
+  PooledFrameStats,
+  PooledVector3,
+  PooledTransformData,
+} from './utils/ObjectPool';
