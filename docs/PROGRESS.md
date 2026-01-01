@@ -557,7 +557,7 @@
 | Compute shader debugging | ✅ | `examples/advanced-techniques/compute-shaders` |
 | Shadow technique comparison | ✅ | `examples/advanced-techniques/shadow-comparison` |
 | Environment mapping debug | ✅ | `examples/advanced-techniques/environment-mapping` |
-| Skinned mesh inspector | ⬜ | `examples/advanced-techniques/skinned-mesh-inspector` |
+| Skinned mesh inspector | ✅ | `examples/advanced-techniques/skinned-mesh-inspector` |
 | Morph target analyzer | ⬜ | `examples/advanced-techniques/morph-target-analyzer` |
 
 ## 4.4 Community
