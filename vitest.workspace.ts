@@ -51,6 +51,15 @@ export default defineWorkspace([
       include: ['src/**/*.{test,spec}.ts'],
     },
   },
+  {
+    extends: './vitest.config.ts',
+    test: {
+      name: 'e2e',
+      root: './packages/core',
+      include: ['src/__tests__/e2e/**/*.test.ts'],
+      testTimeout: 30000,
+    },
+  },
 ]);
 
 
