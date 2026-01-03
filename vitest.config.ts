@@ -4,13 +4,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['packages/*/src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['packages/*/src/**/*.{test,spec,bench}.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['packages/*/src/**/*.ts'],
-      exclude: ['**/*.test.ts', '**/*.spec.ts', '**/index.ts'],
+      exclude: ['**/*.test.ts', '**/*.spec.ts', '**/*.bench.ts', '**/index.ts'],
     },
     passWithNoTests: true,
   },
