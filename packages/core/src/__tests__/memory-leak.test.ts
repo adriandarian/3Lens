@@ -24,7 +24,6 @@ import {
   LRUCache,
   memoize,
   memoizeOne,
-  weakMemoize,
   MemoizationManager,
 } from '../utils/Memoization';
 import { LogicalEntityManager } from '../entities/LogicalEntityManager';
