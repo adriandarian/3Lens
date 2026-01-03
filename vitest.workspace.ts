@@ -7,6 +7,7 @@ export default defineWorkspace([
       name: 'core',
       root: './packages/core',
       include: ['src/**/*.{test,spec}.ts'],
+      exclude: ['src/__tests__/benchmarks/**'],
     },
   },
   {
@@ -58,6 +59,21 @@ export default defineWorkspace([
       root: './packages/core',
       include: ['src/__tests__/e2e/**/*.test.ts'],
       testTimeout: 30000,
+    },
+  },
+  {
+    extends: './vitest.config.ts',
+    test: {
+      name: 'benchmarks',
+      root: './packages/core',
+      include: ['src/__tests__/benchmarks/**/*.bench.ts'],
+      testTimeout: 60000,
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          singleFork: true,
+        },
+      },
     },
   },
 ]);
