@@ -366,9 +366,18 @@ export class ResourceLifecycleTracker {
       totalEvents: this.events.length,
     };
 
+    // Map resource type to summary key
+    const typeToKey = (type: ResourceType): 'geometries' | 'materials' | 'textures' => {
+      switch (type) {
+        case 'geometry': return 'geometries';
+        case 'material': return 'materials';
+        case 'texture': return 'textures';
+      }
+    };
+
     // Count events
     for (const event of this.events) {
-      const stats = summary[`${event.resourceType}s` as 'geometries' | 'materials' | 'textures'];
+      const stats = summary[typeToKey(event.resourceType)];
       if (event.eventType === 'created') {
         stats.created++;
       } else if (event.eventType === 'disposed') {
@@ -380,7 +389,7 @@ export class ResourceLifecycleTracker {
     let oldestActive: { type: ResourceType; uuid: string; name?: string; ageMs: number } | undefined;
 
     for (const [uuid, info] of this.activeResources) {
-      const stats = summary[`${info.type}s` as 'geometries' | 'materials' | 'textures'];
+      const stats = summary[typeToKey(info.type)];
       stats.active++;
 
       const ageMs = now - info.createdAt;
@@ -801,16 +810,23 @@ export class ResourceLifecycleTracker {
       textures: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
     };
 
+    // Map resource type to stats key
+    const typeToKey: Record<ResourceType, 'geometries' | 'materials' | 'textures'> = {
+      geometry: 'geometries',
+      material: 'materials',
+      texture: 'textures',
+    };
+
     // Count events
     for (const event of this.events) {
-      const key = `${event.resourceType}s` as 'geometries' | 'materials' | 'textures';
+      const key = typeToKey[event.resourceType];
       if (event.eventType === 'created') resourceStats[key].created++;
       if (event.eventType === 'disposed') resourceStats[key].disposed++;
     }
 
     // Count orphaned and leaked
     for (const resource of this.activeResources.values()) {
-      const key = `${resource.type}s` as 'geometries' | 'materials' | 'textures';
+      const key = typeToKey[resource.type];
       if (resource.attachedMeshes.size === 0) {
         resourceStats[key].orphaned++;
       }
