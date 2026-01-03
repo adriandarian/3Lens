@@ -594,10 +594,10 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Changelog generation | ⬜ | |
-| npm publish workflow | ⬜ | |
-| GitHub Releases automation | ⬜ | |
-| Version 1.0.0 release | ⬜ | |
+| Changelog generation | ✅ | `scripts/generate-changelog.ts` with conventional commits, release notes, full changelog |
+| npm publish workflow | ✅ | `.github/workflows/release.yml` with workflow_dispatch, dry-run support, npm provenance |
+| GitHub Releases automation | ✅ | Automated tagging, release notes, dist/docs archives |
+| Version 1.0.0 release | ✅ | Released via workflow_dispatch |
 
 ---
 
@@ -610,8 +610,8 @@
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
 | Phase 3 | 72 | 72 | 0 | 0 |
-| Phase 4 | 42 | 21 | 0 | 21 |
-| **Total** | **236** | **215** | **0** | **21** |
+| Phase 4 | 42 | 42 | 0 | 0 |
+| **Total** | **236** | **236** | **0** | **0** |
 
 ## Timeline
 

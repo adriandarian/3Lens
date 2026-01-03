@@ -6,7 +6,7 @@
  * in Node.js test environment, we benchmark the computation logic directly.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import type { FrameStats } from '../../types/stats';
 import {
   benchmark,

@@ -36,7 +36,12 @@
     "typecheck": "pnpm -r typecheck",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
-    "docs:serve": "npx serve docs/api"
+    "docs:serve": "npx serve docs/api",
+    "changelog": "npx ts-node scripts/generate-changelog.ts",
+    "changelog:release": "npx ts-node scripts/generate-changelog.ts --release",
+    "changelog:preview": "npx ts-node scripts/generate-changelog.ts --preview",
+    "version:bump": "npx ts-node scripts/bump-version.ts",
+    "release:prepare": "pnpm build && pnpm test && pnpm changelog"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
