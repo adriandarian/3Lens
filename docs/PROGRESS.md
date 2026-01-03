@@ -586,7 +586,7 @@
 |------|--------|-------|
 | Unit tests for core (>80% coverage) | ✅ | 552 tests, key modules: config (96.87%), entities (90.52%), plugins (98.83%), transport (90.45%), tracking (90.07%), utils (84.26%) |
 | Unit tests for bridges (>70% coverage) | ✅ | 258 tests total. Angular: 79 tests (85.78% coverage), React: 83 tests (91.59% coverage), Vue: 96 tests (97.53% coverage) |
-| Integration E2E tests | ⬜ | |
+| Integration E2E tests | ✅ | 83 tests across 4 test suites: probe-integration (27), plugin-integration (15), scene-adapter-integration (20), bridge-integration (21) |
 | Performance benchmarks | ⬜ | |
 | Memory leak tests | ⬜ | |
 
