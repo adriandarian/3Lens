@@ -613,15 +613,6 @@
 | Phase 4 | 42 | 42 | 0 | 0 |
 | **Total** | **236** | **236** | **0** | **0** |
 
-## Timeline
-
-```
-Phase 1  [                              ] Dec 2025 - Feb 2026
-Phase 2  [                              ] Mar 2026 - Jun 2026
-Phase 3  [                              ] Jul 2026 - Oct 2026
-Phase 4  [                              ] Nov 2026 - Jan 2027
-```
-
 ---
 
 *This document is updated as development progresses. Check the commit history for changes.*
