@@ -588,7 +588,7 @@
 | Unit tests for bridges (>70% coverage) | ✅ | 258 tests total. Angular: 79 tests (85.78% coverage), React: 83 tests (91.59% coverage), Vue: 96 tests (97.53% coverage) |
 | Integration E2E tests | ✅ | 83 tests across 4 test suites: probe-integration (27), plugin-integration (15), scene-adapter-integration (20), bridge-integration (21) |
 | Performance benchmarks | ✅ | 57 benchmarks across 4 suites: ObjectPool (10), Memoization (15), EntityManager (22), Processing Tasks (11). Run with `pnpm benchmark` |
-| Memory leak tests | ⬜ | |
+| Memory leak tests | ✅ | 31 tests across 8 categories: ObjectPool (5), LRUCache (4), Memoization (4), LogicalEntityManager (5), ResourceLifecycleTracker (4), PluginManager (4), Event Cleanup (1), Large Data (2), Circular Refs (2) |
 
 ## 4.7 Release Preparation
 
