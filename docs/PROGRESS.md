@@ -585,7 +585,7 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | Unit tests for core (>80% coverage) | ✅ | 552 tests, key modules: config (96.87%), entities (90.52%), plugins (98.83%), transport (90.45%), tracking (90.07%), utils (84.26%) |
-| Unit tests for bridges (>70% coverage) | 🔄 | React bridge: 40 tests (useDevtoolEntity, useSelectedObject, useThreeLensProbe, useMetric), Vue bridge: 25 tests (useThreeLens, useDevtoolEntity) |
+| Unit tests for bridges (>70% coverage) | ✅ | 258 tests total. Angular: 79 tests (85.78% coverage), React: 83 tests (91.59% coverage), Vue: 96 tests (97.53% coverage) |
 | Integration E2E tests | ⬜ | |
 | Performance benchmarks | ⬜ | |
 | Memory leak tests | ⬜ | |
@@ -610,8 +610,8 @@
 | Phase 1 | 49 | 49 | 0 | 0 |
 | Phase 2 | 73 | 73 | 0 | 0 |
 | Phase 3 | 72 | 72 | 0 | 0 |
-| Phase 4 | 42 | 19 | 1 | 22 |
-| **Total** | **236** | **213** | **1** | **22** |
+| Phase 4 | 42 | 20 | 0 | 22 |
+| **Total** | **236** | **214** | **0** | **22** |
 
 ## Timeline
 
