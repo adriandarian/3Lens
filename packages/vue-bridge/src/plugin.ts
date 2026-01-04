@@ -1,10 +1,10 @@
 import { ref, computed, watch, onUnmounted, type App, type Ref } from 'vue';
 import {
   createProbe,
-  DevtoolProbe,
-  FrameStats,
-  SceneSnapshot,
-  SceneNode,
+  type DevtoolProbe,
+  type FrameStats,
+  type SceneSnapshot,
+  type SceneNode,
 } from '@3lens/core';
 import { ThreeLensKey, type ThreeLensPluginConfig, type ThreeLensContext } from './types';
 
@@ -29,7 +29,7 @@ function createThreeLensContext(config: ThreeLensPluginConfig): ThreeLensContext
   const selectedNode = ref<SceneNode | null>(null);
   const isOverlayVisible = ref(config.showOverlay ?? true);
 
-  let overlay: { show: () => void; hide: () => void; toggle: () => void } | null = null;
+  const overlay: { show: () => void; hide: () => void; toggle: () => void } | null = null;
   const unsubscribes: (() => void)[] = [];
 
   // Create probe

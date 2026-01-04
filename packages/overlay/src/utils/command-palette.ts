@@ -5,7 +5,7 @@
  * for quick access to all 3Lens features.
  */
 
-import { KeyboardManager } from './keyboard';
+import { type KeyboardManager } from './keyboard';
 
 /**
  * Command definition

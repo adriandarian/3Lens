@@ -79,7 +79,6 @@ export type {
   RenderingStats,
   WebGLFrameExtras,
   WebGPUFrameExtras,
-  RuleViolation,
   BenchmarkScore,
   BenchmarkConfig,
   PerformanceHistory,

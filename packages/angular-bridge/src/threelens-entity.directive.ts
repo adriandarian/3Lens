@@ -1,13 +1,13 @@
 import {
   Directive,
   Input,
-  OnInit,
-  OnDestroy,
-  OnChanges,
-  SimpleChanges,
+  type OnInit,
+  type OnDestroy,
+  type OnChanges,
+  type SimpleChanges,
 } from '@angular/core';
-import { ThreeLensService, EntityOptions } from './threelens.service';
-import type * as THREE from 'three';
+import { ThreeLensService, type EntityOptions } from './threelens.service';
+import * as THREE from 'three';
 
 /**
  * Directive to register a Three.js object as a named entity in 3Lens

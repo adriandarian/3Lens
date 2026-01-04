@@ -54,7 +54,8 @@ interface CacheEntry<V> {
 /**
  * A memoized function with cache control methods
  */
-export interface MemoizedFunction<T extends (...args: unknown[]) => unknown> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface MemoizedFunction<T extends (...args: any[]) => any> {
   (...args: Parameters<T>): ReturnType<T>;
   /** Clear the cache */
   clear(): void;
@@ -306,7 +307,8 @@ function defaultKeyResolver(...args: unknown[]): string {
  * const box2 = expensiveCalculation(mesh);
  * ```
  */
-export function memoize<T extends (...args: unknown[]) => unknown>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function memoize<T extends (...args: any[]) => any>(
   fn: T,
   options: MemoizeOptions<string> = {}
 ): MemoizedFunction<T> {
@@ -367,7 +369,8 @@ export function memoize<T extends (...args: unknown[]) => unknown>(
  * );
  * ```
  */
-export function memoizeOne<T extends (...args: unknown[]) => unknown>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function memoizeOne<T extends (...args: any[]) => any>(
   fn: T,
   options: {
     keyResolver?: (...args: unknown[]) => string;

@@ -175,11 +175,11 @@ export function createWebGPUAdapter(
   let currentScene: THREE.Scene | null = null;
 
   // GPU timing with timestamp queries
-  let lastGpuTime = 0;
+  const lastGpuTime = 0;
   let gpuTimingEnabled = false;
   let gpuTimingManager: WebGpuTimingManager | null = null;
   let gpuTimingInitialized = false;
-  let lastGpuTiming: GpuFrameTiming | null = null;
+  const lastGpuTiming: GpuFrameTiming | null = null;
 
   // Try to detect if timestamp queries are available and initialize timing
   const backend = renderer.backend;

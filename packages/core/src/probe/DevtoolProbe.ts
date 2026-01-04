@@ -424,15 +424,15 @@ export class DevtoolProbe {
    */
   takeSnapshot(): SceneSnapshot {
     const scenes: SceneNode[] = [];
-    let allMaterials: import('../types').MaterialData[] = [];
-    let combinedMaterialSummary: import('../types').MaterialsSummary = {
+    const allMaterials: import('../types').MaterialData[] = [];
+    const combinedMaterialSummary: import('../types').MaterialsSummary = {
       totalCount: 0,
       byType: {},
       shaderMaterialCount: 0,
       transparentCount: 0,
     };
-    let allGeometries: import('../types').GeometryData[] = [];
-    let combinedGeometrySummary: import('../types').GeometrySummary = {
+    const allGeometries: import('../types').GeometryData[] = [];
+    const combinedGeometrySummary: import('../types').GeometrySummary = {
       totalCount: 0,
       totalVertices: 0,
       totalTriangles: 0,
@@ -441,8 +441,8 @@ export class DevtoolProbe {
       indexedCount: 0,
       morphedCount: 0,
     };
-    let allTextures: import('../types').TextureData[] = [];
-    let combinedTextureSummary: import('../types').TexturesSummary = {
+    const allTextures: import('../types').TextureData[] = [];
+    const combinedTextureSummary: import('../types').TexturesSummary = {
       totalCount: 0,
       totalMemoryBytes: 0,
       byType: {},
@@ -451,8 +451,8 @@ export class DevtoolProbe {
       videoTextureCount: 0,
       renderTargetCount: 0,
     };
-    let allRenderTargets: import('../types').RenderTargetData[] = [];
-    let combinedRenderTargetsSummary: import('../types').RenderTargetsSummary = {
+    const allRenderTargets: import('../types').RenderTargetData[] = [];
+    const combinedRenderTargetsSummary: import('../types').RenderTargetsSummary = {
       totalCount: 0,
       totalMemoryBytes: 0,
       shadowMapCount: 0,
@@ -2269,7 +2269,7 @@ export class DevtoolProbe {
     property: string,
     value: unknown
   ): void {
-    const mat = material as Record<string, unknown>;
+    const mat = material as unknown as Record<string, unknown>;
 
     switch (property) {
       case 'color':
@@ -2349,7 +2349,7 @@ export class DevtoolProbe {
         const entity = this.findEntityByObject(obj);
         return {
           ...ref,
-          moduleId: entity?.moduleId,
+          moduleId: entity?.module,
           componentId: entity?.componentId,
           entityId: entity?.id,
         };
@@ -2690,7 +2690,7 @@ export class DevtoolProbe {
    * Check all rules against the latest frame stats
    */
   checkRules(): RuleCheckResult[] {
-    const stats = this.getLatestStats();
+    const stats = this.getLatestFrameStats();
     if (!stats) return [];
     return this._configLoader.checkRules(stats);
   }
@@ -2836,7 +2836,7 @@ export class DevtoolProbe {
    * Useful when frameStats is set to 'on-demand'
    */
   requestFrameStatsSample(): FrameStats | null {
-    return this.getLatestStats();
+    return this.getLatestFrameStats();
   }
 
   /**

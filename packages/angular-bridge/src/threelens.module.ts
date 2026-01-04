@@ -1,9 +1,9 @@
-import { NgModule, ModuleWithProviders } from '@angular/core';
+import { NgModule, type ModuleWithProviders } from '@angular/core';
 import { ThreeLensService } from './threelens.service';
 import { ThreeLensEntityDirective } from './threelens-entity.directive';
 import {
   THREELENS_CONFIG,
-  ThreeLensModuleConfig,
+  type ThreeLensModuleConfig,
   DEFAULT_THREELENS_CONFIG,
 } from './tokens';
 

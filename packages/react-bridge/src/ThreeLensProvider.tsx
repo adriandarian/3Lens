@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createProbe, DevtoolProbe, FrameStats, SceneSnapshot, SceneNode } from '@3lens/core';
+import { createProbe, type DevtoolProbe, type FrameStats, type SceneSnapshot, type SceneNode } from '@3lens/core';
 import { ThreeLensContext } from './context';
 import type { ThreeLensProviderConfig, ThreeLensContextValue } from './types';
 

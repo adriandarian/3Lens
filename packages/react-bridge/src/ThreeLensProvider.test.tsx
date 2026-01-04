@@ -62,7 +62,7 @@ vi.mock('@3lens/core', () => ({
 }));
 
 import { ThreeLensProvider, ThreeLensProviderProps } from './ThreeLensProvider';
-import { ThreeLensContextValue } from './types';
+import { type ThreeLensContextValue } from './types';
 
 describe('ThreeLensProvider', () => {
   let keydownHandler: ((e: KeyboardEvent) => void) | null = null;

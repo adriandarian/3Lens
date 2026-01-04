@@ -209,7 +209,7 @@ export class ArrayPool<T> {
 
     // Get or create pool for this length bucket
     const bucket = this.getLengthBucket(length);
-    let pool = this.pools.get(bucket);
+    const pool = this.pools.get(bucket);
 
     if (pool && pool.length > 0) {
       const arr = pool.pop()!;

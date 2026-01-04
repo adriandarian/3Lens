@@ -1,4 +1,4 @@
-import { ThreeLensService } from './threelens.service';
+import { type ThreeLensService } from './threelens.service';
 
 /**
  * Options for registering an Nx library with 3Lens

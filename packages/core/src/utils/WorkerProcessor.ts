@@ -856,7 +856,7 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
       stateChanges: Math.round(stateChangesScore),
     },
     grade,
-    issues,
+    topIssues: issues,
     suggestions,
   };
 }

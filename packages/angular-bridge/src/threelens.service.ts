@@ -1,12 +1,12 @@
-import { Injectable, Inject, Optional, OnDestroy, NgZone } from '@angular/core';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { Injectable, Inject, Optional, type OnDestroy, NgZone } from '@angular/core';
+import { BehaviorSubject, type Observable, Subject } from 'rxjs';
 import { takeUntil, distinctUntilChanged, map } from 'rxjs/operators';
 import {
   createProbe,
-  DevtoolProbe,
-  FrameStats,
-  SceneSnapshot,
-  SceneNode,
+  type DevtoolProbe,
+  type FrameStats,
+  type SceneSnapshot,
+  type SceneNode,
 } from '@3lens/core';
 import {
   THREELENS_CONFIG,

@@ -31,12 +31,11 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@webgpu/types": "^0.1.0",
     "three": "^0.160.0"
   },
   "peerDependencies": {
     "three": ">=0.150.0"
   }
 }
-
