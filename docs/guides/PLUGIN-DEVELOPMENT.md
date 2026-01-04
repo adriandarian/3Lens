@@ -2,6 +2,47 @@
 
 This guide covers creating custom plugins for 3Lens to extend its functionality with custom panels, toolbar actions, and analysis tools.
 
+## Quick Start
+
+Get a plugin running in under 5 minutes:
+
+```typescript
+import { createProbe, type DevtoolPlugin } from '@3lens/core';
+
+// 1. Define your plugin
+const MyPlugin: DevtoolPlugin = {
+  metadata: {
+    id: 'com.mycompany.hello-world',
+    name: 'Hello World',
+    version: '1.0.0',
+    icon: '👋',
+  },
+
+  activate(context) {
+    context.showToast('Hello from my plugin!', 'success');
+  },
+
+  panels: [{
+    id: 'hello-panel',
+    name: 'Hello',
+    icon: '👋',
+    render: (ctx) => `
+      <div style="padding: 16px;">
+        <h2>Hello, 3Lens!</h2>
+        <p>FPS: ${ctx.frameStats?.fps?.toFixed(1) ?? 'N/A'}</p>
+        <p>Draw Calls: ${ctx.frameStats?.drawCalls ?? 'N/A'}</p>
+      </div>
+    `,
+  }],
+};
+
+// 2. Register with 3Lens
+const probe = createProbe({ appName: 'My App' });
+probe.registerAndActivatePlugin(MyPlugin);
+```
+
+That's it! Your plugin now has a custom panel in the 3Lens overlay.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -1226,9 +1267,143 @@ function estimateMaterialComplexity(node: any): number {
 
 ---
 
+## Common Pitfalls
+
+### 1. Plugin ID Conflicts
+
+```typescript
+// ❌ Bad - Generic ID may conflict
+metadata: { id: 'stats-plugin' }
+
+// ✅ Good - Unique reverse-domain ID
+metadata: { id: 'com.mycompany.stats-plugin' }
+```
+
+### 2. Memory Leaks in Event Handlers
+
+```typescript
+// ❌ Bad - Event listener not cleaned up
+activate(context) {
+  window.addEventListener('resize', this.handleResize);
+}
+
+// ✅ Good - Clean up in deactivate
+activate(context) {
+  this.handleResize = () => { /* ... */ };
+  window.addEventListener('resize', this.handleResize);
+  context.setState('resizeHandler', this.handleResize);
+}
+
+deactivate(context) {
+  const handler = context.getState('resizeHandler');
+  window.removeEventListener('resize', handler);
+}
+```
+
+### 3. Rendering Without Data
+
+```typescript
+// ❌ Bad - Crashes if frameStats is null
+render(ctx) {
+  return `<p>FPS: ${ctx.frameStats.fps}</p>`;
+}
+
+// ✅ Good - Handle missing data
+render(ctx) {
+  if (!ctx.frameStats) {
+    return '<p>Loading...</p>';
+  }
+  return `<p>FPS: ${ctx.frameStats.fps.toFixed(1)}</p>`;
+}
+```
+
+### 4. Blocking the Main Thread
+
+```typescript
+// ❌ Bad - Heavy computation blocks rendering
+onClick(context) {
+  const result = heavyAnalysis(); // Blocks for 500ms
+}
+
+// ✅ Good - Use async/Web Workers
+async onClick(context) {
+  context.showToast('Analyzing...', 'info');
+  const result = await runInWorker(heavyAnalysis);
+  context.setState('result', result);
+  context.requestRender();
+}
+```
+
+### 5. Not Using CSS Variables
+
+```typescript
+// ❌ Bad - Hardcoded colors don't match theme
+render() {
+  return '<div style="background: #1e1e1e; color: white;">...</div>';
+}
+
+// ✅ Good - Use 3Lens CSS variables
+render() {
+  return '<div style="background: var(--3lens-bg-primary); color: var(--3lens-text-primary);">...</div>';
+}
+```
+
+### 6. Missing Version Constraints
+
+```typescript
+// ❌ Bad - May break with 3Lens updates
+metadata: { id: 'my-plugin', name: 'My Plugin', version: '1.0.0' }
+
+// ✅ Good - Specify minimum version
+metadata: {
+  id: 'my-plugin',
+  name: 'My Plugin',
+  version: '1.0.0',
+  minVersion: '1.0.0', // Minimum 3Lens version required
+}
+```
+
+---
+
+## Debugging Plugins
+
+### Enable Debug Logging
+
+```typescript
+activate(context) {
+  context.setLogLevel('debug');
+  context.log('Plugin activated with debug logging');
+}
+```
+
+### Inspect Plugin State
+
+```typescript
+// In browser console
+const probe = window.__3LENS_PROBE__;
+const pluginState = probe.getPluginState('com.mycompany.my-plugin');
+console.log(pluginState);
+```
+
+### Hot Reloading During Development
+
+```typescript
+// Re-register plugin without page reload
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {
+    probe.deactivatePlugin('com.mycompany.my-plugin');
+    probe.unregisterPlugin('com.mycompany.my-plugin');
+    probe.registerAndActivatePlugin(MyPlugin);
+  });
+}
+```
+
+---
+
 ## Related Guides
 
 - [Getting Started](./GETTING-STARTED.md)
+- [Custom Rules Guide](./CUSTOM-RULES-GUIDE.md)
 - [React/R3F Guide](./REACT-R3F-GUIDE.md)
 - [Angular Guide](./ANGULAR-GUIDE.md)
 - [Vue/TresJS Guide](./VUE-TRESJS-GUIDE.md)
@@ -1240,3 +1415,9 @@ Check out the built-in plugins for reference implementations:
 
 - `LODCheckerPlugin` - Analyzes mesh LOD configurations
 - `ShadowDebuggerPlugin` - Shadow map analysis and debugging
+
+## API Reference
+
+- [DevtoolPlugin Interface](/api/core/devtool-plugin)
+- [DevtoolContext Interface](/api/core/devtool-context)
+- [PluginManager](/api/core/plugin-manager)

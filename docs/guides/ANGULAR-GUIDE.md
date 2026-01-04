@@ -4,14 +4,68 @@ This guide covers integrating 3Lens with Angular applications using the `@3lens/
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
 - [Installation](#installation)
 - [Basic Setup](#basic-setup)
 - [ThreeLensService](#threelensservice)
 - [Entity Directive](#entity-directive)
 - [Reactive Patterns](#reactive-patterns)
+- [Angular Signals](#angular-signals)
 - [Nx Monorepo Support](#nx-monorepo-support)
 - [Advanced Patterns](#advanced-patterns)
 - [TypeScript Support](#typescript-support)
+- [Best Practices](#best-practices)
+- [Common Pitfalls](#common-pitfalls)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Quick Start
+
+Get up and running in under 3 minutes:
+
+```typescript
+// 1. Install dependencies
+// npm install @3lens/core @3lens/overlay @3lens/angular-bridge three
+
+// 2. Add provider to your app
+// app.config.ts
+import { provideThreeLens } from '@3lens/angular-bridge';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideThreeLens({ appName: 'My Angular App' }),
+  ],
+};
+
+// 3. Use in your component
+// scene.component.ts
+import { Component, inject, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { ThreeLensService } from '@3lens/angular-bridge';
+import * as THREE from 'three';
+
+@Component({
+  selector: 'app-scene',
+  template: `
+    <canvas #canvas></canvas>
+    <div class="stats">FPS: {{ fps$ | async | number:'1.0-0' }}</div>
+  `,
+})
+export class SceneComponent implements AfterViewInit {
+  @ViewChild('canvas', { static: true }) canvasRef!: ElementRef;
+  
+  private threeLens = inject(ThreeLensService);
+  fps$ = this.threeLens.fps$;
+  
+  ngAfterViewInit() {
+    // Setup Three.js...
+    this.threeLens.observeRenderer(renderer);
+    this.threeLens.observeScene(scene);
+  }
+}
+
+// 4. Press Ctrl+Shift+D to toggle the devtools overlay!
+```
 
 ---
 
@@ -524,6 +578,151 @@ export class SceneMonitorComponent implements OnInit {
 
 ---
 
+## Angular Signals
+
+Angular 16+ signals are fully supported for reactive state management:
+
+### Signal-Based Component
+
+```typescript
+import { Component, signal, computed, effect, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ThreeLensService } from '@3lens/angular-bridge';
+
+@Component({
+  selector: 'app-performance-signals',
+  template: `
+    <div class="metrics">
+      <div [class.warning]="isLowFPS()">
+        FPS: {{ fps() | number:'1.0-0' }}
+      </div>
+      <div>Draw Calls: {{ drawCalls() }}</div>
+      <div>Triangles: {{ triangles() | number }}</div>
+      <div>Memory: {{ gpuMemoryMB() | number:'1.1-1' }}MB</div>
+    </div>
+  `,
+})
+export class PerformanceSignalsComponent {
+  private threeLens = inject(ThreeLensService);
+
+  // Convert observables to signals
+  fps = toSignal(this.threeLens.fps$, { initialValue: 0 });
+  drawCalls = toSignal(this.threeLens.drawCalls$, { initialValue: 0 });
+  triangles = toSignal(this.threeLens.triangles$, { initialValue: 0 });
+  gpuMemory = toSignal(this.threeLens.gpuMemory$, { initialValue: 0 });
+  selectedNode = toSignal(this.threeLens.selectedNode$);
+
+  // Computed signals
+  isLowFPS = computed(() => this.fps() < 30);
+  gpuMemoryMB = computed(() => this.gpuMemory() / 1024 / 1024);
+  
+  // Effects for side-effects
+  constructor() {
+    effect(() => {
+      const fps = this.fps();
+      if (fps < 20) {
+        console.warn('Critical FPS drop:', fps);
+      }
+    });
+    
+    effect(() => {
+      const node = this.selectedNode();
+      if (node) {
+        console.log('Selection changed:', node.name);
+      }
+    });
+  }
+}
+```
+
+### Input Signals with Entity Registration
+
+```typescript
+import { Component, input, effect, inject, viewChild, ElementRef } from '@angular/core';
+import { ThreeLensService } from '@3lens/angular-bridge';
+import * as THREE from 'three';
+
+@Component({
+  selector: 'app-game-character',
+  template: `<canvas #canvas></canvas>`,
+})
+export class GameCharacterComponent {
+  private threeLens = inject(ThreeLensService);
+  
+  // Input signals
+  characterName = input.required<string>();
+  health = input(100);
+  level = input(1);
+  
+  private mesh?: THREE.Mesh;
+  private entityId?: string;
+
+  constructor() {
+    // Re-register entity when inputs change
+    effect(() => {
+      const name = this.characterName();
+      const health = this.health();
+      const level = this.level();
+      
+      if (this.mesh) {
+        if (this.entityId) {
+          this.threeLens.updateEntity(this.entityId, {
+            name: `${name} (Lvl ${level})`,
+            metadata: { health, level },
+          });
+        } else {
+          this.entityId = this.threeLens.registerEntity(this.mesh, {
+            name: `${name} (Lvl ${level})`,
+            module: '@game/characters',
+            metadata: { health, level },
+          });
+        }
+      }
+    });
+  }
+}
+```
+
+### Signal Queries for Three.js Refs
+
+```typescript
+import { Component, viewChild, afterRender, inject } from '@angular/core';
+import { ThreeLensService } from '@3lens/angular-bridge';
+
+@Component({
+  selector: 'app-canvas-scene',
+  template: `<canvas #sceneCanvas></canvas>`,
+})
+export class CanvasSceneComponent {
+  private threeLens = inject(ThreeLensService);
+  
+  // Signal-based view query
+  canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('sceneCanvas');
+  
+  private renderer?: THREE.WebGLRenderer;
+  private scene?: THREE.Scene;
+
+  constructor() {
+    afterRender(() => {
+      if (!this.renderer && this.canvas()) {
+        this.initializeScene();
+      }
+    });
+  }
+
+  private initializeScene() {
+    const canvasEl = this.canvas().nativeElement;
+    this.renderer = new THREE.WebGLRenderer({ canvas: canvasEl });
+    this.scene = new THREE.Scene();
+    
+    this.threeLens.observeRenderer(this.renderer);
+    this.threeLens.observeScene(this.scene);
+  }
+}
+```
+
+---
+
 ## Nx Monorepo Support
 
 The `@3lens/angular-bridge` includes helpers for Nx workspaces with library-based architectures.
@@ -818,6 +1017,204 @@ export class CharacterComponent {
       tags: ['character', data.class],
     });
   }
+}
+```
+
+---
+
+## Best Practices
+
+### 1. Use Standalone Components
+
+Prefer standalone components with the modern Angular API:
+
+```typescript
+// ✅ Recommended - Standalone with inject()
+@Component({
+  standalone: true,
+  imports: [AsyncPipe],
+  template: `<div>FPS: {{ fps$ | async }}</div>`,
+})
+export class StatsComponent {
+  private threeLens = inject(ThreeLensService);
+  fps$ = this.threeLens.fps$;
+}
+
+// ❌ Legacy - Constructor injection with NgModule
+@Component({...})
+export class StatsComponent {
+  constructor(private threeLens: ThreeLensService) {}
+}
+```
+
+### 2. Run Render Loop Outside NgZone
+
+Prevent unnecessary change detection during animation:
+
+```typescript
+@Component({...})
+export class SceneComponent {
+  private ngZone = inject(NgZone);
+  private animationId!: number;
+
+  ngAfterViewInit() {
+    // Run Three.js loop outside Angular zone
+    this.ngZone.runOutsideAngular(() => {
+      this.animate();
+    });
+  }
+
+  private animate() {
+    this.animationId = requestAnimationFrame(() => this.animate());
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  ngOnDestroy() {
+    cancelAnimationFrame(this.animationId);
+  }
+}
+```
+
+### 3. Use OnPush Change Detection
+
+Combine with observables for optimal performance:
+
+```typescript
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div>FPS: {{ fps$ | async | number:'1.0-0' }}</div>
+    <div>Draws: {{ drawCalls$ | async }}</div>
+  `,
+})
+export class PerformanceComponent {
+  private threeLens = inject(ThreeLensService);
+  
+  fps$ = this.threeLens.fps$;
+  drawCalls$ = this.threeLens.drawCalls$;
+}
+```
+
+### 4. Clean Up Subscriptions
+
+Use `takeUntilDestroyed` or `DestroyRef`:
+
+```typescript
+@Component({...})
+export class MonitorComponent {
+  private threeLens = inject(ThreeLensService);
+  private destroyRef = inject(DestroyRef);
+
+  ngOnInit() {
+    this.threeLens.frameStats$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(stats => {
+        // Handle stats
+      });
+  }
+}
+```
+
+### 5. Module-Based Entity Organization
+
+Use NxLibraryHelper for large applications:
+
+```typescript
+// libs/enemies/src/lib/enemies.service.ts
+@Injectable({ providedIn: 'root' })
+export class EnemiesService {
+  private helper = createNxLibraryHelper(this.threeLens.probe, {
+    module: '@myapp/enemies',
+    defaultTags: ['enemy', 'ai-controlled'],
+  });
+
+  createEnemy(mesh: THREE.Mesh, type: string) {
+    return this.helper.registerEntity(mesh, {
+      name: `Enemy-${type}`,
+      componentType: type,
+    });
+  }
+}
+```
+
+---
+
+## Common Pitfalls
+
+### ❌ Missing Provider
+
+```typescript
+// ❌ Error: No provider for ThreeLensService
+@Component({...})
+export class MyComponent {
+  private threeLens = inject(ThreeLensService);
+}
+
+// ✅ Add provider to app config
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideThreeLens({ appName: 'My App' }),
+  ],
+};
+```
+
+### ❌ Render Loop in NgZone
+
+```typescript
+// ❌ Wrong - triggers change detection every frame
+private animate() {
+  requestAnimationFrame(() => this.animate());
+  this.renderer.render(this.scene, this.camera);
+}
+
+// ✅ Correct - outside NgZone
+ngAfterViewInit() {
+  this.ngZone.runOutsideAngular(() => {
+    this.animate();
+  });
+}
+```
+
+### ❌ Not Disposing Three.js Resources
+
+```typescript
+// ❌ Wrong - memory leak
+ngOnDestroy() {
+  // Nothing!
+}
+
+// ✅ Correct - clean up everything
+ngOnDestroy() {
+  cancelAnimationFrame(this.animationId);
+  this.renderer.dispose();
+  this.scene.traverse((obj) => {
+    if (obj instanceof THREE.Mesh) {
+      obj.geometry.dispose();
+      if (Array.isArray(obj.material)) {
+        obj.material.forEach(m => m.dispose());
+      } else {
+        obj.material.dispose();
+      }
+    }
+  });
+}
+```
+
+### ❌ Synchronous Access Before Ready
+
+```typescript
+// ❌ Wrong - probe might not be ready
+ngOnInit() {
+  const stats = this.threeLens.frameStats; // Might be null!
+}
+
+// ✅ Correct - use observables
+ngOnInit() {
+  this.threeLens.isReady$
+    .pipe(filter(Boolean), take(1))
+    .subscribe(() => {
+      // Probe is ready
+    });
 }
 ```
 

@@ -4,13 +4,48 @@ This guide covers integrating 3Lens with React applications, including React Thr
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
 - [Installation](#installation)
 - [Basic Setup](#basic-setup)
 - [React Three Fiber Integration](#react-three-fiber-integration)
 - [Hooks Reference](#hooks-reference)
 - [Entity Registration](#entity-registration)
 - [Advanced Patterns](#advanced-patterns)
+- [Next.js & SSR](#nextjs--ssr)
 - [TypeScript Support](#typescript-support)
+- [Best Practices](#best-practices)
+- [Common Pitfalls](#common-pitfalls)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Quick Start
+
+Get up and running in under 2 minutes:
+
+```tsx
+// 1. Install dependencies
+// npm install @3lens/core @3lens/overlay @3lens/react-bridge @react-three/fiber three
+
+// 2. Create your app with 3Lens
+import { ThreeLensCanvas } from '@3lens/react-bridge';
+
+function App() {
+  return (
+    <ThreeLensCanvas config={{ appName: 'My R3F App' }}>
+      <ambientLight />
+      <mesh>
+        <boxGeometry />
+        <meshStandardMaterial color="hotpink" />
+      </mesh>
+    </ThreeLensCanvas>
+  );
+}
+
+// 3. Press Ctrl+Shift+D to toggle the devtools overlay!
+```
+
+That's it! The overlay will appear showing FPS, draw calls, scene hierarchy, and more.
 
 ---
 
@@ -613,6 +648,94 @@ function App() {
 
 ---
 
+## Next.js & SSR
+
+### App Router (Next.js 13+)
+
+3Lens needs to be client-side only. Use the `"use client"` directive:
+
+```tsx
+// components/ThreeScene.tsx
+"use client";
+
+import { ThreeLensCanvas } from '@3lens/react-bridge';
+import { Suspense } from 'react';
+
+export function ThreeScene() {
+  return (
+    <ThreeLensCanvas config={{ appName: 'Next.js App' }}>
+      <Suspense fallback={null}>
+        <Scene />
+      </Suspense>
+    </ThreeLensCanvas>
+  );
+}
+
+// app/page.tsx
+import { ThreeScene } from '../components/ThreeScene';
+
+export default function Page() {
+  return (
+    <main>
+      <ThreeScene />
+    </main>
+  );
+}
+```
+
+### Dynamic Import with No SSR
+
+For Pages Router or when you need more control:
+
+```tsx
+import dynamic from 'next/dynamic';
+
+const ThreeScene = dynamic(
+  () => import('../components/ThreeScene').then((mod) => mod.ThreeScene),
+  { ssr: false }
+);
+
+export default function Page() {
+  return <ThreeScene />;
+}
+```
+
+### Environment-Based Loading
+
+Only load 3Lens in development:
+
+```tsx
+"use client";
+
+import dynamic from 'next/dynamic';
+import { Canvas } from '@react-three/fiber';
+
+const ThreeLensCanvas = dynamic(
+  () => import('@3lens/react-bridge').then((mod) => mod.ThreeLensCanvas),
+  { ssr: false }
+);
+
+export function Scene() {
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  if (!isDev) {
+    return (
+      <Canvas>
+        <SceneContent />
+      </Canvas>
+    );
+  }
+
+  return (
+    <ThreeLensCanvas config={{ appName: 'My App' }}>
+      <SceneContent />
+    </ThreeLensCanvas>
+  );
+}
+```
+
+---
+
 ## TypeScript Support
 
 ### Full Type Definitions
@@ -693,6 +816,196 @@ function Player() {
     </mesh>
   );
 }
+```
+
+---
+
+## Best Practices
+
+### 1. Use ThreeLensCanvas for R3F Projects
+
+Instead of manually wiring up the provider and canvas, use the combined component:
+
+```tsx
+// ✅ Recommended
+<ThreeLensCanvas config={{ appName: 'My App' }}>
+  <Scene />
+</ThreeLensCanvas>
+
+// ❌ More boilerplate (use only if you need custom setup)
+<ThreeLensProvider config={{ appName: 'My App' }}>
+  <Canvas>
+    <R3FProbe />
+    <Scene />
+  </Canvas>
+</ThreeLensProvider>
+```
+
+### 2. Register Logical Entities for Better Debugging
+
+Give meaningful names to important objects:
+
+```tsx
+function Player({ position }) {
+  const meshRef = useRef();
+  
+  useDevtoolEntity(meshRef, {
+    name: 'Player Character',
+    module: '@game/player',
+    tags: ['player', 'controllable'],
+  });
+
+  return (
+    <mesh ref={meshRef} position={position}>
+      <capsuleGeometry />
+      <meshStandardMaterial />
+    </mesh>
+  );
+}
+```
+
+### 3. Set Performance Rules
+
+Define thresholds to catch performance issues early:
+
+```tsx
+<ThreeLensProvider
+  config={{
+    appName: 'My App',
+    rules: {
+      maxDrawCalls: 200,
+      maxTriangles: 500_000,
+      maxFrameTimeMs: 16.67, // Target 60 FPS
+      maxTextures: 50,
+    },
+  }}
+>
+```
+
+### 4. Use Module Patterns for Large Apps
+
+Organize entities by feature module:
+
+```tsx
+// features/enemies/Enemy.tsx
+useDevtoolEntity(ref, {
+  name: `Enemy-${id}`,
+  module: '@game/enemies',
+  tags: ['enemy', 'ai'],
+});
+
+// features/environment/Tree.tsx
+useDevtoolEntity(ref, {
+  name: `Tree-${id}`,
+  module: '@game/environment',
+  tags: ['decoration', 'static'],
+});
+```
+
+### 5. Production Stripping
+
+Remove 3Lens from production builds:
+
+```tsx
+// Use dynamic import for tree-shaking
+const ThreeLensCanvas = lazy(() => 
+  import('@3lens/react-bridge').then(m => ({ default: m.ThreeLensCanvas }))
+);
+
+function App() {
+  if (process.env.NODE_ENV === 'production') {
+    return <Canvas><Scene /></Canvas>;
+  }
+  
+  return (
+    <Suspense fallback={<Canvas><Scene /></Canvas>}>
+      <ThreeLensCanvas config={{ appName: 'My App' }}>
+        <Scene />
+      </ThreeLensCanvas>
+    </Suspense>
+  );
+}
+```
+
+---
+
+## Common Pitfalls
+
+### ❌ Using Hooks Outside Provider
+
+```tsx
+// ❌ Wrong - hook called before provider
+function App() {
+  const probe = useThreeLensProbe(); // Error!
+  return <ThreeLensProvider>...</ThreeLensProvider>;
+}
+
+// ✅ Correct - hook inside provider tree
+function App() {
+  return (
+    <ThreeLensProvider config={{ appName: 'My App' }}>
+      <Scene /> {/* hooks work here */}
+    </ThreeLensProvider>
+  );
+}
+```
+
+### ❌ Forgetting to Connect R3F
+
+```tsx
+// ❌ Won't work - probe not connected to R3F
+<ThreeLensProvider>
+  <Canvas>
+    <Scene />
+  </Canvas>
+</ThreeLensProvider>
+
+// ✅ Correct - use ThreeLensCanvas or R3FProbe
+<ThreeLensCanvas config={{ appName: 'My App' }}>
+  <Scene />
+</ThreeLensCanvas>
+
+// Or with R3FProbe
+<ThreeLensProvider config={{ appName: 'My App' }}>
+  <Canvas>
+    <R3FProbe />
+    <Scene />
+  </Canvas>
+</ThreeLensProvider>
+```
+
+### ❌ Registering Entities Too Early
+
+```tsx
+// ❌ Wrong - ref is null on first render
+function MyObject() {
+  const ref = useRef();
+  useDevtoolEntity(ref, { name: 'My Object' }); // ref.current is null!
+  return <mesh ref={ref} />;
+}
+
+// ✅ Correct - useDevtoolEntity handles null refs properly
+// The hook internally waits for ref.current to be set
+function MyObject() {
+  const ref = useRef();
+  useDevtoolEntity(ref, { name: 'My Object' }); // Works!
+  return <mesh ref={ref} />;
+}
+```
+
+### ❌ Memory Leaks with Event Listeners
+
+```tsx
+// ❌ Wrong - no cleanup
+useEffect(() => {
+  probe.onRuleViolation((v) => console.log(v));
+}, []);
+
+// ✅ Correct - cleanup on unmount
+useEffect(() => {
+  const unsubscribe = probe.onRuleViolation((v) => console.log(v));
+  return () => unsubscribe();
+}, [probe]);
 ```
 
 ---

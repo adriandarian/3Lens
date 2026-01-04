@@ -1,0 +1,94 @@
+# Lychee link checker configuration
+# See https://github.com/lycheeverse/lychee for documentation
+
+# Exclude patterns (URLs to skip)
+exclude = [
+  # Localhost and local IPs
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  
+  # Example domains
+  "example.com",
+  "example.org",
+  "example.net",
+  
+  # Placeholder URLs
+  "your-org.github.io",
+  "yourusername.github.io",
+  "your-domain.com",
+  "your-umami-instance.com",
+  "internal.company.com",
+  
+  # Sites that block automated requests
+  "twitter.com",
+  "x.com",
+  "linkedin.com",
+  "facebook.com",
+  "instagram.com",
+  
+  # Rate-limited APIs
+  "api.github.com",
+  
+  # Analytics providers (not publicly accessible)
+  "plausible.io/js",
+  "cdn.usefathom.com",
+  "scripts.simpleanalyticscdn.com",
+  "queue.simpleanalyticscdn.com",
+  
+  # Card validators (require auth)
+  "cards-dev.twitter.com",
+]
+
+# Exclude specific paths from being checked
+exclude_path = [
+  "node_modules",
+  ".git",
+  "dist",
+  "coverage",
+  "docs/.vitepress/cache",
+  "docs/.vitepress/dist/assets",
+]
+
+# Accept these HTTP status codes as valid
+accept = [
+  200,  # OK
+  204,  # No Content
+  206,  # Partial Content
+  301,  # Moved Permanently
+  302,  # Found
+  307,  # Temporary Redirect
+  308,  # Permanent Redirect
+]
+
+# Skip email addresses
+exclude_mail = true
+
+# Timeout for each request (seconds)
+timeout = 30
+
+# Number of retries for failed requests
+max_retries = 3
+
+# User agent string (some sites block default)
+user_agent = "Mozilla/5.0 (compatible; lychee-link-checker; +https://github.com/lycheeverse/lychee)"
+
+# Maximum number of concurrent requests
+max_concurrency = 16
+
+# Cache results for subsequent runs
+cache = true
+
+# Require HTTPS for external links
+require_https = false
+
+# Include fragments (anchors) in checks
+include_fragments = true
+
+# Only check links to external sites (skip internal)
+# Set to true for faster checks
+exclude_all_private = false
+
+# Accept invalid/self-signed certificates
+# Set to true for internal sites with custom certs
+insecure = false

@@ -4,14 +4,75 @@ This guide covers integrating 3Lens with Vue 3 applications, including projects 
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
 - [Installation](#installation)
 - [Basic Setup](#basic-setup)
 - [Vue Plugin](#vue-plugin)
 - [Composables Reference](#composables-reference)
 - [TresJS Integration](#tresjs-integration)
 - [Entity Registration](#entity-registration)
+- [Nuxt.js Integration](#nuxtjs-integration)
+- [Pinia Integration](#pinia-integration)
 - [Advanced Patterns](#advanced-patterns)
 - [TypeScript Support](#typescript-support)
+- [Best Practices](#best-practices)
+- [Common Pitfalls](#common-pitfalls)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Quick Start
+
+Get up and running in under 2 minutes:
+
+```typescript
+// 1. Install dependencies
+// npm install @3lens/core @3lens/overlay @3lens/vue-bridge @tresjs/core three
+
+// 2. Add plugin to your app
+// main.ts
+import { createApp } from 'vue';
+import { ThreeLensPlugin } from '@3lens/vue-bridge';
+import App from './App.vue';
+
+createApp(App)
+  .use(ThreeLensPlugin, { appName: 'My Vue App' })
+  .mount('#app');
+```
+
+```vue
+<!-- 3. Use in your component -->
+<script setup lang="ts">
+import { TresCanvas } from '@tresjs/core';
+import { useTresProbe, useThreeLens } from '@3lens/vue-bridge';
+
+const { fps, drawCalls } = useThreeLens();
+</script>
+
+<template>
+  <TresCanvas>
+    <TresPerspectiveCamera :position="[0, 0, 5]" />
+    <TresMesh>
+      <TresBoxGeometry />
+      <TresMeshStandardMaterial color="hotpink" />
+    </TresMesh>
+    
+    <!-- Connect 3Lens to TresJS -->
+    <TresProbeConnector />
+  </TresCanvas>
+  
+  <div class="stats">FPS: {{ fps.toFixed(0) }}</div>
+</template>
+
+<!-- TresProbeConnector.vue -->
+<script setup lang="ts">
+import { useTresProbe } from '@3lens/vue-bridge';
+useTresProbe();
+</script>
+<template><slot /></template>
+```
+
+Press **Ctrl+Shift+D** to toggle the devtools overlay!
 
 ---
 
@@ -625,6 +686,227 @@ interface EntityOptions {
 
 ---
 
+## Nuxt.js Integration
+
+### Plugin Setup
+
+Create a client-only plugin for Nuxt 3:
+
+```typescript
+// plugins/threelens.client.ts
+import { ThreeLensPlugin } from '@3lens/vue-bridge';
+
+export default defineNuxtPlugin((nuxtApp) => {
+  nuxtApp.vueApp.use(ThreeLensPlugin, {
+    appName: 'My Nuxt App',
+    debug: import.meta.dev,
+    showOverlay: import.meta.dev,
+  });
+});
+```
+
+### Client-Only Components
+
+Wrap Three.js components in `<ClientOnly>`:
+
+```vue
+<!-- pages/scene.vue -->
+<template>
+  <ClientOnly>
+    <ThreeScene />
+    <template #fallback>
+      <div class="loading">Loading 3D scene...</div>
+    </template>
+  </ClientOnly>
+</template>
+
+<script setup lang="ts">
+const ThreeScene = defineAsyncComponent(() => 
+  import('~/components/ThreeScene.vue')
+);
+</script>
+```
+
+### Composables in Nuxt
+
+```vue
+<!-- components/ThreeScene.vue -->
+<script setup lang="ts">
+// Only runs on client due to ClientOnly wrapper
+const { probe, fps, drawCalls, isReady } = useThreeLens();
+
+// Safe to use Three.js
+import * as THREE from 'three';
+</script>
+```
+
+### Environment-Based Loading
+
+```typescript
+// plugins/threelens.client.ts
+export default defineNuxtPlugin((nuxtApp) => {
+  // Only load in development
+  if (!import.meta.dev) return;
+  
+  nuxtApp.vueApp.use(ThreeLensPlugin, {
+    appName: 'My Nuxt App',
+  });
+});
+```
+
+### Nuxt Module (Advanced)
+
+For reusable configuration, create a local module:
+
+```typescript
+// modules/threelens.ts
+import { defineNuxtModule, addPlugin, createResolver } from '@nuxt/kit';
+
+export default defineNuxtModule({
+  meta: {
+    name: 'threelens',
+    configKey: 'threelens',
+  },
+  defaults: {
+    appName: 'Nuxt App',
+    enabled: true,
+  },
+  setup(options, nuxt) {
+    if (!options.enabled) return;
+    
+    const resolver = createResolver(import.meta.url);
+    addPlugin(resolver.resolve('./runtime/threelens.client'));
+  },
+});
+```
+
+---
+
+## Pinia Integration
+
+### Performance Store
+
+Create a Pinia store for 3Lens metrics:
+
+```typescript
+// stores/performance.ts
+import { defineStore } from 'pinia';
+import { ref, computed, watch } from 'vue';
+import { useThreeLens } from '@3lens/vue-bridge';
+
+export const usePerformanceStore = defineStore('performance', () => {
+  const { fps, drawCalls, triangles, frameStats, selectedNode } = useThreeLens();
+  
+  // Track history for graphs
+  const fpsHistory = ref<number[]>([]);
+  const maxHistory = 60;
+  
+  // Computed state
+  const averageFps = computed(() => {
+    if (fpsHistory.value.length === 0) return 0;
+    return fpsHistory.value.reduce((a, b) => a + b, 0) / fpsHistory.value.length;
+  });
+  
+  const isPerformanceGood = computed(() => averageFps.value >= 55);
+  
+  // Watch and record FPS
+  watch(fps, (newFps) => {
+    fpsHistory.value.push(newFps);
+    if (fpsHistory.value.length > maxHistory) {
+      fpsHistory.value.shift();
+    }
+  });
+  
+  // Actions
+  function clearHistory() {
+    fpsHistory.value = [];
+  }
+  
+  return {
+    fps,
+    drawCalls,
+    triangles,
+    frameStats,
+    selectedNode,
+    fpsHistory,
+    averageFps,
+    isPerformanceGood,
+    clearHistory,
+  };
+});
+```
+
+### Using the Store
+
+```vue
+<script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { usePerformanceStore } from '@/stores/performance';
+
+const performanceStore = usePerformanceStore();
+const { fps, averageFps, isPerformanceGood, fpsHistory } = storeToRefs(performanceStore);
+</script>
+
+<template>
+  <div class="performance-panel">
+    <div :class="{ warning: !isPerformanceGood }">
+      Current FPS: {{ fps.toFixed(0) }}
+    </div>
+    <div>Average FPS: {{ averageFps.toFixed(0) }}</div>
+    
+    <FpsGraph :data="fpsHistory" />
+    
+    <button @click="performanceStore.clearHistory()">
+      Clear History
+    </button>
+  </div>
+</template>
+```
+
+### Selection Store
+
+```typescript
+// stores/selection.ts
+import { defineStore } from 'pinia';
+import { ref, watch } from 'vue';
+import { useSelectedObject, useThreeLens } from '@3lens/vue-bridge';
+
+export const useSelectionStore = defineStore('selection', () => {
+  const { selectedNode, selectObject, clearSelection } = useSelectedObject();
+  const { probe } = useThreeLens();
+  
+  const selectionHistory = ref<string[]>([]);
+  
+  // Track selection history
+  watch(selectedNode, (node) => {
+    if (node) {
+      selectionHistory.value.push(node.uuid);
+      // Keep last 10
+      if (selectionHistory.value.length > 10) {
+        selectionHistory.value.shift();
+      }
+    }
+  });
+  
+  function selectPrevious() {
+    if (selectionHistory.value.length >= 2) {
+      const prevUuid = selectionHistory.value[selectionHistory.value.length - 2];
+      selectObject(prevUuid);
+    }
+  }
+  
+  return {
+    selectedNode,
+    selectObject,
+    clearSelection,
+    selectionHistory,
+    selectPrevious,
+  };
+});
+```
+
+---
+
 ## Advanced Patterns
 
 ### Conditional Debugging
@@ -889,6 +1171,197 @@ function levelUp() {
     } satisfies Partial<PlayerMetadata>,
   });
 }
+```
+
+---
+
+## Best Practices
+
+### 1. Use TresJS for Declarative 3D
+
+Prefer TresJS components over imperative Three.js:
+
+```vue
+<!-- ✅ Recommended - Declarative -->
+<template>
+  <TresCanvas>
+    <TresMesh :position="[0, 1, 0]">
+      <TresBoxGeometry />
+      <TresMeshStandardMaterial color="#4488ff" />
+    </TresMesh>
+  </TresCanvas>
+</template>
+
+<!-- ❌ Harder to maintain - Imperative -->
+<script setup>
+const mesh = new THREE.Mesh(
+  new THREE.BoxGeometry(),
+  new THREE.MeshStandardMaterial({ color: '#4488ff' })
+);
+scene.add(mesh);
+</script>
+```
+
+### 2. Register Entities with Meaningful Names
+
+```vue
+<script setup>
+import { useDevtoolEntity } from '@3lens/vue-bridge';
+
+const playerRef = ref();
+useDevtoolEntity(playerRef, {
+  name: 'Player Character',
+  module: '@game/player',
+  tags: ['controllable', 'physics'],
+  metadata: { health: 100 },
+});
+</script>
+```
+
+### 3. Create Dedicated Probe Connector
+
+```vue
+<!-- components/ProbeConnector.vue -->
+<script setup lang="ts">
+import { useTresProbe } from '@3lens/vue-bridge';
+useTresProbe();
+</script>
+
+<template>
+  <slot />
+</template>
+
+<!-- Usage in scene -->
+<template>
+  <TresCanvas>
+    <ProbeConnector />
+    <!-- scene content -->
+  </TresCanvas>
+</template>
+```
+
+### 4. Use Composables for Reusable Logic
+
+```typescript
+// composables/usePerformanceWarning.ts
+export function usePerformanceWarning(threshold = 30) {
+  const { fps } = useThreeLens();
+  const isLowFPS = computed(() => fps.value < threshold);
+  
+  watch(isLowFPS, (low) => {
+    if (low) {
+      console.warn('Low FPS detected');
+    }
+  });
+  
+  return { isLowFPS };
+}
+```
+
+### 5. Production Stripping
+
+Only load 3Lens in development:
+
+```typescript
+// main.ts
+import { createApp } from 'vue';
+import App from './App.vue';
+
+const app = createApp(App);
+
+if (import.meta.env.DEV) {
+  const { ThreeLensPlugin } = await import('@3lens/vue-bridge');
+  app.use(ThreeLensPlugin, { appName: 'My App' });
+}
+
+app.mount('#app');
+```
+
+---
+
+## Common Pitfalls
+
+### ❌ Using Composables Before Plugin
+
+```typescript
+// ❌ Wrong - composable before plugin registration
+const { probe } = useThreeLens();
+app.use(ThreeLensPlugin);
+
+// ✅ Correct - use in components after app.mount()
+// main.ts
+app.use(ThreeLensPlugin, { appName: 'My App' });
+app.mount('#app');
+
+// MyComponent.vue
+const { probe } = useThreeLens(); // Works!
+```
+
+### ❌ Server-Side Three.js
+
+```vue
+<!-- ❌ Wrong - crashes on SSR -->
+<script setup>
+import * as THREE from 'three';
+const scene = new THREE.Scene(); // No window on server!
+</script>
+
+<!-- ✅ Correct - client only -->
+<script setup>
+import { onMounted } from 'vue';
+
+let scene;
+onMounted(() => {
+  const THREE = await import('three');
+  scene = new THREE.Scene();
+});
+</script>
+```
+
+### ❌ Not Cleaning Up Resources
+
+```vue
+<!-- ❌ Wrong - memory leak -->
+<script setup>
+const renderer = new THREE.WebGLRenderer();
+// Component unmounts, renderer not disposed
+</script>
+
+<!-- ✅ Correct - cleanup -->
+<script setup>
+import { onUnmounted } from 'vue';
+
+let renderer;
+onMounted(() => {
+  renderer = new THREE.WebGLRenderer();
+});
+
+onUnmounted(() => {
+  renderer?.dispose();
+});
+</script>
+```
+
+### ❌ Missing Ref for Entity Registration
+
+```vue
+<!-- ❌ Wrong - no ref attached -->
+<script setup>
+const meshRef = ref();
+useDevtoolEntity(meshRef, { name: 'My Mesh' });
+</script>
+<template>
+  <TresMesh> <!-- Missing ref="meshRef" -->
+    ...
+  </TresMesh>
+</template>
+
+<!-- ✅ Correct -->
+<template>
+  <TresMesh ref="meshRef">
+    ...
+  </TresMesh>
+</template>
 ```
 
 ---

@@ -1,6 +1,16 @@
 name: Deploy Documentation
 
 on:
+  # Auto-deploy on pushes to main (docs changes only)
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'packages/*/src/**'
+      - '.github/workflows/deploy-docs.yml'
+      - 'typedoc.json'
+  
+  # Manual trigger with options
   workflow_dispatch:
     inputs:
       environment:
@@ -18,7 +28,7 @@ permissions:
 
 concurrency:
   group: 'pages'
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -26,6 +36,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for lastUpdated timestamps
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -44,12 +56,13 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Generate API documentation
+      - name: Generate TypeDoc API documentation
         run: pnpm docs
 
-      - name: Copy guides to API docs
-        run: |
-          cp -r docs/guides docs/api/guides
+      - name: Build VitePress documentation
+        run: pnpm docs:build
+        env:
+          NODE_ENV: production
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -57,7 +70,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './docs/api'
+          path: 'docs/.vitepress/dist'
 
   deploy:
     environment:
