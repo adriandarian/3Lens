@@ -11,7 +11,7 @@
     "debugging"
   ],
   "license": "MIT",
-  "author": "",
+  "author": "Adrian Darian <adrian.the.hactus@gmail.com> (https://github.com/adriandarian)",
   "type": "module",
   "exports": {
     ".": {

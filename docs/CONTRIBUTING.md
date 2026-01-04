@@ -517,8 +517,7 @@ pnpm changeset
 
 ### Maintainers
 
-- [@maintainer1](#) - Core SDK
-- [@maintainer2](#) - UI/UX
+- [@adriandarian](https://github.com/adriandarian) - Core SDK & UI/UX
 
 ---
 

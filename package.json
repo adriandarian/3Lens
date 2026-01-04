@@ -18,7 +18,7 @@
     "url": "https://github.com/adriandarian/3Lens.git"
   },
   "license": "MIT",
-  "author": "",
+  "author": "Adrian Darian <adrian.the.hactus@gmail.com> (https://github.com/adriandarian)",
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
