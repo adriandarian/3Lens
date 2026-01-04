@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="lens-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#646cff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#42d392;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lens-gradient-2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#747bff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#42d392;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle (optional - can be removed for transparent) -->
+  
+  <!-- Three overlapping lens circles representing the "3" in 3Lens -->
+  <!-- First lens (left) -->
+  <circle cx="44" cy="64" r="28" fill="none" stroke="url(#lens-gradient)" stroke-width="4" opacity="0.9"/>
+  <circle cx="44" cy="64" r="20" fill="none" stroke="url(#lens-gradient)" stroke-width="2" opacity="0.6"/>
+  <circle cx="44" cy="64" r="12" fill="url(#lens-gradient)" opacity="0.3"/>
+  
+  <!-- Second lens (center-right, overlapping) -->
+  <circle cx="64" cy="52" r="24" fill="none" stroke="url(#lens-gradient-2)" stroke-width="4" opacity="0.9"/>
+  <circle cx="64" cy="52" r="16" fill="none" stroke="url(#lens-gradient-2)" stroke-width="2" opacity="0.6"/>
+  <circle cx="64" cy="52" r="8" fill="url(#lens-gradient-2)" opacity="0.3"/>
+  
+  <!-- Third lens (right, overlapping) -->
+  <circle cx="84" cy="72" r="26" fill="none" stroke="#646cff" stroke-width="4" opacity="0.9"/>
+  <circle cx="84" cy="72" r="18" fill="none" stroke="#646cff" stroke-width="2" opacity="0.6"/>
+  <circle cx="84" cy="72" r="10" fill="#646cff" opacity="0.3"/>
+  
+  <!-- Central intersection highlight -->
+  <circle cx="60" cy="62" r="6" fill="url(#lens-gradient)" opacity="0.8"/>
+  
+  <!-- Lens flare accents -->
+  <circle cx="36" cy="54" r="3" fill="#fff" opacity="0.6"/>
+  <circle cx="56" cy="44" r="2.5" fill="#fff" opacity="0.5"/>
+  <circle cx="78" cy="64" r="2" fill="#fff" opacity="0.5"/>
+</svg>

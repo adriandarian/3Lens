@@ -2,6 +2,60 @@
 
 This guide covers integrating 3Lens into your continuous integration (CI) pipeline for automated performance testing, regression detection, and quality gates.
 
+## Quick Start
+
+Add performance testing to your CI in 5 minutes:
+
+**1. Install dependencies:**
+
+```bash
+npm install -D puppeteer
+```
+
+**2. Create a benchmark script:**
+
+```typescript
+// scripts/benchmark.ts
+import puppeteer from 'puppeteer';
+
+async function benchmark() {
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
+  
+  await page.goto('http://localhost:3000');
+  await page.waitForFunction(() => (window as any).__3LENS_PROBE__?.isReady());
+  await new Promise(r => setTimeout(r, 3000)); // Stabilize
+  
+  const stats = await page.evaluate(() => {
+    const probe = (window as any).__3LENS_PROBE__;
+    return probe.getLatestFrameStats();
+  });
+  
+  await browser.close();
+  
+  console.log(`FPS: ${stats.fps.toFixed(1)}`);
+  console.log(`Draw Calls: ${stats.drawCalls}`);
+  
+  if (stats.fps < 55) {
+    console.error('❌ Performance check failed: FPS too low');
+    process.exit(1);
+  }
+  
+  console.log('✅ Performance check passed');
+}
+
+benchmark();
+```
+
+**3. Add to your CI:**
+
+```yaml
+# .github/workflows/performance.yml
+- run: npm run build && npm run preview &
+- run: npx wait-on http://localhost:3000
+- run: npx ts-node scripts/benchmark.ts
+```
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -1078,8 +1132,128 @@ const ciThresholds = {
 
 ---
 
+## Common Pitfalls
+
+### 1. Flaky Tests Due to CI Resource Variance
+
+```typescript
+// ❌ Bad - Tight thresholds fail randomly
+const thresholds = { minFPS: 60 };
+
+// ✅ Good - Account for CI variance
+const thresholds = { minFPS: 50 };  // ~20% margin
+```
+
+### 2. Not Waiting for Scene Load
+
+```typescript
+// ❌ Bad - Measures before scene is ready
+await page.goto(url);
+const stats = await page.evaluate(() => probe.getLatestFrameStats());
+
+// ✅ Good - Wait for probe and scene to be ready
+await page.goto(url);
+await page.waitForFunction(() => {
+  const probe = (window as any).__3LENS_PROBE__;
+  return probe?.isReady() && probe?.getLatestFrameStats()?.fps > 0;
+}, { timeout: 30000 });
+await new Promise(r => setTimeout(r, 3000)); // Stabilize
+```
+
+### 3. Memory Issues with Long-Running Tests
+
+```typescript
+// ❌ Bad - Browser accumulates memory
+for (const scenario of scenarios) {
+  const stats = await runBenchmark(scenario);
+}
+
+// ✅ Good - Fresh browser per test
+for (const scenario of scenarios) {
+  const browser = await puppeteer.launch();
+  const stats = await runBenchmark(browser, scenario);
+  await browser.close();
+}
+```
+
+### 4. Ignoring GPU Differences
+
+```typescript
+// ❌ Bad - Assumes GPU availability
+await puppeteer.launch();
+
+// ✅ Good - Use software rendering for consistency
+await puppeteer.launch({
+  args: ['--use-gl=swiftshader', '--disable-gpu'],
+});
+```
+
+### 5. Missing Timeout Handling
+
+```typescript
+// ❌ Bad - Hangs forever if scene fails to load
+await page.goto(url);
+
+// ✅ Good - Proper timeouts
+await page.goto(url, { timeout: 30000 });
+await page.waitForFunction(/* ... */, { timeout: 30000 });
+```
+
+### 6. Not Handling WebGL Context Loss
+
+```typescript
+// Add error handling for context loss
+page.on('console', msg => {
+  if (msg.text().includes('WebGL context lost')) {
+    throw new Error('WebGL context lost during benchmark');
+  }
+});
+```
+
+---
+
+## Troubleshooting
+
+### Tests Pass Locally but Fail in CI
+
+1. Check if CI uses software rendering (SwiftShader)
+2. Verify CI has enough memory (4GB+ recommended)
+3. Increase warm-up time
+4. Lower performance thresholds for CI
+
+### Inconsistent Results Between Runs
+
+1. Use median instead of average
+2. Increase number of iterations (5+)
+3. Add longer warm-up period
+4. Pin to dedicated benchmark runners
+
+### Browser Fails to Start
+
+```yaml
+# Install required dependencies
+- run: apt-get update && apt-get install -y chromium-browser
+```
+
+Or use a browser-ready Docker image:
+
+```yaml
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    container: browserless/chrome:latest
+```
+
+---
+
 ## Related Guides
 
 - [Getting Started](./GETTING-STARTED.md)
+- [Performance Debugging Guide](./PERFORMANCE-DEBUGGING-GUIDE.md)
+- [Custom Rules Guide](./CUSTOM-RULES-GUIDE.md)
 - [Plugin Development](./PLUGIN-DEVELOPMENT.md)
-- [React/R3F Guide](./REACT-R3F-GUIDE.md)
+
+## API Reference
+
+- [DevtoolProbe](/api/core/devtool-probe)
+- [FrameStats Interface](/api/core/frame-stats)

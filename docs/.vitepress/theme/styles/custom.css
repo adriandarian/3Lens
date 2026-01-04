@@ -1,0 +1,488 @@
+/**
+ * 3Lens Documentation Theme
+ * Custom styles extending VitePress default theme
+ * 
+ * Color System:
+ * - Primary: Purple/Indigo (#646cff) - Main brand color
+ * - Secondary: Green (#42d392) - Success, positive actions
+ * - Warning: Yellow (#ffc517) - Warnings, caution
+ * - Error: Red (#ff5757) - Errors, critical alerts
+ * - Info: Cyan (#00bcd4) - Information, tips
+ */
+
+/* ============================================
+   CSS Variables - Light Theme (Default)
+   ============================================ */
+:root {
+  /* Primary brand color - 3Lens purple/indigo */
+  --vp-c-brand-1: #646cff;
+  --vp-c-brand-2: #747bff;
+  --vp-c-brand-3: #535bf2;
+  --vp-c-brand-soft: rgba(100, 108, 255, 0.14);
+
+  /* 3Lens specific accent colors */
+  --3lens-accent-green: #42d392;
+  --3lens-accent-green-soft: rgba(66, 211, 146, 0.14);
+  --3lens-accent-yellow: #ffc517;
+  --3lens-accent-yellow-soft: rgba(255, 197, 23, 0.14);
+  --3lens-accent-red: #ff5757;
+  --3lens-accent-red-soft: rgba(255, 87, 87, 0.14);
+  --3lens-accent-cyan: #00bcd4;
+  --3lens-accent-cyan-soft: rgba(0, 188, 212, 0.14);
+
+  /* Background colors - Light */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #f6f6f7;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #f6f6f7;
+
+  /* Text colors - Light */
+  --vp-c-text-1: rgba(60, 60, 67);
+  --vp-c-text-2: rgba(60, 60, 67, 0.78);
+  --vp-c-text-3: rgba(60, 60, 67, 0.56);
+
+  /* Divider colors - Light */
+  --vp-c-divider: rgba(60, 60, 67, 0.12);
+  --vp-c-divider-light: rgba(60, 60, 67, 0.06);
+
+  /* Code block colors - Light */
+  --vp-code-block-bg: #f8f8f8;
+  --vp-code-line-highlight-color: rgba(100, 108, 255, 0.08);
+  --vp-code-line-diff-add-color: rgba(66, 211, 146, 0.12);
+  --vp-code-line-diff-remove-color: rgba(255, 87, 87, 0.12);
+  --vp-code-copy-code-bg: rgba(100, 108, 255, 0.1);
+  --vp-code-copy-code-hover-bg: rgba(100, 108, 255, 0.2);
+
+  /* Button colors */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: var(--vp-c-brand-3);
+
+  /* Alt button (secondary) */
+  --vp-button-alt-border: var(--vp-c-divider);
+  --vp-button-alt-text: var(--vp-c-text-1);
+  --vp-button-alt-bg: var(--vp-c-bg-soft);
+  --vp-button-alt-hover-border: var(--vp-c-divider);
+  --vp-button-alt-hover-text: var(--vp-c-brand-1);
+  --vp-button-alt-hover-bg: var(--vp-c-bg-soft);
+
+  /* Sidebar colors */
+  --vp-sidebar-bg-color: var(--vp-c-bg);
+
+  /* Custom block colors - Light */
+  --vp-custom-block-tip-border: var(--vp-c-brand-1);
+  --vp-custom-block-tip-text: var(--vp-c-brand-1);
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+  --vp-custom-block-tip-code-bg: var(--vp-c-brand-soft);
+
+  --vp-custom-block-warning-border: var(--3lens-accent-yellow);
+  --vp-custom-block-warning-text: #ad8b00;
+  --vp-custom-block-warning-bg: var(--3lens-accent-yellow-soft);
+  --vp-custom-block-warning-code-bg: var(--3lens-accent-yellow-soft);
+
+  --vp-custom-block-danger-border: var(--3lens-accent-red);
+  --vp-custom-block-danger-text: #c41e3a;
+  --vp-custom-block-danger-bg: var(--3lens-accent-red-soft);
+  --vp-custom-block-danger-code-bg: var(--3lens-accent-red-soft);
+
+  --vp-custom-block-info-border: var(--3lens-accent-cyan);
+  --vp-custom-block-info-text: #0097a7;
+  --vp-custom-block-info-bg: var(--3lens-accent-cyan-soft);
+  --vp-custom-block-info-code-bg: var(--3lens-accent-cyan-soft);
+
+  /* Hero gradient */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    #646cff 30%,
+    #42d392 100%
+  );
+
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    rgba(100, 108, 255, 0.5) 50%,
+    rgba(66, 211, 146, 0.5) 50%
+  );
+  --vp-home-hero-image-filter: blur(44px);
+}
+
+/* ============================================
+   CSS Variables - Dark Theme
+   ============================================ */
+.dark {
+  /* Primary brand color - Slightly brighter for dark mode */
+  --vp-c-brand-1: #747bff;
+  --vp-c-brand-2: #8b92ff;
+  --vp-c-brand-3: #646cff;
+  --vp-c-brand-soft: rgba(116, 123, 255, 0.16);
+
+  /* Accent colors - Adjusted for dark backgrounds */
+  --3lens-accent-green: #4ade94;
+  --3lens-accent-green-soft: rgba(74, 222, 148, 0.16);
+  --3lens-accent-yellow: #ffd54f;
+  --3lens-accent-yellow-soft: rgba(255, 213, 79, 0.16);
+  --3lens-accent-red: #ff6b6b;
+  --3lens-accent-red-soft: rgba(255, 107, 107, 0.16);
+  --3lens-accent-cyan: #26c6da;
+  --3lens-accent-cyan-soft: rgba(38, 198, 218, 0.16);
+
+  /* Background colors - Dark */
+  --vp-c-bg: #1a1a1a;
+  --vp-c-bg-alt: #141414;
+  --vp-c-bg-elv: #242424;
+  --vp-c-bg-soft: #242424;
+
+  /* Text colors - Dark */
+  --vp-c-text-1: rgba(255, 255, 255, 0.92);
+  --vp-c-text-2: rgba(255, 255, 255, 0.7);
+  --vp-c-text-3: rgba(255, 255, 255, 0.5);
+
+  /* Divider colors - Dark */
+  --vp-c-divider: rgba(255, 255, 255, 0.12);
+  --vp-c-divider-light: rgba(255, 255, 255, 0.06);
+
+  /* Code block colors - Dark */
+  --vp-code-block-bg: #161618;
+  --vp-code-line-highlight-color: rgba(116, 123, 255, 0.12);
+  --vp-code-line-diff-add-color: rgba(74, 222, 148, 0.16);
+  --vp-code-line-diff-remove-color: rgba(255, 107, 107, 0.16);
+
+  /* Custom block colors - Dark */
+  --vp-custom-block-tip-border: var(--vp-c-brand-1);
+  --vp-custom-block-tip-text: var(--vp-c-brand-1);
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+
+  --vp-custom-block-warning-border: var(--3lens-accent-yellow);
+  --vp-custom-block-warning-text: var(--3lens-accent-yellow);
+  --vp-custom-block-warning-bg: var(--3lens-accent-yellow-soft);
+
+  --vp-custom-block-danger-border: var(--3lens-accent-red);
+  --vp-custom-block-danger-text: var(--3lens-accent-red);
+  --vp-custom-block-danger-bg: var(--3lens-accent-red-soft);
+
+  --vp-custom-block-info-border: var(--3lens-accent-cyan);
+  --vp-custom-block-info-text: var(--3lens-accent-cyan);
+  --vp-custom-block-info-bg: var(--3lens-accent-cyan-soft);
+
+  /* Hero gradient - Adjusted for dark mode */
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    #747bff 30%,
+    #4ade94 100%
+  );
+
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    rgba(116, 123, 255, 0.4) 50%,
+    rgba(74, 222, 148, 0.4) 50%
+  );
+}
+
+/* ============================================
+   Theme Toggle Transition
+   ============================================ */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Smooth transition for theme switch */
+.VPSwitch,
+.VPNavBar,
+.VPSidebar,
+.VPContent,
+.VPDoc,
+.VPFeature,
+.vp-doc div[class*='language-'] {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Theme toggle button enhancement */
+.VPSwitch {
+  background-color: var(--vp-c-bg-soft) !important;
+}
+
+.VPSwitch:hover {
+  background-color: var(--vp-c-brand-soft) !important;
+}
+
+.VPSwitchAppearance .check {
+  background-color: var(--vp-c-brand-1) !important;
+}
+
+/* ============================================
+   Typography
+   ============================================ */
+:root {
+  --vp-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans',
+    'Helvetica Neue', sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas,
+    'Courier New', monospace;
+}
+
+/* ============================================
+   Layout Customizations
+   ============================================ */
+
+/* Make the content area slightly wider */
+.VPDoc.has-aside .content-container {
+  max-width: 900px;
+}
+
+/* Improve code block styling */
+.vp-doc div[class*='language-'] {
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.vp-doc div[class*='language-'] code {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* ============================================
+   Custom Components Styling
+   ============================================ */
+
+/* Package badge styling */
+.package-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+}
+
+.package-badge.core {
+  background: rgba(100, 108, 255, 0.15);
+  color: #646cff;
+}
+
+.package-badge.react {
+  background: rgba(97, 218, 251, 0.15);
+  color: #61dafb;
+}
+
+.package-badge.vue {
+  background: rgba(66, 184, 131, 0.15);
+  color: #42b883;
+}
+
+.package-badge.angular {
+  background: rgba(221, 0, 49, 0.15);
+  color: #dd0031;
+}
+
+/* API reference table styling */
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.api-table th,
+.api-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.api-table th {
+  font-weight: 600;
+  background: var(--vp-c-bg-soft);
+}
+
+.api-table code {
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--vp-c-bg-mute);
+}
+
+/* Type annotation styling */
+.type-annotation {
+  color: var(--vp-c-brand-1);
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.9em;
+}
+
+/* ============================================
+   Home Page Customizations
+   ============================================ */
+
+/* Feature cards enhancement */
+.VPFeature {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.VPFeature:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.dark .VPFeature:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Hero section adjustments */
+.VPHero .name {
+  font-size: 3.5rem;
+  line-height: 1.1;
+}
+
+.VPHero .text {
+  font-size: 1.5rem;
+  color: var(--vp-c-text-2);
+}
+
+.VPHero .tagline {
+  font-size: 1.25rem;
+  max-width: 500px;
+}
+
+@media (max-width: 768px) {
+  .VPHero .name {
+    font-size: 2.5rem;
+  }
+  
+  .VPHero .text {
+    font-size: 1.25rem;
+  }
+}
+
+/* ============================================
+   Code Group Tabs Enhancement
+   ============================================ */
+
+.vp-code-group .tabs {
+  background: var(--vp-c-bg-soft);
+  border-radius: 8px 8px 0 0;
+}
+
+.vp-code-group .tabs label {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+/* ============================================
+   Custom Containers
+   ============================================ */
+
+/* Framework-specific tip boxes */
+.custom-block.react {
+  border-color: #61dafb;
+  background-color: rgba(97, 218, 251, 0.1);
+}
+
+.custom-block.vue {
+  border-color: #42b883;
+  background-color: rgba(66, 184, 131, 0.1);
+}
+
+.custom-block.angular {
+  border-color: #dd0031;
+  background-color: rgba(221, 0, 49, 0.1);
+}
+
+/* Performance metric styling */
+.perf-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--vp-c-bg-soft);
+  font-family: var(--vp-font-family-mono);
+}
+
+.perf-metric.good {
+  color: var(--3lens-accent-green);
+  background: rgba(66, 211, 146, 0.1);
+}
+
+.perf-metric.warning {
+  color: var(--3lens-accent-yellow);
+  background: rgba(255, 197, 23, 0.1);
+}
+
+.perf-metric.bad {
+  color: var(--3lens-accent-red);
+  background: rgba(255, 87, 87, 0.1);
+}
+
+/* ============================================
+   Interactive Demo Styling
+   ============================================ */
+
+.demo-frame {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.demo-frame iframe {
+  width: 100%;
+  height: 400px;
+  border: none;
+}
+
+.demo-frame .demo-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: var(--vp-c-bg-soft);
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+/* ============================================
+   Accessibility Improvements
+   ============================================ */
+
+/* Focus states */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+  .VPNav,
+  .VPSidebar,
+  .VPDocAside,
+  .VPDocFooter {
+    display: none !important;
+  }
+  
+  .VPContent {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+}

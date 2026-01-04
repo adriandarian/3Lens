@@ -1,7 +1,12 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": [
-    "./packages/core/src/index.ts"
+    "./packages/core/src/index.ts",
+    "./packages/overlay/src/index.ts",
+    "./packages/react-bridge/src/index.ts",
+    "./packages/angular-bridge/src/index.ts",
+    "./packages/vue-bridge/src/index.ts",
+    "./packages/ui/src/index.ts"
   ],
   "entryPointStrategy": "expand",
   "out": "./docs/api",
@@ -19,11 +24,20 @@
   "categoryOrder": [
     "Core",
     "Probe",
-    "Types",
-    "React",
-    "Angular", 
-    "Vue",
+    "Configuration",
+    "Helpers",
+    "Tracking",
+    "Entities",
     "Plugins",
+    "Adapters",
+    "Transport",
+    "Utilities",
+    "Types",
+    "Overlay",
+    "React",
+    "Angular",
+    "Vue",
+    "UI",
     "Other"
   ],
   "sort": ["source-order", "alphabetical"],
@@ -38,5 +52,13 @@
   "gitRevision": "main",
   "sourceLinkTemplate": "https://github.com/adriandarian/3Lens/blob/{gitRevision}/{path}#L{line}",
   "customCss": "./docs/api-styles.css",
-  "skipErrorChecking": true
+  "skipErrorChecking": true,
+  "plugin": ["typedoc-plugin-markdown"],
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "treatWarningsAsErrors": false,
+  "logLevel": "Warn"
 }

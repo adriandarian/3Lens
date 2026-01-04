@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f0f23;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lens-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#646cff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#42d392;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lens-grad-2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#747bff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#42d392;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background with rounded corners for Apple touch icon -->
+  <rect width="180" height="180" rx="40" fill="url(#bg-grad)"/>
+  
+  <!-- Scaled and centered logo -->
+  <g transform="translate(26, 26) scale(1.0)">
+    <!-- First lens (left) -->
+    <circle cx="44" cy="64" r="28" fill="none" stroke="url(#lens-grad)" stroke-width="4" opacity="0.95"/>
+    <circle cx="44" cy="64" r="20" fill="none" stroke="url(#lens-grad)" stroke-width="2" opacity="0.7"/>
+    <circle cx="44" cy="64" r="12" fill="url(#lens-grad)" opacity="0.4"/>
+    
+    <!-- Second lens (center-right, overlapping) -->
+    <circle cx="64" cy="52" r="24" fill="none" stroke="url(#lens-grad-2)" stroke-width="4" opacity="0.95"/>
+    <circle cx="64" cy="52" r="16" fill="none" stroke="url(#lens-grad-2)" stroke-width="2" opacity="0.7"/>
+    <circle cx="64" cy="52" r="8" fill="url(#lens-grad-2)" opacity="0.4"/>
+    
+    <!-- Third lens (right, overlapping) -->
+    <circle cx="84" cy="72" r="26" fill="none" stroke="#747bff" stroke-width="4" opacity="0.95"/>
+    <circle cx="84" cy="72" r="18" fill="none" stroke="#747bff" stroke-width="2" opacity="0.7"/>
+    <circle cx="84" cy="72" r="10" fill="#747bff" opacity="0.4"/>
+    
+    <!-- Central intersection highlight -->
+    <circle cx="60" cy="62" r="6" fill="url(#lens-grad)" opacity="0.9"/>
+    
+    <!-- Lens flare accents -->
+    <circle cx="36" cy="54" r="3" fill="#fff" opacity="0.8"/>
+    <circle cx="56" cy="44" r="2.5" fill="#fff" opacity="0.7"/>
+    <circle cx="78" cy="64" r="2" fill="#fff" opacity="0.6"/>
+  </g>
+</svg>
