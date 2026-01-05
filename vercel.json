@@ -4,7 +4,7 @@
   "buildCommand": "pnpm -w run build:packages && pnpm -w run docs && pnpm -w run docs:build",
   "outputDirectory": "docs/.vitepress/dist",
   "installCommand": "pnpm install",
-  "framework": null,
+  "framework": "vitepress",
   "regions": ["iad1"],
   "headers": [
     {
