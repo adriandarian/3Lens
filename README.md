@@ -178,10 +178,32 @@ Open `http://localhost:5173` to see the example scene with the overlay panel.
 
 ### Development Mode
 
-Run all packages in watch mode:
+Run packages in watch mode with the base example app:
 
 ```bash
 pnpm dev
+```
+
+This starts the core packages in watch mode along with the vanilla-threejs example.
+
+### Running Examples
+
+```bash
+# List all available examples
+pnpm example:list
+
+# Interactive example selector
+pnpm example
+
+# Run specific example(s) by name
+pnpm example vanilla-threejs
+pnpm example react-three-fiber vue-tresjs
+
+# Run by number (from example:list)
+pnpm example 1 5 12
+
+# Run a range of examples
+pnpm example 1-5
 ```
 
 ---

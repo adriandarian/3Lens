@@ -22,10 +22,30 @@ From the 3Lens root directory:
 # Install all dependencies
 pnpm install
 
-# Run all examples in dev mode
+# Run packages + base example (vanilla-threejs)
 pnpm dev
+```
 
-# Or run a specific example
+### Running Specific Examples
+
+```bash
+# List all available examples with numbers
+pnpm example:list
+
+# Interactive example selector
+pnpm example
+
+# Run by name
+pnpm example vanilla-threejs
+pnpm example react-three-fiber vue-tresjs
+
+# Run by number (from example:list)
+pnpm example 1 5 12
+
+# Run a range of examples
+pnpm example 1-5
+
+# Or run directly from the example directory
 cd examples/vanilla-threejs
 pnpm dev
 ```
