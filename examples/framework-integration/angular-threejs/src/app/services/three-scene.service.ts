@@ -70,11 +70,6 @@ export class ThreeSceneService implements OnDestroy {
     this.updateAnimations(delta, elapsed);
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
-    
-    // Update probe
-    if (this.probe) {
-      this.probe.onFrame();
-    }
   }
 
   /**
@@ -241,12 +236,12 @@ export class ThreeSceneService implements OnDestroy {
 
   private setupProbe(): void {
     this.probe = createProbe({
-      renderer: this.renderer,
-      scene: this.scene,
-      camera: this.camera
+      appName: 'Angular Three.js Example',
     });
     
-    this.probe.setAppName('Angular Three.js Example');
+    // Observe renderer and scene
+    this.probe.observeRenderer(this.renderer);
+    this.probe.observeScene(this.scene);
     
     // Bootstrap the overlay
     bootstrapOverlay(this.probe);

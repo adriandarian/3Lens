@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
-import React, { createElement, useContext } from 'react';
+import { createElement, useContext, useEffect } from 'react';
 import { ThreeLensContext } from './context';
 
 // Mock @3lens/core
@@ -90,7 +90,7 @@ describe('ThreeLensProvider', () => {
   // Helper component to consume context
   function ContextConsumer({ onContext }: { onContext: (ctx: ThreeLensContextValue | null) => void }) {
     const context = useContext(ThreeLensContext);
-    React.useEffect(() => {
+    useEffect(() => {
       onContext(context);
     }, [context, onContext]);
     return null;

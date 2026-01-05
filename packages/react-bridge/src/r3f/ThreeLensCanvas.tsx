@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, forwardRef } from 'react';
+import { useState, useEffect, useRef, forwardRef } from 'react';
 import { ThreeLensProvider } from '../ThreeLensProvider';
 import { useThreeLensContextOptional } from '../context';
 import type { ThreeLensProviderConfig } from '../types';
@@ -140,7 +140,7 @@ export const ThreeLensCanvas = forwardRef<HTMLCanvasElement, ThreeLensCanvasProp
   function ThreeLensCanvas({ threeLensConfig, children, ...canvasProps }, ref) {
     // Dynamically import Canvas to keep R3F optional
     // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-    const [Canvas, setCanvas] = React.useState<typeof import('@react-three/fiber').Canvas | null>(
+    const [Canvas, setCanvas] = useState<typeof import('@react-three/fiber').Canvas | null>(
       null
     );
 
