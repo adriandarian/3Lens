@@ -1,7 +1,8 @@
 // https://vitepress.dev/guide/custom-theme
-import { h } from 'vue'
+import { h, onMounted } from 'vue'
 import type { Theme } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
+import { inject } from '@vercel/analytics'
 import './styles/custom.css'
 
 // Version system components
@@ -34,6 +35,11 @@ export default {
   },
   
   enhanceApp({ app, router, siteData }) {
+    // Initialize Vercel Analytics
+    if (typeof window !== 'undefined') {
+      inject()
+    }
+    
     // Register version components globally
     app.component('VersionSwitcher', VersionSwitcher)
     

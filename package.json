@@ -52,6 +52,7 @@
     "@types/three": "^0.160.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
+    "@vercel/analytics": "^1.6.1",
     "@vitest/coverage-v8": "^1.0.0",
     "eslint": "^8.55.0",
     "eslint-config-prettier": "^9.1.0",
@@ -69,4 +70,3 @@
     "pnpm": ">=8.0.0"
   }
 }
-
