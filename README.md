@@ -1,7 +1,7 @@
 <h1 align="center">3Lens</h1>
 
 <p align="center">
-  <img src="./3Lens_logo_no_bg.png" alt="3Lens Logo" width="200" />
+  <img src="./docs/public/3Lens_logo_no_bg.png" alt="3Lens Logo" width="200" />
 </p>
 
 <p align="center">
