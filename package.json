@@ -22,6 +22,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
+    "build:packages": "pnpm --filter './packages/**' build",
     "dev": "pnpm -r --parallel dev",
     "lint": "eslint packages/*/src --ext .ts,.tsx",
     "lint:fix": "eslint packages/*/src --ext .ts,.tsx --fix",
