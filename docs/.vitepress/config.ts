@@ -14,6 +14,9 @@ export default defineConfig({
   
   // Last updated timestamps
   lastUpdated: true,
+
+  // Ignore dead links during build (many docs reference planned features)
+  ignoreDeadLinks: true,
   
   // Head tags - Favicons and branding
   head: [
