@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { versions, statusColors, type DocVersion } from '../versions'
+import { versions, statusColors, type DocVersion } from '../../versions'
 
 const isOpen = ref(false)
 const currentVersion = computed(() => versions.find(v => v.current) || versions[0])
