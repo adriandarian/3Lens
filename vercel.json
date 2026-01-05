@@ -6,6 +6,9 @@
   "installCommand": "pnpm install",
   "framework": "vitepress",
   "regions": ["iad1"],
+  "toolbar": {
+    "enabled": "team"
+  },
   "headers": [
     {
       "source": "/assets/(.*)",
