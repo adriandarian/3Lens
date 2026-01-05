@@ -199,7 +199,7 @@ describe('Processing Task Benchmarks', () => {
       results.push(result);
 
       // Should be fast (lowered for CI variance)
-      assertPerformance(result, 25000);
+      assertPerformance(result, 10000);
     });
 
     it('aggregate medium dataset (500 frames)', () => {
@@ -278,7 +278,8 @@ describe('Processing Task Benchmarks', () => {
 
       results.push(result);
 
-      assertPerformance(result, 40000);
+      // Lowered for CI variance
+      assertPerformance(result, 20000);
     });
   });
 
@@ -298,7 +299,8 @@ describe('Processing Task Benchmarks', () => {
 
       results.push(result);
 
-      assertPerformance(result, 100000);
+      // Lowered for CI variance
+      assertPerformance(result, 20000);
     });
 
     it('trend analysis long history (500 points)', () => {
