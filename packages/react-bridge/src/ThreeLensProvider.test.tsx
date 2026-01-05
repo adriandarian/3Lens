@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import React, { createElement, useContext } from 'react';
-import { ThreeLensContext, useThreeLensContext, useThreeLensContextOptional } from './context';
+import { ThreeLensContext } from './context';
 
 // Mock @3lens/core
 const mockFrameStats = {
@@ -29,27 +29,27 @@ const mockSceneNode = {
   children: [],
 };
 
-let frameStatsCallback: ((stats: any) => void) | null = null;
-let snapshotCallback: ((snapshot: any) => void) | null = null;
-let selectionCallback: ((node: any) => void) | null = null;
+let frameStatsCallback: ((stats: unknown) => void) | null = null;
+let snapshotCallback: ((snapshot: unknown) => void) | null = null;
+let selectionCallback: ((node: unknown) => void) | null = null;
 
 const mockProbe = {
-  onFrameStats: vi.fn((cb: (stats: any) => void) => {
+  onFrameStats: vi.fn((cb: (stats: unknown) => void) => {
     frameStatsCallback = cb;
     return () => { frameStatsCallback = null; };
   }),
-  onSnapshot: vi.fn((cb: (snapshot: any) => void) => {
+  onSnapshot: vi.fn((cb: (snapshot: unknown) => void) => {
     snapshotCallback = cb;
     return () => { snapshotCallback = null; };
   }),
-  onSelectionChanged: vi.fn((cb: (node: any) => void) => {
+  onSelectionChanged: vi.fn((cb: (node: unknown) => void) => {
     selectionCallback = cb;
     return () => { selectionCallback = null; };
   }),
   observeRenderer: vi.fn(),
   observeScene: vi.fn(),
-  selectObjectByUuid: vi.fn(),
-  clearSelection: vi.fn(),
+  findObjectByDebugIdOrUuid: vi.fn(() => ({ uuid: 'test-uuid' })),
+  selectObject: vi.fn(),
   takeSnapshot: vi.fn(() => mockSnapshot),
   focusOnSelected: vi.fn(),
   flyToSelected: vi.fn(),
@@ -61,7 +61,7 @@ vi.mock('@3lens/core', () => ({
   createProbe: vi.fn(() => mockProbe),
 }));
 
-import { ThreeLensProvider, ThreeLensProviderProps } from './ThreeLensProvider';
+import { ThreeLensProvider } from './ThreeLensProvider';
 import { type ThreeLensContextValue } from './types';
 
 describe('ThreeLensProvider', () => {
@@ -124,7 +124,7 @@ describe('ThreeLensProvider', () => {
     });
 
     it('should use external probe when provided', async () => {
-      const externalProbe = { ...mockProbe, id: 'external' } as any;
+      const externalProbe = { ...mockProbe, id: 'external' } as unknown as ThreeLensContextValue['probe'];
       let capturedContext: ThreeLensContextValue | null = null;
 
       render(
@@ -235,7 +235,8 @@ describe('ThreeLensProvider', () => {
         capturedContext?.selectObject('test-uuid');
       });
 
-      expect(mockProbe.selectObjectByUuid).toHaveBeenCalledWith('test-uuid');
+      expect(mockProbe.findObjectByDebugIdOrUuid).toHaveBeenCalledWith('test-uuid');
+      expect(mockProbe.selectObject).toHaveBeenCalled();
     });
 
     it('should call clearSelection on probe', async () => {
@@ -257,7 +258,7 @@ describe('ThreeLensProvider', () => {
         capturedContext?.clearSelection();
       });
 
-      expect(mockProbe.clearSelection).toHaveBeenCalled();
+      expect(mockProbe.selectObject).toHaveBeenCalledWith(null);
     });
 
     it('should toggle overlay visibility', async () => {
@@ -420,7 +421,7 @@ describe('ThreeLensProvider', () => {
     });
 
     it('should not dispose external probe on unmount', () => {
-      const externalProbe = { ...mockProbe, id: 'external' } as any;
+      const externalProbe = { ...mockProbe, id: 'external' } as unknown as ThreeLensContextValue['probe'] & { dispose: ReturnType<typeof vi.fn> };
       const { unmount } = render(
         createElement(ThreeLensProvider, { probe: externalProbe },
           createElement('div')

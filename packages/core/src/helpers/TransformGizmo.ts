@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import type { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { DevtoolProbe } from '../probe/DevtoolProbe';
+import type { ThreeNamespace } from '../types';
 
 export type TransformMode = 'translate' | 'rotate' | 'scale';
 export type TransformSpace = 'world' | 'local';
@@ -25,7 +26,7 @@ export interface TransformHistoryEntry {
  */
 export class TransformGizmo {
   private transformControls: TransformControls | null = null;
-  private THREE: typeof import('three') | null = null;
+  private THREE: ThreeNamespace | null = null;
   private scene: THREE.Scene | null = null;
   private camera: THREE.Camera | null = null;
   private domElement: HTMLElement | null = null;
@@ -57,7 +58,7 @@ export class TransformGizmo {
     scene: THREE.Scene,
     camera: THREE.Camera,
     domElement: HTMLElement,
-    three: typeof import('three')
+    three: ThreeNamespace
   ): void {
     this.scene = scene;
     this.camera = camera;
@@ -268,8 +269,8 @@ export class TransformGizmo {
   /**
    * Handle dragging state changes
    */
-  private handleDraggingChanged = (event: { value: boolean }): void => {
-    const isDragging = event.value;
+  private handleDraggingChanged = (event: { value: unknown }): void => {
+    const isDragging = Boolean(event.value);
     
     for (const callback of this.onDraggingChangedCallbacks) {
       callback(isDragging);

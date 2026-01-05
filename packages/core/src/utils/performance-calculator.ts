@@ -65,7 +65,7 @@ export class PerformanceTracker {
   getMetrics(cpuTimeMs: number): PerformanceMetrics {
     const fps = cpuTimeMs > 0 ? 1000 / cpuTimeMs : 0;
     const fpsSmoothed = this.getAverageFps();
-    const sorted = [...this.frameTimes].sort((a, b) => a - b);
+    const _sorted = [...this.frameTimes].sort((a, b) => a - b);
 
     return {
       fps: Math.round(fps),

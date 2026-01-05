@@ -39,10 +39,10 @@ interface R3FProbeProps {
  * }
  * ```
  */
-export function R3FProbe({ showOverlay = true }: R3FProbeProps = {}): React.ReactElement | null {
+export function R3FProbe({ showOverlay: _showOverlay = true }: R3FProbeProps = {}): React.ReactElement | null {
   const context = useThreeLensContextOptional();
   const connectedRef = useRef(false);
-  const overlayRef = useRef<any>(null);
+  const _overlayRef = useRef<unknown>(null);
 
   // We need to dynamically import and use useThree/useFrame
   // This component will be rendered, and we'll use effects to connect
@@ -53,12 +53,13 @@ export function R3FProbe({ showOverlay = true }: R3FProbeProps = {}): React.Reac
     const connect = async () => {
       try {
         // Dynamically import R3F
-        const r3f = await import('@react-three/fiber');
+        const _r3f = await import('@react-three/fiber');
 
         // We need access to the R3F store
         // Unfortunately useThree() can't be called inside useEffect
         // So we need a different approach - see R3FProbeInner
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.warn('[3Lens] Failed to connect to React Three Fiber:', e);
       }
     };
@@ -75,8 +76,8 @@ export function R3FProbe({ showOverlay = true }: R3FProbeProps = {}): React.Reac
  * This needs to be a proper component so hooks work
  */
 export function R3FProbeConnectorInner(): null {
-  const context = useThreeLensContextOptional();
-  const connectedRef = useRef(false);
+  const _context = useThreeLensContextOptional();
+  const _connectedRef = useRef(false);
 
   // We'll try to use a portal or other mechanism to inject into R3F's context
   // For now, provide manual connection instructions
@@ -117,7 +118,7 @@ export function createR3FConnector(
     scene: THREE.Scene;
     camera: THREE.Camera;
   },
-  useFrame: (callback: (state: any, delta: number) => void) => void
+  _useFrame: (callback: (state: unknown, delta: number) => void) => void
 ): React.FC {
   return function ThreeLensR3FConnector() {
     const context = useThreeLensContextOptional();
@@ -153,7 +154,10 @@ export function createR3FConnector(
           probe.initializeCameraController?.(camera, THREE);
         } catch (e) {
           // Helpers not critical, ignore errors
-          if ((context.probe as any).config?.debug) {
+          // Check if debug mode is enabled via config
+          const probeConfig = (context.probe as unknown as { config?: { debug?: boolean } }).config;
+          if (probeConfig?.debug) {
+            // eslint-disable-next-line no-console
             console.log('[3Lens] Could not initialize helpers:', e);
           }
         }
@@ -161,7 +165,10 @@ export function createR3FConnector(
 
       connectedRef.current = true;
 
-      if ((context.probe as any).config?.debug) {
+      // Check if debug mode is enabled via config
+      const probeConfig = (context.probe as unknown as { config?: { debug?: boolean } }).config;
+      if (probeConfig?.debug) {
+        // eslint-disable-next-line no-console
         console.log('[3Lens] Connected to React Three Fiber');
       }
 

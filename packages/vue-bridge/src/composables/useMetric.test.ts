@@ -253,7 +253,7 @@ describe('useFPS', () => {
 
     const wrapper = mount(TestComponent);
 
-    frameStatsRef.value = { fps: 59 };
+    frameStatsRef.value = { performance: { fps: 59 } };
     await nextTick();
 
     expect(wrapper.vm.fps.current).toBe(59);
@@ -293,7 +293,7 @@ describe('useFrameTime', () => {
 
     const wrapper = mount(TestComponent);
 
-    frameStatsRef.value = { frameTimeMs: 16.67 };
+    frameStatsRef.value = { cpuTimeMs: 16.67 };
     await nextTick();
 
     expect(wrapper.vm.frameTime.current).toBe(16.67);
@@ -368,7 +368,7 @@ describe('useGPUMemory', () => {
 
     const wrapper = mount(TestComponent);
 
-    frameStatsRef.value = { memory: { gpuMemoryEstimate: 256 * 1024 * 1024 } };
+    frameStatsRef.value = { memory: { totalGpuMemory: 256 * 1024 * 1024 } };
     await nextTick();
 
     expect(wrapper.vm.gpuMemory.current).toBe(256 * 1024 * 1024);
@@ -412,7 +412,7 @@ describe('useTextureCount', () => {
 
     const wrapper = mount(TestComponent);
 
-    frameStatsRef.value = { memory: { textureCount: 25 } };
+    frameStatsRef.value = { memory: { textures: 25 } };
     await nextTick();
 
     expect(wrapper.vm.textureCount.current).toBe(25);
@@ -437,7 +437,7 @@ describe('useGeometryCount', () => {
 
     const wrapper = mount(TestComponent);
 
-    frameStatsRef.value = { memory: { geometryCount: 50 } };
+    frameStatsRef.value = { memory: { geometries: 50 } };
     await nextTick();
 
     expect(wrapper.vm.geometryCount.current).toBe(50);

@@ -1,10 +1,10 @@
-import { ref, computed, watch, onUnmounted, type App, type Ref } from 'vue';
+import { ref, shallowRef, computed, type App } from 'vue';
+import type * as THREE from 'three';
 import {
   createProbe,
   type DevtoolProbe,
   type FrameStats,
   type SceneSnapshot,
-  type SceneNode,
 } from '@3lens/core';
 import { ThreeLensKey, type ThreeLensPluginConfig, type ThreeLensContext } from './types';
 
@@ -12,7 +12,6 @@ import { ThreeLensKey, type ThreeLensPluginConfig, type ThreeLensContext } from 
  * Default configuration
  */
 const DEFAULT_CONFIG: ThreeLensPluginConfig = {
-  appName: 'Vue Three.js App',
   showOverlay: true,
   toggleShortcut: 'ctrl+shift+d',
   debug: false,
@@ -22,11 +21,11 @@ const DEFAULT_CONFIG: ThreeLensPluginConfig = {
  * Create the 3Lens context
  */
 function createThreeLensContext(config: ThreeLensPluginConfig): ThreeLensContext {
-  const probe = ref<DevtoolProbe | null>(null);
+  const probe = shallowRef<DevtoolProbe | null>(null);
   const isReady = ref(false);
-  const frameStats = ref<FrameStats | null>(null);
-  const snapshot = ref<SceneSnapshot | null>(null);
-  const selectedNode = ref<SceneNode | null>(null);
+  const frameStats = shallowRef<FrameStats | null>(null);
+  const snapshot = shallowRef<SceneSnapshot | null>(null);
+  const selectedNode = shallowRef<THREE.Object3D | null>(null);
   const isOverlayVisible = ref(config.showOverlay ?? true);
 
   const overlay: { show: () => void; hide: () => void; toggle: () => void } | null = null;
@@ -34,7 +33,7 @@ function createThreeLensContext(config: ThreeLensPluginConfig): ThreeLensContext
 
   // Create probe
   const probeInstance = createProbe({
-    appName: config.appName,
+    appName: config.appName ?? 'Vue Three.js App',
     debug: config.debug,
   });
   probe.value = probeInstance;
@@ -60,19 +59,22 @@ function createThreeLensContext(config: ThreeLensPluginConfig): ThreeLensContext
   );
 
   // Computed metrics
-  const fps = computed(() => frameStats.value?.fps ?? 0);
+  const fps = computed(() => frameStats.value?.performance?.fps ?? 0);
   const drawCalls = computed(() => frameStats.value?.drawCalls ?? 0);
   const triangles = computed(() => frameStats.value?.triangles ?? 0);
-  const frameTime = computed(() => frameStats.value?.frameTimeMs ?? 0);
-  const gpuMemory = computed(() => frameStats.value?.memory?.gpuMemoryEstimate ?? 0);
+  const frameTime = computed(() => frameStats.value?.cpuTimeMs ?? 0);
+  const gpuMemory = computed(() => frameStats.value?.memory?.totalGpuMemory ?? 0);
 
   // Actions
   const selectObject = (uuid: string) => {
-    probeInstance.selectObjectByUuid(uuid);
+    const obj = probeInstance.findObjectByDebugIdOrUuid(uuid);
+    if (obj) {
+      probeInstance.selectObject(obj);
+    }
   };
 
   const clearSelection = () => {
-    probeInstance.clearSelection();
+    probeInstance.selectObject(null);
   };
 
   const showOverlay = () => {

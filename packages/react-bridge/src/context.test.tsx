@@ -17,17 +17,17 @@ function createMockContextValue(): ThreeLensContextValue {
     probe: {
       observeRenderer: vi.fn(),
       observeScene: vi.fn(),
-      selectObjectByUuid: vi.fn(),
-      clearSelection: vi.fn(),
-    } as any,
+      findObjectByDebugIdOrUuid: vi.fn(),
+      selectObject: vi.fn(),
+    } as unknown as ThreeLensContextValue['probe'],
     isReady: true,
     frameStats: {
-      fps: 60,
-      frameTimeMs: 16.67,
+      performance: { fps: 60 },
+      cpuTimeMs: 16.67,
       drawCalls: 100,
       triangles: 50000,
-    } as any,
-    snapshot: { root: { children: [] }, timestamp: Date.now() } as any,
+    } as unknown as ThreeLensContextValue['frameStats'],
+    snapshot: { root: { children: [] }, timestamp: Date.now() } as unknown as ThreeLensContextValue['snapshot'],
     selectedNode: null,
     selectObject: vi.fn(),
     clearSelection: vi.fn(),
@@ -66,9 +66,9 @@ describe('useThreeLensContext', () => {
   it('should throw with helpful error message', () => {
     try {
       renderHook(() => useThreeLensContext());
-    } catch (e: any) {
-      expect(e.message).toContain('ThreeLensProvider');
-      expect(e.message).toContain('ThreeLensCanvas');
+    } catch (e: unknown) {
+      expect((e as Error).message).toContain('ThreeLensProvider');
+      expect((e as Error).message).toContain('ThreeLensCanvas');
     }
   });
 
@@ -97,7 +97,7 @@ describe('useThreeLensContext', () => {
     const { result } = renderHook(() => useThreeLensContext(), { wrapper });
 
     expect(result.current.frameStats).toBe(mockContext.frameStats);
-    expect(result.current.frameStats?.fps).toBe(60);
+    expect(result.current.frameStats?.performance?.fps).toBe(60);
   });
 
   it('should provide access to snapshot', () => {

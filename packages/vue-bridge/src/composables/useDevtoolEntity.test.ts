@@ -22,7 +22,7 @@ function createMockObject3D(options: { name?: string; uuid?: string; userData?: 
 // Helper to create a test context
 function createTestContext(overrides: Partial<ThreeLensContext> = {}): ThreeLensContext {
   const mockProbe = {
-    requestSnapshot: vi.fn(),
+    takeSnapshot: vi.fn(),
   };
 
   return {
@@ -144,7 +144,7 @@ describe('useDevtoolEntity', () => {
         },
       });
 
-      expect(mockContext.probe.value?.requestSnapshot).toHaveBeenCalled();
+      expect(mockContext.probe.value?.takeSnapshot).toHaveBeenCalled();
     });
 
     it('should handle null object', () => {
@@ -184,14 +184,14 @@ describe('useDevtoolEntity', () => {
       });
 
       // Initially null, no name set
-      expect(mockContext.probe.value?.requestSnapshot).not.toHaveBeenCalled();
+      expect(mockContext.probe.value?.takeSnapshot).not.toHaveBeenCalled();
 
       // Set the object
       objectRef.value = createMockObject3D();
       await nextTick();
 
       expect(objectRef.value.name).toBe('RefObject');
-      expect(mockContext.probe.value?.requestSnapshot).toHaveBeenCalled();
+      expect(mockContext.probe.value?.takeSnapshot).toHaveBeenCalled();
     });
 
     it('should preserve existing userData', () => {

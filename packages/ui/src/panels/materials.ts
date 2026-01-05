@@ -15,7 +15,7 @@ function buildMeshNameMap(snapshot: SceneSnapshot | null): Map<string, string> {
 
   function traverse(node: SceneNode) {
     // Use the object's name, or fallback to type
-    const name = node.ref.name || node.ref.objectType;
+    const name = node.ref.name || node.ref.type;
     map.set(node.ref.debugId, name);
     
     if (node.children) {

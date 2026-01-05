@@ -196,10 +196,11 @@ export function createNxLibraryHelper(
  * ```
  */
 export function NxThreeLensLibrary(options: NxLibraryOptions): ClassDecorator {
-  return (target: any) => {
+  return (target: object) => {
     // Store options as static metadata
-    target.__3lens_nx_options = options;
-    return target;
+    (target as Record<string, unknown>).__3lens_nx_options = options;
+    // Return undefined - ClassDecorator expects void return type
+    return undefined as unknown as void;
   };
 }
 

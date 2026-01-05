@@ -60,11 +60,11 @@ export interface UseTresProbeReturn {
  * ```
  */
 export function useTresProbe(options: TresProbeOptions = {}): UseTresProbeReturn {
-  const { autoConnect = true } = options;
+  const { autoConnect: _autoConnect = true } = options;
   const context = useThreeLensOptional();
   const isConnected = ref(false);
 
-  let connectedRenderer: THREE.WebGLRenderer | null = null;
+  let _connectedRenderer: THREE.WebGLRenderer | null = null;
 
   const connect = (
     renderer: THREE.WebGLRenderer,
@@ -85,23 +85,24 @@ export function useTresProbe(options: TresProbeOptions = {}): UseTresProbeReturn
         probe.initializeTransformGizmo?.(scene, camera, renderer.domElement, {
           // Minimal THREE namespace for transform controls
           Object3D: scene.constructor,
-        } as any);
-        probe.initializeCameraController?.(camera, {} as any);
+        } as unknown as typeof THREE);
+        probe.initializeCameraController?.(camera, {} as unknown as typeof THREE);
       }
     } catch {
       // Helpers not critical
     }
 
-    connectedRenderer = renderer;
+    _connectedRenderer = renderer;
     isConnected.value = true;
 
-    if (context.probe.value && (context.probe.value as any).config?.debug) {
+    if (context.probe.value && (context.probe.value as unknown as { config?: { debug?: boolean } }).config?.debug) {
+      // eslint-disable-next-line no-console
       console.log('[3Lens] Connected to TresJS');
     }
   };
 
   const disconnect = () => {
-    connectedRenderer = null;
+    _connectedRenderer = null;
     isConnected.value = false;
   };
 
@@ -153,7 +154,8 @@ export function createTresConnector(
         }
       } catch (e) {
         // useTres not available or not inside TresCanvas
-        if (context.probe.value && (context.probe.value as any).config?.debug) {
+        if (context.probe.value && (context.probe.value as unknown as { config?: { debug?: boolean } }).config?.debug) {
+          // eslint-disable-next-line no-console
           console.log('[3Lens] TresJS context not available:', e);
         }
       }
@@ -162,4 +164,3 @@ export function createTresConnector(
     return tresProbe;
   };
 }
-

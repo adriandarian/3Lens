@@ -441,7 +441,7 @@ export class PluginLoader {
     return `${source.type}:${source.source}:${source.version ?? ''}`;
   }
 
-  private getLoadedPluginId(source: PluginSource): PluginId | null {
+  private getLoadedPluginId(_source: PluginSource): PluginId | null {
     // For inline plugins, we can't determine the ID without loading
     // For other sources, we need to load to get the ID
     return null;

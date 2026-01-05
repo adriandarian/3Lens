@@ -380,11 +380,12 @@ export class CommandPalette {
         this.scrollToSelected();
         break;
         
-      case 'Enter':
+      case 'Enter': {
         e.preventDefault();
         const cmd = this.filteredCommands[this.selectedIndex];
         if (cmd) this.execute(cmd.id);
         break;
+      }
         
       case 'Escape':
         e.preventDefault();

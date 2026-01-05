@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { DevtoolProbe } from '../probe/DevtoolProbe';
+import type { ThreeNamespace } from '../types';
 
 /**
  * InspectMode handles interactive object selection via raycasting
@@ -21,7 +22,7 @@ export class InspectMode {
    * Initialize inspect mode with canvas and camera
    * Must be called before enabling inspect mode
    */
-  initialize(canvas: HTMLCanvasElement, camera: THREE.Camera, three: typeof import('three')): void {
+  initialize(canvas: HTMLCanvasElement, camera: THREE.Camera, three: ThreeNamespace): void {
     this.canvas = canvas;
     this.camera = camera;
     this.raycaster = new three.Raycaster();
@@ -169,7 +170,7 @@ export class InspectMode {
       scene.traverse((obj) => {
         // Only pick meshes (skip lights, cameras, helpers, etc.)
         // Check for isMesh property which is set by THREE.Mesh
-        if ((obj as any).isMesh === true) {
+        if ('isMesh' in obj && obj.isMesh === true) {
           // Skip selection helpers themselves
           if (obj.name !== '__3lens_selection_helper__' && 
               obj.name !== '__3lens_hover_helper__') {

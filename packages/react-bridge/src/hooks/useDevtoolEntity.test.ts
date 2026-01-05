@@ -23,7 +23,7 @@ function createMockObject3D(uuid = 'test-uuid'): any {
 // Mock probe
 function createMockProbe(): any {
   return {
-    requestSnapshot: vi.fn(),
+    takeSnapshot: vi.fn(),
     onFrameStats: vi.fn(() => () => {}),
     onSnapshot: vi.fn(() => () => {}),
     onSelectionChanged: vi.fn(() => () => {}),
@@ -123,7 +123,7 @@ describe('useDevtoolEntity', () => {
 
       renderHook(() => useDevtoolEntity(obj, { name: 'Test' }), { wrapper });
 
-      expect(mockProbe.requestSnapshot).toHaveBeenCalled();
+      expect(mockProbe.takeSnapshot).toHaveBeenCalled();
     });
 
     it('should clean up metadata on unmount', () => {
@@ -146,7 +146,7 @@ describe('useDevtoolEntity', () => {
         renderHook(() => useDevtoolEntity(null, { name: 'Test' }), { wrapper });
       }).not.toThrow();
 
-      expect(mockProbe.requestSnapshot).not.toHaveBeenCalled();
+      expect(mockProbe.takeSnapshot).not.toHaveBeenCalled();
     });
 
     it('should handle undefined object', () => {

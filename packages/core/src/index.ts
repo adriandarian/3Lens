@@ -180,7 +180,7 @@ export type {
  * Common utility types.
  * @category Types
  */
-export type { Unsubscribe } from './types/common';
+export type { Unsubscribe, ThreeNamespace } from './types/common';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CORE - Main Probe API

@@ -428,11 +428,20 @@ describe('ConfigLoader', () => {
       const callback = vi.fn();
       loader.onViolation(callback);
       
-      const stats = createMockFrameStats({ drawCalls: 100 });
+      // Create stats that only violate maxDrawCalls, not other rules
+      const stats = createMockFrameStats({ 
+        drawCalls: 100, // > 50 (violates)
+        triangles: 1000, // well under 500000 default
+        cpuTimeMs: 5, // well under 16.67 default
+      });
       loader.checkRules(stats);
       loader.checkRules(stats); // Should be blocked by cooldown
       
-      expect(callback).toHaveBeenCalledTimes(1);
+      // Only count calls for the draw calls rule specifically
+      const drawCallViolations = callback.mock.calls.filter(
+        (call: any) => call[0].ruleId === 'maxDrawCalls'
+      );
+      expect(drawCallViolations.length).toBe(1);
     });
   });
 

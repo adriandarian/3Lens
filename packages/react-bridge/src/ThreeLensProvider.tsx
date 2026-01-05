@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createProbe, type DevtoolProbe, type FrameStats, type SceneSnapshot, type SceneNode } from '@3lens/core';
+import type * as THREE from 'three';
+import { createProbe, type DevtoolProbe, type FrameStats, type SceneSnapshot } from '@3lens/core';
 import { ThreeLensContext } from './context';
 import type { ThreeLensProviderConfig, ThreeLensContextValue } from './types';
 
@@ -12,7 +13,7 @@ export interface ThreeLensProviderProps {
   /**
    * Children to render
    */
-  children: React.ReactNode;
+  children?: React.ReactNode;
 
   /**
    * Optional: Pre-created probe instance (for advanced use cases)
@@ -47,7 +48,7 @@ export function ThreeLensProvider({
   const [isReady, setIsReady] = useState(false);
   const [frameStats, setFrameStats] = useState<FrameStats | null>(null);
   const [snapshot, setSnapshot] = useState<SceneSnapshot | null>(null);
-  const [selectedNode, setSelectedNode] = useState<SceneNode | null>(null);
+  const [selectedNode, setSelectedNode] = useState<THREE.Object3D | null>(null);
   const [isOverlayVisible, setIsOverlayVisible] = useState(config.showOverlay ?? true);
 
   const overlayRef = useRef<{ show: () => void; hide: () => void; toggle: () => void } | null>(
@@ -140,13 +141,16 @@ export function ThreeLensProvider({
 
   const selectObject = useCallback(
     (uuid: string) => {
-      probe?.selectObjectByUuid(uuid);
+      const obj = probe?.findObjectByDebugIdOrUuid(uuid);
+      if (obj) {
+        probe?.selectObject(obj);
+      }
     },
     [probe]
   );
 
   const clearSelection = useCallback(() => {
-    probe?.clearSelection();
+    probe?.selectObject(null);
   }, [probe]);
 
   const showOverlay = useCallback(() => {

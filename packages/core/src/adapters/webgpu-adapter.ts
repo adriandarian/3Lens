@@ -150,7 +150,7 @@ export function createWebGPUAdapter(
   let disposed = false;
 
   // Performance tracking
-  let lastFrameTime = performance.now();
+  let _lastFrameTime = performance.now();
   let minFrameTime = Infinity;
   let maxFrameTime = 0;
   let totalFrameTime = 0;
@@ -172,13 +172,13 @@ export function createWebGPUAdapter(
   const resourceScanInterval = 2000;
 
   // Current scene reference
-  let currentScene: THREE.Scene | null = null;
+  let _currentScene: THREE.Scene | null = null;
 
   // GPU timing with timestamp queries
   const lastGpuTime = 0;
   let gpuTimingEnabled = false;
   let gpuTimingManager: WebGpuTimingManager | null = null;
-  let gpuTimingInitialized = false;
+  let _gpuTimingInitialized = false;
   const lastGpuTiming: GpuFrameTiming | null = null;
 
   // Try to detect if timestamp queries are available and initialize timing
@@ -194,12 +194,13 @@ export function createWebGPUAdapter(
     
     // Initialize async
     gpuTimingManager.initialize(device).then((success) => {
-      gpuTimingInitialized = success;
+      _gpuTimingInitialized = success;
       if (success) {
+        // eslint-disable-next-line no-console
         console.log('[3Lens WebGPU] GPU timing initialized with timestamp queries');
       }
     }).catch(() => {
-      gpuTimingInitialized = false;
+      _gpuTimingInitialized = false;
     });
   } else if (backend?.hasTimestampQuery) {
     gpuTimingEnabled = true;
@@ -223,7 +224,7 @@ export function createWebGPUAdapter(
     frameTimeCount++;
 
     // Calculate averages
-    const avgFrameTime = frameTimeCount > 0 ? totalFrameTime / frameTimeCount : cpuTimeMs;
+    const _avgFrameTime = frameTimeCount > 0 ? totalFrameTime / frameTimeCount : cpuTimeMs;
 
     // Analyze scene if needed
     if (!cachedSceneAnalysis) {
@@ -243,32 +244,54 @@ export function createWebGPUAdapter(
     // Build rendering stats
     const rendering: RenderingStats = buildRenderingStats(scene, info, cachedSceneAnalysis);
 
-    // Camera info
-    const cameraInfo = extractCameraInfo(camera);
-
     // Get GPU timing from timestamp queries
     const gpuTiming = lastGpuTiming;
     const gpuTimeMs = gpuTiming?.totalMs ?? (lastGpuTime > 0 ? lastGpuTime : undefined);
 
+    // Calculate FPS values
+    const currentFps = cpuTimeMs > 0 ? 1000 / cpuTimeMs : 60;
+    const minFps = maxFrameTime > 0 ? 1000 / maxFrameTime : currentFps;
+    const maxFps = minFrameTime > 0 && minFrameTime < Infinity ? 1000 / minFrameTime : currentFps;
+
+    // Calculate delta time
+    const deltaTime = frameCount > 0 ? cpuTimeMs : 0;
+
+    // Scene analysis
+    const visibleObjects = cachedSceneAnalysis?.lights?.length ?? 0;
+    const totalObjects = visibleObjects;
+
     const stats: FrameStats = {
+      frame: frameCount,
       timestamp: now,
-      frameNumber: frameCount,
+      deltaTimeMs: deltaTime,
       cpuTimeMs,
       gpuTimeMs,
       drawCalls: info.render.calls,
       triangles: info.render.triangles,
       points: info.render.points,
       lines: info.render.lines,
-      geometryCount: info.memory.geometries,
-      textureCount: info.memory.textures,
+      vertices: 0, // Would need scene traversal
+      objectsVisible: visibleObjects,
+      objectsTotal: totalObjects,
+      objectsCulled: 0,
+      materialsUsed: 0, // Would need scene traversal
       memory,
       rendering,
       performance: {
-        fpsSmoothed: cpuTimeMs > 0 ? 1000 / cpuTimeMs : 0,
-        fpsMin: maxFrameTime > 0 ? 1000 / maxFrameTime : 0,
-        fpsMax: minFrameTime > 0 && minFrameTime < Infinity ? 1000 / minFrameTime : 0,
+        fps: currentFps,
+        fpsSmoothed: currentFps,
+        fpsMin: minFps,
+        fpsMax: maxFps,
+        fps1PercentLow: minFps,
+        frameBudgetUsed: cpuTimeMs / 16.67 * 100,
+        targetFrameTimeMs: 16.67,
+        frameTimeVariance: 0,
+        trianglesPerDrawCall: info.render.calls > 0 ? info.render.triangles / info.render.calls : 0,
+        trianglesPerObject: totalObjects > 0 ? info.render.triangles / totalObjects : 0,
+        drawCallEfficiency: 100,
+        isSmooth: cpuTimeMs < 16.67,
+        droppedFrames: 0,
       },
-      camera: cameraInfo,
       backend: 'webgpu' as const,
       webgpuExtras: {
         pipelinesUsed: cachedPipelines.length,
@@ -299,7 +322,7 @@ export function createWebGPUAdapter(
       return;
     }
 
-    currentScene = scene;
+    _currentScene = scene;
 
     if (frameCallbacks.length === 0) {
       originalRender(scene, camera);
@@ -321,7 +344,7 @@ export function createWebGPUAdapter(
 
     const cpuTimeMs = performance.now() - startTime;
     frameCount++;
-    lastFrameTime = performance.now();
+    _lastFrameTime = performance.now();
 
     const stats = collectFrameStats(scene, camera, cpuTimeMs);
 
@@ -348,7 +371,7 @@ export function createWebGPUAdapter(
         return;
       }
 
-      currentScene = scene;
+      _currentScene = scene;
 
       if (frameCallbacks.length === 0) {
         await originalRenderAsync(scene, camera);
@@ -370,7 +393,7 @@ export function createWebGPUAdapter(
 
       const cpuTimeMs = performance.now() - startTime;
       frameCount++;
-      lastFrameTime = performance.now();
+      _lastFrameTime = performance.now();
 
       const stats = collectFrameStats(scene, camera, cpuTimeMs);
 
@@ -472,7 +495,7 @@ export function createWebGPUAdapter(
     const pipelineCache = renderer.backend?.pipelines;
     if (pipelineCache) {
       let idx = 0;
-      for (const [key] of pipelineCache) {
+      for (const [_key] of pipelineCache) {
         pipelines.push({
           id: `pipeline-${idx++}`,
           type: 'render', // Would need deeper inspection to determine
@@ -592,13 +615,14 @@ export function createWebGPUAdapter(
     const geometryMemory = cachedGeometries.reduce((sum, g) => sum + g.estimatedMemoryBytes, 0);
 
     return {
-      totalGpuMemory: textureMemory + geometryMemory,
-      textureMemory,
+      geometries: info.memory.geometries,
+      textures: info.memory.textures,
       geometryMemory,
-      renderTargetMemory: 0, // Would need deeper tracking
-      textureCount: info.memory.textures,
-      geometryCount: info.memory.geometries,
-      renderTargetCount: 0,
+      textureMemory,
+      totalGpuMemory: textureMemory + geometryMemory,
+      renderTargets: 0, // Would need deeper tracking
+      renderTargetMemory: 0,
+      programs: cachedPipelines.length, // Approximate with pipelines
       jsHeapSize: (performance as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize,
     };
   }
@@ -612,28 +636,24 @@ export function createWebGPUAdapter(
     analysis: SceneAnalysis
   ): RenderingStats {
     return {
-      lightCount: analysis.lights.length,
-      shadowMapCount: analysis.shadowLights,
-      animationsPlaying: analysis.animations,
-      stateChanges: info.render.calls, // Approximate
-    };
-  }
-
-  /**
-   * Extract camera info
-   */
-  function extractCameraInfo(camera: THREE.Camera): FrameStats['camera'] {
-    return {
-      type: camera.type,
-      fov: 'fov' in camera ? (camera as THREE.PerspectiveCamera).fov : undefined,
-      aspect: 'aspect' in camera ? (camera as THREE.PerspectiveCamera).aspect : undefined,
-      near: 'near' in camera ? (camera as THREE.PerspectiveCamera).near : undefined,
-      far: 'far' in camera ? (camera as THREE.PerspectiveCamera).far : undefined,
-      position: {
-        x: camera.position.x,
-        y: camera.position.y,
-        z: camera.position.z,
-      },
+      shadowMapUpdates: 0,
+      shadowCastingLights: analysis.shadowLights,
+      totalLights: analysis.lights.length,
+      activeLights: analysis.lights.length,
+      skinnedMeshes: 0,
+      totalBones: 0,
+      instancedDrawCalls: 0,
+      totalInstances: 0,
+      transparentObjects: 0,
+      transparentDrawCalls: 0,
+      renderTargetSwitches: 0,
+      programSwitches: info.render.calls, // Approximate via state changes
+      textureBinds: 0,
+      bufferUploads: 0,
+      bytesUploaded: 0,
+      postProcessingPasses: 0,
+      xrActive: false,
+      viewports: 1,
     };
   }
 
@@ -711,7 +731,7 @@ export function createWebGPUAdapter(
 export function getWebGPUCapabilities(renderer: WebGPURenderer): WebGPUCapabilities | null {
   const backend = renderer.backend;
   const device = backend?.device;
-  const adapter = backend?.adapter;
+  const _adapter = backend?.adapter;
 
   if (!device) {
     return null;

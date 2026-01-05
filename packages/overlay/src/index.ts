@@ -140,7 +140,7 @@ export type {
 // CONVENIENCE FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
-import type { DevtoolProbe, ProbeConfig } from '@3lens/core';
+import type { DevtoolProbe, ProbeConfig, ThreeNamespace } from '@3lens/core';
 import { createProbe } from '@3lens/core';
 import type { Scene, WebGLRenderer } from 'three';
 
@@ -212,7 +212,7 @@ export interface OverlayBootstrapOptions {
   /** Additional overlay configuration */
   overlay?: Partial<Omit<OverlayOptions, 'probe'>>;
   /** Optional THREE namespace reference for enhanced type detection */
-  three?: typeof import('three');
+  three?: ThreeNamespace;
 }
 
 /**

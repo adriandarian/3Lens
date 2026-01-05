@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useThreeLensContext } from '../context';
 import type { FrameStats } from '@3lens/core';
 import type { UseMetricOptions, MetricValue } from '../types';
@@ -100,7 +100,7 @@ export function useMetric(
  * ```
  */
 export function useFPS(smoothed = true): MetricValue<number> {
-  return useMetric((stats) => stats.fps, { smoothed, smoothingSamples: 30 });
+  return useMetric((stats) => stats.performance?.fps ?? 0, { smoothed, smoothingSamples: 30 });
 }
 
 /**
@@ -110,7 +110,7 @@ export function useFPS(smoothed = true): MetricValue<number> {
  * @returns Frame time metric value
  */
 export function useFrameTime(smoothed = false): MetricValue<number> {
-  return useMetric((stats) => stats.frameTimeMs, { smoothed });
+  return useMetric((stats) => stats.cpuTimeMs, { smoothed });
 }
 
 /**
@@ -137,7 +137,7 @@ export function useTriangles(): MetricValue<number> {
  * @returns GPU memory in bytes
  */
 export function useGPUMemory(): MetricValue<number> {
-  return useMetric((stats) => stats.memory?.gpuMemoryEstimate ?? 0);
+  return useMetric((stats) => stats.memory?.totalGpuMemory ?? 0);
 }
 
 /**
@@ -146,7 +146,7 @@ export function useGPUMemory(): MetricValue<number> {
  * @returns Texture count metric value
  */
 export function useTextureCount(): MetricValue<number> {
-  return useMetric((stats) => stats.memory?.textureCount ?? 0);
+  return useMetric((stats) => stats.memory?.textures ?? 0);
 }
 
 /**
@@ -155,6 +155,6 @@ export function useTextureCount(): MetricValue<number> {
  * @returns Geometry count metric value
  */
 export function useGeometryCount(): MetricValue<number> {
-  return useMetric((stats) => stats.memory?.geometryCount ?? 0);
+  return useMetric((stats) => stats.memory?.geometries ?? 0);
 }
 

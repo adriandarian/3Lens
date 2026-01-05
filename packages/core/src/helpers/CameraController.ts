@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { DevtoolProbe } from '../probe/DevtoolProbe';
+import type { ThreeNamespace } from '../types';
 
 export interface CameraInfo {
   uuid: string;
@@ -46,7 +47,7 @@ interface AnimationState {
  * and camera switching
  */
 export class CameraController {
-  private THREE: typeof import('three') | null = null;
+  private THREE: ThreeNamespace | null = null;
   private camera: THREE.Camera | null = null;
   private orbitTarget: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
   private animation: AnimationState | null = null;
@@ -73,7 +74,7 @@ export class CameraController {
    */
   initialize(
     camera: THREE.Camera,
-    three: typeof import('three'),
+    three: ThreeNamespace,
     orbitTarget?: { x: number; y: number; z: number }
   ): void {
     this.camera = camera;

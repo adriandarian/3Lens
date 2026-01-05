@@ -8,7 +8,7 @@
  * - URL parameters
  */
 
-import type { ProbeConfig, RulesConfig, SamplingConfig, CustomRule, RuleResult } from '../types/config';
+import type { ProbeConfig, RulesConfig, SamplingConfig, CustomRule } from '../types/config';
 import type { FrameStats } from '../types/stats';
 
 /**
@@ -198,10 +198,11 @@ export class ConfigLoader {
         ];
 
         for (const rule of numericRules) {
-          if (rules[rule] !== undefined && typeof rules[rule] !== 'number') {
+          const value = rules[rule];
+          if (value !== undefined && typeof value !== 'number') {
             warnings.push(`rules.${rule} should be a number`);
           }
-          if (typeof rules[rule] === 'number' && rules[rule] < 0) {
+          if (typeof value === 'number' && value < 0) {
             warnings.push(`rules.${rule} should be positive`);
           }
         }
@@ -500,10 +501,10 @@ export class ConfigLoader {
       results.push({
         ruleId: 'maxLights',
         ruleName: 'Max Lights',
-        passed: stats.rendering.lights <= t.maxLights,
-        severity: stats.rendering.lights > t.maxLights * 1.5 ? 'error' : 'warning',
-        message: `Lights: ${stats.rendering.lights} (max: ${t.maxLights})`,
-        currentValue: stats.rendering.lights,
+        passed: stats.rendering.totalLights <= t.maxLights,
+        severity: stats.rendering.totalLights > t.maxLights * 1.5 ? 'error' : 'warning',
+        message: `Lights: ${stats.rendering.totalLights} (max: ${t.maxLights})`,
+        currentValue: stats.rendering.totalLights,
         threshold: t.maxLights,
       });
 
@@ -511,10 +512,10 @@ export class ConfigLoader {
       results.push({
         ruleId: 'maxShadowLights',
         ruleName: 'Max Shadow Lights',
-        passed: stats.rendering.shadowLights <= t.maxShadowLights,
-        severity: stats.rendering.shadowLights > t.maxShadowLights * 1.5 ? 'error' : 'warning',
-        message: `Shadow lights: ${stats.rendering.shadowLights} (max: ${t.maxShadowLights})`,
-        currentValue: stats.rendering.shadowLights,
+        passed: stats.rendering.shadowCastingLights <= t.maxShadowLights,
+        severity: stats.rendering.shadowCastingLights > t.maxShadowLights * 1.5 ? 'error' : 'warning',
+        message: `Shadow lights: ${stats.rendering.shadowCastingLights} (max: ${t.maxShadowLights})`,
+        currentValue: stats.rendering.shadowCastingLights,
         threshold: t.maxShadowLights,
       });
     }

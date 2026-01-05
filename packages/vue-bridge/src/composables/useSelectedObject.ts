@@ -1,12 +1,12 @@
 import { computed, type ComputedRef, type Ref } from 'vue';
-import type { SceneNode } from '@3lens/core';
+import type * as THREE from 'three';
 import { useThreeLens } from './useThreeLens';
 
 export interface UseSelectedObjectReturn {
   /**
    * The currently selected scene node
    */
-  selectedNode: Ref<SceneNode | null>;
+  selectedNode: Ref<THREE.Object3D | null>;
 
   /**
    * The selected object's UUID
@@ -59,8 +59,8 @@ export interface UseSelectedObjectReturn {
  *
  * <template>
  *   <div v-if="hasSelection">
- *     <h3>{{ selectedNode?.ref.name || 'Unnamed' }}</h3>
- *     <p>Type: {{ selectedNode?.ref.type }}</p>
+ *     <h3>{{ selectedNode?.name || 'Unnamed' }}</h3>
+ *     <p>Type: {{ selectedNode?.type }}</p>
  *     <button @click="clear">Deselect</button>
  *   </div>
  *   <div v-else>Nothing selected</div>
@@ -70,13 +70,13 @@ export interface UseSelectedObjectReturn {
 export function useSelectedObject(): UseSelectedObjectReturn {
   const { selectedNode, selectObject, clearSelection } = useThreeLens();
 
-  const selectedUuid = computed(() => selectedNode.value?.ref.uuid ?? null);
-  const selectedName = computed(() => selectedNode.value?.ref.name ?? null);
-  const selectedType = computed(() => selectedNode.value?.ref.type ?? null);
+  const selectedUuid = computed(() => selectedNode.value?.uuid ?? null);
+  const selectedName = computed(() => selectedNode.value?.name ?? null);
+  const selectedType = computed(() => selectedNode.value?.type ?? null);
   const hasSelection = computed(() => selectedNode.value !== null);
 
   const isSelected = (uuid: string): boolean => {
-    return selectedNode.value?.ref.uuid === uuid;
+    return selectedNode.value?.uuid === uuid;
   };
 
   return {

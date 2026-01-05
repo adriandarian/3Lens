@@ -6,10 +6,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { createElement, type ReactNode, useRef, useEffect } from 'react';
+import { renderHook } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
 import { ThreeLensContext } from '../context';
 import type { ThreeLensContextValue } from '../types';
+import type * as THREE from 'three';
 
 // Mock @react-three/fiber
 vi.mock('@react-three/fiber', () => ({
@@ -21,28 +22,38 @@ vi.mock('@react-three/fiber', () => ({
   useFrame: vi.fn(),
 }));
 
+// Types for the R3F hooks that createR3FConnector expects
+type UseThreeReturn = {
+  gl: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  camera: THREE.Camera;
+};
+
+type UseThreeHook = () => UseThreeReturn;
+type UseFrameHook = (callback: (state: unknown, delta: number) => void) => void;
+
 // Mock Three.js
 const mockRenderer = {
   domElement: document.createElement('canvas'),
   info: { render: { calls: 0, triangles: 0 } },
-};
+} as unknown as THREE.WebGLRenderer;
 
 const mockScene = {
   children: [],
   traverse: vi.fn(),
-};
+} as unknown as THREE.Scene;
 
 const mockCamera = {
   position: { x: 0, y: 0, z: 5 },
-};
+} as unknown as THREE.Camera;
 
 // Mock probe
 function createMockProbe() {
   return {
     observeRenderer: vi.fn(),
     observeScene: vi.fn(),
-    selectObjectByUuid: vi.fn(),
-    clearSelection: vi.fn(),
+    findObjectByDebugIdOrUuid: vi.fn(),
+    selectObject: vi.fn(),
     initializeTransformGizmo: vi.fn(),
     initializeCameraController: vi.fn(),
     config: { debug: false },
@@ -52,7 +63,7 @@ function createMockProbe() {
 // Mock context
 function createMockContext(probe = createMockProbe()): ThreeLensContextValue {
   return {
-    probe: probe as any,
+    probe: probe as unknown as ThreeLensContextValue['probe'],
     isReady: true,
     frameStats: null,
     snapshot: null,
@@ -77,8 +88,8 @@ function createWrapper(contextValue: ThreeLensContextValue | null) {
 import { createR3FConnector, R3FProbe, R3FProbeConnectorInner } from './useR3FProbe';
 
 describe('createR3FConnector', () => {
-  let mockUseThree: ReturnType<typeof vi.fn>;
-  let mockUseFrame: ReturnType<typeof vi.fn>;
+  let mockUseThree: UseThreeHook;
+  let mockUseFrame: UseFrameHook;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -86,8 +97,8 @@ describe('createR3FConnector', () => {
       gl: mockRenderer,
       scene: mockScene,
       camera: mockCamera,
-    }));
-    mockUseFrame = vi.fn();
+    })) as UseThreeHook;
+    mockUseFrame = vi.fn() as UseFrameHook;
   });
 
   it('should create a React component', () => {

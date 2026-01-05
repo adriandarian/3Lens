@@ -1,5 +1,6 @@
+import type * as THREE from 'three';
 import type { DevtoolProbe } from '../probe/DevtoolProbe';
-import type { FrameStats, SceneSnapshot, SceneNode } from '../types';
+import type { FrameStats, SceneSnapshot } from '../types';
 import type {
   PluginId,
   DevtoolPlugin,
@@ -55,7 +56,7 @@ export class PluginManager {
 
   private _frameStats: FrameStats | null = null;
   private _snapshot: SceneSnapshot | null = null;
-  private _selectedNode: SceneNode | null = null;
+  private _selectedNode: THREE.Object3D | null = null;
 
   // Toast callback (set by UI layer)
   private _toastCallback: ((message: string, type: 'info' | 'success' | 'warning' | 'error') => void) | null = null;
@@ -545,8 +546,14 @@ export class PluginManager {
       getSnapshot: () => this._snapshot,
       getSelectedNode: () => this._selectedNode,
 
-      selectObject: (uuid) => this._probe.selectObjectByUuid(uuid),
-      clearSelection: () => this._probe.clearSelection(),
+      selectObject: (uuid) => {
+        // Try to find object by UUID through the probe's scene observer
+        const obj = this._probe.findObjectByDebugIdOrUuid(uuid);
+        if (obj) {
+          this._probe.selectObject(obj);
+        }
+      },
+      clearSelection: () => this._probe.selectObject(null),
 
       getEntities: () => this._probe.getLogicalEntities(),
       getModuleInfo: (moduleId) => this._probe.getModuleInfo(moduleId),
@@ -650,7 +657,7 @@ export class PluginManager {
     }
   }
 
-  private _notifyPanelsSelection(node: SceneNode | null): void {
+  private _notifyPanelsSelection(node: THREE.Object3D | null): void {
     for (const [, { pluginId, panel }] of this._panels) {
       if (!panel.onSelectionChange) continue;
 
@@ -683,6 +690,7 @@ export class PluginManager {
 
   private _log(message: string, data?: Record<string, unknown>): void {
     if (this._probe.config.debug) {
+      // eslint-disable-next-line no-console
       console.log(`[3Lens PluginManager] ${message}`, data ?? '');
     }
   }

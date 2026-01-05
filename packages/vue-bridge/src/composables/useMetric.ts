@@ -1,4 +1,4 @@
-import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
+import { ref, watch, type Ref } from 'vue';
 import type { FrameStats } from '@3lens/core';
 import { useThreeLens } from './useThreeLens';
 import type { UseMetricOptions, MetricValue } from '../types';
@@ -104,7 +104,7 @@ export function useMetric(
  * ```
  */
 export function useFPS(smoothed = true): Ref<MetricValue<number>> {
-  return useMetric((stats) => stats.fps, { smoothed, smoothingSamples: 30 });
+  return useMetric((stats) => stats.performance?.fps ?? 0, { smoothed, smoothingSamples: 30 });
 }
 
 /**
@@ -114,7 +114,7 @@ export function useFPS(smoothed = true): Ref<MetricValue<number>> {
  * @returns Reactive frame time metric value
  */
 export function useFrameTime(smoothed = false): Ref<MetricValue<number>> {
-  return useMetric((stats) => stats.frameTimeMs, { smoothed });
+  return useMetric((stats) => stats.cpuTimeMs, { smoothed });
 }
 
 /**
@@ -141,7 +141,7 @@ export function useTriangles(): Ref<MetricValue<number>> {
  * @returns Reactive GPU memory metric value (in bytes)
  */
 export function useGPUMemory(): Ref<MetricValue<number>> {
-  return useMetric((stats) => stats.memory?.gpuMemoryEstimate ?? 0);
+  return useMetric((stats) => stats.memory?.totalGpuMemory ?? 0);
 }
 
 /**
@@ -150,7 +150,7 @@ export function useGPUMemory(): Ref<MetricValue<number>> {
  * @returns Reactive texture count metric value
  */
 export function useTextureCount(): Ref<MetricValue<number>> {
-  return useMetric((stats) => stats.memory?.textureCount ?? 0);
+  return useMetric((stats) => stats.memory?.textures ?? 0);
 }
 
 /**
@@ -159,6 +159,6 @@ export function useTextureCount(): Ref<MetricValue<number>> {
  * @returns Reactive geometry count metric value
  */
 export function useGeometryCount(): Ref<MetricValue<number>> {
-  return useMetric((stats) => stats.memory?.geometryCount ?? 0);
+  return useMetric((stats) => stats.memory?.geometries ?? 0);
 }
 

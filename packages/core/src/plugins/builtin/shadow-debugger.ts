@@ -282,7 +282,8 @@ export const ShadowDebuggerPlugin: DevtoolPlugin = {
       render(ctx: PanelRenderContext): string {
         const analysis = ctx.state.lastAnalysis as ShadowLightAnalysis[] | null;
         const stats = ctx.state.stats as ShadowStats | null;
-        const settings = { ...DEFAULT_SETTINGS, ...(ctx.state.settings ?? {}) } as ShadowDebuggerSettings;
+        const stateSettings = (ctx.state.settings ?? {}) as Partial<ShadowDebuggerSettings>;
+        const settings: ShadowDebuggerSettings = { ...DEFAULT_SETTINGS, ...stateSettings };
 
         if (!analysis) {
           return `
@@ -370,7 +371,8 @@ export const ShadowDebuggerPlugin: DevtoolPlugin = {
         container.addEventListener('click', async (e) => {
           const action = (e.target as HTMLElement).closest('[data-action]')?.getAttribute('data-action');
           if (action === 'analyze') {
-            const settings = { ...DEFAULT_SETTINGS, ...context.getAllState().settings } as ShadowDebuggerSettings;
+            const stateSettings = (context.getAllState().settings ?? {}) as Partial<ShadowDebuggerSettings>;
+            const settings: ShadowDebuggerSettings = { ...DEFAULT_SETTINGS, ...stateSettings };
             runShadowAnalysis(context, settings);
             context.requestRender();
           }

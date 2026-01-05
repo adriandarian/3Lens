@@ -13,7 +13,7 @@ function buildMeshNameMap(snapshot: SceneSnapshot | null): Map<string, string> {
   if (!snapshot?.scenes) return map;
 
   function traverse(node: SceneNode) {
-    const name = node.ref.name || node.ref.objectType;
+    const name = node.ref.name || node.ref.type;
     map.set(node.ref.debugId, name);
     
     if (node.children) {

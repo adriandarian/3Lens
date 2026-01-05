@@ -11,11 +11,11 @@ import { ThreeLensKey, type ThreeLensContext } from './types';
 
 // Mock @3lens/core
 const mockFrameStats = {
-  fps: 60,
-  frameTimeMs: 16.67,
+  performance: { fps: 60 },
+  cpuTimeMs: 16.67,
   drawCalls: 100,
   triangles: 50000,
-  memory: { gpuMemoryEstimate: 128 },
+  memory: { totalGpuMemory: 128 },
 };
 
 const mockSnapshot = {
@@ -40,8 +40,8 @@ const mockProbe = {
     selectionCallback = cb;
     return () => { selectionCallback = null; };
   }),
-  selectObjectByUuid: vi.fn(),
-  clearSelection: vi.fn(),
+  findObjectByDebugIdOrUuid: vi.fn(() => ({ uuid: 'test-uuid' })),
+  selectObject: vi.fn(),
   dispose: vi.fn(),
   config: { debug: false },
 };
@@ -204,7 +204,8 @@ describe('ThreeLensPlugin', () => {
 
       capturedContext?.selectObject('test-uuid');
 
-      expect(mockProbe.selectObjectByUuid).toHaveBeenCalledWith('test-uuid');
+      expect(mockProbe.findObjectByDebugIdOrUuid).toHaveBeenCalledWith('test-uuid');
+      expect(mockProbe.selectObject).toHaveBeenCalled();
     });
 
     it('should call clearSelection on probe', () => {
@@ -225,7 +226,7 @@ describe('ThreeLensPlugin', () => {
 
       capturedContext?.clearSelection();
 
-      expect(mockProbe.clearSelection).toHaveBeenCalled();
+      expect(mockProbe.selectObject).toHaveBeenCalledWith(null);
     });
   });
 

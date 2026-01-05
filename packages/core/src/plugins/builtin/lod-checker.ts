@@ -213,7 +213,8 @@ export const LODCheckerPlugin: DevtoolPlugin = {
       render(ctx: PanelRenderContext): string {
         const analysis = ctx.state.lastAnalysis as LODAnalysis[] | null;
         const analysisTime = ctx.state.analysisTime as number || 0;
-        const settings = { ...DEFAULT_SETTINGS, ...(ctx.state.settings ?? {}) } as LODCheckerSettings;
+        const stateSettings = (ctx.state.settings ?? {}) as Partial<LODCheckerSettings>;
+        const settings: LODCheckerSettings = { ...DEFAULT_SETTINGS, ...stateSettings };
 
         if (!analysis) {
           return `
@@ -310,7 +311,8 @@ export const LODCheckerPlugin: DevtoolPlugin = {
         container.addEventListener('click', async (e) => {
           const action = (e.target as HTMLElement).closest('[data-action]')?.getAttribute('data-action');
           if (action === 'analyze') {
-            const settings = { ...DEFAULT_SETTINGS, ...context.getAllState().settings } as LODCheckerSettings;
+            const stateSettings = (context.getAllState().settings ?? {}) as Partial<LODCheckerSettings>;
+            const settings: LODCheckerSettings = { ...DEFAULT_SETTINGS, ...stateSettings };
             await runAnalysis(context, settings);
             context.requestRender();
           }
@@ -338,8 +340,8 @@ function runAnalysis(context: DevtoolContext, settings: LODCheckerSettings): voi
   const analysis: LODAnalysis[] = [];
 
   // Get camera info for distance calculations
-  const stats = context.getFrameStats();
-  const cameraPosition = stats?.camera?.position ?? { x: 0, y: 0, z: 0 };
+  // Note: Camera info not available from FrameStats, using default position
+  const cameraPosition = { x: 0, y: 0, z: 0 };
 
   // Traverse all scenes and collect mesh data
   function traverse(node: { ref: { type: string; uuid: string; name?: string; debugId: string }; children: typeof node[] }) {

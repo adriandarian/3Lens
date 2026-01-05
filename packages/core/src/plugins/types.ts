@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import type { DevtoolProbe } from '../probe/DevtoolProbe';
-import type { FrameStats, SceneSnapshot, SceneNode } from '../types';
-import type { NewLogicalEntity, ModuleInfo } from '../entities';
+import type { FrameStats, SceneSnapshot } from '../types';
+import type { LogicalEntity as NewLogicalEntity, ModuleInfo } from '../entities';
 
 /**
  * Unique identifier for a plugin
@@ -115,7 +115,7 @@ export interface PanelDefinition {
   /**
    * Called when selection changes
    */
-  onSelectionChange?: (node: SceneNode | null, container: HTMLElement) => void;
+  onSelectionChange?: (node: THREE.Object3D | null, container: HTMLElement) => void;
 }
 
 /**
@@ -133,9 +133,9 @@ export interface PanelRenderContext {
   snapshot: SceneSnapshot | null;
 
   /**
-   * Currently selected node
+   * Currently selected object
    */
-  selectedNode: SceneNode | null;
+  selectedNode: THREE.Object3D | null;
 
   /**
    * Plugin's stored state
@@ -263,11 +263,6 @@ export interface ContextMenuContext extends DevtoolContext {
   targetObject: THREE.Object3D | null;
 
   /**
-   * The scene node at the click location (if any)
-   */
-  targetNode: SceneNode | null;
-
-  /**
    * Mouse position
    */
   position: { x: number; y: number };
@@ -328,9 +323,9 @@ export interface DevtoolContext {
   getSnapshot(): SceneSnapshot | null;
 
   /**
-   * Currently selected node
+   * Currently selected object
    */
-  getSelectedNode(): SceneNode | null;
+  getSelectedNode(): THREE.Object3D | null;
 
   /**
    * Select an object by UUID

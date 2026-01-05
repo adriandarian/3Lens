@@ -1,4 +1,4 @@
-import { watch, onUnmounted, type Ref, type MaybeRef, unref } from 'vue';
+import { watch, onUnmounted, type MaybeRef, unref } from 'vue';
 import { useThreeLensOptional } from './useThreeLens';
 import type { EntityOptions } from '../types';
 import type * as THREE from 'three';
@@ -39,7 +39,7 @@ export function useDevtoolEntity(
   options: EntityOptions = {}
 ): void {
   const context = useThreeLensOptional();
-  let registeredUuid: string | null = null;
+  let _registeredUuid: string | null = null;
 
   const register = (obj: THREE.Object3D | null | undefined) => {
     if (!obj || !context?.probe.value) return;
@@ -60,10 +60,10 @@ export function useDevtoolEntity(
       },
     };
 
-    registeredUuid = obj.uuid;
+    _registeredUuid = obj.uuid;
 
     // Trigger snapshot refresh
-    context.probe.value.requestSnapshot?.();
+    context.probe.value.takeSnapshot?.();
   };
 
   const unregister = (obj: THREE.Object3D | null | undefined) => {
@@ -72,7 +72,7 @@ export function useDevtoolEntity(
     if (obj.userData?.__3lens) {
       delete obj.userData.__3lens;
     }
-    registeredUuid = null;
+    _registeredUuid = null;
   };
 
   // Watch for object changes

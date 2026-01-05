@@ -70,7 +70,7 @@ export function useDevtoolEntity(
     registeredIdRef.current = object.uuid;
 
     // Trigger a snapshot refresh to pick up the new metadata
-    probe.requestSnapshot?.();
+    probe.takeSnapshot?.();
 
     return () => {
       // Clean up metadata when unmounting

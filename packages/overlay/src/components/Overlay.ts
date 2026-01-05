@@ -1,4 +1,4 @@
-import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType, LeakAlert, LeakReport, RuleViolation, PluginManager, DevtoolPlugin, PluginId, PanelDefinition as CorePanelDefinition, ToolbarActionDefinition } from '@3lens/core';
+import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType, LeakAlert, LeakReport, PluginManager, DevtoolPlugin, PluginId, PanelDefinition as CorePanelDefinition, ToolbarActionDefinition } from '@3lens/core';
 import { calculateBenchmarkScore } from '@3lens/core';
 
 import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
@@ -411,15 +411,15 @@ export class ThreeLensOverlay {
       iconClass: 'plugin',
       defaultWidth: 400,
       defaultHeight: 300,
-      render: (context) => {
+      render: (_context) => {
         // Render plugin panel content
         return pluginManager.renderPanel(panelKey);
       },
-      onMount: (context) => {
+      onMount: (_context) => {
         // Mount the plugin panel
-        pluginManager.mountPanel(panelKey, context.container);
+        pluginManager.mountPanel(panelKey, _context.container);
       },
-      onDestroy: (context) => {
+      onDestroy: (_context) => {
         // Unmount the plugin panel
         pluginManager.unmountPanel(panelKey);
       },
@@ -1489,7 +1489,7 @@ export class ThreeLensOverlay {
     // Calculate totals and percentages
     const totalMs = gpuTiming.totalMs;
     const passes = gpuTiming.passes;
-    const breakdown = gpuTiming.breakdown;
+    const _breakdown = gpuTiming.breakdown;
 
     // Sort passes by duration
     const sortedPasses = [...passes].sort((a, b) => b.durationMs - a.durationMs);
@@ -1522,7 +1522,7 @@ export class ThreeLensOverlay {
           
           <div class="webgpu-timing-bar-container">
             <div class="webgpu-timing-bar">
-              ${sortedPasses.map((pass, i) => {
+              ${sortedPasses.map((pass, _i) => {
                 const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
                 const color = getPassColor(pass.name);
                 return `<div class="webgpu-timing-bar-segment" style="width: ${pct}%; background: ${color};" title="${pass.name}: ${pass.durationMs.toFixed(2)}ms"></div>`;
@@ -1831,7 +1831,7 @@ export class ThreeLensOverlay {
 
     // Clean up virtual scroller when scene panel is closed
     if (panelId === 'scene' && this.virtualScroller) {
-      this.virtualScroller.destroy();
+      this.virtualScroller.dispose();
       this.virtualScroller = null;
       this.virtualScrollContainer = null;
     }
@@ -2236,17 +2236,18 @@ export class ThreeLensOverlay {
     if (!this.virtualScroller) {
       this.virtualScroller = new VirtualScroller<SceneNode>({
         container,
-        rootNodes: snapshot.scenes,
         getChildren: (node) => node.children,
         getId: (node) => node.ref.debugId,
-        isExpanded: (node) => this.expandedNodes.has(node.ref.debugId),
+        isExpanded: (id) => this.expandedNodes.has(id),
         renderRow: (flatNode) => this.renderVirtualTreeNode(flatNode),
         rowHeight: 28,
         overscan: 5,
       });
+      // Set initial data after construction
+      this.virtualScroller.setData(snapshot.scenes);
     } else {
       // Update with new data
-      this.virtualScroller.setRootNodes(snapshot.scenes);
+      this.virtualScroller.setData(snapshot.scenes);
     }
 
     this.virtualScrollContainer = container;
@@ -2373,7 +2374,7 @@ export class ThreeLensOverlay {
 
   private renderOverviewTab(stats: FrameStats, benchmark: BenchmarkScore | null, fps: number, fpsSmoothed: number, fps1Low: number): string {
     const budgetUsed = stats.performance?.frameBudgetUsed ?? (stats.cpuTimeMs / 16.67) * 100;
-    const isSmooth = stats.performance?.isSmooth ?? (stats.cpuTimeMs <= 18);
+    const _isSmooth = stats.performance?.isSmooth ?? (stats.cpuTimeMs <= 18);
 
     return `
       ${benchmark ? this.renderBenchmarkScore(benchmark) : ''}
@@ -2554,7 +2555,7 @@ export class ThreeLensOverlay {
             const percent = totalFrames > 0 ? ((count / totalFrames) * 100).toFixed(1) : 0;
             const isGood = i >= 10; // 50+ FPS
             const isOk = i >= 6 && i < 10; // 30-50 FPS
-            const isBad = i < 6; // <30 FPS
+            const _isBad = i < 6; // <30 FPS
             const colorClass = isGood ? 'good' : isOk ? 'ok' : 'bad';
             return `
               <div class="three-lens-histogram-bar-wrapper" title="${bucketLabels[i]} FPS: ${count} frames (${percent}%)">
@@ -3414,7 +3415,7 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderMemoryWarnings(memory: MemoryStats, stats: FrameStats): string {
+  private renderMemoryWarnings(memory: MemoryStats, _stats: FrameStats): string {
     const warnings: string[] = [];
     const MB = 1024 * 1024;
 
@@ -3686,8 +3687,8 @@ export class ThreeLensOverlay {
   }
 
   private renderLightingAnalysis(rendering: RenderingStats): string {
-    const hasLights = rendering.totalLights > 0;
-    const hasShadows = rendering.shadowCastingLights > 0;
+    const _hasLights = rendering.totalLights > 0;
+    const _hasShadows = rendering.shadowCastingLights > 0;
     
     // Calculate shadow cost estimate (rough)
     const shadowCost = rendering.shadowCastingLights * 2; // Assume 2ms per shadow light
@@ -3899,7 +3900,7 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderTimelineTab(stats: FrameStats): string {
+  private renderTimelineTab(_stats: FrameStats): string {
     const hasGpuData = this.gpuHistory.length > 0;
     const visibleFrameCount = this.getTimelineVisibleFrameCount();
     const spikeThreshold = 33.33; // 30 FPS threshold (2x 60fps budget)
@@ -4292,7 +4293,7 @@ export class ThreeLensOverlay {
           </div>
         </div>
         <div class="three-lens-resource-timeline-chart">
-          ${buckets.map((bucket, i) => {
+          ${buckets.map((bucket, _i) => {
             const totalHeight = ((bucket.geometry + bucket.material + bucket.texture + bucket.disposed) / maxValue * 100);
             const geoHeight = (bucket.geometry / maxValue * 100);
             const matHeight = (bucket.material / maxValue * 100);
@@ -4678,7 +4679,7 @@ export class ThreeLensOverlay {
     return `
       <div class="three-lens-material-details">
         <div class="three-lens-material-details-header">Materials (${materials.length})</div>
-        ${materials.map((mat, i) => `
+        ${materials.map((mat, _i) => `
           <div class="three-lens-material-item">
             <span class="three-lens-material-type">${mat.type}</span>
             <span class="three-lens-material-score">${mat.complexityScore.toFixed(1)}/10</span>
@@ -4760,7 +4761,7 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderCameraControlsSection(node: SceneNode): string {
+  private renderCameraControlsSection(_node: SceneNode): string {
     const isAnimating = this.probe.isCameraAnimating();
     const hasHome = this.probe.hasHomePosition();
     
@@ -5121,8 +5122,10 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 `;
     
     // Log to console for easy copying
+    /* eslint-disable no-console */
     console.log('%c3Lens Leak Report', 'font-size: 16px; font-weight: bold; color: #60a5fa;');
     console.log(reportText);
+    /* eslint-enable no-console */
     
     // Also show a brief notification in the UI
     alert(`Leak Report Generated!\n\nCheck the browser console for the full report.\n\nSummary:\n• ${report.summary.totalAlerts} alerts\n• ${formatBytes(report.summary.estimatedLeakedMemoryBytes)} estimated leaked memory\n• ${report.recommendations.length} recommendations`);
@@ -5461,7 +5464,8 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
         }
         // Update virtual scroller with new expanded state
         if (this.virtualScroller) {
-          this.virtualScroller.refresh();
+          this.virtualScroller.rebuildFlattenedList();
+          this.virtualScroller.forceRender();
         }
         // Also update inspector if needed
         this.updateInspectorPane();
@@ -6134,7 +6138,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
   destroy(): void {
     // Clean up virtual scroller if it exists
     if (this.virtualScroller) {
-      this.virtualScroller.destroy();
+      this.virtualScroller.dispose();
       this.virtualScroller = null;
     }
     this.root.remove();

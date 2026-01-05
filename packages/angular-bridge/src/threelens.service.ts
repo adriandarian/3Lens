@@ -1,17 +1,16 @@
 import { Injectable, Inject, Optional, type OnDestroy, NgZone } from '@angular/core';
 import { BehaviorSubject, type Observable, Subject } from 'rxjs';
-import { takeUntil, distinctUntilChanged, map } from 'rxjs/operators';
+import { distinctUntilChanged, map } from 'rxjs/operators';
 import {
   createProbe,
   type DevtoolProbe,
   type FrameStats,
   type SceneSnapshot,
-  type SceneNode,
 } from '@3lens/core';
 import {
   THREELENS_CONFIG,
-  ThreeLensModuleConfig,
   DEFAULT_THREELENS_CONFIG,
+  type ThreeLensModuleConfig,
 } from './tokens';
 import type * as THREE from 'three';
 
@@ -63,7 +62,7 @@ export class ThreeLensService implements OnDestroy {
   // Reactive state
   private readonly _frameStats$ = new BehaviorSubject<FrameStats | null>(null);
   private readonly _snapshot$ = new BehaviorSubject<SceneSnapshot | null>(null);
-  private readonly _selectedNode$ = new BehaviorSubject<SceneNode | null>(null);
+  private readonly _selectedNode$ = new BehaviorSubject<THREE.Object3D | null>(null);
   private readonly _isReady$ = new BehaviorSubject<boolean>(false);
   private readonly _isOverlayVisible$ = new BehaviorSubject<boolean>(true);
 
@@ -84,9 +83,9 @@ export class ThreeLensService implements OnDestroy {
   readonly snapshot$: Observable<SceneSnapshot | null> = this._snapshot$.asObservable();
 
   /**
-   * Observable of the currently selected scene node
+   * Observable of the currently selected object
    */
-  readonly selectedNode$: Observable<SceneNode | null> = this._selectedNode$.asObservable();
+  readonly selectedNode$: Observable<THREE.Object3D | null> = this._selectedNode$.asObservable();
 
   /**
    * Observable indicating whether the probe is ready
@@ -102,7 +101,7 @@ export class ThreeLensService implements OnDestroy {
    * Observable of current FPS
    */
   readonly fps$: Observable<number> = this._frameStats$.pipe(
-    map((stats) => stats?.fps ?? 0),
+    map((stats) => stats?.performance?.fps ?? 0),
     distinctUntilChanged()
   );
 
@@ -126,7 +125,7 @@ export class ThreeLensService implements OnDestroy {
    * Observable of current frame time in ms
    */
   readonly frameTime$: Observable<number> = this._frameStats$.pipe(
-    map((stats) => stats?.frameTimeMs ?? 0),
+    map((stats) => stats?.cpuTimeMs ?? 0),
     distinctUntilChanged()
   );
 
@@ -134,7 +133,7 @@ export class ThreeLensService implements OnDestroy {
    * Observable of GPU memory estimate
    */
   readonly gpuMemory$: Observable<number> = this._frameStats$.pipe(
-    map((stats) => stats?.memory?.gpuMemoryEstimate ?? 0),
+    map((stats) => stats?.memory?.totalGpuMemory ?? 0),
     distinctUntilChanged()
   );
 
@@ -211,9 +210,9 @@ export class ThreeLensService implements OnDestroy {
   }
 
   /**
-   * Get current selected node synchronously
+   * Get current selected object synchronously
    */
-  get currentSelectedNode(): SceneNode | null {
+  get currentSelectedNode(): THREE.Object3D | null {
     return this._selectedNode$.value;
   }
 
@@ -238,9 +237,9 @@ export class ThreeLensService implements OnDestroy {
     scene: THREE.Scene,
     camera: THREE.Camera,
     domElement: HTMLElement,
-    THREE: typeof import('three')
+    threeModule: unknown
   ): void {
-    this._probe.initializeTransformGizmo?.(scene, camera, domElement, THREE);
+    this._probe.initializeTransformGizmo?.(scene, camera, domElement, threeModule as typeof THREE);
   }
 
   /**
@@ -248,10 +247,10 @@ export class ThreeLensService implements OnDestroy {
    */
   initializeCameraController(
     camera: THREE.Camera,
-    THREE: typeof import('three'),
+    threeModule: unknown,
     orbitTarget?: THREE.Vector3
   ): void {
-    this._probe.initializeCameraController?.(camera, THREE, orbitTarget);
+    this._probe.initializeCameraController?.(camera, threeModule as typeof THREE, orbitTarget);
   }
 
   /**
@@ -265,14 +264,17 @@ export class ThreeLensService implements OnDestroy {
    * Select an object by UUID
    */
   selectObject(uuid: string): void {
-    this._probe.selectObjectByUuid(uuid);
+    const obj = this._probe.findObjectByDebugIdOrUuid(uuid);
+    if (obj) {
+      this._probe.selectObject(obj);
+    }
   }
 
   /**
    * Clear current selection
    */
   clearSelection(): void {
-    this._probe.clearSelection();
+    this._probe.selectObject(null);
   }
 
   /**

@@ -566,12 +566,14 @@ export class PoolManager {
    * Log pool statistics to console (for debugging)
    */
   logStats(): void {
+    /* eslint-disable no-console */
     console.group('[3Lens] Pool Statistics');
     const stats = this.getAllStats();
     for (const [name, poolStats] of Object.entries(stats)) {
       console.log(`${name}:`, poolStats);
     }
     console.groupEnd();
+    /* eslint-enable no-console */
   }
 }
 

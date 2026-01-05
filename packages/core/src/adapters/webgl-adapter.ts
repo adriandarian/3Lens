@@ -94,7 +94,7 @@ export function createWebGLAdapter(
   let lastGpuTime = 0;
 
   // Store current scene reference for resource enumeration
-  let currentScene: THREE.Scene | null = null;
+  let _currentScene: THREE.Scene | null = null;
 
   // Wrap render method - optimized for minimal overhead
   renderer.render = function (
@@ -107,7 +107,7 @@ export function createWebGLAdapter(
     }
 
     // Store scene reference for resource queries
-    currentScene = scene;
+    _currentScene = scene;
 
     // Skip all instrumentation if no callbacks registered
     if (frameCallbacks.length === 0) {
@@ -532,9 +532,12 @@ function estimateTextureMemory(texture: THREE.Texture): number {
   let bytesPerPixel = 4;
 
   // Adjust for format if available
-  const format = texture.format;
-  if (format === 1020 || format === 1021) { // RedFormat or RGFormat
-    bytesPerPixel = format === 1020 ? 1 : 2;
+  // RedFormat = 1028, RGFormat = 1030 in three.js constants
+  const format = texture.format as number;
+  if (format === 1028) { // RedFormat
+    bytesPerPixel = 1;
+  } else if (format === 1030) { // RGFormat
+    bytesPerPixel = 2;
   }
 
   // Calculate base memory
@@ -656,7 +659,7 @@ function scanSceneResources(scene: THREE.Scene): {
 
           textureMap.set(texture.uuid, {
             ref: texture.uuid,
-            type: texture.type || 'Texture',
+            type: (texture as unknown as { type?: string }).type ?? 'Texture',
             name: texture.name || prop,
             width,
             height,

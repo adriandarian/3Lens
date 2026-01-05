@@ -210,7 +210,7 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
       const result = await processor.calculateBenchmark(stats);
 
       expect(result.grade).toMatch(/^[D-F]$/);
-      expect(result.issues.length).toBeGreaterThan(0);
+      expect(result.topIssues.length).toBeGreaterThan(0);
       expect(result.suggestions.length).toBeGreaterThan(0);
     });
 

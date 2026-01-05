@@ -31,11 +31,11 @@ vi.mock('@angular/core', async () => {
 
 // Mock @3lens/core
 const mockFrameStats = {
-  fps: 60,
-  frameTimeMs: 16.67,
+  performance: { fps: 60 },
+  cpuTimeMs: 16.67,
   drawCalls: 100,
   triangles: 50000,
-  memory: { gpuMemoryEstimate: 128 },
+  memory: { totalGpuMemory: 128 },
 };
 
 const mockSnapshot = {
@@ -62,8 +62,8 @@ const mockProbe = {
   }),
   observeRenderer: vi.fn(),
   observeScene: vi.fn(),
-  selectObjectByUuid: vi.fn(),
-  clearSelection: vi.fn(),
+  findObjectByDebugIdOrUuid: vi.fn(() => ({ uuid: 'test-uuid' })),
+  selectObject: vi.fn(),
   takeSnapshot: vi.fn(() => mockSnapshot),
   focusOnSelected: vi.fn(),
   flyToSelected: vi.fn(),
@@ -225,12 +225,13 @@ describe('ThreeLensService', () => {
 
     it('should call selectObjectByUuid on probe', () => {
       service.selectObject('test-uuid');
-      expect(mockProbe.selectObjectByUuid).toHaveBeenCalledWith('test-uuid');
+      expect(mockProbe.findObjectByDebugIdOrUuid).toHaveBeenCalledWith('test-uuid');
+      expect(mockProbe.selectObject).toHaveBeenCalled();
     });
 
     it('should call clearSelection on probe', () => {
       service.clearSelection();
-      expect(mockProbe.clearSelection).toHaveBeenCalled();
+      expect(mockProbe.selectObject).toHaveBeenCalledWith(null);
     });
 
     it('should call focusOnSelected on probe', () => {

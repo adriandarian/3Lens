@@ -54,13 +54,9 @@ describe('useSelectedObject', () => {
 
   it('should return selection info when an object is selected', () => {
     mockContext.selectedNode = {
-      ref: {
-        uuid: 'test-uuid',
-        name: 'TestMesh',
-        type: 'Mesh',
-      },
-      children: [],
-      path: '/Scene/TestMesh',
+      uuid: 'test-uuid',
+      name: 'TestMesh',
+      type: 'Mesh',
     } as any;
 
     const wrapper = createWrapper(mockContext);
@@ -97,12 +93,9 @@ describe('useSelectedObject', () => {
 
   it('should return isSelected function that checks UUID', () => {
     mockContext.selectedNode = {
-      ref: {
-        uuid: 'selected-uuid',
-        name: 'Selected',
-        type: 'Mesh',
-      },
-      children: [],
+      uuid: 'selected-uuid',
+      name: 'Selected',
+      type: 'Mesh',
     } as any;
 
     const wrapper = createWrapper(mockContext);

@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import type { DevtoolProbe, ProbeConfig } from '@3lens/core';
+import type { DevtoolProbe } from '@3lens/core';
 
 /**
  * Injection token for the 3Lens probe instance
@@ -34,7 +34,12 @@ export const THREELENS_CONFIG = new InjectionToken<ThreeLensModuleConfig>('THREE
 /**
  * Configuration for the 3Lens Angular module
  */
-export interface ThreeLensModuleConfig extends Partial<ProbeConfig> {
+export interface ThreeLensModuleConfig {
+  /**
+   * Application name for identification
+   */
+  appName?: string;
+
   /**
    * Whether to show the overlay UI
    * @default true

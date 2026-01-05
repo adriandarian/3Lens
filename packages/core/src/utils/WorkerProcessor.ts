@@ -7,7 +7,7 @@
  */
 
 import type { FrameStats, BenchmarkScore, BenchmarkConfig } from '../types/stats';
-import type { LeakReport, ResourceLifecycleSummary, LeakAlert } from '../tracking/ResourceLifecycleTracker';
+import type { LeakReport, LeakAlert } from '../tracking/ResourceLifecycleTracker';
 
 // ─────────────────────────────────────────────────────────────────
 // WORKER MESSAGE TYPES
@@ -379,7 +379,7 @@ export class WorkerProcessor {
     this.log(`Worker error: ${error.message}`, 'error');
     
     // Reject all pending tasks
-    for (const [id, pending] of this.pendingTasks) {
+    for (const [_id, pending] of this.pendingTasks) {
       if (pending.timeoutId) {
         clearTimeout(pending.timeoutId);
       }
@@ -484,6 +484,7 @@ export class WorkerProcessor {
    */
   private log(message: string, level: 'log' | 'warn' | 'error' = 'log'): void {
     if (this.options.enableLogging) {
+      // eslint-disable-next-line no-console
       console[level](`[WorkerProcessor] ${message}`);
     }
   }
@@ -603,7 +604,7 @@ export class WorkerProcessor {
    * Cancel all pending tasks
    */
   cancelAllTasks(): void {
-    for (const [id, pending] of this.pendingTasks) {
+    for (const [_id, pending] of this.pendingTasks) {
       if (pending.timeoutId) {
         clearTimeout(pending.timeoutId);
       }
@@ -1235,14 +1236,14 @@ function linearRegression(data: Array<{ x: number; y: number }>): {
   let sumY = 0;
   let sumXY = 0;
   let sumX2 = 0;
-  let sumY2 = 0;
+  let _sumY2 = 0;
 
   for (const point of data) {
     sumX += point.x;
     sumY += point.y;
     sumXY += point.x * point.y;
     sumX2 += point.x * point.x;
-    sumY2 += point.y * point.y;
+    _sumY2 += point.y * point.y;
   }
 
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);

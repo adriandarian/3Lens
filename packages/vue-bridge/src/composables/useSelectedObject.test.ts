@@ -62,8 +62,9 @@ describe('useSelectedObject', () => {
 
     it('should return selectedNode when object is selected', async () => {
       const mockNode = {
-        ref: { uuid: 'test-uuid', name: 'TestMesh', type: 'Mesh' },
-        children: [],
+        uuid: 'test-uuid',
+        name: 'TestMesh',
+        type: 'Mesh',
       };
 
       const TestComponent = defineComponent({
@@ -85,8 +86,9 @@ describe('useSelectedObject', () => {
 
     it('should return selectedUuid from selected node', async () => {
       const mockNode = {
-        ref: { uuid: 'my-uuid-123', name: 'Object', type: 'Group' },
-        children: [],
+        uuid: 'my-uuid-123',
+        name: 'Object',
+        type: 'Group',
       };
 
       const TestComponent = defineComponent({
@@ -122,8 +124,9 @@ describe('useSelectedObject', () => {
 
     it('should return selectedName from selected node', async () => {
       const mockNode = {
-        ref: { uuid: 'uuid', name: 'MyObject', type: 'Mesh' },
-        children: [],
+        uuid: 'uuid',
+        name: 'MyObject',
+        type: 'Mesh',
       };
 
       const TestComponent = defineComponent({
@@ -145,8 +148,9 @@ describe('useSelectedObject', () => {
 
     it('should return selectedType from selected node', async () => {
       const mockNode = {
-        ref: { uuid: 'uuid', name: 'Obj', type: 'SkinnedMesh' },
-        children: [],
+        uuid: 'uuid',
+        name: 'Obj',
+        type: 'SkinnedMesh',
       };
 
       const TestComponent = defineComponent({
@@ -184,8 +188,9 @@ describe('useSelectedObject', () => {
 
     it('should return true when something is selected', async () => {
       const mockNode = {
-        ref: { uuid: 'uuid', name: 'Obj', type: 'Mesh' },
-        children: [],
+        uuid: 'uuid',
+        name: 'Obj',
+        type: 'Mesh',
       };
 
       const TestComponent = defineComponent({
@@ -257,8 +262,9 @@ describe('useSelectedObject', () => {
 
     it('should return true when uuid matches selected', async () => {
       const mockNode = {
-        ref: { uuid: 'selected-uuid', name: 'Obj', type: 'Mesh' },
-        children: [],
+        uuid: 'selected-uuid',
+        name: 'Obj',
+        type: 'Mesh',
       };
 
       const TestComponent = defineComponent({
@@ -280,8 +286,9 @@ describe('useSelectedObject', () => {
 
     it('should return false when uuid does not match', async () => {
       const mockNode = {
-        ref: { uuid: 'selected-uuid', name: 'Obj', type: 'Mesh' },
-        children: [],
+        uuid: 'selected-uuid',
+        name: 'Obj',
+        type: 'Mesh',
       };
 
       const TestComponent = defineComponent({
@@ -305,12 +312,14 @@ describe('useSelectedObject', () => {
   describe('reactive updates', () => {
     it('should update when selection changes', async () => {
       const node1 = {
-        ref: { uuid: 'uuid-1', name: 'First', type: 'Mesh' },
-        children: [],
+        uuid: 'uuid-1',
+        name: 'First',
+        type: 'Mesh',
       };
       const node2 = {
-        ref: { uuid: 'uuid-2', name: 'Second', type: 'Group' },
-        children: [],
+        uuid: 'uuid-2',
+        name: 'Second',
+        type: 'Group',
       };
 
       const TestComponent = defineComponent({

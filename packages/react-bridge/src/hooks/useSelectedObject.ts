@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
 import { useThreeLensContext } from '../context';
-import type { SceneNode } from '@3lens/core';
+import type * as THREE from 'three';
 
 export interface UseSelectedObjectResult {
   /**
-   * The currently selected scene node (null if nothing selected)
+   * The currently selected object (null if nothing selected)
    */
-  selectedNode: SceneNode | null;
+  selectedNode: THREE.Object3D | null;
 
   /**
    * The selected object's UUID (null if nothing selected)
@@ -60,8 +60,8 @@ export interface UseSelectedObjectResult {
  *
  *   return (
  *     <div>
- *       <h3>Selected: {selectedNode?.ref.name || 'Unnamed'}</h3>
- *       <p>Type: {selectedNode?.ref.type}</p>
+ *       <h3>Selected: {selectedNode?.name || 'Unnamed'}</h3>
+ *       <p>Type: {selectedNode?.type}</p>
  *       <button onClick={clear}>Deselect</button>
  *     </div>
  *   );
@@ -73,16 +73,16 @@ export function useSelectedObject(): UseSelectedObjectResult {
 
   const isSelected = useCallback(
     (uuid: string) => {
-      return selectedNode?.ref.uuid === uuid;
+      return selectedNode?.uuid === uuid;
     },
     [selectedNode]
   );
 
   return {
     selectedNode,
-    selectedUuid: selectedNode?.ref.uuid ?? null,
-    selectedName: selectedNode?.ref.name ?? null,
-    selectedType: selectedNode?.ref.type ?? null,
+    selectedUuid: selectedNode?.uuid ?? null,
+    selectedName: selectedNode?.name ?? null,
+    selectedType: selectedNode?.type ?? null,
     hasSelection: selectedNode !== null,
     select: selectObject,
     clear: clearSelection,

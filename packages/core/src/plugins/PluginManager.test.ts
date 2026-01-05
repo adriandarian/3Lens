@@ -56,8 +56,7 @@ function createMockProbe(): any {
     getLatestStats: vi.fn(() => null),
     getSnapshot: vi.fn(() => null),
     selectObject: vi.fn(),
-    selectObjectByUuid: vi.fn(),
-    clearSelection: vi.fn(),
+    findObjectByDebugIdOrUuid: vi.fn(() => ({ uuid: 'some-uuid' })),
     navigateToObject: vi.fn(),
     focusOnObject: vi.fn(),
     setObjectVisible: vi.fn(),
@@ -1155,7 +1154,8 @@ describe('PluginManager', () => {
       await manager.activatePlugin('test.plugin');
       
       context!.selectObject('some-uuid');
-      expect(mockProbe.selectObjectByUuid).toHaveBeenCalledWith('some-uuid');
+      expect(mockProbe.findObjectByDebugIdOrUuid).toHaveBeenCalledWith('some-uuid');
+      expect(mockProbe.selectObject).toHaveBeenCalled();
     });
 
     it('should provide clearSelection in context', async () => {
@@ -1167,7 +1167,7 @@ describe('PluginManager', () => {
       await manager.activatePlugin('test.plugin');
       
       context!.clearSelection();
-      expect(mockProbe.clearSelection).toHaveBeenCalled();
+      expect(mockProbe.selectObject).toHaveBeenCalledWith(null);
     });
 
     it('should provide getEntities in context', async () => {

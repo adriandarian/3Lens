@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import type { ThreeNamespace } from '../types';
 
 /**
  * Creates and manages visual selection highlights in the 3D scene
@@ -10,7 +11,7 @@ export class SelectionHelper {
   private hoveredObject: THREE.Object3D | null = null;
   private scene: THREE.Scene | null = null;
   private hoverScene: THREE.Scene | null = null;
-  private THREE: typeof import('three') | null = null;
+  private THREE: ThreeNamespace | null = null;
 
   // Highlight styling
   private highlightColor = 0x22d3ee; // Cyan accent color for selection
@@ -20,7 +21,7 @@ export class SelectionHelper {
    * Initialize the selection helper with three.js reference
    * We need the THREE namespace to create helpers
    */
-  initialize(threeNamespace: typeof import('three')): void {
+  initialize(threeNamespace: ThreeNamespace): void {
     this.THREE = threeNamespace;
   }
 

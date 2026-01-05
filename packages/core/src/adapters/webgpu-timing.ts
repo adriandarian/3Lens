@@ -225,11 +225,18 @@ export class WebGpuTimingManager {
   /**
    * Write timestamp at the start of a render/compute pass
    * Use with GPURenderPassEncoder or GPUComputePassEncoder
+   * 
+   * Note: writeTimestamp requires the 'timestamp-query' feature
    */
   writeTimestamp(encoder: GPUCommandEncoder, queryIndex: number): void {
     if (!this.enabled || !this.querySet || queryIndex < 0) return;
     
-    encoder.writeTimestamp(this.querySet, queryIndex);
+    // writeTimestamp is available when 'timestamp-query' feature is enabled
+    // Cast to extended interface for TypeScript compatibility
+    const encoderWithTimestamp = encoder as GPUCommandEncoder & {
+      writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void;
+    };
+    encoderWithTimestamp.writeTimestamp(this.querySet, queryIndex);
   }
 
   /**

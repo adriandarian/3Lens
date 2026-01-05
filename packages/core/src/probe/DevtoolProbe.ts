@@ -4,7 +4,6 @@ import type {
   ProbeConfig,
   LogicalEntity,
   ObjectMeta,
-  TrackedObjectRef,
   FrameStats,
   SceneSnapshot,
   SceneNode,
@@ -12,7 +11,26 @@ import type {
   Transport,
   DebugMessage,
   Unsubscribe,
+  RenderTargetUsage,
+  TextureInfo,
+  GeometryInfo,
+  MaterialInfo,
+  GpuTimingInfo,
+  MaterialData,
+  MaterialsSummary,
+  GeometryData,
+  GeometrySummary,
+  TextureData,
+  TexturesSummary,
+  RenderTargetData,
+  RenderTargetsSummary,
+  SamplingConfig,
+  RulesConfig,
+  CustomRule,
+  ThreeNamespace,
 } from '../types';
+import type { PoolManager, PoolStats } from '../utils/ObjectPool';
+import { getPoolManager } from '../utils/ObjectPool';
 import { createWebGLAdapter } from '../adapters/webgl-adapter';
 import { createWebGPUAdapter, isWebGPURenderer } from '../adapters/webgpu-adapter';
 import { SceneObserver } from '../observers/SceneObserver';
@@ -40,7 +58,7 @@ export class DevtoolProbe {
   private _rendererAdapter: RendererAdapter | null = null;
   private _transport: Transport | null = null;
   private _sceneObservers: Map<THREE.Scene, SceneObserver> = new Map();
-  private _registeredRenderTargets: Map<string, { rt: THREE.WebGLRenderTarget; usage: import('../types').RenderTargetUsage }> = new Map();
+  private _registeredRenderTargets: Map<string, { rt: THREE.WebGLRenderTarget; usage: RenderTargetUsage }> = new Map();
   private _selectedObject: THREE.Object3D | null = null;
   private _hoveredObject: THREE.Object3D | null = null;
   private _logicalEntities: Map<string, LogicalEntity> = new Map(); // Legacy
@@ -56,7 +74,7 @@ export class DevtoolProbe {
   private _transformGizmo: TransformGizmo | null = null;
   private _cameraController: CameraController | null = null;
   private _entityManager: LogicalEntityManager | null = null;
-  private _threeRef: typeof import('three') | null = null;
+  private _threeRef: ThreeNamespace | null = null;
   private _visualizationHelpers: Map<string, THREE.Object3D> = new Map();
   private _globalWireframe = false;
 
@@ -257,28 +275,28 @@ export class DevtoolProbe {
   /**
    * Get all textures from the renderer adapter
    */
-  getTextures(): import('../types').TextureInfo[] {
+  getTextures(): TextureInfo[] {
     return this._rendererAdapter?.getTextures() ?? [];
   }
 
   /**
    * Get all geometries from the renderer adapter
    */
-  getGeometries(): import('../types').GeometryInfo[] {
+  getGeometries(): GeometryInfo[] {
     return this._rendererAdapter?.getGeometries() ?? [];
   }
 
   /**
    * Get all materials from the renderer adapter
    */
-  getMaterials(): import('../types').MaterialInfo[] {
+  getMaterials(): MaterialInfo[] {
     return this._rendererAdapter?.getMaterials() ?? [];
   }
 
   /**
    * Get GPU timing information
    */
-  async getGpuTimings(): Promise<import('../types').GpuTimingInfo | null> {
+  async getGpuTimings(): Promise<GpuTimingInfo | null> {
     return this._rendererAdapter?.getGpuTimings?.() ?? null;
   }
 
@@ -356,7 +374,7 @@ export class DevtoolProbe {
    */
   observeRenderTarget(
     renderTarget: THREE.WebGLRenderTarget,
-    usage: import('../types').RenderTargetUsage = 'custom'
+    usage: RenderTargetUsage = 'custom'
   ): void {
     const rtId = this.getRenderTargetId(renderTarget);
     if (!rtId) {
@@ -391,7 +409,7 @@ export class DevtoolProbe {
   /**
    * Get all registered render targets
    */
-  getRegisteredRenderTargets(): Map<string, { rt: THREE.WebGLRenderTarget; usage: import('../types').RenderTargetUsage }> {
+  getRegisteredRenderTargets(): Map<string, { rt: THREE.WebGLRenderTarget; usage: RenderTargetUsage }> {
     return this._registeredRenderTargets;
   }
 
@@ -406,7 +424,7 @@ export class DevtoolProbe {
    * probe.setThreeReference(THREE);
    * ```
    */
-  setThreeReference(three: typeof import('three')): void {
+  setThreeReference(three: ThreeNamespace): void {
     this._threeRef = three;
     this.selectionHelper.initialize(three);
     this.log('THREE.js reference set for selection highlighting');
@@ -424,15 +442,15 @@ export class DevtoolProbe {
    */
   takeSnapshot(): SceneSnapshot {
     const scenes: SceneNode[] = [];
-    const allMaterials: import('../types').MaterialData[] = [];
-    const combinedMaterialSummary: import('../types').MaterialsSummary = {
+    const allMaterials: MaterialData[] = [];
+    const combinedMaterialSummary: MaterialsSummary = {
       totalCount: 0,
       byType: {},
       shaderMaterialCount: 0,
       transparentCount: 0,
     };
-    const allGeometries: import('../types').GeometryData[] = [];
-    const combinedGeometrySummary: import('../types').GeometrySummary = {
+    const allGeometries: GeometryData[] = [];
+    const combinedGeometrySummary: GeometrySummary = {
       totalCount: 0,
       totalVertices: 0,
       totalTriangles: 0,
@@ -441,8 +459,8 @@ export class DevtoolProbe {
       indexedCount: 0,
       morphedCount: 0,
     };
-    const allTextures: import('../types').TextureData[] = [];
-    const combinedTextureSummary: import('../types').TexturesSummary = {
+    const allTextures: TextureData[] = [];
+    const combinedTextureSummary: TexturesSummary = {
       totalCount: 0,
       totalMemoryBytes: 0,
       byType: {},
@@ -451,8 +469,8 @@ export class DevtoolProbe {
       videoTextureCount: 0,
       renderTargetCount: 0,
     };
-    const allRenderTargets: import('../types').RenderTargetData[] = [];
-    const combinedRenderTargetsSummary: import('../types').RenderTargetsSummary = {
+    const allRenderTargets: RenderTargetData[] = [];
+    const combinedRenderTargetsSummary: RenderTargetsSummary = {
       totalCount: 0,
       totalMemoryBytes: 0,
       shadowMapCount: 0,
@@ -604,7 +622,7 @@ export class DevtoolProbe {
       try {
         callback(snapshot);
       } catch (e) {
-        this.log('Snapshot callback error', e, 'warn');
+        this.log('Snapshot callback error', { error: String(e) });
       }
     }
 
@@ -663,6 +681,30 @@ export class DevtoolProbe {
     }
 
     return false;
+  }
+
+  /**
+   * Find an object by debugId or UUID
+   */
+  findObjectByDebugIdOrUuid(id: string): THREE.Object3D | null {
+    // First try by debugId
+    for (const observer of this._sceneObservers.values()) {
+      const obj = observer.findObjectByDebugId(id);
+      if (obj) return obj;
+    }
+    
+    // Then try by three.js uuid (traverse scenes)
+    for (const scene of this._sceneObservers.keys()) {
+      let found: THREE.Object3D | null = null;
+      scene.traverse((obj) => {
+        if (obj.uuid === id) {
+          found = obj;
+        }
+      });
+      if (found) return found;
+    }
+    
+    return null;
   }
 
   /**
@@ -776,7 +818,7 @@ export class DevtoolProbe {
     scene: THREE.Scene,
     camera: THREE.Camera,
     domElement: HTMLElement,
-    three: typeof import('three')
+    three: ThreeNamespace
   ): void {
     this.transformGizmo.initialize(scene, camera, domElement, three);
     
@@ -938,7 +980,7 @@ export class DevtoolProbe {
    */
   initializeCameraController(
     camera: THREE.Camera,
-    three: typeof import('three'),
+    three: ThreeNamespace,
     orbitTarget?: { x: number; y: number; z: number }
   ): void {
     this.cameraController.initialize(camera, three, orbitTarget);
@@ -1149,7 +1191,7 @@ export class DevtoolProbe {
   initializeInspectMode(
     canvas: HTMLCanvasElement,
     camera: THREE.Camera,
-    three: typeof import('three')
+    three: ThreeNamespace
   ): void {
     this.inspectMode.initialize(canvas, camera, three);
     this.log('Inspect mode initialized');
@@ -2216,7 +2258,7 @@ export class DevtoolProbe {
     }
   }
 
-  private createNormalsHelper(mesh: THREE.Mesh, THREE: typeof import('three')): THREE.LineSegments | null {
+  private createNormalsHelper(mesh: THREE.Mesh, THREE: ThreeNamespace): THREE.LineSegments | null {
     const geometry = mesh.geometry;
     const normalAttribute = geometry.attributes.normal;
     
@@ -2726,21 +2768,21 @@ export class DevtoolProbe {
   /**
    * Update performance thresholds at runtime
    */
-  updateThresholds(thresholds: Partial<import('../types/config').RulesConfig>): void {
+  updateThresholds(thresholds: Partial<RulesConfig>): void {
     this._configLoader.updateThresholds(thresholds);
   }
 
   /**
    * Get current thresholds
    */
-  getThresholds(): Required<Omit<import('../types/config').RulesConfig, 'custom'>> {
+  getThresholds(): Required<Omit<RulesConfig, 'custom'>> {
     return this._configLoader.getThresholds();
   }
 
   /**
    * Add a custom rule
    */
-  addCustomRule(rule: import('../types/config').CustomRule): void {
+  addCustomRule(rule: CustomRule): void {
     this._configLoader.addCustomRule(rule);
   }
 
@@ -2807,7 +2849,7 @@ export class DevtoolProbe {
    * Update sampling configuration at runtime
    * @param config Partial sampling config to merge
    */
-  updateSamplingConfig(config: Partial<import('../types').SamplingConfig>): void {
+  updateSamplingConfig(config: Partial<SamplingConfig>): void {
     if (this.config.sampling) {
       Object.assign(this.config.sampling, config);
     }
@@ -2822,7 +2864,7 @@ export class DevtoolProbe {
   /**
    * Get current sampling configuration
    */
-  getSamplingConfig(): Required<import('../types').SamplingConfig> {
+  getSamplingConfig(): Required<SamplingConfig> {
     return {
       frameStats: this.config.sampling?.frameStats ?? 'every-frame',
       snapshots: this.config.sampling?.snapshots ?? 'on-change',
@@ -2861,19 +2903,16 @@ export class DevtoolProbe {
    * Get the memory pool manager instance
    * Provides access to object pools used internally for reducing GC pressure
    */
-  getPoolManager(): import('../utils/ObjectPool').PoolManager {
-    return import('../utils/ObjectPool').then(m => m.getPoolManager()) as unknown as import('../utils/ObjectPool').PoolManager;
+  getPoolManager(): PoolManager {
+    return getPoolManager();
   }
 
   /**
    * Get statistics for all memory pools
    * Useful for debugging and monitoring memory pool efficiency
    */
-  getPoolStats(): Record<string, import('../utils/ObjectPool').PoolStats | { available: number; totalCreated: number; acquireCount: number; releaseCount: number }> {
-    // Dynamically import to avoid circular dependencies
+  getPoolStats(): Record<string, PoolStats | { available: number; totalCreated: number; acquireCount: number; releaseCount: number }> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getPoolManager } = require('../utils/ObjectPool');
       return getPoolManager().getAllStats();
     } catch {
       return {};
@@ -2887,8 +2926,6 @@ export class DevtoolProbe {
    */
   clearPools(): void {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getPoolManager } = require('../utils/ObjectPool');
       getPoolManager().clearAll();
       this.log('Memory pools cleared');
     } catch {
@@ -2902,10 +2939,9 @@ export class DevtoolProbe {
    */
   logPoolStats(): void {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { getPoolManager } = require('../utils/ObjectPool');
       getPoolManager().logStats();
     } catch {
+      // eslint-disable-next-line no-console
       console.log('[3Lens] Memory pools not initialized');
     }
   }

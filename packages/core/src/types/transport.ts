@@ -1,7 +1,7 @@
 import type { Unsubscribe } from './common';
 import type { FrameStats } from './stats';
 import type { SceneSnapshot } from './snapshot';
-import type { ObjectMeta, LogicalEntity } from './objects';
+import type { ObjectMeta } from './objects';
 
 /**
  * Transport interface for probe-UI communication
@@ -49,8 +49,12 @@ export type DebugMessage =
   | HoverObjectCommand
   | RequestSnapshotCommand
   | UpdateMaterialPropertyCommand
+  | GeometryVisualizationCommand
   | PingCommand
-  | PongMessage;
+  | PongMessage
+  // Custom messages
+  | CustomMetricMessage
+  | CustomEventMessage;
 
 /**
  * Base message interface
@@ -166,5 +170,34 @@ export interface PingCommand extends BaseMessage {
 export interface PongMessage extends BaseMessage {
   type: 'pong';
   requestId: string;
+}
+
+/**
+ * Custom metric message
+ */
+export interface CustomMetricMessage extends BaseMessage {
+  type: 'custom-metric';
+  name: string;
+  value: number;
+  tags?: Record<string, string>;
+}
+
+/**
+ * Custom event message
+ */
+export interface CustomEventMessage extends BaseMessage {
+  type: 'custom-event';
+  name: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * Geometry visualization command
+ */
+export interface GeometryVisualizationCommand extends BaseMessage {
+  type: 'geometry-visualization';
+  geometryUuid: string;
+  visualization: 'wireframe' | 'boundingBox' | 'normals';
+  enabled: boolean;
 }
 

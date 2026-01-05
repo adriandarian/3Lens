@@ -1,10 +1,16 @@
-import type { InjectionKey, Ref, ComputedRef } from 'vue';
-import type { DevtoolProbe, FrameStats, SceneSnapshot, SceneNode, ProbeConfig } from '@3lens/core';
+import type { InjectionKey, Ref, ComputedRef, ShallowRef } from 'vue';
+import type * as THREE from 'three';
+import type { DevtoolProbe, FrameStats, SceneSnapshot } from '@3lens/core';
 
 /**
  * Configuration for the 3Lens Vue plugin
  */
-export interface ThreeLensPluginConfig extends Partial<ProbeConfig> {
+export interface ThreeLensPluginConfig {
+  /**
+   * Application name for identification
+   */
+  appName?: string;
+
   /**
    * Whether to show the overlay UI
    * @default true
@@ -31,7 +37,7 @@ export interface ThreeLensContext {
   /**
    * The probe instance
    */
-  probe: Ref<DevtoolProbe | null>;
+  probe: ShallowRef<DevtoolProbe | null>;
 
   /**
    * Whether the probe is ready and observing
@@ -41,17 +47,17 @@ export interface ThreeLensContext {
   /**
    * The latest frame stats
    */
-  frameStats: Ref<FrameStats | null>;
+  frameStats: ShallowRef<FrameStats | null>;
 
   /**
    * The current scene snapshot
    */
-  snapshot: Ref<SceneSnapshot | null>;
+  snapshot: ShallowRef<SceneSnapshot | null>;
 
   /**
-   * The currently selected scene node
+   * The currently selected object
    */
-  selectedNode: Ref<SceneNode | null>;
+  selectedNode: ShallowRef<THREE.Object3D | null>;
 
   /**
    * Current FPS (computed)

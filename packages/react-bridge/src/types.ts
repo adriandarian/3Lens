@@ -1,4 +1,5 @@
-import type { DevtoolProbe, ProbeConfig, FrameStats, SceneSnapshot, SceneNode } from '@3lens/core';
+import type * as THREE from 'three';
+import type { DevtoolProbe, ProbeConfig, FrameStats, SceneSnapshot } from '@3lens/core';
 
 /**
  * Configuration for the ThreeLensProvider
@@ -54,9 +55,9 @@ export interface ThreeLensContextValue {
   snapshot: SceneSnapshot | null;
 
   /**
-   * The currently selected object's scene node
+   * The currently selected object
    */
-  selectedNode: SceneNode | null;
+  selectedNode: THREE.Object3D | null;
 
   /**
    * Select an object by UUID

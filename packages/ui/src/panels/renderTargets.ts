@@ -228,7 +228,7 @@ function renderRenderTargetPreview(rt: RenderTargetData, state: UIState): string
   if (!hasThumbnail) return '';
 
   const mode = state.renderTargetPreviewMode;
-  const showColor = mode === 'color' || mode === 'r' || mode === 'g' || mode === 'b' || mode === 'a';
+  const _showColor = mode === 'color' || mode === 'r' || mode === 'g' || mode === 'b' || mode === 'a';
   const showDepth = mode === 'depth' || mode === 'heatmap';
   const currentThumbnail = showDepth && rt.depthThumbnail ? rt.depthThumbnail : rt.thumbnail;
 

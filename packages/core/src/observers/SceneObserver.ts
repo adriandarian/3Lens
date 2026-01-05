@@ -26,6 +26,7 @@ import type {
   RenderTargetsSummary,
   RenderTargetUsage,
 } from '../types';
+import type { ObjectCostData, MaterialComplexityInfo } from '../types/snapshot';
 import { ResourceLifecycleTracker, type ResourceLifecycleEvent } from '../tracking/ResourceLifecycleTracker';
 
 // ============================================================================
@@ -167,8 +168,8 @@ export class SceneObserver {
   private materialsByUuid: Map<string, THREE.Material> = new Map();
   private geometriesByUuid: Map<string, THREE.BufferGeometry> = new Map();
   private texturesByUuid: Map<string, THREE.Texture> = new Map();
-  private originalAdd: typeof THREE.Object3D.prototype.add;
-  private originalRemove: typeof THREE.Object3D.prototype.remove;
+  private originalAdd: THREE.Scene['add'];
+  private originalRemove: THREE.Scene['remove'];
   
   // Resource lifecycle tracking
   private lifecycleTracker: ResourceLifecycleTracker;
@@ -427,7 +428,7 @@ export class SceneObserver {
       const textureSlots = this.getTextureSlots();
       for (const slot of textureSlots) {
         if (slot in material) {
-          const texture = (material as Record<string, unknown>)[slot] as THREE.Texture | null;
+          const texture = (material as unknown as Record<string, unknown>)[slot] as THREE.Texture | null;
           if (texture && texture.uuid) {
             // Track texture by UUID
             this.texturesByUuid.set(texture.uuid, texture);
@@ -804,7 +805,7 @@ export class SceneObserver {
     const data: TextureData = {
       uuid: texture.uuid,
       name: texture.name || '',
-      type: texture.type || texture.constructor.name || 'Texture',
+      type: texture.constructor.name || 'Texture',
       source,
       dimensions: { width, height },
       format: texture.format,
@@ -1309,7 +1310,7 @@ export class SceneObserver {
 
     for (const slot of textureSlots) {
       if (slot in material) {
-        const texture = (material as Record<string, unknown>)[slot] as THREE.Texture | null;
+        const texture = (material as unknown as Record<string, unknown>)[slot] as THREE.Texture | null;
         if (texture) {
           textures.push({
             slot,
@@ -1457,26 +1458,30 @@ export class SceneObserver {
   // ─────────────────────────────────────────────────────────────────
 
   private patchSceneMethods(): void {
-    const self = this;
+    // Patch add - cast to match Scene.add signature
+    const originalAdd = this.originalAdd;
+    const originalRemove = this.originalRemove;
+    const trackObject = this.trackObject.bind(this);
+    const untrackObject = this.untrackObject.bind(this);
+    const onSceneChange = this.options.onSceneChange;
 
-    // Patch add
-    this.scene.add = function (...objects: THREE.Object3D[]) {
-      const result = self.originalAdd.apply(this, objects);
+    this.scene.add = function (...objects: THREE.Object3D[]): THREE.Scene {
+      const result = originalAdd.apply(this, objects);
       for (const obj of objects) {
-        self.trackObject(obj);
+        trackObject(obj);
       }
-      self.options.onSceneChange?.();
-      return result;
+      onSceneChange?.();
+      return result as THREE.Scene;
     };
 
-    // Patch remove
-    this.scene.remove = function (...objects: THREE.Object3D[]) {
-      const result = self.originalRemove.apply(this, objects);
+    // Patch remove - cast to match Scene.remove signature
+    this.scene.remove = function (...objects: THREE.Object3D[]): THREE.Scene {
+      const result = originalRemove.apply(this, objects);
       for (const obj of objects) {
-        self.untrackObject(obj);
+        untrackObject(obj);
       }
-      self.options.onSceneChange?.();
-      return result;
+      onSceneChange?.();
+      return result as THREE.Scene;
     };
   }
 
@@ -1782,9 +1787,9 @@ export class SceneObserver {
     mesh: THREE.Mesh,
     materials: THREE.Material[],
     faceCount: number
-  ): import('../types/snapshot').ObjectCostData {
+  ): ObjectCostData {
     // Analyze each material
-    const materialInfos: import('../types/snapshot').MaterialComplexityInfo[] = materials.map(mat => 
+    const materialInfos: MaterialComplexityInfo[] = materials.map(mat => 
       this.analyzeMaterialComplexity(mat)
     );
 
@@ -1825,7 +1830,7 @@ export class SceneObserver {
     };
   }
 
-  private analyzeMaterialComplexity(material: THREE.Material): import('../types/snapshot').MaterialComplexityInfo {
+  private analyzeMaterialComplexity(material: THREE.Material): MaterialComplexityInfo {
     if (!material) {
       return {
         type: 'unknown',

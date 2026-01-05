@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, forwardRef } from 'react';
-import { ThreeLensProvider, ThreeLensProviderProps } from '../ThreeLensProvider';
+import { ThreeLensProvider } from '../ThreeLensProvider';
 import { useThreeLensContextOptional } from '../context';
 import type { ThreeLensProviderConfig } from '../types';
 
 // Type for R3F Canvas props (avoid direct import to keep it optional)
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 type CanvasProps = React.ComponentProps<typeof import('@react-three/fiber').Canvas>;
 
 /**
@@ -24,7 +25,7 @@ export interface ThreeLensCanvasProps extends Omit<CanvasProps, 'children'> {
 /**
  * Internal component that connects the probe to R3F's renderer and scene
  */
-function R3FConnector({ children }: { children: React.ReactNode }) {
+function _R3FConnector({ children }: { children: React.ReactNode }) {
   const context = useThreeLensContextOptional();
   const connectedRef = useRef(false);
 
@@ -36,13 +37,14 @@ function R3FConnector({ children }: { children: React.ReactNode }) {
     // Try to get R3F's state
     const tryConnect = async () => {
       try {
-        const { useThree } = await import('@react-three/fiber');
+        const { useThree: _useThree } = await import('@react-three/fiber');
 
         // This is a bit hacky - we need to be inside a Canvas to use useThree
         // The actual connection happens in the R3FAutoConnect component
       } catch {
         // R3F not available
-        if (context.probe && (context.probe as any).config?.debug) {
+        if (context.probe && (context.probe as unknown as { config?: { debug?: boolean } }).config?.debug) {
+          // eslint-disable-next-line no-console
           console.log('[3Lens] React Three Fiber not detected');
         }
       }
@@ -68,7 +70,7 @@ export function R3FAutoConnect(): null {
 
     const connect = async () => {
       try {
-        const r3f = await import('@react-three/fiber');
+        const _r3f = await import('@react-three/fiber');
 
         // We can't use hooks here directly since this is not a hook context
         // The actual connection needs to happen in a component that renders inside Canvas
@@ -86,7 +88,7 @@ export function R3FAutoConnect(): null {
 /**
  * Inner component that uses R3F hooks to connect the probe
  */
-function R3FProbeConnector(): null {
+function _R3FProbeConnector(): null {
   const context = useThreeLensContextOptional();
   const connectedRef = useRef(false);
 
@@ -97,7 +99,7 @@ function R3FProbeConnector(): null {
     const connect = async () => {
       try {
         // Get the R3F store
-        const { useThree } = await import('@react-three/fiber');
+        const { useThree: _useThree } = await import('@react-three/fiber');
         // Note: useThree can only be called inside a component that's a child of Canvas
         // This component should be rendered inside Canvas
       } catch {
@@ -137,6 +139,7 @@ function R3FProbeConnector(): null {
 export const ThreeLensCanvas = forwardRef<HTMLCanvasElement, ThreeLensCanvasProps>(
   function ThreeLensCanvas({ threeLensConfig, children, ...canvasProps }, ref) {
     // Dynamically import Canvas to keep R3F optional
+    // eslint-disable-next-line @typescript-eslint/consistent-type-imports
     const [Canvas, setCanvas] = React.useState<typeof import('@react-three/fiber').Canvas | null>(
       null
     );
@@ -180,7 +183,7 @@ function R3FSceneConnector(): null {
 
     const connect = async () => {
       try {
-        const { useThree, useFrame } = await import('@react-three/fiber');
+        const { useThree: _useThree, useFrame: _useFrame } = await import('@react-three/fiber');
         // We can't call useThree here because this is inside useEffect
         // The hook-based approach is in useR3FConnection
       } catch {
@@ -236,7 +239,8 @@ export function useR3FConnection(): void {
       try {
         // Get R3F's root state - this is a workaround since we can't use useThree here
         // In practice, users should call this inside a component that's a child of Canvas
-        const { useThree } = await import('@react-three/fiber');
+        const { useThree: _useThree } = await import('@react-three/fiber');
+        // eslint-disable-next-line no-console
         console.log(
           '[3Lens] To connect R3F, call useR3FConnection() inside a component rendered within <Canvas>'
         );
