@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "name": "3lens-docs",
+  "name": "3lens",
   "buildCommand": "pnpm -w run build:packages && pnpm -w run docs && pnpm -w run docs:build",
   "outputDirectory": "docs/.vitepress/dist",
   "installCommand": "pnpm install",
