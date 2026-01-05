@@ -11,7 +11,8 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
   <a href="https://threejs.org/"><img src="https://img.shields.io/badge/three.js-≥0.150-orange" alt="Three.js" /></a>
-  <img src="https://img.shields.io/badge/status-alpha-yellow" alt="Status" />
+  <img src="https://img.shields.io/badge/version-alpha-yellow" alt="Version" />
+  <a href="https://github.com/adriandarian/3Lens/actions/workflows/ci.yml"><img src="https://github.com/adriandarian/3Lens/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
 </p>
 
 <p align="center">
