@@ -163,7 +163,7 @@ describe('PluginManager', () => {
         contextMenuItems: [
           {
             id: 'menu1',
-            name: 'Menu Item 1',
+            label: 'Menu Item 1',
             target: 'scene-tree',
             onClick: vi.fn(),
           },
@@ -174,7 +174,7 @@ describe('PluginManager', () => {
       
       const items = manager.getContextMenuItems('scene-tree');
       expect(items).toHaveLength(1);
-      expect(items[0].item.name).toBe('Menu Item 1');
+      expect(items[0].item.label).toBe('Menu Item 1');
     });
   });
 
@@ -537,9 +537,9 @@ describe('PluginManager', () => {
     it('should filter context menu items by target', async () => {
       const plugin = createMockPlugin({
         contextMenuItems: [
-          { id: 'item1', name: 'Item 1', target: 'scene-tree', onClick: vi.fn() },
-          { id: 'item2', name: 'Item 2', target: 'inspector', onClick: vi.fn() },
-          { id: 'item3', name: 'Item 3', target: 'all', onClick: vi.fn() },
+          { id: 'item1', label: 'Item 1', target: 'scene-tree', onClick: vi.fn() },
+          { id: 'item2', label: 'Item 2', target: 'inspector', onClick: vi.fn() },
+          { id: 'item3', label: 'Item 3', target: 'all', onClick: vi.fn() },
         ],
       });
       manager.registerPlugin(plugin);
@@ -605,7 +605,7 @@ describe('PluginManager', () => {
       const plugin = createMockPlugin({
         contextMenuItems: [{
           id: 'item1',
-          name: 'Item 1',
+          label: 'Item 1',
           target: 'scene-tree',
           onClick,
         }],
@@ -613,14 +613,14 @@ describe('PluginManager', () => {
       manager.registerPlugin(plugin);
       await manager.activatePlugin('test.plugin');
       
-      await manager.executeContextMenuItem('test.plugin:item1', { targetUuid: '123', targetType: 'mesh' });
+      await manager.executeContextMenuItem('test.plugin:item1', { targetElement: null, targetObject: null, position: { x: 0, y: 0 } });
       
       expect(onClick).toHaveBeenCalled();
     });
 
     it('should not execute for non-existent item', async () => {
       await expect(
-        manager.executeContextMenuItem('non.existent:item', { targetUuid: '123', targetType: 'mesh' })
+        manager.executeContextMenuItem('non.existent:item', { targetElement: null, targetObject: null, position: { x: 0, y: 0 } })
       ).resolves.not.toThrow();
     });
 
@@ -629,14 +629,14 @@ describe('PluginManager', () => {
       const plugin = createMockPlugin({
         contextMenuItems: [{
           id: 'item1',
-          name: 'Item 1',
+          label: 'Item 1',
           target: 'scene-tree',
           onClick,
         }],
       });
       manager.registerPlugin(plugin);
       
-      await manager.executeContextMenuItem('test.plugin:item1', { targetUuid: '123', targetType: 'mesh' });
+      await manager.executeContextMenuItem('test.plugin:item1', { targetElement: null, targetObject: null, position: { x: 0, y: 0 } });
       
       expect(onClick).not.toHaveBeenCalled();
     });
@@ -646,7 +646,7 @@ describe('PluginManager', () => {
       const plugin = createMockPlugin({
         contextMenuItems: [{
           id: 'item1',
-          name: 'Item 1',
+          label: 'Item 1',
           target: 'scene-tree',
           onClick,
           isEnabled: () => false,
@@ -655,7 +655,7 @@ describe('PluginManager', () => {
       manager.registerPlugin(plugin);
       await manager.activatePlugin('test.plugin');
       
-      await manager.executeContextMenuItem('test.plugin:item1', { targetUuid: '123', targetType: 'mesh' });
+      await manager.executeContextMenuItem('test.plugin:item1', { targetElement: null, targetObject: null, position: { x: 0, y: 0 } });
       
       expect(onClick).not.toHaveBeenCalled();
     });
@@ -664,7 +664,7 @@ describe('PluginManager', () => {
       const plugin = createMockPlugin({
         contextMenuItems: [{
           id: 'item1',
-          name: 'Item 1',
+          label: 'Item 1',
           target: 'scene-tree',
           onClick: () => { throw new Error('Item error'); },
         }],
@@ -674,7 +674,7 @@ describe('PluginManager', () => {
       
       // Should not throw
       await expect(
-        manager.executeContextMenuItem('test.plugin:item1', { targetUuid: '123', targetType: 'mesh' })
+        manager.executeContextMenuItem('test.plugin:item1', { targetElement: null, targetObject: null, position: { x: 0, y: 0 } })
       ).resolves.not.toThrow();
     });
   });
@@ -1404,7 +1404,7 @@ describe('PluginManager', () => {
 
     it('should remove context menu items on unregister', async () => {
       const plugin = createMockPlugin({
-        contextMenuItems: [{ id: 'item1', name: 'Item', target: 'scene-tree', onClick: vi.fn() }],
+        contextMenuItems: [{ id: 'item1', label: 'Item', target: 'scene-tree', onClick: vi.fn() }],
       });
       manager.registerPlugin(plugin);
       

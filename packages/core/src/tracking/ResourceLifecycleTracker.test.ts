@@ -779,7 +779,7 @@ describe('ResourceLifecycleTracker', () => {
       t.runLeakDetection();
       
       const alerts = t.getAlerts();
-      const leakAlert = alerts.find(a => a.type === 'potential_leak');
+      const leakAlert = alerts.find(a => a.type === 'undisposed_resource');
       if (leakAlert && leakAlert.details) {
         expect(leakAlert.details).toBeDefined();
       }

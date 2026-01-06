@@ -294,7 +294,7 @@ describe('createTresConnector', () => {
       camera: { value: mockCamera },
     }));
 
-    const useConnector = createTresConnector(mockUseTres);
+    const useConnector = createTresConnector(mockUseTres as any);
     expect(typeof useConnector).toBe('function');
   });
 
@@ -308,7 +308,7 @@ describe('createTresConnector', () => {
       camera: { value: mockCamera },
     }));
 
-    const useConnector = createTresConnector(mockUseTres);
+    const useConnector = createTresConnector(mockUseTres as any);
 
     const TestComponent = defineComponent({
       setup() {
@@ -340,7 +340,7 @@ describe('createTresConnector', () => {
       camera: { value: mockCamera },
     }));
 
-    const useConnector = createTresConnector(mockUseTres);
+    const useConnector = createTresConnector(mockUseTres as any);
 
     const TestComponent = defineComponent({
       setup() {
@@ -367,7 +367,7 @@ describe('createTresConnector', () => {
       throw new Error('Not inside TresCanvas');
     });
 
-    const useConnector = createTresConnector(mockUseTres);
+    const useConnector = createTresConnector(mockUseTres as any);
 
     const TestComponent = defineComponent({
       setup() {
@@ -393,7 +393,7 @@ describe('createTresConnector', () => {
       camera: { value: mockCamera },
     }));
 
-    const useConnector = createTresConnector(mockUseTres);
+    const useConnector = createTresConnector(mockUseTres as any);
 
     const TestComponent = defineComponent({
       setup() {

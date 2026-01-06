@@ -160,9 +160,9 @@ describe('Plugin System Integration E2E', () => {
         toolbarActions: [
           {
             id: 'test-action',
-            label: 'Test Action',
+            name: 'Test Action',
             icon: '⚡',
-            execute: actionHandler,
+            onClick: actionHandler,
           },
         ],
       });
@@ -180,18 +180,18 @@ describe('Plugin System Integration E2E', () => {
     it('should handle plugin settings schema', () => {
       const plugin = createTestPlugin('settings-plugin', {
         settings: {
-          schema: [
+          fields: [
             {
               key: 'enabled',
               type: 'boolean',
               label: 'Enable Feature',
-              default: true,
+              defaultValue: true,
             },
             {
               key: 'threshold',
               type: 'number',
               label: 'Threshold',
-              default: 100,
+              defaultValue: 100,
             },
           ],
         },

@@ -152,7 +152,7 @@ describe('ObjectPool Benchmarks', () => {
 
   describe('ArrayPool Operations', () => {
     it('array acquire/release', () => {
-      const pool = new ArrayPool<number>(100, 50);
+      const pool = new ArrayPool<number>({ maxSize: 100 });
 
       const result = benchmarkBatched(
         'ArrayPool: acquire/release (size 100)',
@@ -171,7 +171,7 @@ describe('ObjectPool Benchmarks', () => {
     });
 
     it('array pool vs Array.from', () => {
-      const pool = new ArrayPool<number>(50, 100);
+      const pool = new ArrayPool<number>({ maxSize: 100 });
 
       const pooledResult = benchmarkBatched(
         'ArrayPool: pooled array',

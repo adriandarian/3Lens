@@ -5,7 +5,7 @@
  * operations which are critical for framework integration.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { LogicalEntityManager } from '../../entities/LogicalEntityManager';
 import {
   benchmark,

@@ -14,7 +14,6 @@
 
 import { execSync } from 'child_process';
 import * as fs from 'fs';
-import * as path from 'path';
 
 interface Commit {
   hash: string;

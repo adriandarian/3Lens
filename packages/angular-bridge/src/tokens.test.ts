@@ -27,7 +27,7 @@ describe('Injection Tokens', () => {
     });
 
     it('should have correct description', () => {
-      expect(THREELENS_PROBE.description).toBe('THREELENS_PROBE');
+      expect((THREELENS_PROBE as any).description).toBe('THREELENS_PROBE');
     });
   });
 
@@ -37,7 +37,7 @@ describe('Injection Tokens', () => {
     });
 
     it('should have correct description', () => {
-      expect(THREELENS_CONFIG.description).toBe('THREELENS_CONFIG');
+      expect((THREELENS_CONFIG as any).description).toBe('THREELENS_CONFIG');
     });
   });
 });

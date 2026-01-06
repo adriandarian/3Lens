@@ -53,7 +53,7 @@ describe('useMetric', () => {
   it('should return initial metric value', () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.fps);
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0);
         return { metric };
       },
       render() {
@@ -72,7 +72,7 @@ describe('useMetric', () => {
   it('should update when frameStats changes', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.fps);
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0);
         return { metric };
       },
       render() {
@@ -83,7 +83,7 @@ describe('useMetric', () => {
     const wrapper = mount(TestComponent);
 
     // Update frame stats
-    frameStatsRef.value = { fps: 60 };
+    frameStatsRef.value = { performance: { fps: 60 } };
     await nextTick();
 
     expect(wrapper.vm.metric.current).toBe(60);
@@ -92,7 +92,7 @@ describe('useMetric', () => {
   it('should track min/max/avg', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.fps);
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0);
         return { metric };
       },
       render() {
@@ -103,11 +103,11 @@ describe('useMetric', () => {
     const wrapper = mount(TestComponent);
 
     // Emit multiple values
-    frameStatsRef.value = { fps: 50 };
+    frameStatsRef.value = { performance: { fps: 50 } };
     await nextTick();
-    frameStatsRef.value = { fps: 60 };
+    frameStatsRef.value = { performance: { fps: 60 } };
     await nextTick();
-    frameStatsRef.value = { fps: 70 };
+    frameStatsRef.value = { performance: { fps: 70 } };
     await nextTick();
 
     expect(wrapper.vm.metric.min).toBe(50);
@@ -118,7 +118,7 @@ describe('useMetric', () => {
   it('should track history', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.fps);
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0);
         return { metric };
       },
       render() {
@@ -128,11 +128,11 @@ describe('useMetric', () => {
 
     const wrapper = mount(TestComponent);
 
-    frameStatsRef.value = { fps: 55 };
+    frameStatsRef.value = { performance: { fps: 55 } };
     await nextTick();
-    frameStatsRef.value = { fps: 60 };
+    frameStatsRef.value = { performance: { fps: 60 } };
     await nextTick();
-    frameStatsRef.value = { fps: 65 };
+    frameStatsRef.value = { performance: { fps: 65 } };
     await nextTick();
 
     expect(wrapper.vm.metric.history).toEqual([55, 60, 65]);
@@ -141,7 +141,7 @@ describe('useMetric', () => {
   it('should respect sampleRate', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.fps, { sampleRate: 2 });
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0, { sampleRate: 2 });
         return { metric };
       },
       render() {
@@ -152,13 +152,13 @@ describe('useMetric', () => {
     const wrapper = mount(TestComponent);
 
     // Only every 2nd frame should be sampled
-    frameStatsRef.value = { fps: 50 }; // frame 1, skipped
+    frameStatsRef.value = { performance: { fps: 50 } }; // frame 1, skipped
     await nextTick();
-    frameStatsRef.value = { fps: 60 }; // frame 2, sampled
+    frameStatsRef.value = { performance: { fps: 60 } }; // frame 2, sampled
     await nextTick();
-    frameStatsRef.value = { fps: 70 }; // frame 3, skipped
+    frameStatsRef.value = { performance: { fps: 70 } }; // frame 3, skipped
     await nextTick();
-    frameStatsRef.value = { fps: 80 }; // frame 4, sampled
+    frameStatsRef.value = { performance: { fps: 80 } }; // frame 4, sampled
     await nextTick();
 
     expect(wrapper.vm.metric.history).toEqual([60, 80]);
@@ -167,7 +167,7 @@ describe('useMetric', () => {
   it('should smooth values when enabled', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.fps, { 
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0, { 
           smoothed: true, 
           smoothingSamples: 3 
         });
@@ -181,11 +181,11 @@ describe('useMetric', () => {
     const wrapper = mount(TestComponent);
 
     // Add samples for smoothing
-    frameStatsRef.value = { fps: 50 };
+    frameStatsRef.value = { performance: { fps: 50 } };
     await nextTick();
-    frameStatsRef.value = { fps: 60 };
+    frameStatsRef.value = { performance: { fps: 60 } };
     await nextTick();
-    frameStatsRef.value = { fps: 70 };
+    frameStatsRef.value = { performance: { fps: 70 } };
     await nextTick();
 
     // Smoothed value should be average of last 3 samples
@@ -195,7 +195,7 @@ describe('useMetric', () => {
   it('should not smooth when disabled', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.fps, { smoothed: false });
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0, { smoothed: false });
         return { metric };
       },
       render() {
@@ -205,9 +205,9 @@ describe('useMetric', () => {
 
     const wrapper = mount(TestComponent);
 
-    frameStatsRef.value = { fps: 50 };
+    frameStatsRef.value = { performance: { fps: 50 } };
     await nextTick();
-    frameStatsRef.value = { fps: 100 };
+    frameStatsRef.value = { performance: { fps: 100 } };
     await nextTick();
 
     // Should return raw value, not smoothed
@@ -217,7 +217,7 @@ describe('useMetric', () => {
   it('should handle null stats', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.fps);
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0);
         return { metric };
       },
       render() {

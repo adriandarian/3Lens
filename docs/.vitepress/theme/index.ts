@@ -1,4 +1,5 @@
 // https://vitepress.dev/guide/custom-theme
+// @ts-ignore - vue types provided by vitepress
 import { h, onMounted } from 'vue'
 import type { Theme } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
@@ -6,7 +7,9 @@ import { inject } from '@vercel/analytics'
 import './styles/custom.css'
 
 // Version system components
+// @ts-ignore - Vue SFC types
 import VersionSwitcher from './components/VersionSwitcher.vue'
+// @ts-ignore - Vue SFC types
 import VersionWarning from './components/VersionWarning.vue'
 
 // Custom components (uncomment as you create them)

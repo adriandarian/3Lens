@@ -99,7 +99,7 @@ describe('ThreeLensService', () => {
       return originalAddEventListener.call(window, event, handler as EventListener);
     });
 
-    mockNgZone = new NgZone();
+    mockNgZone = new NgZone({ enableLongStackTrace: false });
     service = new ThreeLensService(mockNgZone, undefined);
   });
 

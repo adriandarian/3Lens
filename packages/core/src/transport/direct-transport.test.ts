@@ -6,7 +6,15 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDirectTransport } from './direct-transport';
-import type { DebugMessage } from '../types';
+import type { DebugMessage, FrameStats } from '../types';
+
+// Mock stats object for tests (partial mock with type assertion)
+const mockStats = {
+  frame: 1,
+  timestamp: 0,
+  deltaTimeMs: 16,
+  cpuTimeMs: 8,
+} as FrameStats;
 
 describe('createDirectTransport', () => {
   let transports: ReturnType<typeof createDirectTransport>;
@@ -96,7 +104,8 @@ describe('createDirectTransport', () => {
 
       const message: DebugMessage = {
         type: 'frame-stats',
-        payload: { fps: 60 },
+        timestamp: Date.now(),
+        stats: mockStats,
       };
 
       transports.probeTransport.send(message);
@@ -113,7 +122,8 @@ describe('createDirectTransport', () => {
 
       const message: DebugMessage = {
         type: 'select-object',
-        payload: { uuid: '123' },
+        timestamp: Date.now(),
+        debugId: '123',
       };
 
       transports.uiTransport.send(message);
@@ -130,7 +140,8 @@ describe('createDirectTransport', () => {
 
       const message: DebugMessage = {
         type: 'frame-stats',
-        payload: { fps: 60 },
+        timestamp: Date.now(),
+        stats: mockStats,
       };
 
       transports.probeTransport.send(message);
@@ -151,7 +162,8 @@ describe('createDirectTransport', () => {
 
       const message: DebugMessage = {
         type: 'frame-stats',
-        payload: {},
+        timestamp: Date.now(),
+        stats: mockStats,
       };
 
       // Should not throw
@@ -170,14 +182,14 @@ describe('createDirectTransport', () => {
       const unsubscribe = transports.uiTransport.onReceive(handler);
 
       // Send first message
-      transports.probeTransport.send({ type: 'frame-stats', payload: {} });
+      transports.probeTransport.send({ type: 'frame-stats', timestamp: Date.now(), stats: mockStats } as DebugMessage);
       expect(handler).toHaveBeenCalledTimes(1);
 
       // Unsubscribe
       unsubscribe();
 
       // Send second message - should not be received
-      transports.probeTransport.send({ type: 'frame-stats', payload: {} });
+      transports.probeTransport.send({ type: 'frame-stats', timestamp: Date.now(), stats: mockStats } as DebugMessage);
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
@@ -257,7 +269,8 @@ describe('createDirectTransport', () => {
       // Probe to UI
       const statsMessage: DebugMessage = {
         type: 'frame-stats',
-        payload: { fps: 60 },
+        timestamp: Date.now(),
+        stats: mockStats,
       };
       transports.probeTransport.send(statsMessage);
       expect(uiReceiver).toHaveBeenCalledWith(statsMessage);
@@ -265,7 +278,8 @@ describe('createDirectTransport', () => {
       // UI to Probe
       const selectMessage: DebugMessage = {
         type: 'select-object',
-        payload: { uuid: 'abc123' },
+        timestamp: Date.now(),
+        debugId: 'abc123',
       };
       transports.uiTransport.send(selectMessage);
       expect(probeReceiver).toHaveBeenCalledWith(selectMessage);

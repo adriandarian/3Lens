@@ -136,7 +136,7 @@ describe('Memoization Benchmarks', () => {
 
       const memoizedDistance = memoize(distance, {
         maxSize: 100,
-        keyResolver: (p) => `${p.x},${p.y}`,
+        keyResolver: (p: Point) => `${p.x},${p.y}`,
       });
 
       // Pre-populate cache

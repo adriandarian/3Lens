@@ -216,10 +216,7 @@ describe('Bridge Integration Patterns E2E', () => {
       const mesh = createMockObject3D('FrameworkSelectedObject');
 
       // Simulate framework selecting object (e.g., onClick handler)
-      probe.selectObject(mesh as unknown as THREE.Object3D, {
-        source: 'user-interaction',
-        component: 'MeshClickHandler',
-      });
+      probe.selectObject(mesh as unknown as THREE.Object3D);
 
       expect(probe.getSelectedObject()).toBe(mesh);
     });

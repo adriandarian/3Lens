@@ -505,7 +505,7 @@ describe('Memory Leak Tests', () => {
       expect(manager.getEntity(grandchildId)).toBeDefined();
 
       // Recursive unregister parent
-      manager.unregisterLogicalEntity(parentId, { recursive: true });
+      manager.unregisterLogicalEntity(parentId, true);
 
       // All should be gone
       expect(manager.getEntity(parentId)).toBeUndefined();
@@ -899,7 +899,7 @@ describe('Memory Leak Tests', () => {
       }).not.toThrow();
 
       // Entities should still be cleanable
-      manager.unregisterLogicalEntity(id1, { recursive: true });
+      manager.unregisterLogicalEntity(id1, true);
       expect(manager.getAllEntities().length).toBe(0);
     });
 

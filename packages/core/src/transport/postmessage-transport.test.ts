@@ -6,11 +6,19 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPostMessageTransport } from './postmessage-transport';
-import type { DebugMessage } from '../types';
+import type { DebugMessage, FrameStats } from '../types';
 
 // Constants matching the implementation
 const SOURCE_PROBE = '3lens-probe';
 const SOURCE_DEVTOOL = '3lens-devtool';
+
+// Mock stats object for tests (partial mock with type assertion)
+const mockStats = {
+  frame: 1,
+  timestamp: 0,
+  deltaTimeMs: 16,
+  cpuTimeMs: 8,
+} as FrameStats;
 
 describe('createPostMessageTransport', () => {
   let transport: ReturnType<typeof createPostMessageTransport>;
@@ -117,7 +125,8 @@ describe('createPostMessageTransport', () => {
     it('should send message via postMessage', () => {
       const message: DebugMessage = {
         type: 'frame-stats',
-        payload: { fps: 60 },
+        timestamp: Date.now(),
+        stats: mockStats,
       };
 
       transport.send(message);
@@ -140,7 +149,8 @@ describe('createPostMessageTransport', () => {
 
       const payload: DebugMessage = {
         type: 'select-object',
-        payload: { uuid: '123' },
+        timestamp: Date.now(),
+        debugId: '123',
       };
 
       simulateMessage({
@@ -158,7 +168,7 @@ describe('createPostMessageTransport', () => {
 
       simulateMessage({
         source: 'wrong-source',
-        payload: { type: 'frame-stats' },
+        payload: { type: 'frame-stats', stats: mockStats },
       });
 
       expect(handler).not.toHaveBeenCalled();
@@ -171,7 +181,7 @@ describe('createPostMessageTransport', () => {
       simulateMessage(
         {
           source: SOURCE_DEVTOOL,
-          payload: { type: 'frame-stats' },
+          payload: { type: 'frame-stats', stats: mockStats },
         },
         'http://malicious.com'
       );
@@ -196,7 +206,7 @@ describe('createPostMessageTransport', () => {
       transport.onReceive(handler1);
       transport.onReceive(handler2);
 
-      const payload: DebugMessage = { type: 'frame-stats', payload: {} };
+      const payload: DebugMessage = { type: 'frame-stats', timestamp: Date.now(), stats: mockStats };
       simulateMessage({
         source: SOURCE_DEVTOOL,
         version: '1.0.0',
@@ -220,7 +230,7 @@ describe('createPostMessageTransport', () => {
       simulateMessage({
         source: SOURCE_DEVTOOL,
         version: '1.0.0',
-        payload: { type: 'frame-stats', payload: {} },
+        payload: { type: 'frame-stats', stats: mockStats },
       });
 
       expect(consoleError).toHaveBeenCalled();
@@ -239,7 +249,7 @@ describe('createPostMessageTransport', () => {
       simulateMessage({
         source: SOURCE_DEVTOOL,
         version: '1.0.0',
-        payload: { type: 'frame-stats', payload: {} },
+        payload: { type: 'frame-stats', stats: mockStats },
       });
       expect(handler).toHaveBeenCalledTimes(1);
 
@@ -250,7 +260,7 @@ describe('createPostMessageTransport', () => {
       simulateMessage({
         source: SOURCE_DEVTOOL,
         version: '1.0.0',
-        payload: { type: 'frame-stats', payload: {} },
+        payload: { type: 'frame-stats', stats: mockStats },
       });
       expect(handler).toHaveBeenCalledTimes(1);
     });
@@ -289,7 +299,7 @@ describe('createPostMessageTransport', () => {
       simulateMessage({
         source: SOURCE_DEVTOOL,
         version: '1.0.0',
-        payload: { type: 'frame-stats', payload: {} },
+        payload: { type: 'frame-stats', stats: mockStats },
       });
 
       expect(handler).not.toHaveBeenCalled();

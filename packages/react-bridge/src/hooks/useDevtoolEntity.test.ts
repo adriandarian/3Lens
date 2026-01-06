@@ -48,9 +48,14 @@ describe('useDevtoolEntity', () => {
       probe: mockProbe,
       frameStats: null,
       snapshot: null,
-      selectedObject: null,
       selectObject: vi.fn(),
       clearSelection: vi.fn(),
+      isReady: true,
+      selectedNode: null,
+      toggleOverlay: vi.fn(),
+      showOverlay: vi.fn(),
+      hideOverlay: vi.fn(),
+      isOverlayVisible: false,
     };
   });
 
@@ -217,9 +222,14 @@ describe('useDevtoolEntityGroup', () => {
       probe: mockProbe,
       frameStats: null,
       snapshot: null,
-      selectedObject: null,
       selectObject: vi.fn(),
       clearSelection: vi.fn(),
+      isReady: true,
+      selectedNode: null,
+      toggleOverlay: vi.fn(),
+      showOverlay: vi.fn(),
+      hideOverlay: vi.fn(),
+      isOverlayVisible: false,
     };
   });
 

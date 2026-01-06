@@ -31,26 +31,32 @@ function createMockFrameStats(overrides: Partial<FrameStats> = {}): FrameStats {
 
   const basePerformance: PerformanceMetrics = {
     fps: 60,
-    averageFps: 60,
-    minFps: 55,
-    maxFps: 65,
+    fpsMin: 55,
+    fpsMax: 65,
     fps1PercentLow: 50,
     frameTimeVariance: 2,
-    trianglesPerSecond: 30000000,
-    drawCallsPerTriangle: 0.001,
     ...overrides.performance,
   };
 
   const baseRendering: RenderingStats = {
-    lights: 3,
-    shadowLights: 1,
+    totalLights: 3,
+    activeLights: 1,
     skinnedMeshes: 2,
-    bones: 50,
+    totalBones: 50,
     transparentObjects: 5,
-    opaqueObjects: 20,
     programSwitches: 15,
     textureBinds: 30,
-    uniformUpdates: 100,
+    shadowMapUpdates: 0,
+    shadowCastingLights: 0,
+    instancedDrawCalls: 0,
+    totalInstances: 0,
+    transparentDrawCalls: 0,
+    renderTargetSwitches: 0,
+    bufferUploads: 0,
+    bytesUploaded: 0,
+    postProcessingPasses: 0,
+    xrActive: false,
+    viewports: 1,
     ...overrides.rendering,
   };
 
@@ -516,7 +522,21 @@ describe('ConfigLoader', () => {
       });
       const stats = createMockFrameStats({
         cpuTimeMs: 33.33, // ~30 FPS
-        performance: { fps: 30, averageFps: 30, minFps: 25, maxFps: 35, fps1PercentLow: 20, frameTimeVariance: 5, trianglesPerSecond: 1000000, drawCallsPerTriangle: 0.001 },
+        performance: { 
+          fps: 30, 
+          fpsMin: 25, 
+          fpsMax: 35, 
+          fps1PercentLow: 20, 
+          frameTimeVariance: 5,
+          fpsSmoothed: 30,
+          frameBudgetUsed: 200,
+          targetFrameTimeMs: 16.67,
+          trianglesPerDrawCall: 500,
+          trianglesPerObject: 1000,
+          drawCallEfficiency: 0.8,
+          isSmooth: false,
+          droppedFrames: 5,
+        },
       });
       
       const results = loader.checkRules(stats);
@@ -556,15 +576,24 @@ describe('ConfigLoader', () => {
       });
       const stats = createMockFrameStats({
         rendering: {
-          lights: 10, // Exceeds threshold
-          shadowLights: 2,
+          totalLights: 10, // Exceeds threshold
+          activeLights: 8,
           skinnedMeshes: 1,
-          bones: 20,
+          totalBones: 20,
           transparentObjects: 3,
-          opaqueObjects: 10,
           programSwitches: 10,
           textureBinds: 20,
-          uniformUpdates: 50,
+          shadowMapUpdates: 0,
+          shadowCastingLights: 0,
+          instancedDrawCalls: 0,
+          totalInstances: 0,
+          transparentDrawCalls: 0,
+          renderTargetSwitches: 0,
+          bufferUploads: 0,
+          bytesUploaded: 0,
+          postProcessingPasses: 0,
+          xrActive: false,
+          viewports: 1,
         },
       });
       
