@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createProbe } from '@3lens/core';
-import { bootstrapOverlay } from '@3lens/overlay';
+import { createOverlay } from '@3lens/overlay';
 
 /**
  * Electron Renderer Process
@@ -125,13 +125,12 @@ scene.add(torusGroup);
 
 // 3Lens Probe
 const probe = createProbe({
-  renderer,
-  scene,
-  camera,
+  appName: 'Electron Desktop Example',
 });
 
-probe.setAppName('Electron Desktop Example');
-bootstrapOverlay(probe);
+probe.observeRenderer(renderer);
+probe.observeScene(scene);
+createOverlay(probe);
 
 // Info panel
 interface AppInfo {

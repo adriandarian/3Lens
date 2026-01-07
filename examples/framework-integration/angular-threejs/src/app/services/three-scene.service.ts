@@ -3,7 +3,7 @@ import { BehaviorSubject, Subject, interval, takeUntil } from 'rxjs';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createProbe, DevtoolProbe } from '@3lens/core';
-import { bootstrapOverlay } from '@3lens/overlay';
+import { createOverlay } from '@3lens/overlay';
 
 /**
  * Three Scene Service
@@ -243,8 +243,8 @@ export class ThreeSceneService implements OnDestroy {
     this.probe.observeRenderer(this.renderer);
     this.probe.observeScene(this.scene);
     
-    // Bootstrap the overlay
-    bootstrapOverlay(this.probe);
+    // Create the overlay
+    createOverlay(this.probe);
   }
 
   private startMetricsUpdate(): void {
