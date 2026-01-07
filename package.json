@@ -71,6 +71,11 @@
     "vitepress": "^1.6.4",
     "vitest": "^1.0.0"
   },
+  "pnpm": {
+    "overrides": {
+      "http-proxy-middleware": ">=2.0.9"
+    }
+  },
   "packageManager": "pnpm@10.27.0",
   "engines": {
     "node": ">=18.0.0",
