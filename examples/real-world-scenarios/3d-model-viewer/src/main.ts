@@ -360,6 +360,9 @@ async function loadModel(url: string | File) {
     }
     
     currentModel = gltf.scene;
+    if (!currentModel) {
+      throw new Error('Failed to load model: scene is empty');
+    }
     currentModel.name = 'LoadedModel';
     
     // Enable shadows
@@ -386,9 +389,6 @@ async function loadModel(url: string | File) {
     // Calculate and display stats
     currentStats = calculateModelStats(currentModel);
     updateStatsDisplay(currentStats);
-    
-    // Update 3Lens probe
-    probe.updateSnapshot();
     
   } catch (error) {
     console.error('Error loading model:', error);
@@ -648,8 +648,6 @@ function loadSampleModel(type: string) {
   
   currentStats = calculateModelStats(currentModel);
   updateStatsDisplay(currentStats);
-  
-  probe.updateSnapshot();
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -729,14 +727,10 @@ probe.observeRenderer(renderer);
 probe.observeScene(scene);
 probe.setThreeReference(THREE);
 
-// Initialize transform gizmo and camera controller
-(async () => {
-  await probe.initializeTransformGizmo(camera, renderer.domElement);
-  await probe.initializeCameraController(camera, renderer.domElement);
-})();
+probe.initializeTransformGizmo(scene, camera, renderer.domElement, THREE);
+probe.initializeCameraController(camera, THREE);
 
-// Create overlay
-const overlay = createOverlay(probe);
+createOverlay(probe);
 
 // ───────────────────────────────────────────────────────────────
 // Event Handlers

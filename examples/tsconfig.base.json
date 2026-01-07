@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@3lens/core": ["../../packages/core/dist/index.d.ts"],
+      "@3lens/overlay": ["../../packages/overlay/dist/index.d.ts"],
+      "@3lens/ui": ["../../packages/ui/dist/index.d.ts"],
+      "@3lens/react-bridge": ["../../packages/react-bridge/dist/index.d.ts"],
+      "@3lens/vue-bridge": ["../../packages/vue-bridge/dist/index.d.ts"],
+      "@3lens/angular-bridge": ["../../packages/angular-bridge/dist/index.d.ts"]
+    }
+  }
+}

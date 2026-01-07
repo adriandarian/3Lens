@@ -128,12 +128,13 @@ document.getElementById('app')!.prepend(renderer.domElement);
 // Initialize 3Lens DevTool
 // ============================================================================
 
-const probe = new DevtoolProbe();
+const probe = new DevtoolProbe({
+  appName: 'Racing Game Profiler',
+});
 probe.observeScene(scene);
 probe.observeRenderer(renderer);
 
-const overlay = createOverlay(probe);
-overlay.mount(document.getElementById('app')!);
+createOverlay(probe);
 
 // ============================================================================
 // Lighting
@@ -1144,9 +1145,6 @@ function animate(): void {
   updateCamera();
   updateUI();
   updateMinimap();
-
-  // Capture frame for 3Lens
-  probe.captureFrame();
 
   renderer.render(scene, camera);
 }

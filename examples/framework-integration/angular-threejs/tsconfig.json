@@ -18,10 +18,17 @@
     "target": "ES2022",
     "module": "ES2022",
     "useDefineForClassFields": false,
-    "lib": ["ES2022", "dom"],
+    "lib": [
+      "ES2022",
+      "dom"
+    ],
     "paths": {
-      "@3lens/core": ["../../packages/core/dist/index.js"],
-      "@3lens/overlay": ["../../packages/overlay/dist/index.js"]
+      "@3lens/core": [
+        "../../packages/core/dist/index.js"
+      ],
+      "@3lens/overlay": [
+        "../../packages/overlay/dist/index.js"
+      ]
     }
   },
   "angularCompilerOptions": {
@@ -29,6 +36,6 @@
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true,
     "strictTemplates": true
-  }
+  },
+  "extends": "../../tsconfig.base.json"
 }
-

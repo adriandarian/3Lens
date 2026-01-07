@@ -17,7 +17,7 @@ interface Enemy {
   lastAttackTime: number;
   attackCooldown: number;
   pathHelper?: THREE.Line;
-  hitboxHelper?: THREE.BoxHelper;
+  hitboxHelper?: THREE.Box3Helper;
   healthBar?: THREE.Sprite;
 }
 
@@ -86,20 +86,18 @@ container.appendChild(renderer.domElement);
 
 // Pointer Lock Controls
 const controls = new PointerLockControls(camera, renderer.domElement);
-scene.add(controls.object);
 
 // ───────────────────────────────────────────────────────────────
 // 3Lens Integration
 // ───────────────────────────────────────────────────────────────
 
-const probe = createProbe();
-probe.observeScene(scene, { name: 'FPS Arena' });
+const probe = createProbe({
+  appName: 'FPS Arena',
+});
+probe.observeScene(scene);
 probe.observeRenderer(renderer);
 
-const overlay = createOverlay(probe, {
-  initialPosition: { x: window.innerWidth - 420, y: 20 },
-  collapsed: true,
-});
+const overlay = createOverlay(probe);
 
 probe.registerLogicalEntity({
   name: 'Player',
@@ -378,7 +376,7 @@ function removeEnemy(enemy: Enemy) {
 function updateEnemy(enemy: Enemy, delta: number) {
   if (enemy.state === 'dead') return;
 
-  const playerPos = controls.object.position;
+  const playerPos = camera.position;
   const enemyPos = enemy.mesh.position;
   const direction = new THREE.Vector3()
     .subVectors(playerPos, enemyPos)
@@ -661,20 +659,20 @@ function updatePlayer(delta: number) {
   }
 
   // Apply movement
-  controls.object.position.x += playerVelocity.x * delta;
-  controls.object.position.y += playerVelocity.y * delta;
-  controls.object.position.z += playerVelocity.z * delta;
+  camera.position.x += playerVelocity.x * delta;
+  camera.position.y += playerVelocity.y * delta;
+  camera.position.z += playerVelocity.z * delta;
 
   // Ground check
-  if (controls.object.position.y < PLAYER_HEIGHT) {
-    controls.object.position.y = PLAYER_HEIGHT;
+  if (camera.position.y < PLAYER_HEIGHT) {
+    camera.position.y = PLAYER_HEIGHT;
     playerVelocity.y = 0;
     isOnGround = true;
   }
 
   // Arena bounds
-  controls.object.position.x = Math.max(-48, Math.min(48, controls.object.position.x));
-  controls.object.position.z = Math.max(-48, Math.min(48, controls.object.position.z));
+  camera.position.x = Math.max(-48, Math.min(48, camera.position.x));
+  camera.position.z = Math.max(-48, Math.min(48, camera.position.z));
 
   // Update debug stats
   updatePlayerStats();
@@ -760,7 +758,7 @@ function updateEnemyCount() {
 }
 
 function updatePlayerStats() {
-  const pos = controls.object.position;
+  const pos = camera.position;
   document.getElementById('player-pos')!.textContent = 
     `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
   
@@ -828,7 +826,7 @@ function resetGame() {
   gameState.hits = 0;
   
   // Reset player position
-  controls.object.position.set(0, PLAYER_HEIGHT, 5);
+  camera.position.set(0, PLAYER_HEIGHT, 5);
   playerVelocity.set(0, 0, 0);
   
   // Update UI
@@ -860,7 +858,7 @@ function toggleEnemyPaths() {
   
   for (const enemy of enemies) {
     if (showPaths) {
-      const points = [enemy.mesh.position.clone(), controls.object.position.clone()];
+      const points = [enemy.mesh.position.clone(), camera.position.clone()];
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
       const material = new THREE.LineBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.5 });
       enemy.pathHelper = new THREE.Line(geometry, material);
@@ -1042,9 +1040,6 @@ function animate() {
       updateBullet(bullet, delta);
     }
   }
-  
-  // Record frame for 3Lens
-  probe.captureFrame();
   
   renderer.render(scene, camera);
 }

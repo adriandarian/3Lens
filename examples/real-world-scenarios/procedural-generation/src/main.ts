@@ -222,12 +222,13 @@ const COLOR_SCHEMES: Record<ColorScheme, { stops: [number, THREE.Color][] }> = {
 // ============================================================================
 
 class ProceduralGenerator {
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
-  private controls: OrbitControls;
-  private probe: DevtoolProbe;
-  private noise: SimplexNoise;
+  private scene!: THREE.Scene;
+  private camera!: THREE.PerspectiveCamera;
+  private renderer!: THREE.WebGLRenderer;
+  private controls!: OrbitControls;
+  private probe!: DevtoolProbe;
+  private overlay!: ReturnType<typeof createOverlay>;
+  private noise!: SimplexNoise;
 
   private generatorType: GeneratorType = 'terrain';
   private generationMode: GenerationMode = 'realtime';
@@ -333,17 +334,14 @@ class ProceduralGenerator {
 
   private initDevtools(): void {
     this.probe = createProbe({
-      name: 'Procedural Generation Debugger',
-      captureStackTraces: false,
+      appName: 'Procedural Generation Debugger',
+      debug: false,
     });
 
     this.probe.observeScene(this.scene);
     this.probe.observeRenderer(this.renderer);
 
-    createOverlay(this.probe, {
-      position: 'bottom-right',
-      defaultOpen: true,
-    });
+    this.overlay = createOverlay(this.probe);
   }
 
   private setupEventListeners(): void {
@@ -523,13 +521,13 @@ class ProceduralGenerator {
         break;
       case 'd':
       case 'D':
-        this.probe?.setOverlayVisible(!this.probe?.isOverlayVisible());
+        this.overlay?.toggle();
         break;
     }
   }
 
   private toggleDebug(option: keyof typeof this.debugOptions): void {
-    const label = document.querySelector(`label:has(#debug-${option})`);
+    const label = document.querySelector(`label:has(#debug-${option})`) as HTMLElement | null;
     label?.click();
   }
 

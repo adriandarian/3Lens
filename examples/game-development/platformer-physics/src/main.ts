@@ -103,12 +103,13 @@ document.getElementById('app')!.prepend(renderer.domElement);
 // Initialize 3Lens DevTool
 // ============================================================================
 
-const probe = new DevtoolProbe();
+const probe = new DevtoolProbe({
+  appName: 'Platformer Physics Debug',
+});
 probe.observeScene(scene);
 probe.observeRenderer(renderer);
 
-const overlay = createOverlay(probe);
-overlay.mount(document.getElementById('app')!);
+createOverlay(probe);
 
 // ============================================================================
 // Debug Visualization Groups
@@ -865,8 +866,9 @@ function updateMovingPlatforms(time: number): void {
     platform.mesh.position.set(newX, newY, 0);
 
     // Update bounds
-    const width = platform.mesh.geometry.parameters.width;
-    const height = platform.mesh.geometry.parameters.height;
+    const geometry = platform.mesh.geometry as THREE.BoxGeometry;
+    const width = geometry.parameters.width;
+    const height = geometry.parameters.height;
     platform.bounds.min.set(newX - width / 2, newY - height / 2);
     platform.bounds.max.set(newX + width / 2, newY + height / 2);
 
@@ -1109,7 +1111,6 @@ function animate(): void {
 
   // Update 3Lens
   update3LensMetadata();
-  probe.captureFrame();
 
   // Animate coins
   for (const coin of coins) {

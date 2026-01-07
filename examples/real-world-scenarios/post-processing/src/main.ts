@@ -293,6 +293,8 @@ const vignetteEffect = new VignetteEffect({
 
 const chromaticAberrationEffect = new ChromaticAberrationEffect({
   offset: new THREE.Vector2(0.002, 0.002),
+  radialModulation: false,
+  modulationOffset: 0.15,
 });
 
 const noiseEffect = new NoiseEffect({
@@ -387,12 +389,10 @@ probe.observeRenderer(renderer);
 probe.observeScene(scene);
 probe.setThreeReference(THREE);
 
-(async () => {
-  await probe.initializeTransformGizmo(camera, renderer.domElement);
-  await probe.initializeCameraController(camera, renderer.domElement);
-})();
+probe.initializeTransformGizmo(scene, camera, renderer.domElement, THREE);
+probe.initializeCameraController(camera, THREE);
 
-const overlay = createOverlay(probe);
+createOverlay(probe);
 
 // ───────────────────────────────────────────────────────────────
 // Presets
@@ -490,7 +490,7 @@ function applyPreset(name: string) {
   
   // Update effect parameters
   bloomEffect.intensity = preset.bloomIntensity;
-  bloomEffect.luminancePass.fullscreenMaterial.threshold = preset.bloomThreshold;
+  bloomEffect.luminanceMaterial.threshold = preset.bloomThreshold;
   
   vignetteEffect.darkness = preset.vignetteDarkness;
   
@@ -523,7 +523,7 @@ function updateUIFromState() {
   
   // Update sliders
   updateSlider('bloom-intensity', bloomEffect.intensity);
-  updateSlider('bloom-threshold', bloomEffect.luminancePass.fullscreenMaterial.threshold);
+  updateSlider('bloom-threshold', bloomEffect.luminanceMaterial.threshold);
   updateSlider('vignette-darkness', vignetteEffect.darkness);
   updateSlider('chromatic-offset', chromaticAberrationEffect.offset.x);
   updateSlider('noise-intensity', noiseEffect.blendMode.opacity.value);
@@ -579,7 +579,7 @@ document.getElementById('bloom-intensity')?.addEventListener('input', (e) => {
 
 document.getElementById('bloom-threshold')?.addEventListener('input', (e) => {
   const value = parseFloat((e.target as HTMLInputElement).value);
-  bloomEffect.luminancePass.fullscreenMaterial.threshold = value;
+  bloomEffect.luminanceMaterial.threshold = value;
   document.getElementById('bloom-threshold-value')!.textContent = value.toFixed(2);
 });
 

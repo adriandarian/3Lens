@@ -379,12 +379,10 @@ probe.observeRenderer(renderer);
 probe.observeScene(scene);
 probe.setThreeReference(THREE);
 
-(async () => {
-  await probe.initializeTransformGizmo(camera, renderer.domElement);
-  await probe.initializeCameraController(camera, renderer.domElement);
-})();
+probe.initializeTransformGizmo(scene, camera, renderer.domElement, THREE);
+probe.initializeCameraController(camera, THREE, { x: 0, y: 1.6, z: 3 });
 
-const overlay = createOverlay(probe);
+createOverlay(probe);
 
 // ───────────────────────────────────────────────────────────────
 // WebXR Session Management

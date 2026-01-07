@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createProbe, DevtoolProbe } from '@3lens/core';
-import { createOverlay } from '@3lens/overlay';
+import { createOverlay, ThreeLensOverlay } from '@3lens/overlay';
 
 // ============================================================================
 // Types
@@ -51,6 +51,7 @@ type LayoutType = 'single' | '2x2' | '2x1' | '1-2' | '3x1' | 'tabs';
 class MultiSceneManager {
   private scenes: Map<string, ManagedScene> = new Map();
   private probe: DevtoolProbe | null = null;
+  private overlay: ThreeLensOverlay | null = null;
   private activeSceneId: string | null = null;
   private layout: LayoutType = '2x2';
   private messages: SceneMessage[] = [];
@@ -74,14 +75,10 @@ class MultiSceneManager {
 
   private initDevtools(): void {
     this.probe = createProbe({
-      name: 'Multi-Scene Manager',
-      captureStackTraces: false,
+      appName: 'Multi-Scene Manager',
     });
 
-    createOverlay(this.probe, {
-      position: 'bottom-right',
-      defaultOpen: true,
-    });
+    this.overlay = createOverlay(this.probe);
   }
 
   private setupEventListeners(): void {
@@ -164,7 +161,7 @@ class MultiSceneManager {
         break;
       case 'd':
       case 'D':
-        this.probe?.setOverlayVisible(!this.probe?.isOverlayVisible());
+        this.overlay?.toggle();
         break;
     }
   }

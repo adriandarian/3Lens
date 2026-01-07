@@ -35,7 +35,8 @@
     "@3lens/ui": "workspace:*"
   },
   "devDependencies": {
-    "three": "^0.160.0"
+    "three": "^0.160.0",
+    "vite-plugin-dts": "^3.7.0"
   },
   "peerDependencies": {
     "three": ">=0.150.0"

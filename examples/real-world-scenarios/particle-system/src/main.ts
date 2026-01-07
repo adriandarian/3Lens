@@ -526,14 +526,10 @@ probe.observeRenderer(renderer);
 probe.observeScene(scene);
 probe.setThreeReference(THREE);
 
-// Initialize controllers
-(async () => {
-  await probe.initializeTransformGizmo(camera, renderer.domElement);
-  await probe.initializeCameraController(camera, renderer.domElement);
-})();
+probe.initializeTransformGizmo(scene, camera, renderer.domElement, THREE);
+probe.initializeCameraController(camera, THREE);
 
-// Create overlay
-const overlay = createOverlay(probe);
+createOverlay(probe);
 
 // ───────────────────────────────────────────────────────────────
 // UI Controls

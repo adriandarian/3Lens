@@ -49,8 +49,8 @@ class AudioAnalyzer {
   private analyser: AnalyserNode | null = null;
   private source: MediaElementAudioSourceNode | MediaStreamAudioSourceNode | null = null;
   private audio: HTMLAudioElement | null = null;
-  private frequencyData: Uint8Array = new Uint8Array(0);
-  private timeDomainData: Uint8Array = new Uint8Array(0);
+  private frequencyData: Uint8Array<ArrayBuffer> = new Uint8Array(0);
+  private timeDomainData: Uint8Array<ArrayBuffer> = new Uint8Array(0);
   
   // Beat detection
   private beatHistory: number[] = [];
@@ -1035,11 +1035,11 @@ class AudioVisualizationApp {
     }
     
     // Initialize 3Lens
-    this.probe = createProbe();
-    this.probe.attach({ scene: this.scene, renderer: this.renderer });
+    this.probe = createProbe({ appName: 'Audio Visualization' });
+    this.probe.observeRenderer(this.renderer);
+    this.probe.observeScene(this.scene);
     
-    this.overlay = createOverlay();
-    this.overlay.attach(this.probe);
+    this.overlay = createOverlay(this.probe);
     
     // Handle resize
     window.addEventListener('resize', () => this.onResize());
@@ -1391,9 +1391,6 @@ class AudioVisualizationApp {
       this.camera.position.y = 2 + bands.overall * 2;
       this.camera.lookAt(0, 0, 0);
     }
-    
-    // Update probe
-    this.probe?.update();
     
     // Render
     this.renderer.render(this.scene, this.camera);

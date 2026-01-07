@@ -104,14 +104,13 @@ container.appendChild(renderer.domElement);
 // 3Lens Integration
 // ───────────────────────────────────────────────────────────────
 
-const probe = createProbe();
-probe.observeScene(scene, { name: 'RPG World' });
+const probe = createProbe({
+  appName: 'RPG World',
+});
+probe.observeScene(scene);
 probe.observeRenderer(renderer);
 
-const overlay = createOverlay(probe, {
-  initialPosition: { x: window.innerWidth - 420, y: 20 },
-  collapsed: true,
-});
+const overlay = createOverlay(probe);
 
 // ───────────────────────────────────────────────────────────────
 // Lighting
@@ -1352,7 +1351,6 @@ function animate() {
     }
   }
   
-  probe.captureFrame();
   renderer.render(scene, camera);
 }
 
