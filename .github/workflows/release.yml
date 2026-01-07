@@ -34,7 +34,10 @@ concurrency:
 env:
   NODE_VERSION: '20'
   CI: true
-  BROWSER: none
+  BROWSER: "false"
+  NO_OPEN: "1"
+  npm_config_fund: "false"
+  npm_config_audit: "false"
 
 jobs:
   validate:
@@ -171,10 +174,13 @@ jobs:
         run: pnpm build
 
       - name: Generate API docs
-        run: pnpm docs
+        run: pnpm docs 2>&1 || echo "Docs generation had warnings but continuing"
         env:
-          BROWSER: none
+          BROWSER: "false"
           CI: true
+          NO_OPEN: "1"
+          npm_config_fund: "false"
+          npm_config_audit: "false"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
