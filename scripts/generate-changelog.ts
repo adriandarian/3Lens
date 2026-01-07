@@ -76,13 +76,25 @@ function getAllTags(): string[] {
 
 function getCommitsSince(since?: string): string[] {
   const range = since ? `${since}..HEAD` : 'HEAD';
-  const format = '%H|%s|%b|%D';
+  // Use a delimiter that's unlikely to appear in commit messages
+  const delimiter = '<<COMMIT_DELIM>>';
+  const format = `%H${delimiter}%s${delimiter}%b${delimiter}%D`;
   const log = exec(`git log ${range} --format="${format}" --no-merges`);
   return log ? log.split('\n').filter(Boolean) : [];
 }
 
 function parseCommit(raw: string): Commit | null {
-  const [hash, subject, body = '', refs = ''] = raw.split('|');
+  const delimiter = '<<COMMIT_DELIM>>';
+  const parts = raw.split(delimiter);
+  const hash = parts[0] || '';
+  const subject = parts[1] || '';
+  const body = parts[2] || '';
+  const refs = parts[3] || '';
+
+  // Skip if no valid hash or subject
+  if (!hash || !subject) {
+    return null;
+  }
 
   // Parse conventional commit format: type(scope): subject
   const conventionalMatch = subject.match(/^(\w+)(?:\(([^)]+)\))?!?:\s*(.+)$/);
