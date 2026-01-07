@@ -74,7 +74,14 @@
   "pnpm": {
     "overrides": {
       "http-proxy-middleware": ">=2.0.9"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "nice-napi",
+      "unrs-resolver",
+      "vue-demi"
+    ]
   },
   "packageManager": "pnpm@10.27.0",
   "engines": {
