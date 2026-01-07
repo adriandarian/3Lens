@@ -346,10 +346,10 @@ jobs:
           VERSION="${{ needs.validate.outputs.version }}"
           
           # Generate release notes using the changelog script
-          npx ts-node scripts/generate-changelog.ts --release "$VERSION" --output RELEASE_NOTES.md
+          npx tsx scripts/generate-changelog.ts --release "$VERSION" --output RELEASE_NOTES.md
           
           # Also update the full changelog
-          npx ts-node scripts/generate-changelog.ts --output CHANGELOG.md
+          npx tsx scripts/generate-changelog.ts --output CHANGELOG.md
           
           echo "Generated release notes for v$VERSION"
 
