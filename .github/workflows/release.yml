@@ -357,10 +357,8 @@ jobs:
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
           
-          # Create dist archive
-          tar -czvf "3lens-$VERSION-dist.tar.gz" \
-            packages/*/dist \
-            --exclude='*.map'
+          # Create dist archive (exclude source maps)
+          tar --exclude='*.map' -czvf "3lens-$VERSION-dist.tar.gz" packages/*/dist
           
           # Create docs archive
           tar -czvf "3lens-$VERSION-docs.tar.gz" docs/api
