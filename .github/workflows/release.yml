@@ -264,10 +264,12 @@ jobs:
         if: ${{ !inputs.dry_run }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
         run: |
           NPM_TAG="${{ needs.validate.outputs.npm_tag }}"
           
-          # Publish packages in dependency order
+          # Publish packages in dependency order using pnpm
+          # pnpm automatically converts workspace:* to actual versions
           PACKAGES=(
             "packages/core"
             "packages/ui"
@@ -283,7 +285,7 @@ jobs:
               echo "📦 Publishing $name..."
               
               cd "$pkg"
-              npm publish --access public --tag "$NPM_TAG" --provenance
+              pnpm publish --access public --tag "$NPM_TAG" --no-git-checks
               cd - > /dev/null
               
               echo "✅ Published $name"
