@@ -38,11 +38,11 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "@webgpu/types": "^0.1.0",
-    "three": "^0.160.0",
-    "vite-plugin-dts": "^4.5.0"
+    "@webgpu/types": "catalog:",
+    "three": "catalog:",
+    "vite-plugin-dts": "catalog:"
   },
   "peerDependencies": {
-    "three": ">=0.150.0"
+    "three": ">=0.150.0 <0.183.0"
   }
 }

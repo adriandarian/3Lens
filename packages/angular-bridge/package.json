@@ -40,15 +40,15 @@
     "@3lens/core": "workspace:*"
   },
   "devDependencies": {
-    "@angular/core": "^17.0.0",
-    "rxjs": "^7.8.0",
-    "three": "^0.160.0",
-    "zone.js": "^0.14.0"
+    "@angular/core": "catalog:",
+    "rxjs": "catalog:",
+    "three": "catalog:",
+    "zone.js": "catalog:"
   },
   "peerDependencies": {
     "@angular/core": ">=14.0.0",
     "rxjs": ">=7.0.0",
-    "three": ">=0.150.0"
+    "three": ">=0.150.0 <0.183.0"
   }
 }
 

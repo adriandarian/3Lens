@@ -41,14 +41,14 @@
     "@3lens/core": "workspace:*"
   },
   "devDependencies": {
-    "@tresjs/core": "^4.0.0",
-    "@vue/test-utils": "^2.4.6",
-    "jsdom": "^27.4.0",
-    "three": "^0.160.0",
-    "vue": "^3.4.0"
+    "@tresjs/core": "catalog:",
+    "@vue/test-utils": "catalog:",
+    "jsdom": "catalog:",
+    "three": "catalog:",
+    "vue": "catalog:"
   },
   "peerDependencies": {
-    "three": ">=0.150.0",
+    "three": ">=0.150.0 <0.183.0",
     "vue": ">=3.3.0"
   },
   "peerDependenciesMeta": {

@@ -41,11 +41,11 @@
     "@3lens/ui": "workspace:*"
   },
   "devDependencies": {
-    "three": "^0.160.0",
-    "vite-plugin-dts": "^3.7.0"
+    "three": "catalog:",
+    "vite-plugin-dts": "catalog:"
   },
   "peerDependencies": {
-    "three": ">=0.150.0"
+    "three": ">=0.150.0 <0.183.0"
   }
 }
 
