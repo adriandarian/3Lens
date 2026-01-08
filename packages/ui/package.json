@@ -2,6 +2,12 @@
   "name": "@3lens/ui",
   "version": "0.1.0",
   "description": "Shared UI components for 3Lens devtools",
+  "homepage": "https://github.com/adriandarian/3Lens",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adriandarian/3Lens",
+    "directory": "packages/ui"
+  },
   "license": "MIT",
   "author": "Adrian Darian <adrian.the.hactus@gmail.com> (https://github.com/adriandarian)",
   "type": "module",
