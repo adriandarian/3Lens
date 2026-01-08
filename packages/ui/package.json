@@ -18,10 +18,6 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./styles": {
-      "import": "./dist/styles/index.js",
-      "types": "./dist/styles/index.d.ts"
     }
   },
   "files": [
