@@ -6,6 +6,12 @@ Core probe SDK for 3Lens — the definitive developer toolkit for three.js.
 
 ```bash
 npm install @3lens/core
+# or
+pnpm add @3lens/core
+# or
+yarn add @3lens/core
+# or
+bun add @3lens/core
 ```
 
 > **Note:** Currently in alpha, not yet published to npm.

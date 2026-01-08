@@ -56,6 +56,8 @@ npm install @3lens/core @3lens/overlay
 pnpm add @3lens/core @3lens/overlay
 # or
 yarn add @3lens/core @3lens/overlay
+# or
+bun add @3lens/core @3lens/overlay
 ```
 
 > **Note:** 3Lens is currently in alpha. The packages are not yet published to npm. See [Development Setup](#development-setup) to try it locally.

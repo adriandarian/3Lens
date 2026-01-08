@@ -8,6 +8,10 @@ React and React Three Fiber integration for 3Lens - the three.js devtool.
 npm install @3lens/react-bridge @3lens/core @3lens/overlay
 # or
 pnpm add @3lens/react-bridge @3lens/core @3lens/overlay
+# or
+yarn add @3lens/react-bridge @3lens/core @3lens/overlay
+# or
+bun add @3lens/react-bridge @3lens/core @3lens/overlay
 ```
 
 ## Quick Start

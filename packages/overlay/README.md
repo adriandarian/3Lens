@@ -6,6 +6,12 @@ In-app overlay UI for 3Lens — a floating panel for inspecting three.js scenes.
 
 ```bash
 npm install @3lens/core @3lens/overlay
+# or
+pnpm add @3lens/core @3lens/overlay
+# or
+yarn add @3lens/core @3lens/overlay
+# or
+bun add @3lens/core @3lens/overlay
 ```
 
 > **Note:** Currently in alpha, not yet published to npm.

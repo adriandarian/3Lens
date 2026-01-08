@@ -122,6 +122,10 @@ pnpm add @3lens/core @3lens/overlay
 yarn add @3lens/core @3lens/overlay
 ```
 
+```bash [bun]
+bun add @3lens/core @3lens/overlay
+```
+
 :::
 
 ```ts

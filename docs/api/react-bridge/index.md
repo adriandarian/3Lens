@@ -8,6 +8,10 @@ The React bridge provides seamless integration between 3Lens devtools and React 
 npm install @3lens/react-bridge @3lens/core
 # or
 pnpm add @3lens/react-bridge @3lens/core
+# or
+yarn add @3lens/react-bridge @3lens/core
+# or
+bun add @3lens/react-bridge @3lens/core
 ```
 
 For R3F support:

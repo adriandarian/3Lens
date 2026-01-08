@@ -8,6 +8,10 @@ Vue.js integration for 3Lens devtools. Provides a Vue plugin, composables, and T
 npm install @3lens/vue-bridge @3lens/core
 # or
 pnpm add @3lens/vue-bridge @3lens/core
+# or
+yarn add @3lens/vue-bridge @3lens/core
+# or
+bun add @3lens/vue-bridge @3lens/core
 ```
 
 ## Quick Start

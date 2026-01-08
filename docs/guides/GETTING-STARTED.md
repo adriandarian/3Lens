@@ -19,7 +19,7 @@ Before getting started, ensure you have:
 
 - **Node.js** 18.0.0 or higher
 - **A three.js project** (version 0.150.0 or higher recommended)
-- **A package manager**: npm, yarn, or pnpm
+- **A package manager**: npm, yarn, pnpm, or bun
 
 ## Installation
 
@@ -34,6 +34,9 @@ yarn add @3lens/core @3lens/overlay
 
 # Using pnpm
 pnpm add @3lens/core @3lens/overlay
+
+# Using bun
+bun add @3lens/core @3lens/overlay
 ```
 
 ### Framework-Specific Packages

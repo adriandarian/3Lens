@@ -6,7 +6,7 @@ Get up and running with 3Lens in your three.js project in just a few minutes. Th
 
 - **Node.js** 18+ (LTS recommended)
 - **A three.js application** (v0.150.0 or higher recommended)
-- **A package manager** (npm, pnpm, or yarn)
+- **A package manager** (npm, pnpm, yarn, or bun)
 
 ::: tip New to three.js?
 3Lens works with any three.js project. If you're just getting started with three.js, check out the [official three.js documentation](https://threejs.org/docs/) first.
@@ -28,6 +28,10 @@ pnpm add @3lens/core @3lens/overlay
 
 ```bash [yarn]
 yarn add @3lens/core @3lens/overlay
+```
+
+```bash [bun]
+bun add @3lens/core @3lens/overlay
 ```
 
 :::

@@ -8,6 +8,10 @@ The Angular bridge provides full integration between 3Lens devtools and Angular 
 npm install @3lens/angular-bridge @3lens/core
 # or
 pnpm add @3lens/angular-bridge @3lens/core
+# or
+yarn add @3lens/angular-bridge @3lens/core
+# or
+bun add @3lens/angular-bridge @3lens/core
 ```
 
 ## Quick Start
