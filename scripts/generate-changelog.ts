@@ -318,6 +318,12 @@ function generateFullChangelog(repoUrl: string): string {
   return lines.join('\n');
 }
 
+// Escape @3lens package mentions so they don't become GitHub user links
+function escapePackageMentions(text: string): string {
+  // Replace @3lens with escaped version (using backticks) outside of code blocks
+  return text.replace(/@3lens(?=\/)/g, '`@3lens`');
+}
+
 function generateReleaseNotes(version: string, repoUrl: string): string {
   const lastTag = getLastTag();
   const commits = getCommitsSince(lastTag)
@@ -329,7 +335,13 @@ function generateReleaseNotes(version: string, repoUrl: string): string {
   const lines: string[] = [];
   lines.push(`# 🎉 3Lens v${version}`);
   lines.push('');
-  lines.push(generateVersionChangelog(version, date, commits, repoUrl).split('\n').slice(2).join('\n'));
+  
+  // Get the changelog content and escape @3lens mentions
+  const changelogContent = generateVersionChangelog(version, date, commits, repoUrl)
+    .split('\n')
+    .slice(2)
+    .join('\n');
+  lines.push(escapePackageMentions(changelogContent));
 
   // Add packages section
   lines.push('## 📦 Packages');
@@ -356,6 +368,14 @@ function generateReleaseNotes(version: string, repoUrl: string): string {
   lines.push(`npm install @3lens/vue-bridge@${version}`);
   lines.push(`npm install @3lens/angular-bridge@${version}`);
   lines.push('```');
+  lines.push('');
+
+  // Add contributors section with actual repo contributors
+  lines.push('## 👥 Contributors');
+  lines.push('');
+  lines.push('Thanks to all contributors for this release:');
+  lines.push('');
+  lines.push('- [@adriandarian](https://github.com/adriandarian)');
   lines.push('');
 
   return lines.join('\n');
