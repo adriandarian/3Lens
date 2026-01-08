@@ -17,6 +17,14 @@ export default defineConfig({
 
   // Ignore dead links during build (many docs reference planned features)
   ignoreDeadLinks: true,
+
+  // Vite configuration for development
+  vite: {
+    server: {
+      // During development, if examples aren't built, show a helpful message
+      // For production, examples are pre-built to docs/public/examples/
+    }
+  },
   
   // Head tags - Favicons and branding
   head: [
@@ -283,30 +291,113 @@ export default defineConfig({
           text: 'Examples',
           items: [
             { text: 'Overview', link: '/examples/' },
+            { text: '🎮 All Live Examples', link: '/examples/live/' },
           ]
         },
         {
-          text: 'Framework Integration',
+          text: '🔌 Framework Integration',
+          collapsed: false,
           items: [
-            { text: 'Vanilla Three.js', link: '/examples/vanilla-threejs' },
-            { text: 'React Three Fiber', link: '/examples/react-r3f' },
-            { text: 'Vue + TresJS', link: '/examples/vue-tresjs' },
-            { text: 'Next.js SSR', link: '/examples/nextjs-ssr' },
+            { text: 'Overview', link: '/examples/live/framework-integration/' },
+            { text: 'Vanilla Three.js', link: '/examples/live/framework-integration/vanilla-threejs' },
+            { text: 'React Three Fiber', link: '/examples/live/framework-integration/react-three-fiber' },
+            { text: 'Vue + TresJS', link: '/examples/live/framework-integration/vue-tresjs' },
+            { text: 'Angular', link: '/examples/live/framework-integration/angular-threejs' },
+            { text: 'Svelte + Threlte', link: '/examples/live/framework-integration/svelte-threlte' },
+            { text: 'Next.js SSR', link: '/examples/live/framework-integration/nextjs-ssr' },
+            { text: 'Electron Desktop', link: '/examples/live/framework-integration/electron-desktop' },
           ]
         },
         {
-          text: 'Debugging',
+          text: '✨ Feature Showcase',
+          collapsed: true,
           items: [
-            { text: 'Performance Debugging', link: '/examples/performance-debugging' },
-            { text: 'Memory Leak Detection', link: '/examples/memory-leaks' },
-            { text: 'Shader Debugging', link: '/examples/shader-debugging' },
+            { text: 'Overview', link: '/examples/live/feature-showcase/' },
+            { text: 'Transform Gizmo', link: '/examples/live/feature-showcase/transform-gizmo' },
+            { text: 'Camera Controls', link: '/examples/live/feature-showcase/camera-controls' },
+            { text: 'Visual Overlays', link: '/examples/live/feature-showcase/visual-overlays' },
+            { text: 'Configuration Rules', link: '/examples/live/feature-showcase/configuration-rules' },
+            { text: 'Cost Analysis', link: '/examples/live/feature-showcase/cost-analysis' },
+            { text: 'Timeline Recording', link: '/examples/live/feature-showcase/timeline-recording' },
+            { text: 'Custom Plugin', link: '/examples/live/feature-showcase/custom-plugin' },
+            { text: 'WebGPU Features', link: '/examples/live/feature-showcase/webgpu-features' },
           ]
         },
         {
-          text: 'Advanced',
+          text: '🔍 Debugging & Profiling',
+          collapsed: true,
           items: [
-            { text: 'Custom Plugins', link: '/examples/custom-plugin' },
-            { text: 'WebGPU Features', link: '/examples/webgpu' },
+            { text: 'Overview', link: '/examples/live/debugging-profiling/' },
+            { text: 'Performance Debugging', link: '/examples/live/debugging-profiling/performance-debugging' },
+            { text: 'Memory Leak Detection', link: '/examples/live/debugging-profiling/memory-leak-detection' },
+            { text: 'Draw Call Batching', link: '/examples/live/debugging-profiling/draw-call-batching' },
+            { text: 'Large Scene Optimization', link: '/examples/live/debugging-profiling/large-scene-optimization' },
+            { text: 'Animation Profiling', link: '/examples/live/debugging-profiling/animation-profiling' },
+            { text: 'Texture Optimization', link: '/examples/live/debugging-profiling/texture-optimization' },
+            { text: 'Raycasting Debugger', link: '/examples/live/debugging-profiling/raycasting-debugger' },
+            { text: 'Shader Debugging', link: '/examples/live/debugging-profiling/shader-debugging' },
+          ]
+        },
+        {
+          text: '🚀 Advanced Techniques',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/examples/live/advanced-techniques/' },
+            { text: 'Compute Shaders', link: '/examples/live/advanced-techniques/compute-shaders' },
+            { text: 'Custom Render Pipeline', link: '/examples/live/advanced-techniques/custom-render-pipeline' },
+            { text: 'Environment Mapping', link: '/examples/live/advanced-techniques/environment-mapping' },
+            { text: 'Morph Target Analyzer', link: '/examples/live/advanced-techniques/morph-target-analyzer' },
+            { text: 'Shadow Comparison', link: '/examples/live/advanced-techniques/shadow-comparison' },
+            { text: 'Skinned Mesh Inspector', link: '/examples/live/advanced-techniques/skinned-mesh-inspector' },
+          ]
+        },
+        {
+          text: '📊 Data Visualization',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/examples/live/data-visualization/' },
+            { text: '3D Charts', link: '/examples/live/data-visualization/3d-charts' },
+            { text: 'Geographic Data', link: '/examples/live/data-visualization/geographic-data' },
+            { text: 'Realtime Streaming', link: '/examples/live/data-visualization/realtime-streaming' },
+            { text: 'Scientific Viz', link: '/examples/live/data-visualization/scientific-viz' },
+          ]
+        },
+        {
+          text: '🎮 Game Development',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/examples/live/game-development/' },
+            { text: 'First-Person Shooter', link: '/examples/live/game-development/first-person-shooter' },
+            { text: 'Platformer Physics', link: '/examples/live/game-development/platformer-physics' },
+            { text: 'Racing Game', link: '/examples/live/game-development/racing-game' },
+            { text: 'Top-Down RPG', link: '/examples/live/game-development/top-down-rpg' },
+          ]
+        },
+        {
+          text: '🌍 Real-World Scenarios',
+          collapsed: true,
+          items: [
+            { text: 'Overview', link: '/examples/live/real-world-scenarios/' },
+            { text: '3D Model Viewer', link: '/examples/live/real-world-scenarios/3d-model-viewer' },
+            { text: 'Audio Visualization', link: '/examples/live/real-world-scenarios/audio-visualization' },
+            { text: 'Multi-Scene Management', link: '/examples/live/real-world-scenarios/multi-scene-management' },
+            { text: 'Particle System', link: '/examples/live/real-world-scenarios/particle-system' },
+            { text: 'Physics Inspector', link: '/examples/live/real-world-scenarios/physics-inspector' },
+            { text: 'Post Processing', link: '/examples/live/real-world-scenarios/post-processing' },
+            { text: 'Procedural Generation', link: '/examples/live/real-world-scenarios/procedural-generation' },
+            { text: 'VR/XR Debugging', link: '/examples/live/real-world-scenarios/vr-xr-debugging' },
+          ]
+        },
+        {
+          text: '📖 Documentation',
+          collapsed: true,
+          items: [
+            { text: 'Code Examples', link: '/examples/code-examples' },
+            { text: 'Framework Integration Guide', link: '/examples/framework-integration' },
+            { text: 'Feature Showcase Guide', link: '/examples/feature-showcase' },
+            { text: 'Debugging Examples', link: '/examples/debugging-examples' },
+            { text: 'Game Development Guide', link: '/examples/game-development' },
+            { text: 'Real-World Scenarios Guide', link: '/examples/real-world-scenarios' },
           ]
         }
       ]

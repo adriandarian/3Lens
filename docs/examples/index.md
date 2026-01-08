@@ -97,11 +97,21 @@ pnpm dev
 
 ## Live Demos
 
-Try 3Lens directly in your browser:
+Try 3Lens directly in your browser with our interactive examples:
 
-::: info Coming Soon
-StackBlitz and CodeSandbox examples are being prepared. Check back soon!
+::: tip 🎮 Interactive Examples Available!
+We now have live, interactive examples you can run directly in your browser. No setup required!
+
+**[→ Browse Live Examples](/examples/live/)**
 :::
+
+### Quick Links
+
+- **[Vanilla Three.js](/examples/live/vanilla-threejs)** - Basic setup without any framework
+- **[React Three Fiber](/examples/live/react-three-fiber)** - R3F integration with hooks
+- **[Vue + TresJS](/examples/live/vue-tresjs)** - Vue composables with TresJS
+- **[Transform Gizmo](/examples/live/transform-gizmo)** - Interactive object manipulation
+- **[Performance Debugging](/examples/live/performance-debugging)** - Finding bottlenecks
 
 ## Contributing Examples
 

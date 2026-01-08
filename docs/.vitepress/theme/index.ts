@@ -11,6 +11,8 @@ import './styles/custom.css'
 import VersionSwitcher from './components/VersionSwitcher.vue'
 // @ts-ignore - Vue SFC types
 import VersionWarning from './components/VersionWarning.vue'
+// @ts-ignore - Vue SFC types
+import ExampleViewer from './components/ExampleViewer.vue'
 
 // Custom components (uncomment as you create them)
 // import HomeFeatures from './components/HomeFeatures.vue'
@@ -45,6 +47,9 @@ export default {
     
     // Register version components globally
     app.component('VersionSwitcher', VersionSwitcher)
+    
+    // Register example viewer component
+    app.component('ExampleViewer', ExampleViewer)
     
     // Register other global components
     // app.component('PackageBadge', PackageBadge)
