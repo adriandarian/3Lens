@@ -1,6 +1,6 @@
 /**
  * ResourceLifecycleTracker Test Suite
- * 
+ *
  * Tests for resource lifecycle tracking and leak detection.
  */
 
@@ -114,7 +114,7 @@ describe('ResourceLifecycleTracker', () => {
 
     it('should track as active resource', () => {
       tracker.recordCreation('geometry', 'geo-active', { name: 'Active' });
-      
+
       const summary = tracker.getSummary();
       expect(summary.geometries.active).toBe(1);
     });
@@ -198,7 +198,9 @@ describe('ResourceLifecycleTracker', () => {
 
       const geometryEvents = tracker.getEventsByType('geometry');
       expect(geometryEvents).toHaveLength(2);
-      expect(geometryEvents.every(e => e.resourceType === 'geometry')).toBe(true);
+      expect(geometryEvents.every((e) => e.resourceType === 'geometry')).toBe(
+        true
+      );
     });
   });
 
@@ -220,12 +222,12 @@ describe('ResourceLifecycleTracker', () => {
     it('should filter events by time range', async () => {
       const startTime = performance.now();
       tracker.recordCreation('geometry', 'geo-1');
-      
-      await new Promise(r => setTimeout(r, 10));
+
+      await new Promise((r) => setTimeout(r, 10));
       const midTime = performance.now();
-      
+
       tracker.recordCreation('geometry', 'geo-2');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       const endTime = performance.now();
 
       const allEvents = tracker.getEventsInRange(startTime, endTime);
@@ -247,15 +249,15 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordDisposal('texture', 'tex-1');
 
       const summary = tracker.getSummary();
-      
+
       expect(summary.geometries.created).toBe(2);
       expect(summary.geometries.disposed).toBe(1);
       expect(summary.geometries.active).toBe(1);
-      
+
       expect(summary.materials.created).toBe(1);
       expect(summary.materials.disposed).toBe(0);
       expect(summary.materials.active).toBe(1);
-      
+
       expect(summary.textures.created).toBe(2);
       expect(summary.textures.disposed).toBe(1);
       expect(summary.textures.active).toBe(1);
@@ -288,9 +290,9 @@ describe('ResourceLifecycleTracker', () => {
       });
 
       t.recordCreation('geometry', 'geo-leak', { name: 'LeakyGeo' });
-      
+
       // Wait for threshold to pass
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
 
       const leaks = t.getPotentialLeaks();
       expect(leaks.length).toBeGreaterThan(0);
@@ -310,9 +312,9 @@ describe('ResourceLifecycleTracker', () => {
       });
 
       t.recordCreation('geometry', 'geo-oldest');
-      await new Promise(r => setTimeout(r, 5));
+      await new Promise((r) => setTimeout(r, 5));
       t.recordCreation('geometry', 'geo-newer');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
 
       const leaks = t.getPotentialLeaks();
       if (leaks.length >= 2) {
@@ -354,7 +356,7 @@ describe('ResourceLifecycleTracker', () => {
       t.onAlert(callback);
 
       t.recordCreation('geometry', 'geo-leak');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       t.runLeakDetection();
 
       expect(callback).toHaveBeenCalled();
@@ -369,7 +371,7 @@ describe('ResourceLifecycleTracker', () => {
 
       unsubscribe();
       t.recordCreation('geometry', 'geo-leak');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       t.runLeakDetection();
 
       expect(callback).not.toHaveBeenCalled();
@@ -380,11 +382,11 @@ describe('ResourceLifecycleTracker', () => {
     it('should detect orphaned resources', async () => {
       const t = new ResourceLifecycleTracker();
       t.recordCreation('geometry', 'geo-orphan');
-      
+
       // Orphan detection has a 5 second threshold by default
       // We'll check that no alert is generated immediately
       const alerts = t.runLeakDetection();
-      const orphanAlerts = alerts.filter(a => a.type === 'orphaned_resource');
+      const orphanAlerts = alerts.filter((a) => a.type === 'orphaned_resource');
       expect(orphanAlerts).toHaveLength(0); // Too soon
     });
 
@@ -393,11 +395,13 @@ describe('ResourceLifecycleTracker', () => {
         leakThresholdMs: 5,
       });
       t.recordCreation('geometry', 'geo-undisposed');
-      
-      await new Promise(r => setTimeout(r, 10));
+
+      await new Promise((r) => setTimeout(r, 10));
       const alerts = t.runLeakDetection();
-      
-      const undisposedAlerts = alerts.filter(a => a.type === 'undisposed_resource');
+
+      const undisposedAlerts = alerts.filter(
+        (a) => a.type === 'undisposed_resource'
+      );
       expect(undisposedAlerts.length).toBeGreaterThan(0);
     });
 
@@ -406,24 +410,28 @@ describe('ResourceLifecycleTracker', () => {
       t.recordCreation('material', 'mat-detached');
       t.recordAttachment('material', 'mat-detached', 'mesh-1');
       t.recordDetachment('material', 'mat-detached', 'mesh-1');
-      
+
       // Detached detection has a 10 second threshold
       // For immediate testing, we'd need to mock time
       const alerts = t.runLeakDetection();
       // Initially no alert as threshold not reached
-      expect(alerts.filter(a => a.type === 'detached_not_disposed')).toHaveLength(0);
+      expect(
+        alerts.filter((a) => a.type === 'detached_not_disposed')
+      ).toHaveLength(0);
     });
 
     it('should detect resource accumulation', () => {
       const t = new ResourceLifecycleTracker();
-      
+
       // Create many geometries (threshold is 100)
       for (let i = 0; i < 105; i++) {
         t.recordCreation('geometry', `geo-${i}`);
       }
-      
+
       const alerts = t.runLeakDetection();
-      const accumulationAlerts = alerts.filter(a => a.type === 'resource_accumulation');
+      const accumulationAlerts = alerts.filter(
+        (a) => a.type === 'resource_accumulation'
+      );
       expect(accumulationAlerts.length).toBeGreaterThan(0);
     });
 
@@ -432,14 +440,14 @@ describe('ResourceLifecycleTracker', () => {
         leakThresholdMs: 5,
       });
       t.recordCreation('geometry', 'geo-dup');
-      
-      await new Promise(r => setTimeout(r, 10));
+
+      await new Promise((r) => setTimeout(r, 10));
       t.runLeakDetection();
       t.runLeakDetection(); // Run again
-      
+
       const allAlerts = t.getAlerts();
       const geoAlerts = allAlerts.filter(
-        a => a.resourceUuid === 'geo-dup' && a.type === 'undisposed_resource'
+        (a) => a.resourceUuid === 'geo-dup' && a.type === 'undisposed_resource'
       );
       expect(geoAlerts).toHaveLength(1);
     });
@@ -451,7 +459,7 @@ describe('ResourceLifecycleTracker', () => {
         leakThresholdMs: 5,
       });
       t.recordCreation('geometry', 'geo-1');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       t.runLeakDetection();
 
       const alerts1 = t.getAlerts();
@@ -467,13 +475,13 @@ describe('ResourceLifecycleTracker', () => {
         leakThresholdMs: 5,
       });
       t.recordCreation('geometry', 'geo-1');
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       t.runLeakDetection();
 
       expect(t.getAlerts().length).toBeGreaterThan(0);
-      
+
       t.clearAlerts();
-      
+
       expect(t.getAlerts()).toHaveLength(0);
     });
   });
@@ -499,26 +507,30 @@ describe('ResourceLifecycleTracker', () => {
         leakThresholdMs: 5,
       });
       t.recordCreation('geometry', 'geo-very-old');
-      
+
       // Wait for 3x threshold
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 20));
       const alerts = t.runLeakDetection();
-      
-      const criticalAlerts = alerts.filter(a => a.severity === 'critical');
+
+      const criticalAlerts = alerts.filter((a) => a.severity === 'critical');
       expect(criticalAlerts.length).toBeGreaterThan(0);
     });
 
     it('should set critical severity for high resource accumulation', () => {
       const t = new ResourceLifecycleTracker();
-      
+
       // Create 2x threshold (200+ geometries)
       for (let i = 0; i < 205; i++) {
         t.recordCreation('geometry', `geo-${i}`);
       }
-      
+
       const alerts = t.runLeakDetection();
-      const accumulationAlerts = alerts.filter(a => a.type === 'resource_accumulation');
-      expect(accumulationAlerts.some(a => a.severity === 'critical')).toBe(true);
+      const accumulationAlerts = alerts.filter(
+        (a) => a.type === 'resource_accumulation'
+      );
+      expect(accumulationAlerts.some((a) => a.severity === 'critical')).toBe(
+        true
+      );
     });
   });
 
@@ -534,7 +546,7 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordDisposal('texture', 'tex-1');
 
       const summary = tracker.getSummary();
-      
+
       expect(summary.geometries.active).toBe(1);
       expect(summary.materials.active).toBe(1);
       expect(summary.textures.active).toBe(2);
@@ -558,11 +570,11 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordAttachment('material', 'mat-multi', 'mesh-1');
       tracker.recordAttachment('material', 'mat-multi', 'mesh-2');
       tracker.recordDetachment('material', 'mat-multi', 'mesh-1');
-      
+
       // Still attached to mesh-2
       const summary = tracker.getSummary();
       expect(summary.materials.active).toBe(1);
-      
+
       tracker.recordDetachment('material', 'mat-multi', 'mesh-2');
       // Now fully detached - should trigger detach time tracking
     });
@@ -573,16 +585,16 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordCreation('geometry', 'geo-1');
       tracker.recordCreation('material', 'mat-1');
       tracker.recordCreation('texture', 'tex-1');
-      
+
       // Attach only mat-1
       tracker.recordAttachment('material', 'mat-1', 'mesh-1');
-      
+
       const orphans = tracker.getOrphanedResources();
-      
+
       expect(orphans).toHaveLength(2);
-      expect(orphans.map(o => o.uuid)).toContain('geo-1');
-      expect(orphans.map(o => o.uuid)).toContain('tex-1');
-      expect(orphans.map(o => o.uuid)).not.toContain('mat-1');
+      expect(orphans.map((o) => o.uuid)).toContain('geo-1');
+      expect(orphans.map((o) => o.uuid)).toContain('tex-1');
+      expect(orphans.map((o) => o.uuid)).not.toContain('mat-1');
     });
 
     it('should include name and subtype in orphaned resources', () => {
@@ -590,19 +602,19 @@ describe('ResourceLifecycleTracker', () => {
         name: 'BoxGeometry',
         subtype: 'BoxBufferGeometry',
       });
-      
+
       const orphans = tracker.getOrphanedResources();
-      
+
       expect(orphans[0].name).toBe('BoxGeometry');
       expect(orphans[0].subtype).toBe('BoxBufferGeometry');
     });
 
     it('should include age in orphaned resources', async () => {
       tracker.recordCreation('geometry', 'geo-1');
-      await new Promise(r => setTimeout(r, 10));
-      
+      await new Promise((r) => setTimeout(r, 10));
+
       const orphans = tracker.getOrphanedResources();
-      
+
       expect(orphans[0].ageMs).toBeGreaterThan(0);
     });
   });
@@ -612,9 +624,9 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordCreation('geometry', 'geo-1');
       tracker.recordCreation('material', 'mat-1');
       tracker.recordDisposal('geometry', 'geo-1');
-      
+
       const report = tracker.generateLeakReport();
-      
+
       expect(report.generatedAt).toBeGreaterThan(0);
       expect(report.sessionDurationMs).toBeGreaterThanOrEqual(0);
       expect(report.summary).toBeDefined();
@@ -627,9 +639,9 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordCreation('geometry', 'geo-2');
       tracker.recordCreation('material', 'mat-1');
       tracker.recordDisposal('geometry', 'geo-1');
-      
+
       const report = tracker.generateLeakReport();
-      
+
       expect(report.resourceStats.geometries.created).toBe(2);
       expect(report.resourceStats.geometries.disposed).toBe(1);
     });
@@ -639,35 +651,43 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordCreation('material', 'mat-1');
       tracker.recordCreation('texture', 'tex-1');
       // All orphaned
-      
+
       const report = tracker.generateLeakReport();
-      
+
       expect(report.recommendations.length).toBeGreaterThan(0);
-      expect(report.recommendations.some(r => r.includes('geometries'))).toBe(true);
-      expect(report.recommendations.some(r => r.includes('materials'))).toBe(true);
-      expect(report.recommendations.some(r => r.includes('textures'))).toBe(true);
+      expect(report.recommendations.some((r) => r.includes('geometries'))).toBe(
+        true
+      );
+      expect(report.recommendations.some((r) => r.includes('materials'))).toBe(
+        true
+      );
+      expect(report.recommendations.some((r) => r.includes('textures'))).toBe(
+        true
+      );
     });
 
     it('should recommend addressing critical alerts', async () => {
       const t = new ResourceLifecycleTracker({ leakThresholdMs: 5 });
       t.recordCreation('geometry', 'geo-old');
-      await new Promise(r => setTimeout(r, 20));
-      
+      await new Promise((r) => setTimeout(r, 20));
+
       const report = t.generateLeakReport();
-      
-      expect(report.recommendations.some(r => r.includes('critical'))).toBe(true);
+
+      expect(report.recommendations.some((r) => r.includes('critical'))).toBe(
+        true
+      );
     });
 
     it('should recommend reviewing memory growth', () => {
       const t = new ResourceLifecycleTracker();
-      
+
       // Simulate memory growth history by adding resources over time
       for (let i = 0; i < 15; i++) {
         t.recordCreation('texture', `tex-${i}`, {
           estimatedMemory: 10 * 1024 * 1024, // 10MB each
         });
       }
-      
+
       // Manually trigger memory history updates
       const history = t.getMemoryHistory();
       // Note: updateMemoryHistory is called internally, but we can check if it tracks
@@ -676,10 +696,10 @@ describe('ResourceLifecycleTracker', () => {
     it('should count leaked resources in report', async () => {
       const t = new ResourceLifecycleTracker({ leakThresholdMs: 5 });
       t.recordCreation('geometry', 'geo-leak', { estimatedMemory: 1024 });
-      await new Promise(r => setTimeout(r, 10));
-      
+      await new Promise((r) => setTimeout(r, 10));
+
       const report = t.generateLeakReport();
-      
+
       expect(report.resourceStats.geometries.leaked).toBe(1);
       expect(report.summary.estimatedLeakedMemoryBytes).toBe(1024);
     });
@@ -690,9 +710,9 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordCreation('texture', 'tex-1', { estimatedMemory: 1024 });
       tracker.recordCreation('texture', 'tex-2', { estimatedMemory: 2048 });
       tracker.recordCreation('geometry', 'geo-1', { estimatedMemory: 512 });
-      
+
       const total = tracker.getEstimatedMemory();
-      
+
       expect(total).toBe(3584);
     });
 
@@ -700,9 +720,9 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordCreation('texture', 'tex-1', { estimatedMemory: 1024 });
       tracker.recordCreation('texture', 'tex-2', { estimatedMemory: 2048 });
       tracker.recordDisposal('texture', 'tex-1');
-      
+
       const total = tracker.getEstimatedMemory();
-      
+
       expect(total).toBe(2048);
     });
   });
@@ -720,7 +740,7 @@ describe('ResourceLifecycleTracker', () => {
       t.recordCreation('material', 'mat-1');
       t.recordAttachment('material', 'mat-1', 'mesh-1');
       t.recordDetachment('material', 'mat-1', 'mesh-1');
-      
+
       // Need to wait for threshold (10s is too long for test)
       // Just verify the method exists and runs
       t.runLeakDetection();
@@ -729,15 +749,15 @@ describe('ResourceLifecycleTracker', () => {
     it('should not duplicate alerts for same resource', async () => {
       const t = new ResourceLifecycleTracker({ leakThresholdMs: 1 });
       t.recordCreation('geometry', 'geo-1');
-      
-      await new Promise(r => setTimeout(r, 5));
+
+      await new Promise((r) => setTimeout(r, 5));
       t.runLeakDetection();
       const firstCount = t.getAlerts().length;
-      
-      await new Promise(r => setTimeout(r, 5));
+
+      await new Promise((r) => setTimeout(r, 5));
       t.runLeakDetection();
       const secondCount = t.getAlerts().length;
-      
+
       // Some alerts shouldn't be duplicated within threshold
       // (exact behavior depends on alert type)
     });
@@ -746,7 +766,7 @@ describe('ResourceLifecycleTracker', () => {
   describe('detectMemoryGrowth', () => {
     it('should detect consistent memory growth', () => {
       const t = new ResourceLifecycleTracker();
-      
+
       // Need 10+ samples in history
       // Memory growth detection is internal, but we can verify via alerts
     });
@@ -754,16 +774,20 @@ describe('ResourceLifecycleTracker', () => {
 
   describe('callback errors', () => {
     it('should handle callback errors gracefully', () => {
-      const errorCallback = vi.fn(() => { throw new Error('Callback error'); });
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
+      const errorCallback = vi.fn(() => {
+        throw new Error('Callback error');
+      });
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
       tracker.onEvent(errorCallback);
-      
+
       // Should not throw
       expect(() => {
         tracker.recordCreation('geometry', 'geo-1');
       }).not.toThrow();
-      
+
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
@@ -772,14 +796,14 @@ describe('ResourceLifecycleTracker', () => {
   describe('formatBytes', () => {
     it('should format bytes correctly in alerts', async () => {
       const t = new ResourceLifecycleTracker({ leakThresholdMs: 5 });
-      
+
       // Create resource with specific memory
       t.recordCreation('texture', 'tex-1', { estimatedMemory: 1500 }); // 1.5KB
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       t.runLeakDetection();
-      
+
       const alerts = t.getAlerts();
-      const leakAlert = alerts.find(a => a.type === 'undisposed_resource');
+      const leakAlert = alerts.find((a) => a.type === 'undisposed_resource');
       if (leakAlert && leakAlert.details) {
         expect(leakAlert.details).toBeDefined();
       }
@@ -787,11 +811,13 @@ describe('ResourceLifecycleTracker', () => {
 
     it('should format MB correctly in alerts', async () => {
       const t = new ResourceLifecycleTracker({ leakThresholdMs: 5 });
-      
-      t.recordCreation('texture', 'tex-1', { estimatedMemory: 10 * 1024 * 1024 }); // 10MB
-      await new Promise(r => setTimeout(r, 10));
+
+      t.recordCreation('texture', 'tex-1', {
+        estimatedMemory: 10 * 1024 * 1024,
+      }); // 10MB
+      await new Promise((r) => setTimeout(r, 10));
       t.runLeakDetection();
-      
+
       const alerts = t.getAlerts();
       expect(alerts.length).toBeGreaterThan(0);
     });
@@ -802,9 +828,9 @@ describe('ResourceLifecycleTracker', () => {
       tracker.recordCreation('geometry', 'geo-1');
       tracker.recordCreation('material', 'mat-1');
       tracker.runLeakDetection();
-      
+
       tracker.clear();
-      
+
       expect(tracker.getEvents()).toHaveLength(0);
       expect(tracker.getAlerts()).toHaveLength(0);
       expect(tracker.getSummary().geometries.active).toBe(0);
@@ -832,7 +858,7 @@ describe('ResourceLifecycleTracker', () => {
 
     it('should handle resource with no metadata', () => {
       tracker.recordCreation('geometry', 'geo-minimal');
-      
+
       const events = tracker.getEvents();
       expect(events[0].resourceName).toBeUndefined();
       expect(events[0].resourceSubtype).toBeUndefined();
@@ -843,12 +869,12 @@ describe('ResourceLifecycleTracker', () => {
     it('should allow unsubscribe from events', () => {
       const callback = vi.fn();
       const unsub = tracker.onEvent(callback);
-      
+
       tracker.recordCreation('geometry', 'geo-1');
       expect(callback).toHaveBeenCalledTimes(1);
-      
+
       unsub();
-      
+
       tracker.recordCreation('geometry', 'geo-2');
       expect(callback).toHaveBeenCalledTimes(1);
     });

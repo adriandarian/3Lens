@@ -90,4 +90,3 @@ export function useSelectedObject(): UseSelectedObjectReturn {
     isSelected,
   };
 }
-

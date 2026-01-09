@@ -476,7 +476,9 @@ describe('getFrameMemoizer', () => {
 
 describe('formatPropertyPath', () => {
   it('should format path arrays', () => {
-    expect(formatPropertyPath(['material', 'color', 'r'])).toBe('material.color.r');
+    expect(formatPropertyPath(['material', 'color', 'r'])).toBe(
+      'material.color.r'
+    );
     expect(formatPropertyPath(['position', 'x'])).toBe('position.x');
   });
 

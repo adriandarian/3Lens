@@ -2,8 +2,18 @@
  * Textures Panel - Shared renderer for texture inspection
  */
 
-import type { PanelContext, UIState, TextureData, SceneSnapshot } from '../types';
-import { escapeHtml, formatBytes, getTextureIcon, truncateUrl } from '../utils/format';
+import type {
+  PanelContext,
+  UIState,
+  TextureData,
+  SceneSnapshot,
+} from '../types';
+import {
+  escapeHtml,
+  formatBytes,
+  getTextureIcon,
+  truncateUrl,
+} from '../utils/format';
 
 /**
  * Render the textures panel content
@@ -45,7 +55,9 @@ export function renderTexturesPanel(
   `;
 }
 
-function renderTexturesSummary(summary: SceneSnapshot['texturesSummary']): string {
+function renderTexturesSummary(
+  summary: SceneSnapshot['texturesSummary']
+): string {
   if (!summary) return '';
 
   return `
@@ -74,16 +86,18 @@ function renderTextureListItem(tex: TextureData, state: UIState): string {
   const isSelected = state.selectedTextureId === tex.uuid;
   const displayName = tex.name || `<${tex.type}>`;
   const texIcon = getTextureIcon(tex);
-  const dimensionText = tex.dimensions.width > 0 
-    ? `${tex.dimensions.width}×${tex.dimensions.height}` 
-    : 'Unknown';
+  const dimensionText =
+    tex.dimensions.width > 0
+      ? `${tex.dimensions.width}×${tex.dimensions.height}`
+      : 'Unknown';
 
   return `
     <div class="list-item texture-item ${isSelected ? 'selected' : ''}" data-uuid="${tex.uuid}" data-action="select-texture">
       <div class="texture-item-thumbnail">
-        ${tex.thumbnail 
-          ? `<img src="${tex.thumbnail}" alt="${escapeHtml(displayName)}" class="texture-thumb-img" />`
-          : `<div class="texture-thumb-placeholder">${texIcon}</div>`
+        ${
+          tex.thumbnail
+            ? `<img src="${tex.thumbnail}" alt="${escapeHtml(displayName)}" class="texture-thumb-img" />`
+            : `<div class="texture-thumb-placeholder">${texIcon}</div>`
         }
       </div>
       <div class="texture-item-info">
@@ -119,16 +133,18 @@ function renderNoTextureSelected(): string {
 
 function renderTextureInspector(tex: TextureData, state: UIState): string {
   const texIcon = getTextureIcon(tex);
-  const dimensionText = tex.dimensions.width > 0 
-    ? `${tex.dimensions.width} × ${tex.dimensions.height}` 
-    : 'Unknown';
+  const dimensionText =
+    tex.dimensions.width > 0
+      ? `${tex.dimensions.width} × ${tex.dimensions.height}`
+      : 'Unknown';
 
   return `
     <div class="inspector-header texture-header">
       <div class="texture-header-thumb">
-        ${tex.thumbnail 
-          ? `<img src="${tex.thumbnail}" alt="Preview" class="texture-header-img" />`
-          : `<div class="texture-header-placeholder">${texIcon}</div>`
+        ${
+          tex.thumbnail
+            ? `<img src="${tex.thumbnail}" alt="Preview" class="texture-header-img" />`
+            : `<div class="texture-header-placeholder">${texIcon}</div>`
         }
       </div>
       <div class="inspector-header-text">
@@ -197,7 +213,7 @@ function renderTexturePreview(tex: TextureData, state: UIState): string {
 
 function renderTextureSource(tex: TextureData): string {
   const source = tex.source;
-  
+
   return `
     <div class="inspector-section">
       <div class="section-title">Source</div>
@@ -214,12 +230,16 @@ function renderTextureSource(tex: TextureData): string {
           <span class="property-label">Ready</span>
           <span class="property-value ${source.isReady ? 'value-true' : 'value-false'}">${source.isReady ? 'Yes' : 'No'}</span>
         </div>
-        ${source.url ? `
+        ${
+          source.url
+            ? `
         <div class="property-row url-row">
           <span class="property-label">URL</span>
           <span class="property-value texture-url" title="${escapeHtml(source.url)}">${truncateUrl(source.url)}</span>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     </div>
   `;
@@ -227,7 +247,7 @@ function renderTextureSource(tex: TextureData): string {
 
 function renderTextureMipmaps(tex: TextureData): string {
   const mip = tex.mipmaps;
-  
+
   return `
     <div class="inspector-section">
       <div class="section-title">Mipmaps</div>
@@ -240,12 +260,16 @@ function renderTextureMipmaps(tex: TextureData): string {
           <span class="property-label">Generate</span>
           <span class="property-value ${mip.generateMipmaps ? 'value-true' : 'value-false'}">${mip.generateMipmaps ? 'Auto' : 'Manual'}</span>
         </div>
-        ${mip.count > 0 ? `
+        ${
+          mip.count > 0
+            ? `
         <div class="property-row">
           <span class="property-label">Levels</span>
           <span class="property-value">${mip.count}</span>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     </div>
   `;
@@ -339,13 +363,17 @@ function renderTextureUsage(tex: TextureData): string {
     <div class="inspector-section">
       <div class="section-title">Usage (${tex.usedByMaterials.length})</div>
       <div class="texture-usage-list">
-        ${tex.usedByMaterials.map((usage: TextureData['usedByMaterials'][0]) => `
+        ${tex.usedByMaterials
+          .map(
+            (usage: TextureData['usedByMaterials'][0]) => `
           <div class="texture-usage-item">
             <span class="usage-slot">${usage.slot}</span>
             <span class="usage-material">${escapeHtml(usage.materialName)}</span>
             <span class="usage-uuid">${usage.materialUuid.substring(0, 8)}</span>
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     </div>
   `;
@@ -362,18 +390,20 @@ export function attachTexturesEvents(
   rerender: () => void
 ): void {
   // Texture list item selection
-  container.querySelectorAll('[data-action="select-texture"]').forEach((item) => {
-    const itemEl = item as HTMLElement;
-    const uuid = itemEl.dataset.uuid;
+  container
+    .querySelectorAll('[data-action="select-texture"]')
+    .forEach((item) => {
+      const itemEl = item as HTMLElement;
+      const uuid = itemEl.dataset.uuid;
 
-    itemEl.addEventListener('click', () => {
-      if (!uuid) return;
-      // Toggle selection - clicking selected item deselects it
-      const newSelection = state.selectedTextureId === uuid ? null : uuid;
-      updateState({ selectedTextureId: newSelection });
-      rerender();
+      itemEl.addEventListener('click', () => {
+        if (!uuid) return;
+        // Toggle selection - clicking selected item deselects it
+        const newSelection = state.selectedTextureId === uuid ? null : uuid;
+        updateState({ selectedTextureId: newSelection });
+        rerender();
+      });
     });
-  });
 
   // Channel toggle buttons
   container.querySelectorAll('.channel-btn').forEach((btn) => {
@@ -387,4 +417,3 @@ export function attachTexturesEvents(
     });
   });
 }
-

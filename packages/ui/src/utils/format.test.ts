@@ -72,7 +72,9 @@ describe('formatBytes', () => {
 describe('formatVector', () => {
   it('should format vector with 2 decimal places', () => {
     expect(formatVector({ x: 1, y: 2, z: 3 })).toBe('(1.00, 2.00, 3.00)');
-    expect(formatVector({ x: 1.234, y: 5.678, z: 9.012 })).toBe('(1.23, 5.68, 9.01)');
+    expect(formatVector({ x: 1.234, y: 5.678, z: 9.012 })).toBe(
+      '(1.23, 5.68, 9.01)'
+    );
   });
 
   it('should handle negative values', () => {
@@ -117,7 +119,7 @@ describe('escapeHtml', () => {
     expect(escapeHtml('<div>')).toBe('&lt;div&gt;');
     expect(escapeHtml('a & b')).toBe('a &amp; b');
     expect(escapeHtml('"quoted"')).toBe('&quot;quoted&quot;');
-    expect(escapeHtml("it's")).toBe("it&#039;s");
+    expect(escapeHtml("it's")).toBe('it&#039;s');
   });
 
   it('should handle strings without entities', () => {

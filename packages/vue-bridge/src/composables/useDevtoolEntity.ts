@@ -142,7 +142,9 @@ export function useDevtoolEntityGroup(
   const registerGroup = (objs: (THREE.Object3D | null | undefined)[]) => {
     if (!context?.probe.value) return;
 
-    const validObjects = objs.filter((obj): obj is THREE.Object3D => obj != null);
+    const validObjects = objs.filter(
+      (obj): obj is THREE.Object3D => obj != null
+    );
 
     validObjects.forEach((obj, index) => {
       obj.userData = {
@@ -186,4 +188,3 @@ export function useDevtoolEntityGroup(
     unregisterGroup(unref(objects) ?? []);
   });
 }
-

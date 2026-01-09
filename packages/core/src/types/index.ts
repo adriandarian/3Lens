@@ -9,4 +9,3 @@ export * from './materials';
 export * from './geometry';
 export * from './textures';
 export * from './renderTargets';
-

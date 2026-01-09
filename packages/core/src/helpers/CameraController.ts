@@ -49,24 +49,30 @@ interface AnimationState {
 export class CameraController {
   private THREE: ThreeNamespace | null = null;
   private camera: THREE.Camera | null = null;
-  private orbitTarget: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 };
+  private orbitTarget: { x: number; y: number; z: number } = {
+    x: 0,
+    y: 0,
+    z: 0,
+  };
   private animation: AnimationState | null = null;
   private animationFrameId: number | null = null;
   private sceneCameras: THREE.Camera[] = [];
   private activeCameraIndex = 0;
-  
+
   // Home position (saved on initialization)
   private homePosition: { x: number; y: number; z: number } | null = null;
   private homeTarget: { x: number; y: number; z: number } | null = null;
-  
+
   // Track last focused object to prevent refocusing on the same object
   private lastFocusedObjectUuid: string | null = null;
   private lastFocusPadding: number = 1.5;
-  
+
   // Callbacks
-  private onCameraChangedCallbacks: Array<(camera: THREE.Camera, info: CameraInfo) => void> = [];
+  private onCameraChangedCallbacks: Array<
+    (camera: THREE.Camera, info: CameraInfo) => void
+  > = [];
   private onAnimationCompleteCallbacks: Array<() => void> = [];
-  
+
   constructor(private probe: DevtoolProbe) {}
 
   /**
@@ -82,7 +88,7 @@ export class CameraController {
     if (orbitTarget) {
       this.orbitTarget = { ...orbitTarget };
     }
-    
+
     // Save home position
     this.homePosition = {
       x: camera.position.x,
@@ -90,7 +96,7 @@ export class CameraController {
       z: camera.position.z,
     };
     this.homeTarget = { ...this.orbitTarget };
-    
+
     // Scan for cameras in observed scenes
     this.updateSceneCameras();
   }
@@ -134,7 +140,7 @@ export class CameraController {
     );
     this.orbitTarget = { ...this.homeTarget };
     this.camera.lookAt(this.homeTarget.x, this.homeTarget.y, this.homeTarget.z);
-    
+
     // Clear focus tracking since we're no longer focused on an object
     this.lastFocusedObjectUuid = null;
   }
@@ -145,11 +151,7 @@ export class CameraController {
   flyHome(options: Omit<FlyToOptions, 'padding'> = {}): void {
     if (!this.camera || !this.homePosition || !this.homeTarget) return;
 
-    const {
-      duration = 800,
-      easing = 'easeInOut',
-      onComplete,
-    } = options;
+    const { duration = 800, easing = 'easeInOut', onComplete } = options;
 
     // Clear focus tracking since we're going home
     this.lastFocusedObjectUuid = null;
@@ -183,7 +185,10 @@ export class CameraController {
   /**
    * Get the home position
    */
-  getHomePosition(): { position: { x: number; y: number; z: number }; target: { x: number; y: number; z: number } } | null {
+  getHomePosition(): {
+    position: { x: number; y: number; z: number };
+    target: { x: number; y: number; z: number };
+  } | null {
     if (!this.homePosition || !this.homeTarget) return null;
     return {
       position: { ...this.homePosition },
@@ -259,7 +264,10 @@ export class CameraController {
     };
 
     // Handle PerspectiveCamera
-    if ('isPerspectiveCamera' in camera && (camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+    if (
+      'isPerspectiveCamera' in camera &&
+      (camera as THREE.PerspectiveCamera).isPerspectiveCamera
+    ) {
       const perspCam = camera as THREE.PerspectiveCamera;
       info.fov = perspCam.fov;
       info.aspect = perspCam.aspect;
@@ -269,7 +277,10 @@ export class CameraController {
     }
 
     // Handle OrthographicCamera
-    if ('isOrthographicCamera' in camera && (camera as THREE.OrthographicCamera).isOrthographicCamera) {
+    if (
+      'isOrthographicCamera' in camera &&
+      (camera as THREE.OrthographicCamera).isOrthographicCamera
+    ) {
       const orthoCam = camera as THREE.OrthographicCamera;
       info.left = orthoCam.left;
       info.right = orthoCam.right;
@@ -290,7 +301,10 @@ export class CameraController {
     if (!this.camera || !this.THREE) return;
 
     // Skip if already focused on this exact object with same padding
-    if (this.lastFocusedObjectUuid === object.uuid && this.lastFocusPadding === padding) {
+    if (
+      this.lastFocusedObjectUuid === object.uuid &&
+      this.lastFocusPadding === padding
+    ) {
       return;
     }
 
@@ -298,12 +312,16 @@ export class CameraController {
     if (!target) return;
 
     // Instant move
-    this.camera.position.set(target.position.x, target.position.y, target.position.z);
+    this.camera.position.set(
+      target.position.x,
+      target.position.y,
+      target.position.z
+    );
     this.orbitTarget = { ...target.target };
-    
+
     // Update camera to look at target
     this.camera.lookAt(target.target.x, target.target.y, target.target.z);
-    
+
     // Remember what we focused on
     this.lastFocusedObjectUuid = object.uuid;
     this.lastFocusPadding = padding;
@@ -315,7 +333,7 @@ export class CameraController {
   focusOnSelected(padding = 1.5): boolean {
     const selected = this.probe.getSelectedObject();
     if (!selected) return false;
-    
+
     this.focusOnObject(selected, padding);
     return true;
   }
@@ -334,7 +352,10 @@ export class CameraController {
     } = options;
 
     // Skip if already focused on this exact object with same padding
-    if (this.lastFocusedObjectUuid === object.uuid && this.lastFocusPadding === padding) {
+    if (
+      this.lastFocusedObjectUuid === object.uuid &&
+      this.lastFocusPadding === padding
+    ) {
       if (onComplete) onComplete();
       return;
     }
@@ -371,7 +392,7 @@ export class CameraController {
   flyToSelected(options: FlyToOptions = {}): boolean {
     const selected = this.probe.getSelectedObject();
     if (!selected) return false;
-    
+
     this.flyToObject(selected, options);
     return true;
   }
@@ -382,18 +403,21 @@ export class CameraController {
   private calculateFocusPosition(
     object: THREE.Object3D,
     padding: number
-  ): { position: { x: number; y: number; z: number }; target: { x: number; y: number; z: number } } | null {
+  ): {
+    position: { x: number; y: number; z: number };
+    target: { x: number; y: number; z: number };
+  } | null {
     if (!this.THREE || !this.camera) return null;
 
     // Get object's world bounding box
     const box = new this.THREE.Box3().setFromObject(object);
-    
+
     // Handle empty bounding box
     if (box.isEmpty()) {
       // Use object's world position
       const worldPos = new this.THREE.Vector3();
       object.getWorldPosition(worldPos);
-      
+
       return {
         position: {
           x: worldPos.x + 5,
@@ -415,8 +439,11 @@ export class CameraController {
 
     // Calculate distance based on camera type
     let distance: number;
-    
-    if ('isPerspectiveCamera' in this.camera && (this.camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+
+    if (
+      'isPerspectiveCamera' in this.camera &&
+      (this.camera as THREE.PerspectiveCamera).isPerspectiveCamera
+    ) {
       const perspCam = this.camera as THREE.PerspectiveCamera;
       const fov = perspCam.fov * (Math.PI / 180);
       distance = (maxDim * padding) / (2 * Math.tan(fov / 2));
@@ -427,7 +454,14 @@ export class CameraController {
 
     // Keep the same viewing angle, just adjust distance
     const direction = new this.THREE.Vector3();
-    direction.subVectors(this.camera.position, new this.THREE.Vector3(this.orbitTarget.x, this.orbitTarget.y, this.orbitTarget.z));
+    direction.subVectors(
+      this.camera.position,
+      new this.THREE.Vector3(
+        this.orbitTarget.x,
+        this.orbitTarget.y,
+        this.orbitTarget.z
+      )
+    );
     direction.normalize();
 
     // Calculate new position
@@ -462,20 +496,48 @@ export class CameraController {
 
       // Interpolate position
       this.camera.position.set(
-        this.lerp(this.animation.startPosition.x, this.animation.endPosition.x, easedProgress),
-        this.lerp(this.animation.startPosition.y, this.animation.endPosition.y, easedProgress),
-        this.lerp(this.animation.startPosition.z, this.animation.endPosition.z, easedProgress)
+        this.lerp(
+          this.animation.startPosition.x,
+          this.animation.endPosition.x,
+          easedProgress
+        ),
+        this.lerp(
+          this.animation.startPosition.y,
+          this.animation.endPosition.y,
+          easedProgress
+        ),
+        this.lerp(
+          this.animation.startPosition.z,
+          this.animation.endPosition.z,
+          easedProgress
+        )
       );
 
       // Interpolate target
       this.orbitTarget = {
-        x: this.lerp(this.animation.startTarget.x, this.animation.endTarget.x, easedProgress),
-        y: this.lerp(this.animation.startTarget.y, this.animation.endTarget.y, easedProgress),
-        z: this.lerp(this.animation.startTarget.z, this.animation.endTarget.z, easedProgress),
+        x: this.lerp(
+          this.animation.startTarget.x,
+          this.animation.endTarget.x,
+          easedProgress
+        ),
+        y: this.lerp(
+          this.animation.startTarget.y,
+          this.animation.endTarget.y,
+          easedProgress
+        ),
+        z: this.lerp(
+          this.animation.startTarget.z,
+          this.animation.endTarget.z,
+          easedProgress
+        ),
       };
 
       // Update camera to look at target
-      this.camera.lookAt(this.orbitTarget.x, this.orbitTarget.y, this.orbitTarget.z);
+      this.camera.lookAt(
+        this.orbitTarget.x,
+        this.orbitTarget.y,
+        this.orbitTarget.z
+      );
 
       if (progress < 1) {
         this.animationFrameId = requestAnimationFrame(animate);
@@ -484,11 +546,11 @@ export class CameraController {
         const onComplete = this.animation.onComplete;
         this.animation = null;
         this.animationFrameId = null;
-        
+
         if (onComplete) {
           onComplete();
         }
-        
+
         for (const callback of this.onAnimationCompleteCallbacks) {
           callback();
         }
@@ -526,7 +588,10 @@ export class CameraController {
   /**
    * Apply easing function
    */
-  private applyEasing(t: number, easing: 'linear' | 'easeInOut' | 'easeOut'): number {
+  private applyEasing(
+    t: number,
+    easing: 'linear' | 'easeInOut' | 'easeOut'
+  ): number {
     switch (easing) {
       case 'linear':
         return t;
@@ -544,7 +609,7 @@ export class CameraController {
    */
   updateSceneCameras(): void {
     this.sceneCameras = [];
-    
+
     for (const scene of this.probe.getObservedScenes()) {
       scene.traverse((obj) => {
         if ('isCamera' in obj && (obj as THREE.Camera).isCamera) {
@@ -562,9 +627,9 @@ export class CameraController {
    */
   getAvailableCameras(): CameraInfo[] {
     this.updateSceneCameras();
-    
+
     const cameras: CameraInfo[] = [];
-    
+
     // Add main camera first
     if (this.camera) {
       cameras.push({
@@ -572,12 +637,12 @@ export class CameraController {
         name: this.camera.name || 'Main Camera',
       });
     }
-    
+
     // Add scene cameras
     for (const cam of this.sceneCameras) {
       cameras.push(this.extractCameraInfo(cam));
     }
-    
+
     return cameras;
   }
 
@@ -585,16 +650,18 @@ export class CameraController {
    * Switch to a different camera by index
    */
   switchToCamera(index: number): boolean {
-    const allCameras = [this.camera, ...this.sceneCameras].filter(Boolean) as THREE.Camera[];
-    
+    const allCameras = [this.camera, ...this.sceneCameras].filter(
+      Boolean
+    ) as THREE.Camera[];
+
     if (index < 0 || index >= allCameras.length) {
       return false;
     }
-    
+
     this.activeCameraIndex = index;
     this.camera = allCameras[index];
     this.notifyCameraChanged();
-    
+
     return true;
   }
 
@@ -608,7 +675,7 @@ export class CameraController {
       this.notifyCameraChanged();
       return true;
     }
-    
+
     // Check scene cameras
     const index = this.sceneCameras.findIndex((cam) => cam.uuid === uuid);
     if (index >= 0) {
@@ -617,7 +684,7 @@ export class CameraController {
       this.notifyCameraChanged();
       return true;
     }
-    
+
     return false;
   }
 
@@ -633,10 +700,10 @@ export class CameraController {
    */
   private notifyCameraChanged(): void {
     if (!this.camera) return;
-    
+
     const info = this.getCameraInfo();
     if (!info) return;
-    
+
     for (const callback of this.onCameraChangedCallbacks) {
       callback(this.camera, info);
     }
@@ -645,7 +712,9 @@ export class CameraController {
   /**
    * Subscribe to camera change events
    */
-  onCameraChanged(callback: (camera: THREE.Camera, info: CameraInfo) => void): () => void {
+  onCameraChanged(
+    callback: (camera: THREE.Camera, info: CameraInfo) => void
+  ): () => void {
     this.onCameraChangedCallbacks.push(callback);
     return () => {
       const index = this.onCameraChangedCallbacks.indexOf(callback);
@@ -680,4 +749,3 @@ export class CameraController {
     this.onAnimationCompleteCallbacks = [];
   }
 }
-

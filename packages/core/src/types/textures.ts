@@ -249,4 +249,3 @@ export interface TexturesSummary {
    */
   renderTargetCount: number;
 }
-

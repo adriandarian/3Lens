@@ -80,12 +80,20 @@ function createMockContext(probe = createMockProbe()): ThreeLensContextValue {
 // Context wrapper
 function createWrapper(contextValue: ThreeLensContextValue | null) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(ThreeLensContext.Provider, { value: contextValue }, children);
+    return createElement(
+      ThreeLensContext.Provider,
+      { value: contextValue },
+      children
+    );
   };
 }
 
 // Import after mocks
-import { createR3FConnector, R3FProbe, R3FProbeConnectorInner } from './useR3FProbe';
+import {
+  createR3FConnector,
+  R3FProbe,
+  R3FProbeConnectorInner,
+} from './useR3FProbe';
 
 describe('createR3FConnector', () => {
   let mockUseThree: UseThreeHook;
@@ -112,10 +120,13 @@ describe('createR3FConnector', () => {
     const wrapper = createWrapper(mockContext);
 
     const Connector = createR3FConnector(mockUseThree, mockUseFrame);
-    const { result } = renderHook(() => {
-      const Component = Connector;
-      return createElement(Component);
-    }, { wrapper });
+    const { result } = renderHook(
+      () => {
+        const Component = Connector;
+        return createElement(Component);
+      },
+      { wrapper }
+    );
 
     // Component returns null
     expect(result.current).toBeDefined();
@@ -127,7 +138,7 @@ describe('createR3FConnector', () => {
     const wrapper = createWrapper(mockContext);
 
     const Connector = createR3FConnector(mockUseThree, mockUseFrame);
-    
+
     // We need to render the component, not use it as a hook
     const TestComponent = () => {
       return createElement(Connector);
@@ -143,10 +154,13 @@ describe('createR3FConnector', () => {
     const mockProbe = createMockProbe();
 
     const Connector = createR3FConnector(mockUseThree, mockUseFrame);
-    
-    renderHook(() => {
-      return createElement(Connector);
-    }, { wrapper });
+
+    renderHook(
+      () => {
+        return createElement(Connector);
+      },
+      { wrapper }
+    );
 
     expect(mockProbe.observeRenderer).not.toHaveBeenCalled();
     expect(mockProbe.observeScene).not.toHaveBeenCalled();
@@ -160,7 +174,9 @@ describe('createR3FConnector', () => {
     const Connector = createR3FConnector(mockUseThree, mockUseFrame);
 
     // Render twice
-    const { rerender } = renderHook(() => createElement(Connector), { wrapper });
+    const { rerender } = renderHook(() => createElement(Connector), {
+      wrapper,
+    });
     rerender();
 
     // Should only connect once (checked by ref)
@@ -181,7 +197,9 @@ describe('R3FProbe', () => {
   it('should accept showOverlay prop', () => {
     const wrapper = createWrapper(null);
     expect(() => {
-      renderHook(() => createElement(R3FProbe, { showOverlay: false }), { wrapper });
+      renderHook(() => createElement(R3FProbe, { showOverlay: false }), {
+        wrapper,
+      });
     }).not.toThrow();
   });
 });
@@ -193,7 +211,9 @@ describe('R3FProbeConnectorInner', () => {
 
   it('should render null', () => {
     const wrapper = createWrapper(null);
-    const { result } = renderHook(() => createElement(R3FProbeConnectorInner), { wrapper });
+    const { result } = renderHook(() => createElement(R3FProbeConnectorInner), {
+      wrapper,
+    });
     expect(result.current).toBeDefined();
   });
 });

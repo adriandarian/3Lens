@@ -45,7 +45,9 @@ describe('createDirectTransport', () => {
     });
 
     it('should have onConnectionChange method on both transports', () => {
-      expect(typeof transports.probeTransport.onConnectionChange).toBe('function');
+      expect(typeof transports.probeTransport.onConnectionChange).toBe(
+        'function'
+      );
       expect(typeof transports.uiTransport.onConnectionChange).toBe('function');
     });
 
@@ -151,7 +153,9 @@ describe('createDirectTransport', () => {
     });
 
     it('should handle handler errors gracefully', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const errorHandler = vi.fn(() => {
         throw new Error('Handler error');
       });
@@ -182,20 +186,29 @@ describe('createDirectTransport', () => {
       const unsubscribe = transports.uiTransport.onReceive(handler);
 
       // Send first message
-      transports.probeTransport.send({ type: 'frame-stats', timestamp: Date.now(), stats: mockStats } as DebugMessage);
+      transports.probeTransport.send({
+        type: 'frame-stats',
+        timestamp: Date.now(),
+        stats: mockStats,
+      } as DebugMessage);
       expect(handler).toHaveBeenCalledTimes(1);
 
       // Unsubscribe
       unsubscribe();
 
       // Send second message - should not be received
-      transports.probeTransport.send({ type: 'frame-stats', timestamp: Date.now(), stats: mockStats } as DebugMessage);
+      transports.probeTransport.send({
+        type: 'frame-stats',
+        timestamp: Date.now(),
+        stats: mockStats,
+      } as DebugMessage);
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
     it('should allow unsubscribing from connection callbacks', () => {
       const callback = vi.fn();
-      const unsubscribe = transports.probeTransport.onConnectionChange(callback);
+      const unsubscribe =
+        transports.probeTransport.onConnectionChange(callback);
 
       // Unsubscribe before connect
       unsubscribe();

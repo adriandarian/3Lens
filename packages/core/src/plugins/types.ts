@@ -1,7 +1,10 @@
 import type * as THREE from 'three';
 import type { DevtoolProbe } from '../probe/DevtoolProbe';
 import type { FrameStats, SceneSnapshot } from '../types';
-import type { LogicalEntity as NewLogicalEntity, ModuleInfo } from '../entities';
+import type {
+  LogicalEntity as NewLogicalEntity,
+  ModuleInfo,
+} from '../entities';
 
 /**
  * Unique identifier for a plugin
@@ -115,7 +118,10 @@ export interface PanelDefinition {
   /**
    * Called when selection changes
    */
-  onSelectionChange?: (node: THREE.Object3D | null, container: HTMLElement) => void;
+  onSelectionChange?: (
+    node: THREE.Object3D | null,
+    container: HTMLElement
+  ) => void;
 }
 
 /**
@@ -301,7 +307,9 @@ export interface PluginMessage {
 /**
  * Plugin message handler
  */
-export type PluginMessageHandler = (message: PluginMessage) => void | Promise<void>;
+export type PluginMessageHandler = (
+  message: PluginMessage
+) => void | Promise<void>;
 
 /**
  * Context provided to plugins for interacting with 3Lens
@@ -355,7 +363,10 @@ export interface DevtoolContext {
   /**
    * Show a toast notification
    */
-  showToast(message: string, type?: 'info' | 'success' | 'warning' | 'error'): void;
+  showToast(
+    message: string,
+    type?: 'info' | 'success' | 'warning' | 'error'
+  ): void;
 
   /**
    * Get plugin state
@@ -440,13 +451,21 @@ export interface DevtoolPlugin {
   /**
    * Called when plugin settings change
    */
-  onSettingsChange?: (settings: Record<string, unknown>, context: DevtoolContext) => void;
+  onSettingsChange?: (
+    settings: Record<string, unknown>,
+    context: DevtoolContext
+  ) => void;
 }
 
 /**
  * Plugin settings field types
  */
-export type PluginSettingType = 'string' | 'number' | 'boolean' | 'select' | 'color';
+export type PluginSettingType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'select'
+  | 'color';
 
 /**
  * Plugin settings field definition
@@ -557,4 +576,3 @@ export interface RegisteredPlugin {
    */
   error: Error | null;
 }
-

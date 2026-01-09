@@ -5,7 +5,9 @@ import type { ThreeLensProviderConfig } from '../types';
 
 // Type for R3F Canvas props (avoid direct import to keep it optional)
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-type CanvasProps = React.ComponentProps<typeof import('@react-three/fiber').Canvas>;
+type CanvasProps = React.ComponentProps<
+  typeof import('@react-three/fiber').Canvas
+>;
 
 /**
  * Props for ThreeLensCanvas
@@ -43,7 +45,11 @@ function _R3FConnector({ children }: { children: React.ReactNode }) {
         // The actual connection happens in the R3FAutoConnect component
       } catch {
         // R3F not available
-        if (context.probe && (context.probe as unknown as { config?: { debug?: boolean } }).config?.debug) {
+        if (
+          context.probe &&
+          (context.probe as unknown as { config?: { debug?: boolean } }).config
+            ?.debug
+        ) {
           // eslint-disable-next-line no-console
           console.log('[3Lens] React Three Fiber not detected');
         }
@@ -136,39 +142,40 @@ function _R3FProbeConnector(): null {
  * }
  * ```
  */
-export const ThreeLensCanvas = forwardRef<HTMLCanvasElement, ThreeLensCanvasProps>(
-  function ThreeLensCanvas({ threeLensConfig, children, ...canvasProps }, ref) {
-    // Dynamically import Canvas to keep R3F optional
-    // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-    const [Canvas, setCanvas] = useState<typeof import('@react-three/fiber').Canvas | null>(
-      null
-    );
+export const ThreeLensCanvas = forwardRef<
+  HTMLCanvasElement,
+  ThreeLensCanvasProps
+>(function ThreeLensCanvas({ threeLensConfig, children, ...canvasProps }, ref) {
+  // Dynamically import Canvas to keep R3F optional
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const [Canvas, setCanvas] = useState<
+    typeof import('@react-three/fiber').Canvas | null
+  >(null);
 
-    useEffect(() => {
-      import('@react-three/fiber')
-        .then((mod) => setCanvas(() => mod.Canvas))
-        .catch(() => {
-          console.error(
-            '[3Lens] @react-three/fiber is required for ThreeLensCanvas. ' +
-              'Install it with: npm install @react-three/fiber'
-          );
-        });
-    }, []);
+  useEffect(() => {
+    import('@react-three/fiber')
+      .then((mod) => setCanvas(() => mod.Canvas))
+      .catch(() => {
+        console.error(
+          '[3Lens] @react-three/fiber is required for ThreeLensCanvas. ' +
+            'Install it with: npm install @react-three/fiber'
+        );
+      });
+  }, []);
 
-    if (!Canvas) {
-      return null; // Or a loading state
-    }
-
-    return (
-      <ThreeLensProvider config={threeLensConfig}>
-        <Canvas ref={ref} {...canvasProps}>
-          <R3FSceneConnector />
-          {children}
-        </Canvas>
-      </ThreeLensProvider>
-    );
+  if (!Canvas) {
+    return null; // Or a loading state
   }
-);
+
+  return (
+    <ThreeLensProvider config={threeLensConfig}>
+      <Canvas ref={ref} {...canvasProps}>
+        <R3FSceneConnector />
+        {children}
+      </Canvas>
+    </ThreeLensProvider>
+  );
+});
 
 /**
  * Component that connects 3Lens to the R3F scene
@@ -183,7 +190,8 @@ function R3FSceneConnector(): null {
 
     const connect = async () => {
       try {
-        const { useThree: _useThree, useFrame: _useFrame } = await import('@react-three/fiber');
+        const { useThree: _useThree, useFrame: _useFrame } =
+          await import('@react-three/fiber');
         // We can't call useThree here because this is inside useEffect
         // The hook-based approach is in useR3FConnection
       } catch {
@@ -252,4 +260,3 @@ export function useR3FConnection(): void {
     connect();
   }, [context]);
 }
-

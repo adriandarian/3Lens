@@ -32,24 +32,27 @@ vi.mock('./useThreeLens', () => ({
     showOverlay: vi.fn(),
     hideOverlay: vi.fn(),
   }),
-  useThreeLensOptional: () => probeRef.value ? {
-    probe: probeRef,
-    isReady: isReadyRef,
-    frameStats: ref(null),
-    snapshot: ref(null),
-    selectedNode: ref(null),
-    fps: computed(() => 0),
-    drawCalls: computed(() => 0),
-    triangles: computed(() => 0),
-    frameTime: computed(() => 0),
-    gpuMemory: computed(() => 0),
-    isOverlayVisible: ref(false),
-    selectObject: vi.fn(),
-    clearSelection: vi.fn(),
-    toggleOverlay: vi.fn(),
-    showOverlay: vi.fn(),
-    hideOverlay: vi.fn(),
-  } : null,
+  useThreeLensOptional: () =>
+    probeRef.value
+      ? {
+          probe: probeRef,
+          isReady: isReadyRef,
+          frameStats: ref(null),
+          snapshot: ref(null),
+          selectedNode: ref(null),
+          fps: computed(() => 0),
+          drawCalls: computed(() => 0),
+          triangles: computed(() => 0),
+          frameTime: computed(() => 0),
+          gpuMemory: computed(() => 0),
+          isOverlayVisible: ref(false),
+          selectObject: vi.fn(),
+          clearSelection: vi.fn(),
+          toggleOverlay: vi.fn(),
+          showOverlay: vi.fn(),
+          hideOverlay: vi.fn(),
+        }
+      : null,
 }));
 
 import { useProbe, useProbeOptional } from './useProbe';
@@ -101,7 +104,7 @@ describe('useProbe', () => {
     isReadyRef.value = true;
 
     const wrapper = mount(TestComponent);
-    
+
     await nextTick();
 
     expect(wrapper.vm.probe).toStrictEqual(mockProbe);
@@ -141,7 +144,10 @@ describe('useProbe', () => {
       setup() {
         const probe = useProbe();
         // Check it's a computed ref
-        return { isComputed: typeof probe.value !== 'undefined' || probe.value === null };
+        return {
+          isComputed:
+            typeof probe.value !== 'undefined' || probe.value === null,
+        };
       },
       render() {
         return h('div');
@@ -217,10 +223,10 @@ describe('useProbeOptional', () => {
     const TestComponent = defineComponent({
       setup() {
         const probe = useProbeOptional();
-        
+
         // Safe access - won't throw
         const result = probe.value?.takeSnapshot?.() ?? 'no-snapshot';
-        
+
         return { result };
       },
       render() {
@@ -242,9 +248,9 @@ describe('useProbeOptional', () => {
     const TestComponent = defineComponent({
       setup() {
         const probe = useProbeOptional();
-        
+
         const snapshot = probe.value?.takeSnapshot?.();
-        
+
         return { snapshot };
       },
       render() {

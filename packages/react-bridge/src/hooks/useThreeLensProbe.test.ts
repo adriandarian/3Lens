@@ -8,7 +8,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { ThreeLensContext } from '../context';
-import { useThreeLensProbe, useThreeLensProbeOptional } from './useThreeLensProbe';
+import {
+  useThreeLensProbe,
+  useThreeLensProbeOptional,
+} from './useThreeLensProbe';
 import type { ThreeLensContextValue } from '../types';
 
 // Mock probe
@@ -40,7 +43,11 @@ function createContext(probe: any): ThreeLensContextValue {
 // Context wrapper factory
 function createWrapper(contextValue: ThreeLensContextValue | null) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(ThreeLensContext.Provider, { value: contextValue }, children);
+    return createElement(
+      ThreeLensContext.Provider,
+      { value: contextValue },
+      children
+    );
   };
 }
 
@@ -74,7 +81,9 @@ describe('useThreeLensProbeOptional', () => {
     const mockProbe = createMockProbe();
     const wrapper = createWrapper(createContext(mockProbe));
 
-    const { result } = renderHook(() => useThreeLensProbeOptional(), { wrapper });
+    const { result } = renderHook(() => useThreeLensProbeOptional(), {
+      wrapper,
+    });
 
     expect(result.current).toBe(mockProbe);
   });
@@ -82,7 +91,9 @@ describe('useThreeLensProbeOptional', () => {
   it('should return null when context not available', () => {
     const wrapper = createWrapper(null);
 
-    const { result } = renderHook(() => useThreeLensProbeOptional(), { wrapper });
+    const { result } = renderHook(() => useThreeLensProbeOptional(), {
+      wrapper,
+    });
 
     expect(result.current).toBeNull();
   });
@@ -90,7 +101,9 @@ describe('useThreeLensProbeOptional', () => {
   it('should return null when probe is null in context', () => {
     const wrapper = createWrapper(createContext(null));
 
-    const { result } = renderHook(() => useThreeLensProbeOptional(), { wrapper });
+    const { result } = renderHook(() => useThreeLensProbeOptional(), {
+      wrapper,
+    });
 
     expect(result.current).toBeNull();
   });

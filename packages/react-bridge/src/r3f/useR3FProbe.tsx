@@ -39,7 +39,9 @@ interface R3FProbeProps {
  * }
  * ```
  */
-export function R3FProbe({ showOverlay: _showOverlay = true }: R3FProbeProps = {}): React.ReactElement | null {
+export function R3FProbe({
+  showOverlay: _showOverlay = true,
+}: R3FProbeProps = {}): React.ReactElement | null {
   const context = useThreeLensContextOptional();
   const connectedRef = useRef(false);
   const _overlayRef = useRef<unknown>(null);
@@ -155,7 +157,9 @@ export function createR3FConnector(
         } catch (e) {
           // Helpers not critical, ignore errors
           // Check if debug mode is enabled via config
-          const probeConfig = (context.probe as unknown as { config?: { debug?: boolean } }).config;
+          const probeConfig = (
+            context.probe as unknown as { config?: { debug?: boolean } }
+          ).config;
           if (probeConfig?.debug) {
             // eslint-disable-next-line no-console
             console.log('[3Lens] Could not initialize helpers:', e);
@@ -166,7 +170,9 @@ export function createR3FConnector(
       connectedRef.current = true;
 
       // Check if debug mode is enabled via config
-      const probeConfig = (context.probe as unknown as { config?: { debug?: boolean } }).config;
+      const probeConfig = (
+        context.probe as unknown as { config?: { debug?: boolean } }
+      ).config;
       if (probeConfig?.debug) {
         // eslint-disable-next-line no-console
         console.log('[3Lens] Connected to React Three Fiber');
@@ -191,4 +197,3 @@ export function createR3FConnector(
     return null;
   };
 }
-

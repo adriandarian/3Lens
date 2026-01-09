@@ -50,4 +50,3 @@ export function useThreeLensProbeOptional(): DevtoolProbe | null {
   const context = useThreeLensContextOptional();
   return context?.probe ?? null;
 }
-

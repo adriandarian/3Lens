@@ -86,8 +86,10 @@ export function useDevtoolEntity(
     if (!object || !context?.probe) return;
 
     const optionsChanged =
-      JSON.stringify(options.metadata) !== JSON.stringify(prevOptionsRef.current.metadata) ||
-      JSON.stringify(options.tags) !== JSON.stringify(prevOptionsRef.current.tags);
+      JSON.stringify(options.metadata) !==
+        JSON.stringify(prevOptionsRef.current.metadata) ||
+      JSON.stringify(options.tags) !==
+        JSON.stringify(prevOptionsRef.current.tags);
 
     if (optionsChanged && object.userData?.__3lens) {
       object.userData.__3lens = {
@@ -140,7 +142,9 @@ export function useDevtoolEntityGroup(
   useEffect(() => {
     if (!context?.probe) return;
 
-    const validObjects = objects.filter((obj): obj is THREE.Object3D => obj != null);
+    const validObjects = objects.filter(
+      (obj): obj is THREE.Object3D => obj != null
+    );
     if (validObjects.length === 0) return;
 
     // Create a group ID
@@ -172,4 +176,3 @@ export function useDevtoolEntityGroup(
     };
   }, [objects, context?.probe, options.name, options.module, options.tags]);
 }
-

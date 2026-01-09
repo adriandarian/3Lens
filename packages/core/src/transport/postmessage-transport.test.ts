@@ -81,7 +81,10 @@ describe('createPostMessageTransport', () => {
     });
 
     it('should add message listener on creation', () => {
-      expect(window.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(window.addEventListener).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function)
+      );
     });
   });
 
@@ -206,7 +209,11 @@ describe('createPostMessageTransport', () => {
       transport.onReceive(handler1);
       transport.onReceive(handler2);
 
-      const payload: DebugMessage = { type: 'frame-stats', timestamp: Date.now(), stats: mockStats };
+      const payload: DebugMessage = {
+        type: 'frame-stats',
+        timestamp: Date.now(),
+        stats: mockStats,
+      };
       simulateMessage({
         source: SOURCE_DEVTOOL,
         version: '1.0.0',
@@ -218,7 +225,9 @@ describe('createPostMessageTransport', () => {
     });
 
     it('should handle handler errors gracefully', () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleError = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const errorHandler = vi.fn(() => {
         throw new Error('Handler error');
       });
@@ -286,7 +295,10 @@ describe('createPostMessageTransport', () => {
     it('should remove message listener on close', () => {
       transport.close();
 
-      expect(window.removeEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(window.removeEventListener).toHaveBeenCalledWith(
+        'message',
+        expect.any(Function)
+      );
     });
 
     it('should clear all handlers on close', () => {

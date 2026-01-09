@@ -56,7 +56,14 @@ describe('highlightGLSL', () => {
     });
 
     it('should highlight storage qualifiers', () => {
-      const qualifiers = ['uniform', 'varying', 'attribute', 'in', 'out', 'const'];
+      const qualifiers = [
+        'uniform',
+        'varying',
+        'attribute',
+        'in',
+        'out',
+        'const',
+      ];
       for (const q of qualifiers) {
         const result = highlightGLSL(q);
         expect(result).toContain('glsl-keyword');
@@ -199,7 +206,7 @@ void main() {
   gl_Position = modelViewMatrix * vec4(position, 1.0);
 }`;
       const result = highlightGLSL(shader);
-      
+
       expect(result).toContain('glsl-preprocessor'); // #version
       expect(result).toContain('glsl-keyword'); // precision, highp, float, uniform, etc.
       expect(result).toContain('glsl-builtin'); // main
@@ -218,9 +225,9 @@ describe('truncateShader', () => {
   it('should truncate long shaders', () => {
     const lines = Array.from({ length: 30 }, (_, i) => `line${i + 1}`);
     const shader = lines.join('\n');
-    
+
     const result = truncateShader(shader, 10);
-    
+
     expect(result).toContain('line1');
     expect(result).toContain('line10');
     expect(result).not.toContain('line11');
@@ -230,9 +237,9 @@ describe('truncateShader', () => {
   it('should use default maxLines of 20', () => {
     const lines = Array.from({ length: 30 }, (_, i) => `line${i + 1}`);
     const shader = lines.join('\n');
-    
+
     const result = truncateShader(shader);
-    
+
     expect(result).toContain('10 more lines');
   });
 });

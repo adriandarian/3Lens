@@ -224,7 +224,12 @@ export interface BindGroupLayoutEntryInfo {
   bufferType?: 'uniform' | 'storage' | 'read-only-storage';
   samplerType?: 'filtering' | 'non-filtering' | 'comparison';
   textureType?: string;
-  textureSampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+  textureSampleType?:
+    | 'float'
+    | 'unfilterable-float'
+    | 'depth'
+    | 'sint'
+    | 'uint';
 }
 
 /**
@@ -257,4 +262,3 @@ export interface GpuTimingInfo {
   totalMs: number;
   breakdown?: Record<string, number>;
 }
-

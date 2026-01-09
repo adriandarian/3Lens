@@ -22,27 +22,35 @@ const mockProbe = {
 
 // Mock useThreeLensOptional
 vi.mock('../composables/useThreeLens', () => ({
-  useThreeLensOptional: () => probeRef.value ? {
-    probe: probeRef,
-    isReady: isReadyRef,
-    frameStats: ref(null),
-    snapshot: ref(null),
-    selectedNode: ref(null),
-    fps: computed(() => 0),
-    drawCalls: computed(() => 0),
-    triangles: computed(() => 0),
-    frameTime: computed(() => 0),
-    gpuMemory: computed(() => 0),
-    isOverlayVisible: ref(false),
-    selectObject: vi.fn(),
-    clearSelection: vi.fn(),
-    toggleOverlay: vi.fn(),
-    showOverlay: vi.fn(),
-    hideOverlay: vi.fn(),
-  } : null,
+  useThreeLensOptional: () =>
+    probeRef.value
+      ? {
+          probe: probeRef,
+          isReady: isReadyRef,
+          frameStats: ref(null),
+          snapshot: ref(null),
+          selectedNode: ref(null),
+          fps: computed(() => 0),
+          drawCalls: computed(() => 0),
+          triangles: computed(() => 0),
+          frameTime: computed(() => 0),
+          gpuMemory: computed(() => 0),
+          isOverlayVisible: ref(false),
+          selectObject: vi.fn(),
+          clearSelection: vi.fn(),
+          toggleOverlay: vi.fn(),
+          showOverlay: vi.fn(),
+          hideOverlay: vi.fn(),
+        }
+      : null,
 }));
 
-import { useTresProbe, createTresConnector, TresProbeOptions, UseTresProbeReturn } from './useTresProbe';
+import {
+  useTresProbe,
+  createTresConnector,
+  TresProbeOptions,
+  UseTresProbeReturn,
+} from './useTresProbe';
 
 // Mock THREE objects
 const mockRenderer = {
@@ -122,14 +130,14 @@ describe('useTresProbe', () => {
       const TestComponent = defineComponent({
         setup() {
           const result = useTresProbe();
-          
+
           // Try to connect without probe
           result.connect(
             mockRenderer as any,
             mockScene as any,
             mockCamera as any
           );
-          
+
           return result;
         },
         render() {
@@ -148,14 +156,14 @@ describe('useTresProbe', () => {
       const TestComponent = defineComponent({
         setup() {
           const result = useTresProbe();
-          
+
           // Connect with probe available
           result.connect(
             mockRenderer as any,
             mockScene as any,
             mockCamera as any
           );
-          
+
           return result;
         },
         render() {
@@ -178,11 +186,19 @@ describe('useTresProbe', () => {
       const TestComponent = defineComponent({
         setup() {
           const result = useTresProbe();
-          
+
           // Connect twice
-          result.connect(mockRenderer as any, mockScene as any, mockCamera as any);
-          result.connect(mockRenderer as any, mockScene as any, mockCamera as any);
-          
+          result.connect(
+            mockRenderer as any,
+            mockScene as any,
+            mockCamera as any
+          );
+          result.connect(
+            mockRenderer as any,
+            mockScene as any,
+            mockCamera as any
+          );
+
           return result;
         },
         render() {
@@ -207,10 +223,14 @@ describe('useTresProbe', () => {
       const TestComponent = defineComponent({
         setup() {
           const result = useTresProbe();
-          
-          result.connect(mockRenderer as any, mockScene as any, mockCamera as any);
+
+          result.connect(
+            mockRenderer as any,
+            mockScene as any,
+            mockCamera as any
+          );
           result.disconnect();
-          
+
           return result;
         },
         render() {
@@ -231,11 +251,19 @@ describe('useTresProbe', () => {
       const TestComponent = defineComponent({
         setup() {
           const result = useTresProbe();
-          
-          result.connect(mockRenderer as any, mockScene as any, mockCamera as any);
+
+          result.connect(
+            mockRenderer as any,
+            mockScene as any,
+            mockCamera as any
+          );
           result.disconnect();
-          result.connect(mockRenderer as any, mockScene as any, mockCamera as any);
-          
+          result.connect(
+            mockRenderer as any,
+            mockScene as any,
+            mockCamera as any
+          );
+
           return result;
         },
         render() {
@@ -260,7 +288,11 @@ describe('useTresProbe', () => {
       const TestComponent = defineComponent({
         setup() {
           tresResult = useTresProbe();
-          tresResult.connect(mockRenderer as any, mockScene as any, mockCamera as any);
+          tresResult.connect(
+            mockRenderer as any,
+            mockScene as any,
+            mockCamera as any
+          );
           return tresResult;
         },
         render() {

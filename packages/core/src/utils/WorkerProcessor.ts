@@ -1,13 +1,20 @@
 /**
  * Web Worker Processor
- * 
+ *
  * Offloads heavy processing tasks to a Web Worker to keep the main thread responsive.
  * Supports benchmark calculation, leak analysis, scene statistics aggregation,
  * and custom processing tasks.
  */
 
-import type { FrameStats, BenchmarkScore, BenchmarkConfig } from '../types/stats';
-import type { LeakReport, LeakAlert } from '../tracking/ResourceLifecycleTracker';
+import type {
+  FrameStats,
+  BenchmarkScore,
+  BenchmarkConfig,
+} from '../types/stats';
+import type {
+  LeakReport,
+  LeakAlert,
+} from '../tracking/ResourceLifecycleTracker';
 
 // ─────────────────────────────────────────────────────────────────
 // WORKER MESSAGE TYPES
@@ -16,13 +23,13 @@ import type { LeakReport, LeakAlert } from '../tracking/ResourceLifecycleTracker
 /**
  * Task types that can be processed by the worker
  */
-export type WorkerTaskType = 
-  | 'benchmark'           // Calculate benchmark score
-  | 'leakAnalysis'        // Analyze resource lifecycle for leaks
-  | 'statsAggregation'    // Aggregate multiple frame stats
-  | 'percentileCalc'      // Calculate percentiles from frame history
-  | 'trendAnalysis'       // Analyze performance trends
-  | 'custom';             // Custom processing task
+export type WorkerTaskType =
+  | 'benchmark' // Calculate benchmark score
+  | 'leakAnalysis' // Analyze resource lifecycle for leaks
+  | 'statsAggregation' // Aggregate multiple frame stats
+  | 'percentileCalc' // Calculate percentiles from frame history
+  | 'trendAnalysis' // Analyze performance trends
+  | 'custom'; // Custom processing task
 
 /**
  * Message sent to the worker
@@ -158,8 +165,8 @@ export interface TrendAnalysisPayload {
   history: Array<{ timestamp: number; value: number }>;
   windowSize?: number;
   thresholds?: {
-    improving: number;   // Threshold for improvement (negative slope)
-    degrading: number;   // Threshold for degradation (positive slope)
+    improving: number; // Threshold for improvement (negative slope)
+    degrading: number; // Threshold for degradation (positive slope)
   };
 }
 
@@ -181,7 +188,7 @@ export interface TrendAnalysisResult {
 export interface CustomTaskPayload {
   taskName: string;
   data: unknown;
-  code?: string;  // Optional serialized function code for dynamic tasks
+  code?: string; // Optional serialized function code for dynamic tasks
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -227,18 +234,18 @@ export interface WorkerStats {
 
 /**
  * WorkerProcessor - Manages Web Worker for offloading heavy processing
- * 
+ *
  * @example
  * ```typescript
  * const processor = new WorkerProcessor();
  * await processor.initialize();
- * 
+ *
  * // Calculate benchmark in worker
  * const score = await processor.calculateBenchmark(frameStats);
- * 
+ *
  * // Analyze leaks in worker
  * const report = await processor.analyzeLeaks(events, activeResources, memoryHistory);
- * 
+ *
  * processor.dispose();
  * ```
  */
@@ -308,7 +315,7 @@ export class WorkerProcessor {
 
       this.worker.onmessage = this.handleMessage.bind(this);
       this.worker.onerror = this.handleError.bind(this);
-      
+
       this.stats.isAvailable = true;
       this.log('Worker initialized successfully');
     } catch (error) {
@@ -324,14 +331,18 @@ export class WorkerProcessor {
     const workerCode = getWorkerCode();
     const blob = new Blob([workerCode], { type: 'application/javascript' });
     const url = URL.createObjectURL(blob);
-    
+
     const worker = new Worker(url);
-    
+
     // Clean up blob URL after worker loads
-    worker.addEventListener('message', function cleanup() {
-      URL.revokeObjectURL(url);
-      worker.removeEventListener('message', cleanup);
-    }, { once: true });
+    worker.addEventListener(
+      'message',
+      function cleanup() {
+        URL.revokeObjectURL(url);
+        worker.removeEventListener('message', cleanup);
+      },
+      { once: true }
+    );
 
     return worker;
   }
@@ -361,7 +372,9 @@ export class WorkerProcessor {
     if (response.success) {
       this.stats.completedTasks++;
       pending.resolve(response.result);
-      this.log(`Task ${response.id} completed in ${response.processingTimeMs.toFixed(2)}ms`);
+      this.log(
+        `Task ${response.id} completed in ${response.processingTimeMs.toFixed(2)}ms`
+      );
     } else {
       this.stats.failedTasks++;
       pending.reject(new Error(response.error ?? 'Unknown worker error'));
@@ -377,7 +390,7 @@ export class WorkerProcessor {
    */
   private handleError(error: ErrorEvent): void {
     this.log(`Worker error: ${error.message}`, 'error');
-    
+
     // Reject all pending tasks
     for (const [_id, pending] of this.pendingTasks) {
       if (pending.timeoutId) {
@@ -407,12 +420,14 @@ export class WorkerProcessor {
 
     // Check concurrent task limit
     if (this.pendingTasks.size >= this.options.maxConcurrentTasks) {
-      throw new Error(`Maximum concurrent tasks (${this.options.maxConcurrentTasks}) reached`);
+      throw new Error(
+        `Maximum concurrent tasks (${this.options.maxConcurrentTasks}) reached`
+      );
     }
 
     return new Promise<TResult>((resolve, reject) => {
       const id = `task_${++this.taskIdCounter}`;
-      
+
       const request: WorkerRequest<TPayload> = {
         id,
         type,
@@ -425,7 +440,11 @@ export class WorkerProcessor {
           this.pendingTasks.delete(id);
           this.stats.timedOutTasks++;
           this.stats.pendingTasks = this.pendingTasks.size;
-          reject(new Error(`Task ${id} timed out after ${this.options.taskTimeout}ms`));
+          reject(
+            new Error(
+              `Task ${id} timed out after ${this.options.taskTimeout}ms`
+            )
+          );
         }
       }, this.options.taskTimeout);
 
@@ -453,7 +472,7 @@ export class WorkerProcessor {
   ): Promise<TResult> {
     this.log(`Executing ${type} on main thread (fallback)`);
     const startTime = performance.now();
-    
+
     try {
       const result = processTask(type, payload);
       const processingTime = performance.now() - startTime;
@@ -535,10 +554,13 @@ export class WorkerProcessor {
     stats: FrameStats[],
     windowSize?: number
   ): Promise<StatsAggregationResult> {
-    return this.sendTask<StatsAggregationPayload, StatsAggregationResult>('statsAggregation', {
-      stats,
-      windowSize,
-    });
+    return this.sendTask<StatsAggregationPayload, StatsAggregationResult>(
+      'statsAggregation',
+      {
+        stats,
+        windowSize,
+      }
+    );
   }
 
   /**
@@ -548,10 +570,13 @@ export class WorkerProcessor {
     values: number[],
     percentiles: number[] = [50, 90, 95, 99]
   ): Promise<PercentileResult> {
-    return this.sendTask<PercentilePayload, PercentileResult>('percentileCalc', {
-      values,
-      percentiles,
-    });
+    return this.sendTask<PercentilePayload, PercentileResult>(
+      'percentileCalc',
+      {
+        values,
+        percentiles,
+      }
+    );
   }
 
   /**
@@ -562,11 +587,14 @@ export class WorkerProcessor {
     windowSize?: number,
     thresholds?: TrendAnalysisPayload['thresholds']
   ): Promise<TrendAnalysisResult> {
-    return this.sendTask<TrendAnalysisPayload, TrendAnalysisResult>('trendAnalysis', {
-      history,
-      windowSize,
-      thresholds,
-    });
+    return this.sendTask<TrendAnalysisPayload, TrendAnalysisResult>(
+      'trendAnalysis',
+      {
+        history,
+        windowSize,
+        thresholds,
+      }
+    );
   }
 
   /**
@@ -722,7 +750,7 @@ function processTask(type: WorkerTaskType, payload: unknown): unknown {
  */
 function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
   const { stats, config } = payload;
-  
+
   // Default config values
   const targetFps = config?.targetFps ?? 60;
   const maxDrawCalls = config?.maxDrawCalls ?? 500;
@@ -794,7 +822,8 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
   // Memory score (0-100)
   let memoryScore = 100;
   if (stats.memory) {
-    const textureMemRatio = (stats.memory.textureMemory ?? 0) / maxTextureMemory;
+    const textureMemRatio =
+      (stats.memory.textureMemory ?? 0) / maxTextureMemory;
     const geoMemRatio = (stats.memory.geometryMemory ?? 0) / maxGeometryMemory;
     const memoryRatio = Math.max(textureMemRatio, geoMemRatio);
     if (memoryRatio <= 0.5) {
@@ -814,7 +843,8 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
   // State changes score (0-100)
   const stateChangesPerDraw =
     stats.drawCalls > 0 && stats.rendering
-      ? ((stats.rendering.programSwitches ?? 0) + (stats.rendering.textureBinds ?? 0)) /
+      ? ((stats.rendering.programSwitches ?? 0) +
+          (stats.rendering.textureBinds ?? 0)) /
         stats.drawCalls
       : 0;
   let stateChangesScore: number;
@@ -875,7 +905,8 @@ function formatLargeNumber(num: number): string {
  * Analyze resource lifecycle for leaks
  */
 function analyzeLeaksInWorker(payload: LeakAnalysisPayload): LeakReport {
-  const { events, activeResources, memoryHistory, sessionStartTime, options } = payload;
+  const { events, activeResources, memoryHistory, sessionStartTime, options } =
+    payload;
   const now = performance.now();
   const sessionDurationMs = now - sessionStartTime;
 
@@ -884,9 +915,24 @@ function analyzeLeaksInWorker(payload: LeakAnalysisPayload): LeakReport {
 
   // Count events by type
   const stats: {
-    geometries: { created: number; disposed: number; orphaned: number; leaked: number };
-    materials: { created: number; disposed: number; orphaned: number; leaked: number };
-    textures: { created: number; disposed: number; orphaned: number; leaked: number };
+    geometries: {
+      created: number;
+      disposed: number;
+      orphaned: number;
+      leaked: number;
+    };
+    materials: {
+      created: number;
+      disposed: number;
+      orphaned: number;
+      leaked: number;
+    };
+    textures: {
+      created: number;
+      disposed: number;
+      orphaned: number;
+      leaked: number;
+    };
   } = {
     geometries: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
     materials: { created: 0, disposed: 0, orphaned: 0, leaked: 0 },
@@ -943,7 +989,10 @@ function analyzeLeaksInWorker(payload: LeakAnalysisPayload): LeakReport {
     }
 
     // Check for undisposed old resources that were detached
-    if (resource.detachedAt && now - resource.detachedAt > options.leakThresholdMs) {
+    if (
+      resource.detachedAt &&
+      now - resource.detachedAt > options.leakThresholdMs
+    ) {
       // Detached but not disposed
       stats[typeKey].leaked++;
       alerts.push({
@@ -965,22 +1014,33 @@ function analyzeLeaksInWorker(payload: LeakAnalysisPayload): LeakReport {
   let estimatedLeakedMemory = 0;
   if (memoryHistory.length >= 10) {
     const recentHistory = memoryHistory.slice(-20);
-    const firstHalf = recentHistory.slice(0, Math.floor(recentHistory.length / 2));
-    const secondHalf = recentHistory.slice(Math.floor(recentHistory.length / 2));
+    const firstHalf = recentHistory.slice(
+      0,
+      Math.floor(recentHistory.length / 2)
+    );
+    const secondHalf = recentHistory.slice(
+      Math.floor(recentHistory.length / 2)
+    );
 
-    const firstAvg = firstHalf.reduce((a, b) => a + b.estimatedBytes, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((a, b) => a + b.estimatedBytes, 0) / secondHalf.length;
+    const firstAvg =
+      firstHalf.reduce((a, b) => a + b.estimatedBytes, 0) / firstHalf.length;
+    const secondAvg =
+      secondHalf.reduce((a, b) => a + b.estimatedBytes, 0) / secondHalf.length;
     const growth = secondAvg - firstAvg;
 
     if (growth > options.memoryGrowthThresholdBytes) {
       alerts.push({
         id: `alert_${++alertIdCounter}`,
         type: 'memory_growth',
-        severity: growth > options.memoryGrowthThresholdBytes * 2 ? 'critical' : 'warning',
+        severity:
+          growth > options.memoryGrowthThresholdBytes * 2
+            ? 'critical'
+            : 'warning',
         message: 'Memory usage growing consistently',
         details: `Memory increased by ${formatBytes(growth)} over recent frames`,
         timestamp: now,
-        suggestion: 'Check for undisposed resources or excessive object creation',
+        suggestion:
+          'Check for undisposed resources or excessive object creation',
       });
       estimatedLeakedMemory = growth;
     }
@@ -996,7 +1056,9 @@ function analyzeLeaksInWorker(payload: LeakAnalysisPayload): LeakReport {
   // Generate recommendations
   const recommendations: string[] = [];
   if (stats.geometries.leaked > 0) {
-    recommendations.push(`Dispose ${stats.geometries.leaked} leaked geometries`);
+    recommendations.push(
+      `Dispose ${stats.geometries.leaked} leaked geometries`
+    );
   }
   if (stats.materials.leaked > 0) {
     recommendations.push(`Dispose ${stats.materials.leaked} leaked materials`);
@@ -1005,7 +1067,9 @@ function analyzeLeaksInWorker(payload: LeakAnalysisPayload): LeakReport {
     recommendations.push(`Dispose ${stats.textures.leaked} leaked textures`);
   }
   if (estimatedLeakedMemory > 0) {
-    recommendations.push(`Estimated ${formatBytes(estimatedLeakedMemory)} of GPU memory may be leaked`);
+    recommendations.push(
+      `Estimated ${formatBytes(estimatedLeakedMemory)} of GPU memory may be leaked`
+    );
   }
   if (recommendations.length === 0) {
     recommendations.push('No significant memory leaks detected');
@@ -1016,9 +1080,9 @@ function analyzeLeaksInWorker(payload: LeakAnalysisPayload): LeakReport {
     sessionDurationMs,
     summary: {
       totalAlerts: alerts.length,
-      criticalAlerts: alerts.filter(a => a.severity === 'critical').length,
-      warningAlerts: alerts.filter(a => a.severity === 'warning').length,
-      infoAlerts: alerts.filter(a => a.severity === 'info').length,
+      criticalAlerts: alerts.filter((a) => a.severity === 'critical').length,
+      warningAlerts: alerts.filter((a) => a.severity === 'warning').length,
+      infoAlerts: alerts.filter((a) => a.severity === 'info').length,
       estimatedLeakedMemoryBytes: estimatedLeakedMemory,
     },
     alerts,
@@ -1032,7 +1096,8 @@ function analyzeLeaksInWorker(payload: LeakAnalysisPayload): LeakReport {
  * Format bytes for display
  */
 function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  if (bytes >= 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
   return `${bytes} B`;
@@ -1041,7 +1106,9 @@ function formatBytes(bytes: number): string {
 /**
  * Aggregate multiple frame stats
  */
-function aggregateStatsInWorker(payload: StatsAggregationPayload): StatsAggregationResult {
+function aggregateStatsInWorker(
+  payload: StatsAggregationPayload
+): StatsAggregationResult {
   const { stats, windowSize } = payload;
   const data = windowSize ? stats.slice(-windowSize) : stats;
 
@@ -1091,8 +1158,10 @@ function aggregateStatsInWorker(payload: StatsAggregationPayload): StatsAggregat
   const avgFps = fpsValues.reduce((a, b) => a + b, 0) / fpsValues.length;
 
   // Calculate variance
-  const squaredDiffs = fpsValues.map(fps => Math.pow(fps - avgFps, 2));
-  const variance = Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / fpsValues.length);
+  const squaredDiffs = fpsValues.map((fps) => Math.pow(fps - avgFps, 2));
+  const variance = Math.sqrt(
+    squaredDiffs.reduce((a, b) => a + b, 0) / fpsValues.length
+  );
 
   return {
     avgCpuTimeMs,
@@ -1111,7 +1180,9 @@ function aggregateStatsInWorker(payload: StatsAggregationPayload): StatsAggregat
 /**
  * Calculate percentiles from values
  */
-function calculatePercentilesInWorker(payload: PercentilePayload): PercentileResult {
+function calculatePercentilesInWorker(
+  payload: PercentilePayload
+): PercentileResult {
   const { values, percentiles } = payload;
 
   if (values.length === 0) {
@@ -1147,9 +1218,10 @@ function calculatePercentilesInWorker(payload: PercentilePayload): PercentileRes
 
   // Median
   const midIndex = Math.floor(sorted.length / 2);
-  result.median = sorted.length % 2 === 0
-    ? (sorted[midIndex - 1] + sorted[midIndex]) / 2
-    : sorted[midIndex];
+  result.median =
+    sorted.length % 2 === 0
+      ? (sorted[midIndex - 1] + sorted[midIndex]) / 2
+      : sorted[midIndex];
 
   return result;
 }
@@ -1157,7 +1229,9 @@ function calculatePercentilesInWorker(payload: PercentilePayload): PercentileRes
 /**
  * Analyze performance trends using linear regression
  */
-function analyzeTrendInWorker(payload: TrendAnalysisPayload): TrendAnalysisResult {
+function analyzeTrendInWorker(
+  payload: TrendAnalysisPayload
+): TrendAnalysisResult {
   const { history, windowSize, thresholds } = payload;
   const data = windowSize ? history.slice(-windowSize) : history;
 
@@ -1177,7 +1251,7 @@ function analyzeTrendInWorker(payload: TrendAnalysisPayload): TrendAnalysisResul
 
   // Normalize timestamps to start from 0
   const startTime = data[0].timestamp;
-  const normalizedData = data.map(d => ({
+  const normalizedData = data.map((d) => ({
     x: (d.timestamp - startTime) / 1000, // Convert to seconds
     y: d.value,
   }));
@@ -1197,7 +1271,8 @@ function analyzeTrendInWorker(payload: TrendAnalysisPayload): TrendAnalysisResul
   // Calculate change percent
   const firstValue = data[0].value;
   const lastValue = data[data.length - 1].value;
-  const changePercent = firstValue !== 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
+  const changePercent =
+    firstValue !== 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
 
   // Determine confidence based on R² value
   let confidence: 'high' | 'medium' | 'low';

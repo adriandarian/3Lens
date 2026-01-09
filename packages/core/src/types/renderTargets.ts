@@ -227,4 +227,3 @@ export interface RenderTargetsSummary {
    */
   msaaCount: number;
 }
-

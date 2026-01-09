@@ -12,4 +12,3 @@ export type {
   EntityEventType,
   EntityEventCallback,
 } from './types';
-

@@ -38,17 +38,19 @@ export class TransformGizmo {
   private translationSnap = 1;
   private rotationSnap = Math.PI / 12; // 15 degrees
   private scaleSnap = 0.1;
-  
+
   // Undo/redo history
   private history: TransformHistoryEntry[] = [];
   private historyIndex = -1;
   private maxHistorySize = 50;
   private transformStart: TransformSnapshot | null = null;
-  
+
   // Callbacks
   private onDraggingChangedCallbacks: Array<(isDragging: boolean) => void> = [];
-  private onTransformChangedCallbacks: Array<(entry: TransformHistoryEntry) => void> = [];
-  
+  private onTransformChangedCallbacks: Array<
+    (entry: TransformHistoryEntry) => void
+  > = [];
+
   constructor(private probe: DevtoolProbe) {}
 
   /**
@@ -70,7 +72,12 @@ export class TransformGizmo {
    * Check if the gizmo is initialized
    */
   isInitialized(): boolean {
-    return this.scene !== null && this.camera !== null && this.domElement !== null && this.THREE !== null;
+    return (
+      this.scene !== null &&
+      this.camera !== null &&
+      this.domElement !== null &&
+      this.THREE !== null
+    );
   }
 
   /**
@@ -90,31 +97,41 @@ export class TransformGizmo {
 
     // Dynamically import TransformControls
     try {
-      const { TransformControls } = await import('three/examples/jsm/controls/TransformControls.js');
-      
+      const { TransformControls } =
+        await import('three/examples/jsm/controls/TransformControls.js');
+
       this.transformControls = new TransformControls(
         this.camera!,
         this.domElement!
       );
-      
+
       this.transformControls.name = '__3lens_transform_controls__';
-      
+
       // Set initial mode and space
       this.transformControls.setMode(this.mode);
       this.transformControls.setSpace(this.space);
-      
+
       // Set up snapping
       this.updateSnapping();
-      
+
       // Add event listeners
-      this.transformControls.addEventListener('dragging-changed', this.handleDraggingChanged);
-      this.transformControls.addEventListener('objectChange', this.handleObjectChange);
-      this.transformControls.addEventListener('mouseDown', this.handleMouseDown);
+      this.transformControls.addEventListener(
+        'dragging-changed',
+        this.handleDraggingChanged
+      );
+      this.transformControls.addEventListener(
+        'objectChange',
+        this.handleObjectChange
+      );
+      this.transformControls.addEventListener(
+        'mouseDown',
+        this.handleMouseDown
+      );
       this.transformControls.addEventListener('mouseUp', this.handleMouseUp);
-      
+
       // Add to scene
       this.scene!.add(this.transformControls);
-      
+
       this.enabled = true;
       this.updateAttachment();
     } catch (error) {
@@ -223,17 +240,19 @@ export class TransformGizmo {
    */
   private updateAttachment(): void {
     const selectedObject = this.probe.getSelectedObject();
-    
+
     if (this.enabled && this.transformControls && selectedObject) {
       // Don't attach to 3lens helpers or the scene itself
-      if (selectedObject.name.startsWith('__3lens') || 
-          selectedObject.name.startsWith('3lens_') ||
-          selectedObject.type === 'Scene') {
+      if (
+        selectedObject.name.startsWith('__3lens') ||
+        selectedObject.name.startsWith('3lens_') ||
+        selectedObject.type === 'Scene'
+      ) {
         this.transformControls.detach();
         this.currentObject = null;
         return;
       }
-      
+
       this.transformControls.attach(selectedObject);
       this.currentObject = selectedObject;
     } else if (this.transformControls) {
@@ -254,7 +273,7 @@ export class TransformGizmo {
    */
   private updateSnapping(): void {
     if (!this.transformControls) return;
-    
+
     if (this.snapEnabled) {
       this.transformControls.setTranslationSnap(this.translationSnap);
       this.transformControls.setRotationSnap(this.rotationSnap);
@@ -271,7 +290,7 @@ export class TransformGizmo {
    */
   private handleDraggingChanged = (event: { value: unknown }): void => {
     const isDragging = Boolean(event.value);
-    
+
     for (const callback of this.onDraggingChangedCallbacks) {
       callback(isDragging);
     }
@@ -292,7 +311,7 @@ export class TransformGizmo {
   private handleMouseUp = (): void => {
     if (this.currentObject && this.transformStart) {
       const transformEnd = this.captureTransform(this.currentObject);
-      
+
       // Only add to history if something actually changed
       if (!this.transformsEqual(this.transformStart, transformEnd)) {
         const entry: TransformHistoryEntry = {
@@ -302,15 +321,15 @@ export class TransformGizmo {
           after: transformEnd,
           timestamp: Date.now(),
         };
-        
+
         this.addToHistory(entry);
-        
+
         // Notify callbacks
         for (const callback of this.onTransformChangedCallbacks) {
           callback(entry);
         }
       }
-      
+
       this.transformStart = null;
     }
   };
@@ -336,9 +355,20 @@ export class TransformGizmo {
   /**
    * Apply a transform snapshot to an object
    */
-  private applyTransform(obj: THREE.Object3D, transform: TransformSnapshot): void {
-    obj.position.set(transform.position.x, transform.position.y, transform.position.z);
-    obj.rotation.set(transform.rotation.x, transform.rotation.y, transform.rotation.z);
+  private applyTransform(
+    obj: THREE.Object3D,
+    transform: TransformSnapshot
+  ): void {
+    obj.position.set(
+      transform.position.x,
+      transform.position.y,
+      transform.position.z
+    );
+    obj.rotation.set(
+      transform.rotation.x,
+      transform.rotation.y,
+      transform.rotation.z
+    );
     obj.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);
   }
 
@@ -368,11 +398,11 @@ export class TransformGizmo {
     if (this.historyIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.historyIndex + 1);
     }
-    
+
     // Add new entry
     this.history.push(entry);
     this.historyIndex = this.history.length - 1;
-    
+
     // Limit history size
     if (this.history.length > this.maxHistorySize) {
       this.history.shift();
@@ -403,16 +433,16 @@ export class TransformGizmo {
     if (this.historyIndex < 0) {
       return false;
     }
-    
+
     const entry = this.history[this.historyIndex];
     const obj = this.findObjectByUuid(entry.objectUuid);
-    
+
     if (obj) {
       this.applyTransform(obj, entry.before);
       this.historyIndex--;
       return true;
     }
-    
+
     return false;
   }
 
@@ -423,16 +453,16 @@ export class TransformGizmo {
     if (this.historyIndex >= this.history.length - 1) {
       return false;
     }
-    
+
     this.historyIndex++;
     const entry = this.history[this.historyIndex];
     const obj = this.findObjectByUuid(entry.objectUuid);
-    
+
     if (obj) {
       this.applyTransform(obj, entry.after);
       return true;
     }
-    
+
     return false;
   }
 
@@ -481,7 +511,9 @@ export class TransformGizmo {
   /**
    * Subscribe to transform changes
    */
-  onTransformChanged(callback: (entry: TransformHistoryEntry) => void): () => void {
+  onTransformChanged(
+    callback: (entry: TransformHistoryEntry) => void
+  ): () => void {
     this.onTransformChangedCallbacks.push(callback);
     return () => {
       const index = this.onTransformChangedCallbacks.indexOf(callback);
@@ -504,21 +536,30 @@ export class TransformGizmo {
    */
   dispose(): void {
     if (this.transformControls) {
-      this.transformControls.removeEventListener('dragging-changed', this.handleDraggingChanged);
-      this.transformControls.removeEventListener('objectChange', this.handleObjectChange);
-      this.transformControls.removeEventListener('mouseDown', this.handleMouseDown);
+      this.transformControls.removeEventListener(
+        'dragging-changed',
+        this.handleDraggingChanged
+      );
+      this.transformControls.removeEventListener(
+        'objectChange',
+        this.handleObjectChange
+      );
+      this.transformControls.removeEventListener(
+        'mouseDown',
+        this.handleMouseDown
+      );
       this.transformControls.removeEventListener('mouseUp', this.handleMouseUp);
-      
+
       this.transformControls.detach();
-      
+
       if (this.scene) {
         this.scene.remove(this.transformControls);
       }
-      
+
       this.transformControls.dispose();
       this.transformControls = null;
     }
-    
+
     this.currentObject = null;
     this.scene = null;
     this.camera = null;
@@ -531,4 +572,3 @@ export class TransformGizmo {
     this.onTransformChangedCallbacks = [];
   }
 }
-

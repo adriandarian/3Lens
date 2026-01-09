@@ -311,4 +311,3 @@ export interface EntityEvent {
  * Callback for entity events
  */
 export type EntityEventCallback = (event: EntityEvent) => void;
-

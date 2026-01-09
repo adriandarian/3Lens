@@ -9,7 +9,9 @@ import { PluginLoader } from './PluginLoader';
 import type { DevtoolPlugin, PluginMetadata } from './types';
 
 // Helper to create a valid plugin
-function createValidPlugin(overrides: Partial<DevtoolPlugin> = {}): DevtoolPlugin {
+function createValidPlugin(
+  overrides: Partial<DevtoolPlugin> = {}
+): DevtoolPlugin {
   return {
     metadata: {
       id: 'test.plugin',
@@ -49,9 +51,9 @@ describe('PluginLoader', () => {
   describe('loadInline', () => {
     it('should load a valid inline plugin', () => {
       const plugin = createValidPlugin();
-      
+
       const result = loader.loadInline(plugin);
-      
+
       expect(result.success).toBe(true);
       expect(result.plugin).toBe(plugin);
       expect(result.source.type).toBe('inline');
@@ -59,9 +61,9 @@ describe('PluginLoader', () => {
 
     it('should track load time', () => {
       const plugin = createValidPlugin();
-      
+
       const result = loader.loadInline(plugin);
-      
+
       expect(result.loadTime).toBeGreaterThanOrEqual(0);
     });
 
@@ -69,9 +71,9 @@ describe('PluginLoader', () => {
       const plugin = {
         activate: vi.fn(),
       } as unknown as DevtoolPlugin;
-      
+
       const result = loader.loadInline(plugin);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
     });
@@ -81,9 +83,9 @@ describe('PluginLoader', () => {
         metadata: { name: 'Test', version: '1.0.0' },
         activate: vi.fn(),
       } as unknown as DevtoolPlugin;
-      
+
       const result = loader.loadInline(plugin);
-      
+
       expect(result.success).toBe(false);
     });
 
@@ -92,9 +94,9 @@ describe('PluginLoader', () => {
         metadata: { id: 'test', version: '1.0.0' },
         activate: vi.fn(),
       } as unknown as DevtoolPlugin;
-      
+
       const result = loader.loadInline(plugin);
-      
+
       expect(result.success).toBe(false);
     });
 
@@ -103,9 +105,9 @@ describe('PluginLoader', () => {
         metadata: { id: 'test', name: 'Test' },
         activate: vi.fn(),
       } as unknown as DevtoolPlugin;
-      
+
       const result = loader.loadInline(plugin);
-      
+
       expect(result.success).toBe(false);
     });
 
@@ -113,17 +115,17 @@ describe('PluginLoader', () => {
       const plugin = {
         metadata: { id: 'test', name: 'Test', version: '1.0.0' },
       } as DevtoolPlugin;
-      
+
       const result = loader.loadInline(plugin);
-      
+
       expect(result.success).toBe(false);
     });
 
     it('should store loaded plugin', () => {
       const plugin = createValidPlugin();
-      
+
       loader.loadInline(plugin);
-      
+
       expect(loader.isLoaded('test.plugin')).toBe(true);
       expect(loader.getLoadedPlugin('test.plugin')).toBe(plugin);
     });
@@ -133,7 +135,7 @@ describe('PluginLoader', () => {
     it('should return loaded plugin', () => {
       const plugin = createValidPlugin();
       loader.loadInline(plugin);
-      
+
       expect(loader.getLoadedPlugin('test.plugin')).toBe(plugin);
     });
 
@@ -144,12 +146,16 @@ describe('PluginLoader', () => {
 
   describe('getLoadedPlugins', () => {
     it('should return all loaded plugins', () => {
-      const plugin1 = createValidPlugin({ metadata: { id: 'plugin1', name: 'P1', version: '1.0.0' } });
-      const plugin2 = createValidPlugin({ metadata: { id: 'plugin2', name: 'P2', version: '1.0.0' } });
-      
+      const plugin1 = createValidPlugin({
+        metadata: { id: 'plugin1', name: 'P1', version: '1.0.0' },
+      });
+      const plugin2 = createValidPlugin({
+        metadata: { id: 'plugin2', name: 'P2', version: '1.0.0' },
+      });
+
       loader.loadInline(plugin1);
       loader.loadInline(plugin2);
-      
+
       const plugins = loader.getLoadedPlugins();
       expect(plugins).toHaveLength(2);
       expect(plugins).toContain(plugin1);
@@ -165,7 +171,7 @@ describe('PluginLoader', () => {
     it('should return true for loaded plugin', () => {
       const plugin = createValidPlugin();
       loader.loadInline(plugin);
-      
+
       expect(loader.isLoaded('test.plugin')).toBe(true);
     });
 
@@ -178,27 +184,35 @@ describe('PluginLoader', () => {
     it('should unload a plugin', () => {
       const plugin = createValidPlugin();
       loader.loadInline(plugin);
-      
+
       const result = loader.unload('test.plugin');
-      
+
       expect(result).toBe(true);
       expect(loader.isLoaded('test.plugin')).toBe(false);
     });
 
     it('should return false for unknown plugin', () => {
       const result = loader.unload('unknown');
-      
+
       expect(result).toBe(false);
     });
   });
 
   describe('clear', () => {
     it('should clear all loaded plugins', () => {
-      loader.loadInline(createValidPlugin({ metadata: { id: 'p1', name: 'P1', version: '1.0.0' } }));
-      loader.loadInline(createValidPlugin({ metadata: { id: 'p2', name: 'P2', version: '1.0.0' } }));
-      
+      loader.loadInline(
+        createValidPlugin({
+          metadata: { id: 'p1', name: 'P1', version: '1.0.0' },
+        })
+      );
+      loader.loadInline(
+        createValidPlugin({
+          metadata: { id: 'p2', name: 'P2', version: '1.0.0' },
+        })
+      );
+
       loader.clear();
-      
+
       expect(loader.getLoadedPlugins()).toEqual([]);
     });
   });
@@ -208,9 +222,11 @@ describe('PluginLoader', () => {
       const restrictedLoader = new PluginLoader({
         allowUrlImports: false,
       });
-      
-      const result = await restrictedLoader.loadFromUrl('https://example.com/plugin.js');
-      
+
+      const result = await restrictedLoader.loadFromUrl(
+        'https://example.com/plugin.js'
+      );
+
       expect(result.success).toBe(false);
       expect(result.error?.message).toContain('disabled');
     });
@@ -219,26 +235,30 @@ describe('PluginLoader', () => {
       const mockImport = vi.fn().mockResolvedValue({
         plugin: createValidPlugin(),
       });
-      
+
       const urlLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
-      const result = await urlLoader.loadFromUrl('https://example.com/plugin.js');
-      
+
+      const result = await urlLoader.loadFromUrl(
+        'https://example.com/plugin.js'
+      );
+
       expect(mockImport).toHaveBeenCalledWith('https://example.com/plugin.js');
       expect(result.success).toBe(true);
     });
 
     it('should handle load errors', async () => {
       const mockImport = vi.fn().mockRejectedValue(new Error('Network error'));
-      
+
       const errorLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
-      const result = await errorLoader.loadFromUrl('https://example.com/plugin.js');
-      
+
+      const result = await errorLoader.loadFromUrl(
+        'https://example.com/plugin.js'
+      );
+
       expect(result.success).toBe(false);
       expect(result.error?.message).toContain('Network error');
     });
@@ -249,56 +269,65 @@ describe('PluginLoader', () => {
       const mockImport = vi.fn().mockResolvedValue({
         plugin: createValidPlugin(),
       });
-      
+
       const npmLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
+
       await npmLoader.loadFromNpm('@3lens/plugin-test', '1.0.0');
-      
+
       expect(mockImport).toHaveBeenCalledWith(
         expect.stringContaining('@3lens/plugin-test')
       );
-      expect(mockImport).toHaveBeenCalledWith(
-        expect.stringContaining('1.0.0')
-      );
+      expect(mockImport).toHaveBeenCalledWith(expect.stringContaining('1.0.0'));
     });
 
     it('should use latest version by default', async () => {
       const mockImport = vi.fn().mockResolvedValue({
         plugin: createValidPlugin(),
       });
-      
+
       const npmLoader = new PluginLoader({
         importFn: mockImport,
         cdnTemplate: 'https://cdn.example.com/{package}@{version}',
       });
-      
+
       await npmLoader.loadFromNpm('my-plugin');
-      
-      expect(mockImport).toHaveBeenCalledWith('https://cdn.example.com/my-plugin@latest');
+
+      expect(mockImport).toHaveBeenCalledWith(
+        'https://cdn.example.com/my-plugin@latest'
+      );
     });
   });
 
   describe('loadFromSource', () => {
     it('should deduplicate concurrent loads', async () => {
       let resolveLoad: Function;
-      const mockImport = vi.fn().mockImplementation(() => 
-        new Promise(resolve => { resolveLoad = () => resolve({ plugin: createValidPlugin() }); })
+      const mockImport = vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveLoad = () => resolve({ plugin: createValidPlugin() });
+          })
       );
-      
+
       const dedupeLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
-      const promise1 = dedupeLoader.loadFromSource({ type: 'url', source: 'https://example.com/plugin.js' });
-      const promise2 = dedupeLoader.loadFromSource({ type: 'url', source: 'https://example.com/plugin.js' });
-      
+
+      const promise1 = dedupeLoader.loadFromSource({
+        type: 'url',
+        source: 'https://example.com/plugin.js',
+      });
+      const promise2 = dedupeLoader.loadFromSource({
+        type: 'url',
+        source: 'https://example.com/plugin.js',
+      });
+
       // Both should return the same promise (deduplication)
       resolveLoad!();
-      
+
       const [result1, result2] = await Promise.all([promise1, promise2]);
-      
+
       expect(result1.success).toBe(true);
       expect(result2.success).toBe(true);
       // Import should only be called once
@@ -308,18 +337,24 @@ describe('PluginLoader', () => {
     it('should fail when loading duplicate plugin ID from different source', async () => {
       const plugin = createValidPlugin();
       const mockImport = vi.fn().mockResolvedValue({ plugin });
-      
+
       const cacheLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
+
       // Load first time
-      const firstResult = await cacheLoader.loadFromSource({ type: 'url', source: 'https://example.com/plugin.js' });
+      const firstResult = await cacheLoader.loadFromSource({
+        type: 'url',
+        source: 'https://example.com/plugin.js',
+      });
       expect(firstResult.success).toBe(true);
-      
+
       // Load second time with same URL - fails because plugin ID already exists
-      const secondResult = await cacheLoader.loadFromSource({ type: 'url', source: 'https://example.com/plugin.js' });
-      
+      const secondResult = await cacheLoader.loadFromSource({
+        type: 'url',
+        source: 'https://example.com/plugin.js',
+      });
+
       expect(secondResult.success).toBe(false);
       expect(secondResult.error?.message).toContain('already loaded');
     });
@@ -327,19 +362,28 @@ describe('PluginLoader', () => {
 
   describe('loadMultiple', () => {
     it('should load multiple plugins', async () => {
-      const mockImport = vi.fn()
-        .mockResolvedValueOnce({ plugin: createValidPlugin({ metadata: { id: 'p1', name: 'P1', version: '1.0.0' } }) })
-        .mockResolvedValueOnce({ plugin: createValidPlugin({ metadata: { id: 'p2', name: 'P2', version: '1.0.0' } }) });
-      
+      const mockImport = vi
+        .fn()
+        .mockResolvedValueOnce({
+          plugin: createValidPlugin({
+            metadata: { id: 'p1', name: 'P1', version: '1.0.0' },
+          }),
+        })
+        .mockResolvedValueOnce({
+          plugin: createValidPlugin({
+            metadata: { id: 'p2', name: 'P2', version: '1.0.0' },
+          }),
+        });
+
       const multiLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
+
       const results = await multiLoader.loadMultiple([
         { type: 'url', source: 'https://example.com/plugin1.js' },
         { type: 'url', source: 'https://example.com/plugin2.js' },
       ]);
-      
+
       expect(results).toHaveLength(2);
       expect(results[0].success).toBe(true);
       expect(results[1].success).toBe(true);
@@ -352,13 +396,15 @@ describe('PluginLoader', () => {
       const mockImport = vi.fn().mockResolvedValue({
         createPlugin: () => plugin,
       });
-      
+
       const factoryLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
-      const result = await factoryLoader.loadFromUrl('https://example.com/plugin.js');
-      
+
+      const result = await factoryLoader.loadFromUrl(
+        'https://example.com/plugin.js'
+      );
+
       expect(result.success).toBe(true);
       expect(result.plugin).toBe(plugin);
     });
@@ -366,13 +412,15 @@ describe('PluginLoader', () => {
     it('should pass options to createPlugin factory', async () => {
       const createPlugin = vi.fn().mockReturnValue(createValidPlugin());
       const mockImport = vi.fn().mockResolvedValue({ createPlugin });
-      
+
       const optionsLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
-      await optionsLoader.loadFromUrl('https://example.com/plugin.js', { debug: true });
-      
+
+      await optionsLoader.loadFromUrl('https://example.com/plugin.js', {
+        debug: true,
+      });
+
       expect(createPlugin).toHaveBeenCalledWith({ debug: true });
     });
 
@@ -381,13 +429,15 @@ describe('PluginLoader', () => {
       const mockImport = vi.fn().mockResolvedValue({
         default: plugin,
       });
-      
+
       const defaultLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
-      const result = await defaultLoader.loadFromUrl('https://example.com/plugin.js');
-      
+
+      const result = await defaultLoader.loadFromUrl(
+        'https://example.com/plugin.js'
+      );
+
       expect(result.success).toBe(true);
       expect(result.plugin).toBe(plugin);
     });
@@ -397,13 +447,15 @@ describe('PluginLoader', () => {
       const mockImport = vi.fn().mockResolvedValue({
         default: { plugin },
       });
-      
+
       const defaultPluginLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
-      const result = await defaultPluginLoader.loadFromUrl('https://example.com/plugin.js');
-      
+
+      const result = await defaultPluginLoader.loadFromUrl(
+        'https://example.com/plugin.js'
+      );
+
       expect(result.success).toBe(true);
       expect(result.plugin).toBe(plugin);
     });
@@ -413,13 +465,15 @@ describe('PluginLoader', () => {
       const mockImport = vi.fn().mockResolvedValue({
         default: { createPlugin: () => plugin },
       });
-      
+
       const defaultFactoryLoader = new PluginLoader({
         importFn: mockImport,
       });
-      
-      const result = await defaultFactoryLoader.loadFromUrl('https://example.com/plugin.js');
-      
+
+      const result = await defaultFactoryLoader.loadFromUrl(
+        'https://example.com/plugin.js'
+      );
+
       expect(result.success).toBe(true);
       expect(result.plugin).toBe(plugin);
     });
@@ -427,17 +481,21 @@ describe('PluginLoader', () => {
 
   describe('timeout handling', () => {
     it('should timeout slow loads', async () => {
-      const mockImport = vi.fn().mockImplementation(() => 
-        new Promise(resolve => setTimeout(resolve, 1000))
-      );
-      
+      const mockImport = vi
+        .fn()
+        .mockImplementation(
+          () => new Promise((resolve) => setTimeout(resolve, 1000))
+        );
+
       const timeoutLoader = new PluginLoader({
         importFn: mockImport,
         timeout: 50,
       });
-      
-      const result = await timeoutLoader.loadFromUrl('https://example.com/slow-plugin.js');
-      
+
+      const result = await timeoutLoader.loadFromUrl(
+        'https://example.com/slow-plugin.js'
+      );
+
       expect(result.success).toBe(false);
       expect(result.error?.message).toContain('timeout');
     });

@@ -1,6 +1,6 @@
 /**
  * 3Lens Command Palette
- * 
+ *
  * A searchable command palette (like VS Code's Ctrl+K or Spotlight)
  * for quick access to all 3Lens features.
  */
@@ -42,14 +42,14 @@ export class CommandPalette {
   private searchQuery = '';
   private selectedIndex = 0;
   private filteredCommands: Command[] = [];
-  
+
   /**
    * Register the keyboard manager for focus trapping
    */
   setKeyboardManager(manager: KeyboardManager): void {
     this.keyboardManager = manager;
   }
-  
+
   /**
    * Register a command
    */
@@ -59,7 +59,7 @@ export class CommandPalette {
       enabled: command.enabled ?? (() => true),
     });
   }
-  
+
   /**
    * Register multiple commands
    */
@@ -68,62 +68,62 @@ export class CommandPalette {
       this.register(cmd);
     }
   }
-  
+
   /**
    * Unregister a command
    */
   unregister(id: string): void {
     this.commands.delete(id);
   }
-  
+
   /**
    * Get all commands
    */
   getCommands(): Command[] {
     return Array.from(this.commands.values());
   }
-  
+
   /**
    * Get commands grouped by category
    */
   getCommandGroups(): CommandGroup[] {
     const groups: Map<string, Command[]> = new Map();
-    
+
     for (const cmd of this.commands.values()) {
       if (!groups.has(cmd.category)) {
         groups.set(cmd.category, []);
       }
       groups.get(cmd.category)!.push(cmd);
     }
-    
+
     return Array.from(groups.entries()).map(([category, commands]) => ({
       category,
       commands,
     }));
   }
-  
+
   /**
    * Search commands
    */
   search(query: string): Command[] {
     if (!query.trim()) {
-      return Array.from(this.commands.values()).filter(cmd => 
-        cmd.enabled?.() !== false
+      return Array.from(this.commands.values()).filter(
+        (cmd) => cmd.enabled?.() !== false
       );
     }
-    
+
     const lowerQuery = query.toLowerCase();
     const terms = lowerQuery.split(/\s+/);
-    
+
     const scored = Array.from(this.commands.values())
-      .filter(cmd => cmd.enabled?.() !== false)
-      .map(cmd => {
+      .filter((cmd) => cmd.enabled?.() !== false)
+      .map((cmd) => {
         let score = 0;
         const title = cmd.title.toLowerCase();
         const category = cmd.category.toLowerCase();
         const description = cmd.description?.toLowerCase() ?? '';
         const keywords = cmd.keywords?.join(' ').toLowerCase() ?? '';
-        
+
         for (const term of terms) {
           // Exact title match
           if (title === term) score += 100;
@@ -140,56 +140,56 @@ export class CommandPalette {
           // Fuzzy match on title
           else if (this.fuzzyMatch(title, term)) score += 5;
         }
-        
+
         return { cmd, score };
       })
-      .filter(item => item.score > 0)
+      .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score);
-    
-    return scored.map(item => item.cmd);
+
+    return scored.map((item) => item.cmd);
   }
-  
+
   /**
    * Open the command palette
    */
   open(parentElement: HTMLElement): void {
     if (this.isOpen) return;
-    
+
     this.isOpen = true;
     this.searchQuery = '';
     this.selectedIndex = 0;
     this.filteredCommands = this.search('');
-    
+
     this.render(parentElement);
-    
+
     // Set up focus trap
     if (this.keyboardManager && this.container) {
       this.keyboardManager.setFocusTrap(this.container);
     }
   }
-  
+
   /**
    * Close the command palette
    */
   close(): void {
     if (!this.isOpen) return;
-    
+
     this.isOpen = false;
-    
+
     // Remove focus trap
     if (this.keyboardManager) {
       this.keyboardManager.setFocusTrap(null);
     }
-    
+
     // Remove from DOM
     if (this.container) {
       this.container.remove();
       this.container = null;
     }
-    
+
     this.onCloseCallback?.();
   }
-  
+
   /**
    * Toggle the command palette
    */
@@ -200,21 +200,21 @@ export class CommandPalette {
       this.open(parentElement);
     }
   }
-  
+
   /**
    * Check if palette is open
    */
   isVisible(): boolean {
     return this.isOpen;
   }
-  
+
   /**
    * Set callback for when palette closes
    */
   onClose(callback: () => void): void {
     this.onCloseCallback = callback;
   }
-  
+
   /**
    * Execute a command by ID
    */
@@ -227,28 +227,30 @@ export class CommandPalette {
     }
     return false;
   }
-  
+
   // ───────────────────────────────────────────────────────────────
   // RENDERING
   // ───────────────────────────────────────────────────────────────
-  
+
   private render(parent: HTMLElement): void {
     // Create container
     this.container = document.createElement('div');
     this.container.className = 'three-lens-command-palette';
     this.container.innerHTML = this.getHTML();
     parent.appendChild(this.container);
-    
+
     // Attach events
     this.attachEvents();
-    
+
     // Focus input
-    const input = this.container.querySelector('.command-palette-input') as HTMLInputElement;
+    const input = this.container.querySelector(
+      '.command-palette-input'
+    ) as HTMLInputElement;
     if (input) {
       input.focus();
     }
   }
-  
+
   private getHTML(): string {
     return `
       <div class="command-palette-backdrop"></div>
@@ -277,12 +279,12 @@ export class CommandPalette {
       </div>
     `;
   }
-  
+
   private renderResults(): string {
     if (this.filteredCommands.length === 0) {
       return '<div class="command-palette-empty">No matching commands</div>';
     }
-    
+
     // Group by category
     const groups: Map<string, Command[]> = new Map();
     for (const cmd of this.filteredCommands) {
@@ -291,14 +293,14 @@ export class CommandPalette {
       }
       groups.get(cmd.category)!.push(cmd);
     }
-    
+
     let html = '';
     let globalIndex = 0;
-    
+
     for (const [category, commands] of groups) {
       html += `<div class="command-palette-group">`;
       html += `<div class="command-palette-group-title">${this.escapeHtml(category)}</div>`;
-      
+
       for (const cmd of commands) {
         const isSelected = globalIndex === this.selectedIndex;
         html += `
@@ -317,26 +319,28 @@ export class CommandPalette {
         `;
         globalIndex++;
       }
-      
+
       html += '</div>';
     }
-    
+
     return html;
   }
-  
+
   private attachEvents(): void {
     if (!this.container) return;
-    
+
     // Backdrop click
     const backdrop = this.container.querySelector('.command-palette-backdrop');
     backdrop?.addEventListener('click', () => this.close());
-    
+
     // Close button
     const closeBtn = this.container.querySelector('.command-palette-close');
     closeBtn?.addEventListener('click', () => this.close());
-    
+
     // Input events
-    const input = this.container.querySelector('.command-palette-input') as HTMLInputElement;
+    const input = this.container.querySelector(
+      '.command-palette-input'
+    ) as HTMLInputElement;
     if (input) {
       input.addEventListener('input', () => {
         this.searchQuery = input.value;
@@ -344,18 +348,18 @@ export class CommandPalette {
         this.selectedIndex = 0;
         this.updateResults();
       });
-      
+
       input.addEventListener('keydown', (e) => this.handleInputKeydown(e));
     }
-    
+
     // Item click
     const items = this.container.querySelectorAll('.command-palette-item');
-    items.forEach(item => {
+    items.forEach((item) => {
       item.addEventListener('click', () => {
         const id = (item as HTMLElement).dataset.id;
         if (id) this.execute(id);
       });
-      
+
       item.addEventListener('mouseenter', () => {
         const index = parseInt((item as HTMLElement).dataset.index ?? '0', 10);
         this.selectedIndex = index;
@@ -363,64 +367,70 @@ export class CommandPalette {
       });
     });
   }
-  
+
   private handleInputKeydown(e: KeyboardEvent): void {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        this.selectedIndex = Math.min(this.selectedIndex + 1, this.filteredCommands.length - 1);
+        this.selectedIndex = Math.min(
+          this.selectedIndex + 1,
+          this.filteredCommands.length - 1
+        );
         this.updateSelection();
         this.scrollToSelected();
         break;
-        
+
       case 'ArrowUp':
         e.preventDefault();
         this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
         this.updateSelection();
         this.scrollToSelected();
         break;
-        
+
       case 'Enter': {
         e.preventDefault();
         const cmd = this.filteredCommands[this.selectedIndex];
         if (cmd) this.execute(cmd.id);
         break;
       }
-        
+
       case 'Escape':
         e.preventDefault();
         this.close();
         break;
     }
   }
-  
+
   private updateResults(): void {
     if (!this.container) return;
-    
+
     const results = this.container.querySelector('.command-palette-results');
     if (results) {
       results.innerHTML = this.renderResults();
-      
+
       // Re-attach item events
       const items = this.container.querySelectorAll('.command-palette-item');
-      items.forEach(item => {
+      items.forEach((item) => {
         item.addEventListener('click', () => {
           const id = (item as HTMLElement).dataset.id;
           if (id) this.execute(id);
         });
-        
+
         item.addEventListener('mouseenter', () => {
-          const index = parseInt((item as HTMLElement).dataset.index ?? '0', 10);
+          const index = parseInt(
+            (item as HTMLElement).dataset.index ?? '0',
+            10
+          );
           this.selectedIndex = index;
           this.updateSelection();
         });
       });
     }
   }
-  
+
   private updateSelection(): void {
     if (!this.container) return;
-    
+
     const items = this.container.querySelectorAll('.command-palette-item');
     items.forEach((item, index) => {
       if (index === this.selectedIndex) {
@@ -432,24 +442,26 @@ export class CommandPalette {
       }
     });
   }
-  
+
   private scrollToSelected(): void {
     if (!this.container) return;
-    
-    const selected = this.container.querySelector('.command-palette-item.selected');
+
+    const selected = this.container.querySelector(
+      '.command-palette-item.selected'
+    );
     if (selected) {
       selected.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }
-  
+
   private highlightMatch(text: string, query: string): string {
     if (!query) return this.escapeHtml(text);
-    
+
     const escaped = this.escapeHtml(text);
     const regex = new RegExp(`(${this.escapeRegExp(query)})`, 'gi');
     return escaped.replace(regex, '<mark>$1</mark>');
   }
-  
+
   private fuzzyMatch(text: string, pattern: string): boolean {
     let patternIdx = 0;
     for (let i = 0; i < text.length && patternIdx < pattern.length; i++) {
@@ -459,13 +471,21 @@ export class CommandPalette {
     }
     return patternIdx === pattern.length;
   }
-  
+
   private escapeHtml(str: string): string {
-    return str.replace(/[&<>"']/g, c => 
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c
+    return str.replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[c] ?? c
     );
   }
-  
+
   private escapeRegExp(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
@@ -494,7 +514,7 @@ export function getDefaultCommands(handlers: {
   showShortcuts?: () => void;
 }): Command[] {
   const commands: Command[] = [];
-  
+
   // Panels
   if (handlers.openScenePanel) {
     commands.push({
@@ -508,7 +528,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.openScenePanel,
     });
   }
-  
+
   if (handlers.openPerformancePanel) {
     commands.push({
       id: 'open-performance-panel',
@@ -521,7 +541,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.openPerformancePanel,
     });
   }
-  
+
   if (handlers.openMaterialsPanel) {
     commands.push({
       id: 'open-materials-panel',
@@ -534,7 +554,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.openMaterialsPanel,
     });
   }
-  
+
   if (handlers.openTexturesPanel) {
     commands.push({
       id: 'open-textures-panel',
@@ -547,7 +567,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.openTexturesPanel,
     });
   }
-  
+
   if (handlers.openPluginsPanel) {
     commands.push({
       id: 'open-plugins-panel',
@@ -560,7 +580,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.openPluginsPanel,
     });
   }
-  
+
   if (handlers.openWebGPUPanel) {
     commands.push({
       id: 'open-webgpu-panel',
@@ -572,7 +592,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.openWebGPUPanel,
     });
   }
-  
+
   // View
   if (handlers.toggleTheme) {
     commands.push({
@@ -586,7 +606,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.toggleTheme,
     });
   }
-  
+
   if (handlers.toggleWireframe) {
     commands.push({
       id: 'toggle-wireframe',
@@ -599,7 +619,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.toggleWireframe,
     });
   }
-  
+
   if (handlers.goHome) {
     commands.push({
       id: 'go-home',
@@ -612,7 +632,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.goHome,
     });
   }
-  
+
   if (handlers.focusSelected) {
     commands.push({
       id: 'focus-selected',
@@ -625,7 +645,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.focusSelected,
     });
   }
-  
+
   // Tools
   if (handlers.toggleGizmo) {
     commands.push({
@@ -639,7 +659,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.toggleGizmo,
     });
   }
-  
+
   if (handlers.setGizmoTranslate) {
     commands.push({
       id: 'gizmo-translate',
@@ -651,7 +671,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.setGizmoTranslate,
     });
   }
-  
+
   if (handlers.setGizmoRotate) {
     commands.push({
       id: 'gizmo-rotate',
@@ -663,7 +683,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.setGizmoRotate,
     });
   }
-  
+
   if (handlers.setGizmoScale) {
     commands.push({
       id: 'gizmo-scale',
@@ -675,7 +695,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.setGizmoScale,
     });
   }
-  
+
   // Edit
   if (handlers.undo) {
     commands.push({
@@ -689,7 +709,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.undo,
     });
   }
-  
+
   if (handlers.redo) {
     commands.push({
       id: 'redo',
@@ -702,7 +722,7 @@ export function getDefaultCommands(handlers: {
       handler: handlers.redo,
     });
   }
-  
+
   // Help
   if (handlers.showShortcuts) {
     commands.push({
@@ -716,7 +736,6 @@ export function getDefaultCommands(handlers: {
       handler: handlers.showShortcuts,
     });
   }
-  
+
   return commands;
 }
-

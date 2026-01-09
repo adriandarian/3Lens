@@ -1,6 +1,6 @@
 /**
  * 3Lens Keyboard Shortcuts System
- * 
+ *
  * Provides keyboard navigation, shortcuts, and command palette integration.
  */
 
@@ -39,7 +39,7 @@ type KeyHandler = () => void;
 
 /**
  * Keyboard Manager
- * 
+ *
  * Handles keyboard shortcuts and navigation for the 3Lens overlay.
  */
 export class KeyboardManager {
@@ -48,10 +48,11 @@ export class KeyboardManager {
   private listener: ((e: KeyboardEvent) => void) | null = null;
   private focusTrapElement: HTMLElement | null = null;
   private lastFocusedElement: Element | null = null;
-  
+
   // Platform detection for displaying correct modifier symbols
-  private isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform);
-  
+  private isMac =
+    typeof navigator !== 'undefined' && /Mac/.test(navigator.platform);
+
   /**
    * Initialize keyboard handling
    */
@@ -59,7 +60,7 @@ export class KeyboardManager {
     this.listener = this.handleKeyDown.bind(this);
     document.addEventListener('keydown', this.listener);
   }
-  
+
   /**
    * Register a keyboard shortcut
    */
@@ -67,7 +68,7 @@ export class KeyboardManager {
     const key = this.buildKey(shortcut.key, shortcut.modifiers);
     this.shortcuts.set(key, { ...shortcut, enabled: shortcut.enabled ?? true });
   }
-  
+
   /**
    * Unregister a shortcut by ID
    */
@@ -79,14 +80,14 @@ export class KeyboardManager {
       }
     }
   }
-  
+
   /**
    * Enable/disable all shortcuts
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
   }
-  
+
   /**
    * Enable/disable a specific shortcut
    */
@@ -98,36 +99,43 @@ export class KeyboardManager {
       }
     }
   }
-  
+
   /**
    * Get all registered shortcuts grouped by category
    */
   getShortcutGroups(): ShortcutGroup[] {
     const groups: Map<string, KeyboardShortcut[]> = new Map();
-    
+
     for (const shortcut of this.shortcuts.values()) {
       if (!groups.has(shortcut.category)) {
         groups.set(shortcut.category, []);
       }
       groups.get(shortcut.category)!.push(shortcut);
     }
-    
-    const categoryOrder = ['general', 'panels', 'navigation', 'scene', 'view', 'tools'];
-    
+
+    const categoryOrder = [
+      'general',
+      'panels',
+      'navigation',
+      'scene',
+      'view',
+      'tools',
+    ];
+
     return categoryOrder
-      .filter(cat => groups.has(cat))
-      .map(cat => ({
+      .filter((cat) => groups.has(cat))
+      .map((cat) => ({
         category: cat,
         shortcuts: groups.get(cat)!,
       }));
   }
-  
+
   /**
    * Get shortcut display string (e.g., "⌘K" or "Ctrl+K")
    */
   getShortcutDisplay(shortcut: KeyboardShortcut): string {
     const parts: string[] = [];
-    
+
     if (shortcut.modifiers?.ctrl) {
       parts.push(this.isMac ? '⌃' : 'Ctrl');
     }
@@ -140,7 +148,7 @@ export class KeyboardManager {
     if (shortcut.modifiers?.meta) {
       parts.push(this.isMac ? '⌘' : 'Win');
     }
-    
+
     // Format key
     let keyDisplay = shortcut.key.toUpperCase();
     if (keyDisplay === ' ') keyDisplay = 'Space';
@@ -153,12 +161,12 @@ export class KeyboardManager {
     if (keyDisplay === 'BACKSPACE') keyDisplay = this.isMac ? '⌫' : 'Backspace';
     if (keyDisplay === 'DELETE') keyDisplay = this.isMac ? '⌦' : 'Del';
     if (keyDisplay === 'TAB') keyDisplay = this.isMac ? '⇥' : 'Tab';
-    
+
     parts.push(keyDisplay);
-    
+
     return this.isMac ? parts.join('') : parts.join('+');
   }
-  
+
   /**
    * Set up focus trap for modal dialogs
    */
@@ -166,7 +174,7 @@ export class KeyboardManager {
     if (element) {
       this.lastFocusedElement = document.activeElement;
       this.focusTrapElement = element;
-      
+
       // Focus first focusable element
       const firstFocusable = this.getFocusableElements(element)[0];
       if (firstFocusable) {
@@ -174,14 +182,14 @@ export class KeyboardManager {
       }
     } else {
       this.focusTrapElement = null;
-      
+
       // Restore focus
       if (this.lastFocusedElement && 'focus' in this.lastFocusedElement) {
         (this.lastFocusedElement as HTMLElement).focus();
       }
     }
   }
-  
+
   /**
    * Dispose and clean up
    */
@@ -193,52 +201,56 @@ export class KeyboardManager {
     this.shortcuts.clear();
     this.focusTrapElement = null;
   }
-  
+
   // ───────────────────────────────────────────────────────────────
   // PRIVATE METHODS
   // ───────────────────────────────────────────────────────────────
-  
+
   private handleKeyDown(e: KeyboardEvent): void {
     if (!this.enabled) return;
-    
+
     // Handle focus trap
     if (this.focusTrapElement && e.key === 'Tab') {
       this.handleFocusTrap(e);
       return;
     }
-    
+
     // Don't trigger shortcuts when typing in inputs
     const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    ) {
       // Only allow Escape to work in inputs
       if (e.key !== 'Escape') return;
     }
-    
+
     const key = this.buildKey(e.key, {
       ctrl: e.ctrlKey,
       alt: e.altKey,
       shift: e.shiftKey,
       meta: e.metaKey,
     });
-    
+
     const shortcut = this.shortcuts.get(key);
-    
+
     if (shortcut && shortcut.enabled) {
       e.preventDefault();
       e.stopPropagation();
       shortcut.handler();
     }
   }
-  
+
   private handleFocusTrap(e: KeyboardEvent): void {
     if (!this.focusTrapElement) return;
-    
+
     const focusable = this.getFocusableElements(this.focusTrapElement);
     if (focusable.length === 0) return;
-    
+
     const first = focusable[0] as HTMLElement;
     const last = focusable[focusable.length - 1] as HTMLElement;
-    
+
     if (e.shiftKey) {
       // Shift+Tab: go to last if on first
       if (document.activeElement === first) {
@@ -253,7 +265,7 @@ export class KeyboardManager {
       }
     }
   }
-  
+
   private getFocusableElements(container: HTMLElement): Element[] {
     const selector = [
       'button:not([disabled])',
@@ -263,20 +275,20 @@ export class KeyboardManager {
       'textarea:not([disabled])',
       '[tabindex]:not([tabindex="-1"])',
     ].join(',');
-    
+
     return Array.from(container.querySelectorAll(selector));
   }
-  
+
   private buildKey(key: string, modifiers?: KeyModifiers): string {
     const parts: string[] = [];
-    
+
     if (modifiers?.ctrl) parts.push('ctrl');
     if (modifiers?.alt) parts.push('alt');
     if (modifiers?.shift) parts.push('shift');
     if (modifiers?.meta) parts.push('meta');
-    
+
     parts.push(key.toLowerCase());
-    
+
     return parts.join('+');
   }
 }
@@ -306,7 +318,7 @@ export function getDefaultShortcuts(handlers: {
   redo?: KeyHandler;
 }): KeyboardShortcut[] {
   const shortcuts: KeyboardShortcut[] = [];
-  
+
   if (handlers.toggleOverlay) {
     shortcuts.push({
       id: 'toggle-overlay',
@@ -317,7 +329,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.toggleOverlay,
     });
   }
-  
+
   if (handlers.toggleTheme) {
     shortcuts.push({
       id: 'toggle-theme',
@@ -328,7 +340,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.toggleTheme,
     });
   }
-  
+
   if (handlers.openCommandPalette) {
     shortcuts.push({
       id: 'command-palette',
@@ -339,7 +351,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.openCommandPalette,
     });
   }
-  
+
   if (handlers.openScenePanel) {
     shortcuts.push({
       id: 'open-scene',
@@ -350,7 +362,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.openScenePanel,
     });
   }
-  
+
   if (handlers.openPerformancePanel) {
     shortcuts.push({
       id: 'open-performance',
@@ -361,7 +373,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.openPerformancePanel,
     });
   }
-  
+
   if (handlers.openMaterialsPanel) {
     shortcuts.push({
       id: 'open-materials',
@@ -372,7 +384,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.openMaterialsPanel,
     });
   }
-  
+
   if (handlers.openTexturesPanel) {
     shortcuts.push({
       id: 'open-textures',
@@ -383,7 +395,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.openTexturesPanel,
     });
   }
-  
+
   if (handlers.openPluginsPanel) {
     shortcuts.push({
       id: 'open-plugins',
@@ -394,7 +406,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.openPluginsPanel,
     });
   }
-  
+
   if (handlers.closePanel) {
     shortcuts.push({
       id: 'close-panel',
@@ -404,7 +416,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.closePanel,
     });
   }
-  
+
   if (handlers.focusSearch) {
     shortcuts.push({
       id: 'focus-search',
@@ -415,7 +427,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.focusSearch,
     });
   }
-  
+
   if (handlers.toggleWireframe) {
     shortcuts.push({
       id: 'toggle-wireframe',
@@ -425,7 +437,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.toggleWireframe,
     });
   }
-  
+
   if (handlers.goHome) {
     shortcuts.push({
       id: 'go-home',
@@ -435,7 +447,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.goHome,
     });
   }
-  
+
   if (handlers.toggleGizmo) {
     shortcuts.push({
       id: 'toggle-gizmo',
@@ -445,7 +457,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.toggleGizmo,
     });
   }
-  
+
   if (handlers.selectParent) {
     shortcuts.push({
       id: 'select-parent',
@@ -455,7 +467,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.selectParent,
     });
   }
-  
+
   if (handlers.selectNext) {
     shortcuts.push({
       id: 'select-next',
@@ -465,7 +477,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.selectNext,
     });
   }
-  
+
   if (handlers.selectPrev) {
     shortcuts.push({
       id: 'select-prev',
@@ -475,7 +487,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.selectPrev,
     });
   }
-  
+
   if (handlers.deleteSelected) {
     shortcuts.push({
       id: 'delete-selected',
@@ -484,7 +496,7 @@ export function getDefaultShortcuts(handlers: {
       category: 'scene',
       handler: handlers.deleteSelected,
     });
-    
+
     shortcuts.push({
       id: 'delete-selected-backspace',
       key: 'Backspace',
@@ -493,7 +505,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.deleteSelected,
     });
   }
-  
+
   if (handlers.undo) {
     shortcuts.push({
       id: 'undo',
@@ -504,7 +516,7 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.undo,
     });
   }
-  
+
   if (handlers.redo) {
     shortcuts.push({
       id: 'redo',
@@ -514,7 +526,7 @@ export function getDefaultShortcuts(handlers: {
       category: 'general',
       handler: handlers.redo,
     });
-    
+
     shortcuts.push({
       id: 'redo-alt',
       key: 'y',
@@ -524,7 +536,6 @@ export function getDefaultShortcuts(handlers: {
       handler: handlers.redo,
     });
   }
-  
+
   return shortcuts;
 }
-

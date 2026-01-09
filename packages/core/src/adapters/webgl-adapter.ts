@@ -42,7 +42,7 @@ export interface WebGLAdapterOptions {
    * @default true
    */
   gpuTiming?: boolean;
-  
+
   /**
    * Interval for resource scanning (ms)
    * @default 2000
@@ -61,7 +61,7 @@ export function createWebGLAdapter(
   const frameCallbacks: Array<(stats: FrameStats) => void> = [];
   let frameCount = 0;
   let disposed = false;
-  
+
   // Options with defaults
   const gpuTimingEnabled = options.gpuTiming ?? true;
   const resourceScanInterval = options.resourceScanInterval ?? 2000;
@@ -78,17 +78,18 @@ export function createWebGLAdapter(
 
   // Scene analysis - cached, only computed once
   let cachedSceneAnalysis: SceneAnalysis | null = null;
-  
+
   // Cached resource lists (updated periodically)
   let cachedTextures: TextureInfo[] = [];
   let cachedGeometries: GeometryInfo[] = [];
   let cachedMaterials: MaterialInfo[] = [];
   let lastResourceScan = 0;
-  
+
   // GPU timing support - only initialize if enabled
   const gl = renderer.getContext();
-  const timerQueryExt = gpuTimingEnabled 
-    ? (gl.getExtension('EXT_disjoint_timer_query_webgl2') || gl.getExtension('EXT_disjoint_timer_query'))
+  const timerQueryExt = gpuTimingEnabled
+    ? gl.getExtension('EXT_disjoint_timer_query_webgl2') ||
+      gl.getExtension('EXT_disjoint_timer_query')
     : null;
   let pendingQuery: WebGLQuery | null = null;
   let lastGpuTime = 0;
@@ -97,10 +98,7 @@ export function createWebGLAdapter(
   let _currentScene: THREE.Scene | null = null;
 
   // Wrap render method - optimized for minimal overhead
-  renderer.render = function (
-    scene: THREE.Scene,
-    camera: THREE.Camera
-  ): void {
+  renderer.render = function (scene: THREE.Scene, camera: THREE.Camera): void {
     if (disposed) {
       originalRender(scene, camera);
       return;
@@ -123,20 +121,31 @@ export function createWebGLAdapter(
     if (timerQueryExt && gl instanceof WebGL2RenderingContext) {
       // Check if previous query is ready
       if (pendingQuery) {
-        const available = gl.getQueryParameter(pendingQuery, gl.QUERY_RESULT_AVAILABLE);
-        const disjoint = gl.getParameter((timerQueryExt as { GPU_DISJOINT_EXT: number }).GPU_DISJOINT_EXT);
+        const available = gl.getQueryParameter(
+          pendingQuery,
+          gl.QUERY_RESULT_AVAILABLE
+        );
+        const disjoint = gl.getParameter(
+          (timerQueryExt as { GPU_DISJOINT_EXT: number }).GPU_DISJOINT_EXT
+        );
         if (available && !disjoint) {
-          const nanoseconds = gl.getQueryParameter(pendingQuery, gl.QUERY_RESULT);
+          const nanoseconds = gl.getQueryParameter(
+            pendingQuery,
+            gl.QUERY_RESULT
+          );
           lastGpuTime = nanoseconds / 1000000; // Convert to milliseconds
         }
         gl.deleteQuery(pendingQuery);
         pendingQuery = null;
       }
-      
+
       // Start new query
       query = gl.createQuery();
       if (query) {
-        gl.beginQuery((timerQueryExt as { TIME_ELAPSED_EXT: number }).TIME_ELAPSED_EXT, query);
+        gl.beginQuery(
+          (timerQueryExt as { TIME_ELAPSED_EXT: number }).TIME_ELAPSED_EXT,
+          query
+        );
       }
     }
 
@@ -145,7 +154,9 @@ export function createWebGLAdapter(
 
     // End GPU timer query
     if (query && timerQueryExt && gl instanceof WebGL2RenderingContext) {
-      gl.endQuery((timerQueryExt as { TIME_ELAPSED_EXT: number }).TIME_ELAPSED_EXT);
+      gl.endQuery(
+        (timerQueryExt as { TIME_ELAPSED_EXT: number }).TIME_ELAPSED_EXT
+      );
       pendingQuery = query;
     }
 
@@ -182,16 +193,21 @@ export function createWebGLAdapter(
     }
 
     // Calculate FPS from running average
-    const avgFrameTime = frameTimeCount > 0 ? totalFrameTime / frameTimeCount : cpuTime;
+    const avgFrameTime =
+      frameTimeCount > 0 ? totalFrameTime / frameTimeCount : cpuTime;
     const fps = avgFrameTime > 0 ? Math.round(1000 / avgFrameTime) : 60;
 
     // Compute triangles per draw call
-    const trianglesPerDrawCall = info.render.calls > 0 
-      ? Math.round(info.render.triangles / info.render.calls) 
-      : 0;
-    const trianglesPerObject = (cachedSceneAnalysis?.visibleObjects ?? 0) > 0
-      ? Math.round(info.render.triangles / (cachedSceneAnalysis?.visibleObjects ?? 1))
-      : 0;
+    const trianglesPerDrawCall =
+      info.render.calls > 0
+        ? Math.round(info.render.triangles / info.render.calls)
+        : 0;
+    const trianglesPerObject =
+      (cachedSceneAnalysis?.visibleObjects ?? 0) > 0
+        ? Math.round(
+            info.render.triangles / (cachedSceneAnalysis?.visibleObjects ?? 1)
+          )
+        : 0;
 
     // Build memory stats from renderer.info and scene analysis
     const memory: MemoryStats = {
@@ -199,12 +215,18 @@ export function createWebGLAdapter(
       textures: info.memory.textures,
       geometryMemory: cachedSceneAnalysis?.estimatedGeometryMemory ?? 0,
       textureMemory: cachedSceneAnalysis?.estimatedTextureMemory ?? 0,
-      totalGpuMemory: (cachedSceneAnalysis?.estimatedGeometryMemory ?? 0) + (cachedSceneAnalysis?.estimatedTextureMemory ?? 0),
+      totalGpuMemory:
+        (cachedSceneAnalysis?.estimatedGeometryMemory ?? 0) +
+        (cachedSceneAnalysis?.estimatedTextureMemory ?? 0),
       renderTargets: 0,
       renderTargetMemory: 0,
       programs: info.programs?.length ?? 0,
-      jsHeapSize: (performance as unknown as { memory?: { usedJSHeapSize?: number } }).memory?.usedJSHeapSize,
-      jsHeapLimit: (performance as unknown as { memory?: { jsHeapSizeLimit?: number } }).memory?.jsHeapSizeLimit,
+      jsHeapSize: (
+        performance as unknown as { memory?: { usedJSHeapSize?: number } }
+      ).memory?.usedJSHeapSize,
+      jsHeapLimit: (
+        performance as unknown as { memory?: { jsHeapSizeLimit?: number } }
+      ).memory?.jsHeapSizeLimit,
     };
 
     // Build rendering stats
@@ -391,10 +413,10 @@ function analyzeSceneLight(scene: THREE.Scene): SceneAnalysis {
     if (mesh.isMesh && mesh.geometry) {
       const geometry = mesh.geometry;
       const positionAttr = geometry.attributes?.position;
-      
+
       if (positionAttr) {
         totalVertices += positionAttr.count;
-        
+
         // Estimate triangles
         if (geometry.index) {
           totalTriangles += geometry.index.count / 3;
@@ -426,18 +448,27 @@ function analyzeSceneLight(scene: THREE.Scene): SceneAnalysis {
       // Check for transparent material
       const material = mesh.material as THREE.Material | THREE.Material[];
       if (Array.isArray(material)) {
-        if (material.some(m => m.transparent)) {
+        if (material.some((m) => m.transparent)) {
           transparentObjects++;
         }
         // Estimate texture memory from materials
         for (const mat of material) {
-          estimatedTextureMemory += estimateMaterialTextureMemory(mat, countedTextures);
+          estimatedTextureMemory += estimateMaterialTextureMemory(
+            mat,
+            countedTextures
+          );
         }
       } else if (material?.transparent) {
         transparentObjects++;
-        estimatedTextureMemory += estimateMaterialTextureMemory(material, countedTextures);
+        estimatedTextureMemory += estimateMaterialTextureMemory(
+          material,
+          countedTextures
+        );
       } else if (material) {
-        estimatedTextureMemory += estimateMaterialTextureMemory(material, countedTextures);
+        estimatedTextureMemory += estimateMaterialTextureMemory(
+          material,
+          countedTextures
+        );
       }
     }
   });
@@ -484,18 +515,33 @@ function estimateGeometryMemory(geometry: THREE.BufferGeometry): number {
 /**
  * Estimate texture memory from a material
  */
-function estimateMaterialTextureMemory(material: THREE.Material, countedTextures: Set<string>): number {
+function estimateMaterialTextureMemory(
+  material: THREE.Material,
+  countedTextures: Set<string>
+): number {
   let bytes = 0;
   const mat = material as THREE.MeshStandardMaterial;
 
   const textureProps = [
-    'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
-    'emissiveMap', 'alphaMap', 'envMap', 'lightMap', 'bumpMap',
-    'displacementMap', 'specularMap', 'gradientMap'
+    'map',
+    'normalMap',
+    'roughnessMap',
+    'metalnessMap',
+    'aoMap',
+    'emissiveMap',
+    'alphaMap',
+    'envMap',
+    'lightMap',
+    'bumpMap',
+    'displacementMap',
+    'specularMap',
+    'gradientMap',
   ];
 
   for (const prop of textureProps) {
-    const texture = (mat as unknown as Record<string, THREE.Texture | undefined>)[prop];
+    const texture = (
+      mat as unknown as Record<string, THREE.Texture | undefined>
+    )[prop];
     if (texture?.uuid && !countedTextures.has(texture.uuid)) {
       countedTextures.add(texture.uuid);
       bytes += estimateTextureMemory(texture);
@@ -521,7 +567,11 @@ function estimateTextureMemory(texture: THREE.Texture): number {
   } else if (image instanceof ImageBitmap) {
     width = image.width;
     height = image.height;
-  } else if (typeof image === 'object' && 'width' in image && 'height' in image) {
+  } else if (
+    typeof image === 'object' &&
+    'width' in image &&
+    'height' in image
+  ) {
     width = (image as { width: number; height: number }).width;
     height = (image as { width: number; height: number }).height;
   }
@@ -534,9 +584,11 @@ function estimateTextureMemory(texture: THREE.Texture): number {
   // Adjust for format if available
   // RedFormat = 1028, RGFormat = 1030 in three.js constants
   const format = texture.format as number;
-  if (format === 1028) { // RedFormat
+  if (format === 1028) {
+    // RedFormat
     bytesPerPixel = 1;
-  } else if (format === 1030) { // RGFormat
+  } else if (format === 1030) {
+    // RGFormat
     bytesPerPixel = 2;
   }
 
@@ -594,7 +646,7 @@ function scanSceneResources(scene: THREE.Scene): {
         const vertexCount = posAttr?.count ?? 0;
         const indexCount = geo.index?.count;
         const faceCount = indexCount ? indexCount / 3 : vertexCount / 3;
-        
+
         geometryMap.set(geo.uuid, {
           ref: geo.uuid,
           type: geo.type || 'BufferGeometry',
@@ -608,10 +660,12 @@ function scanSceneResources(scene: THREE.Scene): {
     }
 
     // Collect materials and their textures
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
     for (const mat of materials) {
       if (!mat) continue;
-      
+
       // Collect material
       if (!materialMap.has(mat.uuid)) {
         const stdMat = mat as THREE.MeshStandardMaterial;
@@ -628,25 +682,45 @@ function scanSceneResources(scene: THREE.Scene): {
 
       // Collect textures from material
       const textureProps = [
-        'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
-        'emissiveMap', 'alphaMap', 'envMap', 'lightMap', 'bumpMap',
-        'displacementMap', 'specularMap', 'gradientMap'
+        'map',
+        'normalMap',
+        'roughnessMap',
+        'metalnessMap',
+        'aoMap',
+        'emissiveMap',
+        'alphaMap',
+        'envMap',
+        'lightMap',
+        'bumpMap',
+        'displacementMap',
+        'specularMap',
+        'gradientMap',
       ];
 
       for (const prop of textureProps) {
-        const texture = (mat as unknown as Record<string, THREE.Texture | undefined>)[prop];
+        const texture = (
+          mat as unknown as Record<string, THREE.Texture | undefined>
+        )[prop];
         if (texture && !textureMap.has(texture.uuid)) {
           const image = texture.image;
           let width = 0;
           let height = 0;
 
-          if (image instanceof HTMLImageElement || image instanceof HTMLCanvasElement) {
+          if (
+            image instanceof HTMLImageElement ||
+            image instanceof HTMLCanvasElement
+          ) {
             width = image.width || 0;
             height = image.height || 0;
           } else if (image instanceof ImageBitmap) {
             width = image.width;
             height = image.height;
-          } else if (typeof image === 'object' && image && 'width' in image && 'height' in image) {
+          } else if (
+            typeof image === 'object' &&
+            image &&
+            'width' in image &&
+            'height' in image
+          ) {
             width = (image as { width: number; height: number }).width;
             height = (image as { width: number; height: number }).height;
           }
@@ -678,4 +752,3 @@ function scanSceneResources(scene: THREE.Scene): {
     materials: Array.from(materialMap.values()),
   };
 }
-

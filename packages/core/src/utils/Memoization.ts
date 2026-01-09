@@ -86,11 +86,13 @@ export class LRUCache<K, V> {
   private _evictions = 0;
   private _expirations = 0;
 
-  constructor(options: {
-    maxSize?: number;
-    ttl?: number;
-    name?: string;
-  } = {}) {
+  constructor(
+    options: {
+      maxSize?: number;
+      ttl?: number;
+      name?: string;
+    } = {}
+  ) {
     this.maxSize = options.maxSize ?? 100;
     this.ttl = options.ttl ?? Infinity;
     this.name = options.name ?? 'LRUCache';
@@ -271,7 +273,10 @@ function defaultKeyResolver(...args: unknown[]): string {
     if (arg === undefined) return '__undefined__';
     if (typeof arg === 'object') {
       // For THREE.js objects, use uuid if available
-      if ('uuid' in arg && typeof (arg as { uuid: unknown }).uuid === 'string') {
+      if (
+        'uuid' in arg &&
+        typeof (arg as { uuid: unknown }).uuid === 'string'
+      ) {
         return (arg as { uuid: string }).uuid;
       }
       // For objects with id
@@ -325,7 +330,10 @@ export function memoize<T extends (...args: any[]) => any>(
     name,
   });
 
-  const memoized = function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
+  const memoized = function (
+    this: unknown,
+    ...args: Parameters<T>
+  ): ReturnType<T> {
     const key = keyResolver(...args);
 
     // Use peek() to check existence and get value without affecting LRU order
@@ -352,7 +360,8 @@ export function memoize<T extends (...args: any[]) => any>(
   memoized.set = (args: Parameters<T>, value: ReturnType<T>) => {
     cache.set(keyResolver(...args), value);
   };
-  memoized.delete = (...args: Parameters<T>) => cache.delete(keyResolver(...args));
+  memoized.delete = (...args: Parameters<T>) =>
+    cache.delete(keyResolver(...args));
   Object.defineProperty(memoized, 'name', { value: name, writable: false });
 
   return memoized;
@@ -377,14 +386,18 @@ export function memoizeOne<T extends (...args: any[]) => any>(
     name?: string;
   } = {}
 ): MemoizedFunction<T> {
-  const { keyResolver = defaultKeyResolver, name = fn.name || 'memoizedOne' } = options;
+  const { keyResolver = defaultKeyResolver, name = fn.name || 'memoizedOne' } =
+    options;
 
   let lastKey: string | undefined;
   let lastValue: ReturnType<T> | undefined;
   let hits = 0;
   let misses = 0;
 
-  const memoized = function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
+  const memoized = function (
+    this: unknown,
+    ...args: Parameters<T>
+  ): ReturnType<T> {
     const key = keyResolver(...args);
 
     if (key === lastKey && lastValue !== undefined) {
@@ -489,7 +502,10 @@ export class FrameMemoizer {
    */
   memoizeOne<T extends (...args: unknown[]) => unknown>(
     fn: T,
-    options: { keyResolver?: (...args: unknown[]) => string; name?: string } = {}
+    options: {
+      keyResolver?: (...args: unknown[]) => string;
+      name?: string;
+    } = {}
   ): MemoizedFunction<T> {
     const memoized = memoizeOne(fn, options);
     this.memoizedFunctions.push(memoized);
@@ -563,7 +579,8 @@ export const formatNumber = memoize(
   {
     maxSize: 1000,
     name: 'numberFormatter',
-    keyResolver: (value: unknown, precision: unknown) => `${value}:${precision}`,
+    keyResolver: (value: unknown, precision: unknown) =>
+      `${value}:${precision}`,
   }
 );
 
@@ -687,7 +704,10 @@ export function MemoizeMethod(options: MemoizeOptions<string> = {}) {
         return cached;
       }
 
-      const result = (originalMethod as (...args: unknown[]) => unknown).apply(this, args);
+      const result = (originalMethod as (...args: unknown[]) => unknown).apply(
+        this,
+        args
+      );
       cache.set(key, result);
       return result;
     } as unknown as T;
@@ -704,7 +724,10 @@ export function MemoizeMethod(options: MemoizeOptions<string> = {}) {
  * Centralized manager for all memoization caches in the devtools
  */
 export class MemoizationManager {
-  private caches = new Map<string, { clear: () => void; getStats: () => MemoStats }>();
+  private caches = new Map<
+    string,
+    { clear: () => void; getStats: () => MemoStats }
+  >();
   private frameMemoizer: FrameMemoizer;
 
   constructor() {
@@ -714,7 +737,10 @@ export class MemoizationManager {
   /**
    * Register a memoized function for centralized management
    */
-  register(name: string, cache: { clear: () => void; getStats: () => MemoStats }): void {
+  register(
+    name: string,
+    cache: { clear: () => void; getStats: () => MemoStats }
+  ): void {
     this.caches.set(name, cache);
   }
 
@@ -815,7 +841,10 @@ export function getMemoizationManager(): MemoizationManager {
     globalMemoizationManager = new MemoizationManager();
 
     // Register built-in formatters
-    globalMemoizationManager.register('propertyPathFormatter', formatPropertyPath);
+    globalMemoizationManager.register(
+      'propertyPathFormatter',
+      formatPropertyPath
+    );
     globalMemoizationManager.register('numberFormatter', formatNumber);
     globalMemoizationManager.register('bytesFormatter', formatBytes);
     globalMemoizationManager.register('typeNameGetter', getTypeName);

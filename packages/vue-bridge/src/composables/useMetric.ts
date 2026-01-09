@@ -104,7 +104,10 @@ export function useMetric(
  * ```
  */
 export function useFPS(smoothed = true): Ref<MetricValue<number>> {
-  return useMetric((stats) => stats.performance?.fps ?? 0, { smoothed, smoothingSamples: 30 });
+  return useMetric((stats) => stats.performance?.fps ?? 0, {
+    smoothed,
+    smoothingSamples: 30,
+  });
 }
 
 /**
@@ -161,4 +164,3 @@ export function useTextureCount(): Ref<MetricValue<number>> {
 export function useGeometryCount(): Ref<MetricValue<number>> {
   return useMetric((stats) => stats.memory?.geometries ?? 0);
 }
-

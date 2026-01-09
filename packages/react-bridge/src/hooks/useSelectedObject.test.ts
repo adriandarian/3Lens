@@ -14,7 +14,11 @@ import type { ThreeLensContextValue } from '../types';
 // Context wrapper factory
 function createWrapper(contextValue: ThreeLensContextValue) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(ThreeLensContext.Provider, { value: contextValue }, children);
+    return createElement(
+      ThreeLensContext.Provider,
+      { value: contextValue },
+      children
+    );
   };
 }
 

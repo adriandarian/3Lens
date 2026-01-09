@@ -22,7 +22,11 @@ export class InspectMode {
    * Initialize inspect mode with canvas and camera
    * Must be called before enabling inspect mode
    */
-  initialize(canvas: HTMLCanvasElement, camera: THREE.Camera, three: ThreeNamespace): void {
+  initialize(
+    canvas: HTMLCanvasElement,
+    camera: THREE.Camera,
+    three: ThreeNamespace
+  ): void {
     this.canvas = canvas;
     this.camera = camera;
     this.raycaster = new three.Raycaster();
@@ -35,7 +39,9 @@ export class InspectMode {
    */
   setEnabled(enabled: boolean): void {
     if (enabled && (!this.canvas || !this.camera || !this.raycaster)) {
-      console.warn('[3Lens] InspectMode: Cannot enable - not initialized. Call initialize() first.');
+      console.warn(
+        '[3Lens] InspectMode: Cannot enable - not initialized. Call initialize() first.'
+      );
       return;
     }
 
@@ -88,7 +94,13 @@ export class InspectMode {
    * Handle pointer down events (click to select)
    */
   private handlePointerDown = (event: PointerEvent): void => {
-    if (!this.inspecting || !this.canvas || !this.camera || !this.raycaster || !this.pointer) {
+    if (
+      !this.inspecting ||
+      !this.canvas ||
+      !this.camera ||
+      !this.raycaster ||
+      !this.pointer
+    ) {
       return;
     }
 
@@ -109,7 +121,13 @@ export class InspectMode {
    * Handle pointer move events (hover highlighting)
    */
   private handlePointerMove = (event: PointerEvent): void => {
-    if (!this.inspecting || !this.canvas || !this.camera || !this.raycaster || !this.pointer) {
+    if (
+      !this.inspecting ||
+      !this.canvas ||
+      !this.camera ||
+      !this.raycaster ||
+      !this.pointer
+    ) {
       return;
     }
 
@@ -135,7 +153,7 @@ export class InspectMode {
     }
 
     const rect = this.canvas.getBoundingClientRect();
-    
+
     // Convert mouse coordinates to normalized device coordinates (-1 to +1)
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -165,15 +183,17 @@ export class InspectMode {
     // Otherwise, collect all meshes from observed scenes
     const objects: THREE.Object3D[] = [];
     const scenes = this.probe.getObservedScenes();
-    
+
     for (const scene of scenes) {
       scene.traverse((obj) => {
         // Only pick meshes (skip lights, cameras, helpers, etc.)
         // Check for isMesh property which is set by THREE.Mesh
         if ('isMesh' in obj && obj.isMesh === true) {
           // Skip selection helpers themselves
-          if (obj.name !== '__3lens_selection_helper__' && 
-              obj.name !== '__3lens_hover_helper__') {
+          if (
+            obj.name !== '__3lens_selection_helper__' &&
+            obj.name !== '__3lens_hover_helper__'
+          ) {
             objects.push(obj);
           }
         }
@@ -202,4 +222,3 @@ export class InspectMode {
     this.pickableObjects = [];
   }
 }
-

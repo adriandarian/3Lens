@@ -2,7 +2,12 @@
  * Render Targets Panel - Shared renderer for render target inspection
  */
 
-import type { PanelContext, UIState, RenderTargetData, SceneSnapshot } from '../types';
+import type {
+  PanelContext,
+  UIState,
+  RenderTargetData,
+  SceneSnapshot,
+} from '../types';
 import { escapeHtml, formatBytes } from '../utils/format';
 
 /**
@@ -10,14 +15,22 @@ import { escapeHtml, formatBytes } from '../utils/format';
  */
 function getUsageDisplayName(usage: RenderTargetData['usage']): string {
   switch (usage) {
-    case 'shadow-map': return 'Shadow Map';
-    case 'post-process': return 'Post Process';
-    case 'reflection': return 'Reflection';
-    case 'refraction': return 'Refraction';
-    case 'environment': return 'Environment';
-    case 'picker': return 'Picker';
-    case 'custom': return 'Custom';
-    default: return 'Unknown';
+    case 'shadow-map':
+      return 'Shadow Map';
+    case 'post-process':
+      return 'Post Process';
+    case 'reflection':
+      return 'Reflection';
+    case 'refraction':
+      return 'Refraction';
+    case 'environment':
+      return 'Environment';
+    case 'picker':
+      return 'Picker';
+    case 'custom':
+      return 'Custom';
+    default:
+      return 'Unknown';
   }
 }
 
@@ -26,14 +39,22 @@ function getUsageDisplayName(usage: RenderTargetData['usage']): string {
  */
 function getRenderTargetIcon(rt: RenderTargetData): string {
   switch (rt.usage) {
-    case 'shadow-map': return '🌑';
-    case 'post-process': return '✨';
-    case 'reflection': return '🪞';
-    case 'refraction': return '💎';
-    case 'environment': return '🌍';
-    case 'picker': return '🎯';
-    case 'custom': return '🔧';
-    default: return '📺';
+    case 'shadow-map':
+      return '🌑';
+    case 'post-process':
+      return '✨';
+    case 'reflection':
+      return '🪞';
+    case 'refraction':
+      return '💎';
+    case 'environment':
+      return '🌍';
+    case 'picker':
+      return '🎯';
+    case 'custom':
+      return '🔧';
+    default:
+      return '📺';
   }
 }
 
@@ -42,12 +63,18 @@ function getRenderTargetIcon(rt: RenderTargetData): string {
  */
 function getUsageBadgeClass(usage: RenderTargetData['usage']): string {
   switch (usage) {
-    case 'shadow-map': return 'shadow';
-    case 'post-process': return 'postprocess';
-    case 'reflection': return 'reflection';
-    case 'refraction': return 'refraction';
-    case 'environment': return 'environment';
-    default: return '';
+    case 'shadow-map':
+      return 'shadow';
+    case 'post-process':
+      return 'postprocess';
+    case 'reflection':
+      return 'reflection';
+    case 'refraction':
+      return 'refraction';
+    case 'environment':
+      return 'environment';
+    default:
+      return '';
   }
 }
 
@@ -73,7 +100,9 @@ export function renderRenderTargetsPanel(
   }
 
   const selectedTarget = state.selectedRenderTargetId
-    ? renderTargets.find((rt: RenderTargetData) => rt.uuid === state.selectedRenderTargetId)
+    ? renderTargets.find(
+        (rt: RenderTargetData) => rt.uuid === state.selectedRenderTargetId
+      )
     : null;
 
   return `
@@ -91,7 +120,9 @@ export function renderRenderTargetsPanel(
   `;
 }
 
-function renderRenderTargetsSummary(summary: SceneSnapshot['renderTargetsSummary']): string {
+function renderRenderTargetsSummary(
+  summary: SceneSnapshot['renderTargetsSummary']
+): string {
   if (!summary) return '';
 
   return `
@@ -120,7 +151,10 @@ function renderRenderTargetsSummary(summary: SceneSnapshot['renderTargetsSummary
   `;
 }
 
-function renderRenderTargetGridItem(rt: RenderTargetData, state: UIState): string {
+function renderRenderTargetGridItem(
+  rt: RenderTargetData,
+  state: UIState
+): string {
   const isSelected = state.selectedRenderTargetId === rt.uuid;
   const displayName = rt.name || `<${rt.type}>`;
   const rtIcon = getRenderTargetIcon(rt);
@@ -129,9 +163,10 @@ function renderRenderTargetGridItem(rt: RenderTargetData, state: UIState): strin
   return `
     <div class="rt-grid-item ${isSelected ? 'selected' : ''}" data-uuid="${rt.uuid}" data-action="select-render-target">
       <div class="rt-grid-thumbnail">
-        ${rt.thumbnail 
-          ? `<img src="${rt.thumbnail}" alt="${escapeHtml(displayName)}" class="rt-thumb-img" />`
-          : `<div class="rt-thumb-placeholder">${rtIcon}</div>`
+        ${
+          rt.thumbnail
+            ? `<img src="${rt.thumbnail}" alt="${escapeHtml(displayName)}" class="rt-thumb-img" />`
+            : `<div class="rt-thumb-placeholder">${rtIcon}</div>`
         }
         ${rt.hasDepthTexture ? '<div class="rt-depth-indicator" title="Has Depth Texture">D</div>' : ''}
         ${rt.samples > 0 ? `<div class="rt-msaa-indicator" title="${rt.samples}x MSAA">${rt.samples}x</div>` : ''}
@@ -160,16 +195,20 @@ function renderNoTargetSelected(): string {
   `;
 }
 
-function renderRenderTargetInspector(rt: RenderTargetData, state: UIState): string {
+function renderRenderTargetInspector(
+  rt: RenderTargetData,
+  state: UIState
+): string {
   const rtIcon = getRenderTargetIcon(rt);
   const dimensionText = `${rt.dimensions.width} × ${rt.dimensions.height}`;
 
   return `
     <div class="inspector-header rt-header">
       <div class="rt-header-thumb">
-        ${rt.thumbnail 
-          ? `<img src="${rt.thumbnail}" alt="Preview" class="rt-header-img" />`
-          : `<div class="rt-header-placeholder">${rtIcon}</div>`
+        ${
+          rt.thumbnail
+            ? `<img src="${rt.thumbnail}" alt="Preview" class="rt-header-img" />`
+            : `<div class="rt-header-placeholder">${rtIcon}</div>`
         }
       </div>
       <div class="inspector-header-text">
@@ -223,22 +262,32 @@ function renderRenderTargetInspector(rt: RenderTargetData, state: UIState): stri
   `;
 }
 
-function renderRenderTargetPreview(rt: RenderTargetData, state: UIState): string {
+function renderRenderTargetPreview(
+  rt: RenderTargetData,
+  state: UIState
+): string {
   const hasThumbnail = rt.thumbnail || rt.depthThumbnail;
   if (!hasThumbnail) return '';
 
   const mode = state.renderTargetPreviewMode;
-  const _showColor = mode === 'color' || mode === 'r' || mode === 'g' || mode === 'b' || mode === 'a';
+  const _showColor =
+    mode === 'color' ||
+    mode === 'r' ||
+    mode === 'g' ||
+    mode === 'b' ||
+    mode === 'a';
   const showDepth = mode === 'depth' || mode === 'heatmap';
-  const currentThumbnail = showDepth && rt.depthThumbnail ? rt.depthThumbnail : rt.thumbnail;
+  const currentThumbnail =
+    showDepth && rt.depthThumbnail ? rt.depthThumbnail : rt.thumbnail;
 
   return `
     <div class="inspector-section rt-preview-section">
       <div class="section-title">Preview</div>
       <div class="rt-preview-container">
-        ${currentThumbnail 
-          ? `<img src="${currentThumbnail}" alt="Render Target Preview" class="rt-preview-img channel-${mode}" style="transform: scale(${state.renderTargetZoom})" />`
-          : `<div class="rt-preview-placeholder">No preview available</div>`
+        ${
+          currentThumbnail
+            ? `<img src="${currentThumbnail}" alt="Render Target Preview" class="rt-preview-img channel-${mode}" style="transform: scale(${state.renderTargetZoom})" />`
+            : `<div class="rt-preview-placeholder">No preview available</div>`
         }
         <div class="rt-preview-controls">
           <div class="rt-channel-toggles">
@@ -247,11 +296,15 @@ function renderRenderTargetPreview(rt: RenderTargetData, state: UIState): string
             <button class="channel-btn ${mode === 'g' ? 'active' : ''}" data-mode="g" title="Green Channel">G</button>
             <button class="channel-btn ${mode === 'b' ? 'active' : ''}" data-mode="b" title="Blue Channel">B</button>
             <button class="channel-btn ${mode === 'a' ? 'active' : ''}" data-mode="a" title="Alpha Channel">A</button>
-            ${rt.hasDepthTexture ? `
+            ${
+              rt.hasDepthTexture
+                ? `
               <span class="channel-separator"></span>
               <button class="channel-btn depth ${mode === 'depth' ? 'active' : ''}" data-mode="depth" title="Depth">Depth</button>
               <button class="channel-btn heatmap ${mode === 'heatmap' ? 'active' : ''}" data-mode="heatmap" title="Depth Heatmap">🌡️</button>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
           <div class="rt-zoom-controls">
             <button class="zoom-btn" data-zoom="out" title="Zoom Out">−</button>
@@ -289,13 +342,17 @@ function renderRenderTargetBuffers(rt: RenderTargetData): string {
           <span class="buffer-label">Depth Texture</span>
           <span class="buffer-status">${rt.hasDepthTexture ? rt.depthTextureFormatName || 'Yes' : 'None'}</span>
         </div>
-        ${rt.samples > 0 ? `
+        ${
+          rt.samples > 0
+            ? `
         <div class="rt-buffer-item enabled msaa">
           <span class="buffer-icon">🔲</span>
           <span class="buffer-label">MSAA</span>
           <span class="buffer-status">${rt.samples}x samples</span>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     </div>
   `;
@@ -318,12 +375,15 @@ function renderRenderTargetMRT(rt: RenderTargetData): string {
         </div>
       </div>
       <div class="mrt-attachments">
-        ${Array.from({ length: rt.colorAttachmentCount }, (_, i) => `
+        ${Array.from(
+          { length: rt.colorAttachmentCount },
+          (_, i) => `
           <div class="mrt-attachment">
             <span class="attachment-index">${i}</span>
             <span class="attachment-format">${rt.textureFormatName}</span>
           </div>
-        `).join('')}
+        `
+        ).join('')}
       </div>
     </div>
   `;
@@ -364,12 +424,16 @@ function renderRenderTargetWrapping(rt: RenderTargetData): string {
           <span class="property-label">Wrap T</span>
           <span class="property-value type-badge">${rt.wrap.tName}</span>
         </div>
-        ${rt.scissorTest ? `
+        ${
+          rt.scissorTest
+            ? `
         <div class="property-row">
           <span class="property-label">Scissor Test</span>
           <span class="property-value value-true">Enabled</span>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     </div>
   `;
@@ -382,12 +446,16 @@ function renderRenderTargetActions(rt: RenderTargetData): string {
         <span class="btn-icon">💾</span>
         Save Color
       </button>
-      ${rt.hasDepthTexture ? `
+      ${
+        rt.hasDepthTexture
+          ? `
       <button class="action-btn" data-action="save-depth" data-uuid="${rt.uuid}" title="Save depth texture as image">
         <span class="btn-icon">🗺️</span>
         Save Depth
       </button>
-      ` : ''}
+      `
+          : ''
+      }
       <button class="action-btn" data-action="refresh" data-uuid="${rt.uuid}" title="Refresh preview">
         <span class="btn-icon">🔄</span>
         Refresh
@@ -407,31 +475,36 @@ export function attachRenderTargetsEvents(
   rerender: () => void
 ): void {
   // Render target grid item selection
-  container.querySelectorAll('[data-action="select-render-target"]').forEach((item) => {
-    const itemEl = item as HTMLElement;
-    const uuid = itemEl.dataset.uuid;
+  container
+    .querySelectorAll('[data-action="select-render-target"]')
+    .forEach((item) => {
+      const itemEl = item as HTMLElement;
+      const uuid = itemEl.dataset.uuid;
 
-    itemEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!uuid) return;
-      // Toggle selection - clicking selected item deselects it
-      const newSelection = state.selectedRenderTargetId === uuid ? null : uuid;
-      updateState({ selectedRenderTargetId: newSelection });
-      rerender();
+      itemEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!uuid) return;
+        // Toggle selection - clicking selected item deselects it
+        const newSelection =
+          state.selectedRenderTargetId === uuid ? null : uuid;
+        updateState({ selectedRenderTargetId: newSelection });
+        rerender();
+      });
     });
-  });
 
   // Channel/mode toggle buttons
-  container.querySelectorAll('.rt-channel-toggles .channel-btn').forEach((btn) => {
-    const btnEl = btn as HTMLElement;
-    const mode = btnEl.dataset.mode as UIState['renderTargetPreviewMode'];
+  container
+    .querySelectorAll('.rt-channel-toggles .channel-btn')
+    .forEach((btn) => {
+      const btnEl = btn as HTMLElement;
+      const mode = btnEl.dataset.mode as UIState['renderTargetPreviewMode'];
 
-    btnEl.addEventListener('click', () => {
-      if (!mode) return;
-      updateState({ renderTargetPreviewMode: mode });
-      rerender();
+      btnEl.addEventListener('click', () => {
+        if (!mode) return;
+        updateState({ renderTargetPreviewMode: mode });
+        rerender();
+      });
     });
-  });
 
   // Zoom controls
   container.querySelectorAll('.zoom-btn').forEach((btn) => {
@@ -441,7 +514,7 @@ export function attachRenderTargetsEvents(
     btnEl.addEventListener('click', () => {
       if (!action) return;
       let newZoom = state.renderTargetZoom;
-      
+
       switch (action) {
         case 'in':
           newZoom = Math.min(4, newZoom * 1.25);
@@ -453,52 +526,63 @@ export function attachRenderTargetsEvents(
           newZoom = 1;
           break;
       }
-      
+
       updateState({ renderTargetZoom: newZoom });
       rerender();
     });
   });
 
   // Save buttons
-  container.querySelectorAll('[data-action="save-color"], [data-action="save-depth"]').forEach((btn) => {
-    const btnEl = btn as HTMLElement;
-    const action = btnEl.dataset.action;
-    const uuid = btnEl.dataset.uuid;
+  container
+    .querySelectorAll('[data-action="save-color"], [data-action="save-depth"]')
+    .forEach((btn) => {
+      const btnEl = btn as HTMLElement;
+      const action = btnEl.dataset.action;
+      const uuid = btnEl.dataset.uuid;
 
-    btnEl.addEventListener('click', () => {
-      if (!uuid) return;
-      const rt = _context.snapshot?.renderTargets?.find(r => r.uuid === uuid);
-      if (!rt) return;
+      btnEl.addEventListener('click', () => {
+        if (!uuid) return;
+        const rt = _context.snapshot?.renderTargets?.find(
+          (r) => r.uuid === uuid
+        );
+        if (!rt) return;
 
-      const dataUrl = action === 'save-depth' && rt.depthThumbnail 
-        ? rt.depthThumbnail 
-        : rt.thumbnail;
-      
-      if (!dataUrl) return;
+        const dataUrl =
+          action === 'save-depth' && rt.depthThumbnail
+            ? rt.depthThumbnail
+            : rt.thumbnail;
 
-      // Create download link
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `${rt.name || 'render-target'}-${action === 'save-depth' ? 'depth' : 'color'}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+        if (!dataUrl) return;
+
+        // Create download link
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `${rt.name || 'render-target'}-${action === 'save-depth' ? 'depth' : 'color'}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
     });
-  });
 
   // Pixel inspection on preview hover
-  const previewImg = container.querySelector('.rt-preview-img') as HTMLImageElement;
+  const previewImg = container.querySelector(
+    '.rt-preview-img'
+  ) as HTMLImageElement;
   const pixelInfo = container.querySelector('#rt-pixel-info') as HTMLElement;
 
   if (previewImg && pixelInfo) {
     previewImg.addEventListener('mousemove', (e) => {
       const rect = previewImg.getBoundingClientRect();
-      const x = Math.floor(((e.clientX - rect.left) / rect.width) * previewImg.naturalWidth);
-      const y = Math.floor(((e.clientY - rect.top) / rect.height) * previewImg.naturalHeight);
-      
+      const x = Math.floor(
+        ((e.clientX - rect.left) / rect.width) * previewImg.naturalWidth
+      );
+      const y = Math.floor(
+        ((e.clientY - rect.top) / rect.height) * previewImg.naturalHeight
+      );
+
       const coordsEl = pixelInfo.querySelector('.pixel-coords');
       const valueEl = pixelInfo.querySelector('.pixel-value');
-      
+
       if (coordsEl) coordsEl.textContent = `(${x}, ${y})`;
       if (valueEl) valueEl.textContent = 'Inspecting...';
     });
@@ -506,10 +590,9 @@ export function attachRenderTargetsEvents(
     previewImg.addEventListener('mouseleave', () => {
       const coordsEl = pixelInfo.querySelector('.pixel-coords');
       const valueEl = pixelInfo.querySelector('.pixel-value');
-      
+
       if (coordsEl) coordsEl.textContent = '—';
       if (valueEl) valueEl.textContent = 'Hover to inspect';
     });
   }
 }
-

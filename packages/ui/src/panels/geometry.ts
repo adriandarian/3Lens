@@ -2,8 +2,20 @@
  * Geometry Panel - Shared renderer for geometry inspection
  */
 
-import type { PanelContext, UIState, GeometryData, SceneSnapshot, SceneNode } from '../types';
-import { escapeHtml, formatNumber, formatBytes, getGeometryIcon, getShortTypeName } from '../utils/format';
+import type {
+  PanelContext,
+  UIState,
+  GeometryData,
+  SceneSnapshot,
+  SceneNode,
+} from '../types';
+import {
+  escapeHtml,
+  formatNumber,
+  formatBytes,
+  getGeometryIcon,
+  getShortTypeName,
+} from '../utils/format';
 
 /**
  * Build a map of debug ID -> mesh name from the scene tree
@@ -15,7 +27,7 @@ function buildMeshNameMap(snapshot: SceneSnapshot | null): Map<string, string> {
   function traverse(node: SceneNode) {
     const name = node.ref.name || node.ref.type;
     map.set(node.ref.debugId, name);
-    
+
     if (node.children) {
       for (const child of node.children) {
         traverse(child);
@@ -60,10 +72,12 @@ export function renderGeometryPanel(
     ? geometries.filter((geo: GeometryData) => {
         const geoName = (geo.name || geo.type).toLowerCase();
         const meshNamesList = geo.usedByMeshes
-          .map(id => meshNames.get(id) || '')
+          .map((id) => meshNames.get(id) || '')
           .join(' ')
           .toLowerCase();
-        return geoName.includes(searchQuery) || meshNamesList.includes(searchQuery);
+        return (
+          geoName.includes(searchQuery) || meshNamesList.includes(searchQuery)
+        );
       })
     : geometries;
 
@@ -76,9 +90,14 @@ export function renderGeometryPanel(
       <div class="panel-list geometry-list-panel">
         ${renderGeometrySummary(summary)}
         <div class="geometry-list">
-          ${filteredGeometries.length > 0
-            ? filteredGeometries.map((geo: GeometryData) => renderGeometryListItem(geo, state, meshNames)).join('')
-            : `<div class="no-results">No geometries match "${escapeHtml(state.geometrySearch)}"</div>`
+          ${
+            filteredGeometries.length > 0
+              ? filteredGeometries
+                  .map((geo: GeometryData) =>
+                    renderGeometryListItem(geo, state, meshNames)
+                  )
+                  .join('')
+              : `<div class="no-results">No geometries match "${escapeHtml(state.geometrySearch)}"</div>`
           }
         </div>
       </div>
@@ -89,7 +108,9 @@ export function renderGeometryPanel(
   `;
 }
 
-function renderGeometrySummary(summary: SceneSnapshot['geometriesSummary']): string {
+function renderGeometrySummary(
+  summary: SceneSnapshot['geometriesSummary']
+): string {
   if (!summary) return '';
 
   return `
@@ -122,21 +143,26 @@ function renderGeometrySummary(summary: SceneSnapshot['geometriesSummary']): str
   `;
 }
 
-function renderGeometryListItem(geo: GeometryData, state: UIState, meshNames: Map<string, string>): string {
+function renderGeometryListItem(
+  geo: GeometryData,
+  state: UIState,
+  meshNames: Map<string, string>
+): string {
   const isSelected = state.selectedGeometryId === geo.uuid;
   const geoIcon = getGeometryIcon(geo.type);
-  
+
   // Get mesh names that use this geometry
   const usedByNames = geo.usedByMeshes
-    .map(debugId => meshNames.get(debugId) || debugId.substring(0, 8))
+    .map((debugId) => meshNames.get(debugId) || debugId.substring(0, 8))
     .slice(0, 3);
   const moreCount = geo.usedByMeshes.length - usedByNames.length;
-  
+
   // Title: geometry name or type
   const displayName = geo.name || geo.type;
-  
+
   // Subtitle: object names that use this geometry
-  const subtitle = usedByNames.join(', ') + (moreCount > 0 ? ` +${moreCount}` : '');
+  const subtitle =
+    usedByNames.join(', ') + (moreCount > 0 ? ` +${moreCount}` : '');
 
   return `
     <div class="list-item geometry-item ${isSelected ? 'selected' : ''}" data-uuid="${geo.uuid}" data-action="select-geometry">
@@ -168,15 +194,19 @@ function renderNoGeometrySelected(): string {
   `;
 }
 
-function renderGeometryInspector(geo: GeometryData, state: UIState, meshNames: Map<string, string>): string {
+function renderGeometryInspector(
+  geo: GeometryData,
+  state: UIState,
+  meshNames: Map<string, string>
+): string {
   const geoIcon = getGeometryIcon(geo.type);
-  
+
   // Get mesh names that use this geometry
-  const usedByList = geo.usedByMeshes.map(debugId => ({
+  const usedByList = geo.usedByMeshes.map((debugId) => ({
     debugId,
     name: meshNames.get(debugId) || debugId.substring(0, 8),
   }));
-  
+
   // Title: geometry name or type
   const displayName = geo.name || geo.type;
 
@@ -193,12 +223,16 @@ function renderGeometryInspector(geo: GeometryData, state: UIState, meshNames: M
     <div class="inspector-section used-by-section">
       <div class="section-title">Used By (${usedByList.length})</div>
       <div class="used-by-list">
-        ${usedByList.map(item => `
+        ${usedByList
+          .map(
+            (item) => `
           <div class="used-by-item" data-debug-id="${item.debugId}">
             <span class="mesh-icon">M</span>
             <span class="mesh-name">${escapeHtml(item.name)}</span>
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     </div>
 
@@ -255,7 +289,9 @@ function renderGeometryInspector(geo: GeometryData, state: UIState, meshNames: M
   `;
 }
 
-function renderAttributesSection(attributes: GeometryData['attributes']): string {
+function renderAttributesSection(
+  attributes: GeometryData['attributes']
+): string {
   if (attributes.length === 0) return '';
 
   return `
@@ -271,7 +307,9 @@ function renderAttributesSection(attributes: GeometryData['attributes']): string
           </tr>
         </thead>
         <tbody>
-          ${attributes.map((attr: GeometryData['attributes'][0]) => `
+          ${attributes
+            .map(
+              (attr: GeometryData['attributes'][0]) => `
             <tr>
               <td>
                 <span class="attr-name">${attr.name}</span>
@@ -281,14 +319,18 @@ function renderAttributesSection(attributes: GeometryData['attributes']): string
               <td class="attr-type">${getShortTypeName(attr.arrayType)}${attr.normalized ? ' (N)' : ''}</td>
               <td class="attr-size">${formatBytes(attr.memoryBytes)}</td>
             </tr>
-          `).join('')}
+          `
+            )
+            .join('')}
         </tbody>
       </table>
     </div>
   `;
 }
 
-function renderBoundingBoxSection(bbox: NonNullable<GeometryData['boundingBox']>): string {
+function renderBoundingBoxSection(
+  bbox: NonNullable<GeometryData['boundingBox']>
+): string {
   const width = Math.abs(bbox.max.x - bbox.min.x);
   const height = Math.abs(bbox.max.y - bbox.min.y);
   const depth = Math.abs(bbox.max.z - bbox.min.z);
@@ -313,7 +355,9 @@ function renderBoundingBoxSection(bbox: NonNullable<GeometryData['boundingBox']>
   `;
 }
 
-function renderBoundingSphereSection(sphere: NonNullable<GeometryData['boundingSphere']>): string {
+function renderBoundingSphereSection(
+  sphere: NonNullable<GeometryData['boundingSphere']>
+): string {
   return `
     <div class="inspector-section">
       <div class="section-title">Bounding Sphere</div>
@@ -336,29 +380,39 @@ function renderGroupsSection(groups: GeometryData['groups']): string {
     <div class="inspector-section">
       <div class="section-title">Groups (${groups.length})</div>
       <div class="groups-list">
-        ${groups.map((group: GeometryData['groups'][0], i: number) => `
+        ${groups
+          .map(
+            (group: GeometryData['groups'][0], i: number) => `
           <div class="group-item">
             <span class="group-index">#${i}</span>
             <span class="group-range">${group.start} → ${group.start + group.count}</span>
             <span class="group-material">Mat[${group.materialIndex}]</span>
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     </div>
   `;
 }
 
-function renderMorphAttributesSection(morphs: NonNullable<GeometryData['morphAttributes']>): string {
+function renderMorphAttributesSection(
+  morphs: NonNullable<GeometryData['morphAttributes']>
+): string {
   return `
     <div class="inspector-section">
       <div class="section-title">Morph Targets</div>
       <div class="morph-list">
-        ${morphs.map((morph: { name: string; count: number }) => `
+        ${morphs
+          .map(
+            (morph: { name: string; count: number }) => `
           <div class="morph-item">
             <span class="morph-name">${morph.name}</span>
             <span class="morph-count">×${morph.count}</span>
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     </div>
   `;
@@ -375,18 +429,20 @@ export function attachGeometryEvents(
   rerender: () => void
 ): void {
   // Geometry list item selection
-  container.querySelectorAll('[data-action="select-geometry"]').forEach((item) => {
-    const itemEl = item as HTMLElement;
-    const uuid = itemEl.dataset.uuid;
+  container
+    .querySelectorAll('[data-action="select-geometry"]')
+    .forEach((item) => {
+      const itemEl = item as HTMLElement;
+      const uuid = itemEl.dataset.uuid;
 
-    itemEl.addEventListener('click', () => {
-      if (!uuid) return;
-      // Toggle selection - clicking selected item deselects it
-      const newSelection = state.selectedGeometryId === uuid ? null : uuid;
-      updateState({ selectedGeometryId: newSelection });
-      rerender();
+      itemEl.addEventListener('click', () => {
+        if (!uuid) return;
+        // Toggle selection - clicking selected item deselects it
+        const newSelection = state.selectedGeometryId === uuid ? null : uuid;
+        updateState({ selectedGeometryId: newSelection });
+        rerender();
+      });
     });
-  });
 
   // Action buttons
   container.querySelectorAll('.action-btn').forEach((btn) => {
@@ -412,7 +468,7 @@ function handleGeometryAction(
   rerender: () => void
 ): void {
   const viz = state.geometryVisualization;
-  
+
   switch (action) {
     case 'toggle-bbox': {
       const newSet = new Set(viz.boundingBox);
@@ -422,7 +478,7 @@ function handleGeometryAction(
         newSet.add(geometryUuid);
       }
       updateState({
-        geometryVisualization: { ...viz, boundingBox: newSet }
+        geometryVisualization: { ...viz, boundingBox: newSet },
       });
       context.sendCommand({
         type: 'geometry-visualization',
@@ -441,7 +497,7 @@ function handleGeometryAction(
         newSet.add(geometryUuid);
       }
       updateState({
-        geometryVisualization: { ...viz, wireframe: newSet }
+        geometryVisualization: { ...viz, wireframe: newSet },
       });
       context.sendCommand({
         type: 'geometry-visualization',
@@ -460,7 +516,7 @@ function handleGeometryAction(
         newSet.add(geometryUuid);
       }
       updateState({
-        geometryVisualization: { ...viz, normals: newSet }
+        geometryVisualization: { ...viz, normals: newSet },
       });
       context.sendCommand({
         type: 'geometry-visualization',
@@ -473,4 +529,3 @@ function handleGeometryAction(
     }
   }
 }
-

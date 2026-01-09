@@ -27,7 +27,10 @@ import type {
   RenderTargetUsage,
 } from '../types';
 import type { ObjectCostData, MaterialComplexityInfo } from '../types/snapshot';
-import { ResourceLifecycleTracker, type ResourceLifecycleEvent } from '../tracking/ResourceLifecycleTracker';
+import {
+  ResourceLifecycleTracker,
+  type ResourceLifecycleEvent,
+} from '../tracking/ResourceLifecycleTracker';
 
 // ============================================================================
 // Memoized lookup functions for WebGL/texture constants
@@ -148,7 +151,8 @@ const getUsageNameMemo = memoize(
 
 /** Memoized compression format name lookup */
 const getCompressionFormatMemo = memoize(
-  (format: number): string => COMPRESSION_NAMES[format] || `Compressed(${format})`,
+  (format: number): string =>
+    COMPRESSION_NAMES[format] || `Compressed(${format})`,
   { maxSize: 20, name: 'compressionFormatLookup' }
 );
 
@@ -170,7 +174,7 @@ export class SceneObserver {
   private texturesByUuid: Map<string, THREE.Texture> = new Map();
   private originalAdd: THREE.Scene['add'];
   private originalRemove: THREE.Scene['remove'];
-  
+
   // Resource lifecycle tracking
   private lifecycleTracker: ResourceLifecycleTracker;
   private trackedResourceUuids: Set<string> = new Set();
@@ -178,7 +182,7 @@ export class SceneObserver {
   constructor(scene: THREE.Scene, options: SceneObserverOptions = {}) {
     this.scene = scene;
     this.options = options;
-    
+
     // Initialize lifecycle tracker
     this.lifecycleTracker = new ResourceLifecycleTracker();
     if (options.onResourceEvent) {
@@ -268,7 +272,10 @@ export class SceneObserver {
    * Collect all materials from the scene
    */
   collectMaterials(): { materials: MaterialData[]; summary: MaterialsSummary } {
-    const materialMap = new Map<string, { material: THREE.Material; meshDebugIds: string[] }>();
+    const materialMap = new Map<
+      string,
+      { material: THREE.Material; meshDebugIds: string[] }
+    >();
 
     // Clear and rebuild material tracking
     this.materialsByUuid.clear();
@@ -276,7 +283,9 @@ export class SceneObserver {
     // Traverse scene and collect all materials
     this.scene.traverse((obj) => {
       if (this.isMesh(obj)) {
-        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const materials = Array.isArray(obj.material)
+          ? obj.material
+          : [obj.material];
         const meshRef = this.getOrCreateRef(obj);
 
         for (const material of materials) {
@@ -333,8 +342,14 @@ export class SceneObserver {
   /**
    * Collect all geometries from the scene
    */
-  collectGeometries(): { geometries: GeometryData[]; summary: GeometrySummary } {
-    const geometryMap = new Map<string, { geometry: THREE.BufferGeometry; meshDebugIds: string[] }>();
+  collectGeometries(): {
+    geometries: GeometryData[];
+    summary: GeometrySummary;
+  } {
+    const geometryMap = new Map<
+      string,
+      { geometry: THREE.BufferGeometry; meshDebugIds: string[] }
+    >();
 
     // Clear and rebuild geometry tracking
     this.geometriesByUuid.clear();
@@ -381,7 +396,8 @@ export class SceneObserver {
       totalTriangles += data.faceCount;
       totalMemoryBytes += data.memoryBytes;
       if (data.isIndexed) indexedCount++;
-      if (data.morphAttributes && data.morphAttributes.length > 0) morphedCount++;
+      if (data.morphAttributes && data.morphAttributes.length > 0)
+        morphedCount++;
     }
 
     // Sort geometries by memory usage (largest first), then by name
@@ -408,10 +424,13 @@ export class SceneObserver {
    */
   collectTextures(): { textures: TextureData[]; summary: TexturesSummary } {
     // Build a map of texture UUID -> { texture, material usages }
-    const textureMap = new Map<string, {
-      texture: THREE.Texture;
-      usages: TextureMaterialUsage[];
-    }>();
+    const textureMap = new Map<
+      string,
+      {
+        texture: THREE.Texture;
+        usages: TextureMaterialUsage[];
+      }
+    >();
 
     // Clear and rebuild texture tracking
     this.texturesByUuid.clear();
@@ -428,7 +447,9 @@ export class SceneObserver {
       const textureSlots = this.getTextureSlots();
       for (const slot of textureSlots) {
         if (slot in material) {
-          const texture = (material as unknown as Record<string, unknown>)[slot] as THREE.Texture | null;
+          const texture = (material as unknown as Record<string, unknown>)[
+            slot
+          ] as THREE.Texture | null;
           if (texture && texture.uuid) {
             // Track texture by UUID
             this.texturesByUuid.set(texture.uuid, texture);
@@ -458,7 +479,10 @@ export class SceneObserver {
           if (uniform.type === 'sampler2D' || uniform.type === 'samplerCube') {
             const uniformValue = uniform.value as { uuid?: string } | null;
             if (uniformValue?.uuid) {
-              const texture = this.findTextureInMaterial(material, uniform.name);
+              const texture = this.findTextureInMaterial(
+                material,
+                uniform.name
+              );
               if (texture) {
                 this.texturesByUuid.set(texture.uuid, texture);
 
@@ -528,25 +552,33 @@ export class SceneObserver {
   /**
    * Collect all render targets from the scene
    */
-  collectRenderTargets(): { renderTargets: RenderTargetData[]; summary: RenderTargetsSummary } {
+  collectRenderTargets(): {
+    renderTargets: RenderTargetData[];
+    summary: RenderTargetsSummary;
+  } {
     const renderTargetMap = new Map<string, THREE.WebGLRenderTarget>();
 
     // Helper to get render target ID (WebGLRenderTarget doesn't have uuid, use texture.uuid)
     const getRtId = (rt: THREE.WebGLRenderTarget): string => {
-      return (rt as unknown as { uuid?: string }).uuid || rt.texture?.uuid || '';
+      return (
+        (rt as unknown as { uuid?: string }).uuid || rt.texture?.uuid || ''
+      );
     };
 
     // Traverse scene to find render targets used by lights (shadow maps)
     this.scene.traverse((obj) => {
       // Check for shadow-casting lights with shadow maps
       if (this.isLight(obj) && obj.castShadow && 'shadow' in obj) {
-        const shadow = (obj as THREE.DirectionalLight | THREE.SpotLight | THREE.PointLight).shadow;
+        const shadow = (
+          obj as THREE.DirectionalLight | THREE.SpotLight | THREE.PointLight
+        ).shadow;
         if (shadow?.map) {
           const rt = shadow.map as THREE.WebGLRenderTarget;
           const rtId = getRtId(rt);
           if (rtId && !renderTargetMap.has(rtId)) {
             // Mark as shadow map
-            (rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage = 'shadow-map';
+            (rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage =
+              'shadow-map';
             renderTargetMap.set(rtId, rt);
           }
         }
@@ -554,10 +586,12 @@ export class SceneObserver {
 
       // Check for meshes with materials that use render targets (env maps, reflection probes, etc.)
       if (this.isMesh(obj)) {
-        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const materials = Array.isArray(obj.material)
+          ? obj.material
+          : [obj.material];
         for (const material of materials) {
           if (!material) continue;
-          
+
           // Check for envMap that might be from a render target
           if ('envMap' in material && material.envMap) {
             const tex = material.envMap as THREE.Texture;
@@ -612,7 +646,10 @@ export class SceneObserver {
    * Create RenderTargetData from a three.js WebGLRenderTarget (public version)
    * Used by DevtoolProbe for registered render targets
    */
-  createRenderTargetDataPublic(rt: THREE.WebGLRenderTarget, usage: RenderTargetUsage = 'custom'): RenderTargetData {
+  createRenderTargetDataPublic(
+    rt: THREE.WebGLRenderTarget,
+    usage: RenderTargetUsage = 'custom'
+  ): RenderTargetData {
     // Set usage marker before creating data
     (rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage = usage;
     return this.createRenderTargetData(rt);
@@ -621,19 +658,29 @@ export class SceneObserver {
   /**
    * Create RenderTargetData from a three.js WebGLRenderTarget
    */
-  private createRenderTargetData(rt: THREE.WebGLRenderTarget): RenderTargetData {
+  private createRenderTargetData(
+    rt: THREE.WebGLRenderTarget
+  ): RenderTargetData {
     const texture = rt.texture;
     const isCube = 'isWebGLCubeRenderTarget' in rt;
     const isMultiple = 'isWebGLMultipleRenderTargets' in rt;
-    const colorAttachmentCount = isMultiple ? (rt as unknown as { count: number }).count || 1 : 1;
-    
+    const colorAttachmentCount = isMultiple
+      ? (rt as unknown as { count: number }).count || 1
+      : 1;
+
     // Get usage from our marker or try to detect
-    const usage = ((rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage) || 'unknown';
+    const usage =
+      (rt as unknown as { _3lensUsage?: RenderTargetUsage })._3lensUsage ||
+      'unknown';
 
     // Estimate memory
-    const bytesPerPixel = this.getBytesPerPixel(texture.format, texture.type as number);
-    let memoryBytes = rt.width * rt.height * bytesPerPixel * colorAttachmentCount;
-    
+    const bytesPerPixel = this.getBytesPerPixel(
+      texture.format,
+      texture.type as number
+    );
+    let memoryBytes =
+      rt.width * rt.height * bytesPerPixel * colorAttachmentCount;
+
     // Add depth buffer memory
     if (rt.depthBuffer) {
       memoryBytes += rt.width * rt.height * 4; // Assume 32-bit depth
@@ -641,12 +688,12 @@ export class SceneObserver {
     if (rt.stencilBuffer) {
       memoryBytes += rt.width * rt.height * 1; // 8-bit stencil
     }
-    
+
     // MSAA multiplier
     if (rt.samples > 0) {
       memoryBytes *= rt.samples;
     }
-    
+
     // Cube faces
     if (isCube) {
       memoryBytes *= 6;
@@ -660,7 +707,7 @@ export class SceneObserver {
 
     // WebGLRenderTarget doesn't have a uuid property - use the texture's uuid
     const rtUuid = (rt as unknown as { uuid?: string }).uuid || texture.uuid;
-    
+
     const data: RenderTargetData = {
       uuid: rtUuid,
       name: texture.name || '',
@@ -679,7 +726,8 @@ export class SceneObserver {
       textureFormatName: this.getFormatName(texture.format),
       textureType: texture.type as number,
       textureTypeName: this.getDataTypeName(texture.type as number),
-      hasDepthTexture: rt.depthTexture !== null && rt.depthTexture !== undefined,
+      hasDepthTexture:
+        rt.depthTexture !== null && rt.depthTexture !== undefined,
       colorSpace: texture.colorSpace || 'srgb',
       filtering: {
         mag: texture.magFilter,
@@ -734,20 +782,41 @@ export class SceneObserver {
    */
   private getTextureSlots(): string[] {
     return [
-      'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
-      'emissiveMap', 'bumpMap', 'displacementMap', 'alphaMap',
-      'envMap', 'lightMap', 'specularMap', 'gradientMap',
-      'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap',
-      'sheenColorMap', 'sheenRoughnessMap', 'transmissionMap', 'thicknessMap',
-      'iridescenceMap', 'iridescenceThicknessMap', 'anisotropyMap',
-      'specularIntensityMap', 'specularColorMap',
+      'map',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'aoMap',
+      'emissiveMap',
+      'bumpMap',
+      'displacementMap',
+      'alphaMap',
+      'envMap',
+      'lightMap',
+      'specularMap',
+      'gradientMap',
+      'clearcoatMap',
+      'clearcoatNormalMap',
+      'clearcoatRoughnessMap',
+      'sheenColorMap',
+      'sheenRoughnessMap',
+      'transmissionMap',
+      'thicknessMap',
+      'iridescenceMap',
+      'iridescenceThicknessMap',
+      'anisotropyMap',
+      'specularIntensityMap',
+      'specularColorMap',
     ];
   }
 
   /**
    * Find a texture in a material by uniform name
    */
-  private findTextureInMaterial(material: THREE.Material, uniformName: string): THREE.Texture | null {
+  private findTextureInMaterial(
+    material: THREE.Material,
+    uniformName: string
+  ): THREE.Texture | null {
     if ('uniforms' in material) {
       const shaderMat = material as THREE.ShaderMaterial;
       const uniform = shaderMat.uniforms?.[uniformName];
@@ -768,9 +837,16 @@ export class SceneObserver {
   /**
    * Create TextureData from a three.js Texture
    */
-  private createTextureData(texture: THREE.Texture, usages: TextureMaterialUsage[]): TextureData {
-    const isCubeTexture = 'isCubeTexture' in texture && (texture as THREE.CubeTexture).isCubeTexture === true;
-    const isDataTexture = 'isDataTexture' in texture && (texture as THREE.DataTexture).isDataTexture === true;
+  private createTextureData(
+    texture: THREE.Texture,
+    usages: TextureMaterialUsage[]
+  ): TextureData {
+    const isCubeTexture =
+      'isCubeTexture' in texture &&
+      (texture as THREE.CubeTexture).isCubeTexture === true;
+    const isDataTexture =
+      'isDataTexture' in texture &&
+      (texture as THREE.DataTexture).isDataTexture === true;
     const isCompressedTexture = 'isCompressedTexture' in texture;
     const isVideoTexture = 'isVideoTexture' in texture;
     const isCanvasTexture = 'isCanvasTexture' in texture;
@@ -791,7 +867,12 @@ export class SceneObserver {
     }
 
     // Estimate memory usage
-    const memoryBytes = this.estimateTextureMemory(texture, width, height, isCubeTexture);
+    const memoryBytes = this.estimateTextureMemory(
+      texture,
+      width,
+      height,
+      isCubeTexture
+    );
 
     // Get source info
     const source = this.getTextureSourceInfo(texture);
@@ -813,7 +894,9 @@ export class SceneObserver {
       dataType: texture.type as number,
       dataTypeName: this.getDataTypeName(texture.type as number),
       mipmaps: {
-        enabled: texture.generateMipmaps || (texture.mipmaps && texture.mipmaps.length > 0),
+        enabled:
+          texture.generateMipmaps ||
+          (texture.mipmaps && texture.mipmaps.length > 0),
         count: texture.mipmaps?.length || 0,
         generateMipmaps: texture.generateMipmaps,
       },
@@ -922,22 +1005,33 @@ export class SceneObserver {
   /**
    * Estimate texture memory usage in bytes
    */
-  private estimateTextureMemory(texture: THREE.Texture, width: number, height: number, isCube: boolean): number {
+  private estimateTextureMemory(
+    texture: THREE.Texture,
+    width: number,
+    height: number,
+    isCube: boolean
+  ): number {
     if (width === 0 || height === 0) return 0;
 
     // Get bytes per pixel based on format and type
-    const bytesPerPixel = this.getBytesPerPixel(texture.format, texture.type as number);
-    
+    const bytesPerPixel = this.getBytesPerPixel(
+      texture.format,
+      texture.type as number
+    );
+
     // Base memory
     let memory = width * height * bytesPerPixel;
-    
+
     // Cube textures have 6 faces
     if (isCube) {
       memory *= 6;
     }
-    
+
     // Add mipmap memory (roughly 1.33x for full mipchain)
-    if (texture.generateMipmaps || (texture.mipmaps && texture.mipmaps.length > 0)) {
+    if (
+      texture.generateMipmaps ||
+      (texture.mipmaps && texture.mipmaps.length > 0)
+    ) {
       memory = Math.floor(memory * 1.33);
     }
 
@@ -1011,7 +1105,11 @@ export class SceneObserver {
   /**
    * Generate a small thumbnail for a texture
    */
-  private generateTextureThumbnail(texture: THREE.Texture, width: number, height: number): string | undefined {
+  private generateTextureThumbnail(
+    texture: THREE.Texture,
+    width: number,
+    height: number
+  ): string | undefined {
     try {
       const image = texture.image;
       if (!image) return undefined;
@@ -1032,7 +1130,11 @@ export class SceneObserver {
       if (!ctx) return undefined;
 
       // Try to draw the image
-      if (image instanceof HTMLImageElement || image instanceof HTMLCanvasElement || image instanceof ImageBitmap) {
+      if (
+        image instanceof HTMLImageElement ||
+        image instanceof HTMLCanvasElement ||
+        image instanceof ImageBitmap
+      ) {
         ctx.drawImage(image, 0, 0, thumbWidth, thumbHeight);
         return canvas.toDataURL('image/png');
       }
@@ -1088,9 +1190,15 @@ export class SceneObserver {
   /**
    * Create GeometryData from a three.js BufferGeometry
    */
-  private createGeometryData(geometry: THREE.BufferGeometry, usedByMeshes: string[]): GeometryData {
+  private createGeometryData(
+    geometry: THREE.BufferGeometry,
+    usedByMeshes: string[]
+  ): GeometryData {
     const attributes = this.collectGeometryAttributes(geometry);
-    const memoryBytes = attributes.reduce((sum, attr) => sum + attr.memoryBytes, 0);
+    const memoryBytes = attributes.reduce(
+      (sum, attr) => sum + attr.memoryBytes,
+      0
+    );
 
     // Calculate index memory if present
     let indexMemory = 0;
@@ -1154,8 +1262,16 @@ export class SceneObserver {
     // Add bounding box if computed
     if (geometry.boundingBox) {
       data.boundingBox = {
-        min: { x: geometry.boundingBox.min.x, y: geometry.boundingBox.min.y, z: geometry.boundingBox.min.z },
-        max: { x: geometry.boundingBox.max.x, y: geometry.boundingBox.max.y, z: geometry.boundingBox.max.z },
+        min: {
+          x: geometry.boundingBox.min.x,
+          y: geometry.boundingBox.min.y,
+          z: geometry.boundingBox.min.z,
+        },
+        max: {
+          x: geometry.boundingBox.max.x,
+          y: geometry.boundingBox.max.y,
+          z: geometry.boundingBox.max.z,
+        },
       };
     }
 
@@ -1182,12 +1298,16 @@ export class SceneObserver {
   /**
    * Collect all attributes from a BufferGeometry
    */
-  private collectGeometryAttributes(geometry: THREE.BufferGeometry): GeometryAttributeData[] {
+  private collectGeometryAttributes(
+    geometry: THREE.BufferGeometry
+  ): GeometryAttributeData[] {
     const attributes: GeometryAttributeData[] = [];
 
     for (const [name, attr] of Object.entries(geometry.attributes)) {
       if (!attr) continue;
-      attributes.push(this.createAttributeData(name, attr as THREE.BufferAttribute));
+      attributes.push(
+        this.createAttributeData(name, attr as THREE.BufferAttribute)
+      );
     }
 
     // Sort by importance: position, normal, uv first, then others
@@ -1207,7 +1327,10 @@ export class SceneObserver {
   /**
    * Create attribute data from a BufferAttribute
    */
-  private createAttributeData(name: string, attr: THREE.BufferAttribute): GeometryAttributeData {
+  private createAttributeData(
+    name: string,
+    attr: THREE.BufferAttribute
+  ): GeometryAttributeData {
     const isInstanced = 'isInstancedBufferAttribute' in attr;
     const memoryBytes = this.calculateBufferMemory(attr);
 
@@ -1228,7 +1351,9 @@ export class SceneObserver {
 
     // Add mesh per attribute for instanced attributes
     if (isInstanced && 'meshPerAttribute' in attr) {
-      data.meshPerAttribute = (attr as { meshPerAttribute: number }).meshPerAttribute;
+      data.meshPerAttribute = (
+        attr as { meshPerAttribute: number }
+      ).meshPerAttribute;
     }
 
     return data;
@@ -1252,7 +1377,10 @@ export class SceneObserver {
   /**
    * Create MaterialData from a three.js material
    */
-  private createMaterialData(material: THREE.Material, usedByMeshes: string[]): MaterialData {
+  private createMaterialData(
+    material: THREE.Material,
+    usedByMeshes: string[]
+  ): MaterialData {
     const isShaderMat = this.isShaderMaterial(material);
 
     const data: MaterialData = {
@@ -1266,7 +1394,10 @@ export class SceneObserver {
       side: material.side,
       depthTest: material.depthTest,
       depthWrite: material.depthWrite,
-      wireframe: 'wireframe' in material ? (material as THREE.MeshBasicMaterial).wireframe : false,
+      wireframe:
+        'wireframe' in material
+          ? (material as THREE.MeshBasicMaterial).wireframe
+          : false,
       textures: this.collectMaterialTextures(material),
       usageCount: usedByMeshes.length,
       usedByMeshes,
@@ -1298,19 +1429,38 @@ export class SceneObserver {
   /**
    * Collect texture references from a material
    */
-  private collectMaterialTextures(material: THREE.Material): MaterialTextureRef[] {
+  private collectMaterialTextures(
+    material: THREE.Material
+  ): MaterialTextureRef[] {
     const textures: MaterialTextureRef[] = [];
     const textureSlots = [
-      'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
-      'emissiveMap', 'bumpMap', 'displacementMap', 'alphaMap',
-      'envMap', 'lightMap', 'specularMap', 'gradientMap',
-      'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap',
-      'sheenColorMap', 'sheenRoughnessMap', 'transmissionMap', 'thicknessMap',
+      'map',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'aoMap',
+      'emissiveMap',
+      'bumpMap',
+      'displacementMap',
+      'alphaMap',
+      'envMap',
+      'lightMap',
+      'specularMap',
+      'gradientMap',
+      'clearcoatMap',
+      'clearcoatNormalMap',
+      'clearcoatRoughnessMap',
+      'sheenColorMap',
+      'sheenRoughnessMap',
+      'transmissionMap',
+      'thicknessMap',
     ];
 
     for (const slot of textureSlots) {
       if (slot in material) {
-        const texture = (material as unknown as Record<string, unknown>)[slot] as THREE.Texture | null;
+        const texture = (material as unknown as Record<string, unknown>)[
+          slot
+        ] as THREE.Texture | null;
         if (texture) {
           textures.push({
             slot,
@@ -1334,14 +1484,21 @@ export class SceneObserver {
   /**
    * Check if material is a PBR material (MeshStandardMaterial or MeshPhysicalMaterial)
    */
-  private isPBRMaterial(material: THREE.Material): material is THREE.MeshStandardMaterial {
-    return 'isMeshStandardMaterial' in material || 'isMeshPhysicalMaterial' in material;
+  private isPBRMaterial(
+    material: THREE.Material
+  ): material is THREE.MeshStandardMaterial {
+    return (
+      'isMeshStandardMaterial' in material ||
+      'isMeshPhysicalMaterial' in material
+    );
   }
 
   /**
    * Extract PBR properties from a standard/physical material
    */
-  private extractPBRProperties(material: THREE.MeshStandardMaterial): MaterialData['pbr'] {
+  private extractPBRProperties(
+    material: THREE.MeshStandardMaterial
+  ): MaterialData['pbr'] {
     const pbr: MaterialData['pbr'] = {
       roughness: material.roughness,
       metalness: material.metalness,
@@ -1366,7 +1523,9 @@ export class SceneObserver {
   /**
    * Extract shader information from a ShaderMaterial
    */
-  private extractShaderInfo(material: THREE.ShaderMaterial): MaterialData['shader'] {
+  private extractShaderInfo(
+    material: THREE.ShaderMaterial
+  ): MaterialData['shader'] {
     const uniforms: UniformData[] = [];
 
     if (material.uniforms) {
@@ -1379,7 +1538,8 @@ export class SceneObserver {
       vertexShader: material.vertexShader || '',
       fragmentShader: material.fragmentShader || '',
       uniforms,
-      defines: (material.defines as Record<string, string | number | boolean>) || {},
+      defines:
+        (material.defines as Record<string, string | number | boolean>) || {},
     };
   }
 
@@ -1538,10 +1698,12 @@ export class SceneObserver {
       const geo = mesh.geometry;
       if (!this.trackedResourceUuids.has(geo.uuid)) {
         this.trackedResourceUuids.add(geo.uuid);
-        const posAttr = geo.attributes?.position as THREE.BufferAttribute | undefined;
+        const posAttr = geo.attributes?.position as
+          | THREE.BufferAttribute
+          | undefined;
         const vertexCount = posAttr?.count ?? 0;
         const faceCount = geo.index ? geo.index.count / 3 : vertexCount / 3;
-        
+
         this.lifecycleTracker.recordCreation('geometry', geo.uuid, {
           name: geo.name || undefined,
           subtype: geo.type || 'BufferGeometry',
@@ -1550,17 +1712,19 @@ export class SceneObserver {
           faceCount: Math.round(faceCount),
         });
       }
-      
+
       this.lifecycleTracker.recordAttachment('geometry', geo.uuid, mesh.uuid, {
         meshName: meshRef.name,
       });
     }
 
     // Track materials
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
     for (const mat of materials) {
       if (!mat) continue;
-      
+
       if (!this.trackedResourceUuids.has(mat.uuid)) {
         this.trackedResourceUuids.add(mat.uuid);
         this.lifecycleTracker.recordCreation('material', mat.uuid, {
@@ -1568,7 +1732,7 @@ export class SceneObserver {
           subtype: mat.type || 'Material',
         });
       }
-      
+
       this.lifecycleTracker.recordAttachment('material', mat.uuid, mesh.uuid, {
         meshName: meshRef.name,
       });
@@ -1581,17 +1745,33 @@ export class SceneObserver {
   /**
    * Track textures from a material
    */
-  private trackMaterialTextures(material: THREE.Material, meshUuid: string, meshName?: string): void {
+  private trackMaterialTextures(
+    material: THREE.Material,
+    meshUuid: string,
+    meshName?: string
+  ): void {
     const textureProps = [
-      'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
-      'emissiveMap', 'alphaMap', 'envMap', 'lightMap', 'bumpMap',
-      'displacementMap', 'specularMap', 'gradientMap'
+      'map',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'aoMap',
+      'emissiveMap',
+      'alphaMap',
+      'envMap',
+      'lightMap',
+      'bumpMap',
+      'displacementMap',
+      'specularMap',
+      'gradientMap',
     ];
 
     for (const prop of textureProps) {
-      const texture = (material as unknown as Record<string, THREE.Texture | undefined>)[prop];
+      const texture = (
+        material as unknown as Record<string, THREE.Texture | undefined>
+      )[prop];
       if (!texture) continue;
-      
+
       if (!this.trackedResourceUuids.has(texture.uuid)) {
         this.trackedResourceUuids.add(texture.uuid);
         this.lifecycleTracker.recordCreation('texture', texture.uuid, {
@@ -1600,11 +1780,16 @@ export class SceneObserver {
           estimatedMemory: this.estimateTextureMemorySimple(texture),
         });
       }
-      
-      this.lifecycleTracker.recordAttachment('texture', texture.uuid, meshUuid, {
-        meshName,
-        textureSlot: prop,
-      });
+
+      this.lifecycleTracker.recordAttachment(
+        'texture',
+        texture.uuid,
+        meshUuid,
+        {
+          meshName,
+          textureSlot: prop,
+        }
+      );
     }
   }
 
@@ -1617,34 +1802,58 @@ export class SceneObserver {
 
     // Record geometry detachment
     if (mesh.geometry) {
-      this.lifecycleTracker.recordDetachment('geometry', mesh.geometry.uuid, mesh.uuid, {
-        meshName,
-      });
+      this.lifecycleTracker.recordDetachment(
+        'geometry',
+        mesh.geometry.uuid,
+        mesh.uuid,
+        {
+          meshName,
+        }
+      );
     }
 
     // Record material detachment
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
     for (const mat of materials) {
       if (!mat) continue;
-      
+
       this.lifecycleTracker.recordDetachment('material', mat.uuid, mesh.uuid, {
         meshName,
       });
 
       // Record texture detachments
       const textureProps = [
-        'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
-        'emissiveMap', 'alphaMap', 'envMap', 'lightMap', 'bumpMap',
-        'displacementMap', 'specularMap', 'gradientMap'
+        'map',
+        'normalMap',
+        'roughnessMap',
+        'metalnessMap',
+        'aoMap',
+        'emissiveMap',
+        'alphaMap',
+        'envMap',
+        'lightMap',
+        'bumpMap',
+        'displacementMap',
+        'specularMap',
+        'gradientMap',
       ];
 
       for (const prop of textureProps) {
-        const texture = (mat as unknown as Record<string, THREE.Texture | undefined>)[prop];
+        const texture = (
+          mat as unknown as Record<string, THREE.Texture | undefined>
+        )[prop];
         if (texture) {
-          this.lifecycleTracker.recordDetachment('texture', texture.uuid, mesh.uuid, {
-            meshName,
-            textureSlot: prop,
-          });
+          this.lifecycleTracker.recordDetachment(
+            'texture',
+            texture.uuid,
+            mesh.uuid,
+            {
+              meshName,
+              textureSlot: prop,
+            }
+          );
         }
       }
     }
@@ -1655,18 +1864,18 @@ export class SceneObserver {
    */
   private estimateGeometryMemory(geometry: THREE.BufferGeometry): number {
     let bytes = 0;
-    
+
     for (const name in geometry.attributes) {
       const attr = geometry.attributes[name] as THREE.BufferAttribute;
       if (attr.array) {
         bytes += attr.array.byteLength;
       }
     }
-    
+
     if (geometry.index?.array) {
       bytes += geometry.index.array.byteLength;
     }
-    
+
     return bytes;
   }
 
@@ -1676,14 +1885,14 @@ export class SceneObserver {
   private estimateTextureMemorySimple(texture: THREE.Texture): number {
     const image = texture.image;
     if (!image) return 0;
-    
+
     const width = image.width || image.videoWidth || 256;
     const height = image.height || image.videoHeight || 256;
     const bytesPerPixel = 4; // RGBA
-    
+
     // Account for mipmaps (roughly 1.33x base size)
     const mipmapFactor = texture.generateMipmaps ? 1.33 : 1;
-    
+
     return Math.round(width * height * bytesPerPixel * mipmapFactor);
   }
 
@@ -1789,7 +1998,7 @@ export class SceneObserver {
     faceCount: number
   ): ObjectCostData {
     // Analyze each material
-    const materialInfos: MaterialComplexityInfo[] = materials.map(mat => 
+    const materialInfos: MaterialComplexityInfo[] = materials.map((mat) =>
       this.analyzeMaterialComplexity(mat)
     );
 
@@ -1797,12 +2006,17 @@ export class SceneObserver {
     const triangleCost = faceCount / 1000;
 
     // Calculate material complexity (average of all materials)
-    const materialComplexity = materialInfos.length > 0
-      ? materialInfos.reduce((sum, m) => sum + m.complexityScore, 0) / materialInfos.length
-      : 1;
+    const materialComplexity =
+      materialInfos.length > 0
+        ? materialInfos.reduce((sum, m) => sum + m.complexityScore, 0) /
+          materialInfos.length
+        : 1;
 
     // Calculate texture cost (sum of texture usage)
-    const textureCost = materialInfos.reduce((sum, m) => sum + m.textureCount * 2, 0);
+    const textureCost = materialInfos.reduce(
+      (sum, m) => sum + m.textureCount * 2,
+      0
+    );
 
     // Calculate shadow cost
     let shadowCost = 0;
@@ -1810,7 +2024,11 @@ export class SceneObserver {
     if (mesh.receiveShadow) shadowCost += 1;
 
     // Calculate total cost (weighted sum)
-    const totalCost = (triangleCost * 1) + (materialComplexity * 0.5) + (textureCost * 0.3) + (shadowCost * 0.2);
+    const totalCost =
+      triangleCost * 1 +
+      materialComplexity * 0.5 +
+      textureCost * 0.3 +
+      shadowCost * 0.2;
 
     // Determine cost level
     let costLevel: 'low' | 'medium' | 'high' | 'critical';
@@ -1830,7 +2048,9 @@ export class SceneObserver {
     };
   }
 
-  private analyzeMaterialComplexity(material: THREE.Material): MaterialComplexityInfo {
+  private analyzeMaterialComplexity(
+    material: THREE.Material
+  ): MaterialComplexityInfo {
     if (!material) {
       return {
         type: 'unknown',
@@ -1847,7 +2067,7 @@ export class SceneObserver {
     }
 
     const mat = material as THREE.MeshStandardMaterial;
-    
+
     // Count textures
     let textureCount = 0;
     let hasNormalMap = false;
@@ -1857,10 +2077,22 @@ export class SceneObserver {
 
     // Check for standard material properties
     if ('map' in mat && mat.map) textureCount++;
-    if ('normalMap' in mat && mat.normalMap) { textureCount++; hasNormalMap = true; }
-    if ('envMap' in mat && mat.envMap) { textureCount++; hasEnvMap = true; }
-    if ('displacementMap' in mat && mat.displacementMap) { textureCount++; hasDisplacementMap = true; }
-    if ('aoMap' in mat && mat.aoMap) { textureCount++; hasAoMap = true; }
+    if ('normalMap' in mat && mat.normalMap) {
+      textureCount++;
+      hasNormalMap = true;
+    }
+    if ('envMap' in mat && mat.envMap) {
+      textureCount++;
+      hasEnvMap = true;
+    }
+    if ('displacementMap' in mat && mat.displacementMap) {
+      textureCount++;
+      hasDisplacementMap = true;
+    }
+    if ('aoMap' in mat && mat.aoMap) {
+      textureCount++;
+      hasAoMap = true;
+    }
     if ('roughnessMap' in mat && mat.roughnessMap) textureCount++;
     if ('metalnessMap' in mat && mat.metalnessMap) textureCount++;
     if ('emissiveMap' in mat && mat.emissiveMap) textureCount++;
@@ -1878,7 +2110,8 @@ export class SceneObserver {
     else if (type === 'MeshPhongMaterial') complexityScore += 2;
     else if (type === 'MeshStandardMaterial') complexityScore += 3;
     else if (type === 'MeshPhysicalMaterial') complexityScore += 4;
-    else if (type === 'ShaderMaterial' || type === 'RawShaderMaterial') complexityScore += 5;
+    else if (type === 'ShaderMaterial' || type === 'RawShaderMaterial')
+      complexityScore += 5;
 
     // Add texture complexity
     complexityScore += textureCount * 0.5;
@@ -1912,7 +2145,8 @@ export class SceneObserver {
 
     const data: LightNodeData = {
       lightType,
-      color: 'color' in light ? (light.color as THREE.Color).getHex() : 0xffffff,
+      color:
+        'color' in light ? (light.color as THREE.Color).getHex() : 0xffffff,
       intensity: light.intensity,
       castShadow: light.castShadow,
     };
@@ -1934,9 +2168,7 @@ export class SceneObserver {
     return data;
   }
 
-  private getLightType(
-    light: THREE.Light
-  ): LightNodeData['lightType'] {
+  private getLightType(light: THREE.Light): LightNodeData['lightType'] {
     if ('isAmbientLight' in light) return 'ambient';
     if ('isDirectionalLight' in light) return 'directional';
     if ('isPointLight' in light) return 'point';
@@ -1976,4 +2208,3 @@ export class SceneObserver {
     return 'obj_' + Math.random().toString(36).substring(2, 11);
   }
 }
-

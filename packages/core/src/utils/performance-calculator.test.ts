@@ -186,14 +186,29 @@ describe('estimateGeometryMemory', () => {
 
   it('should use 32-bit indices for large meshes', () => {
     // More than 65535 indices should use 32-bit
-    const smallMesh = estimateGeometryMemory(1000, 60000, false, false, false, false);
-    const largeMesh = estimateGeometryMemory(1000, 70000, false, false, false, false);
+    const smallMesh = estimateGeometryMemory(
+      1000,
+      60000,
+      false,
+      false,
+      false,
+      false
+    );
+    const largeMesh = estimateGeometryMemory(
+      1000,
+      70000,
+      false,
+      false,
+      false,
+      false
+    );
 
     // Large mesh should have ~2x index memory (4 bytes vs 2 bytes per index)
     const smallIndexMem = 60000 * 2;
     const largeIndexMem = 70000 * 4;
-    expect(largeMesh - smallMesh).toBeCloseTo(largeIndexMem - smallIndexMem, -1);
+    expect(largeMesh - smallMesh).toBeCloseTo(
+      largeIndexMem - smallIndexMem,
+      -1
+    );
   });
 });
-
-

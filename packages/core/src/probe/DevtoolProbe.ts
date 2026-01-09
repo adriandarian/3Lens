@@ -32,16 +32,61 @@ import type {
 import type { PoolManager, PoolStats } from '../utils/ObjectPool';
 import { getPoolManager } from '../utils/ObjectPool';
 import { createWebGLAdapter } from '../adapters/webgl-adapter';
-import { createWebGPUAdapter, isWebGPURenderer } from '../adapters/webgpu-adapter';
+import {
+  createWebGPUAdapter,
+  isWebGPURenderer,
+} from '../adapters/webgpu-adapter';
 import { SceneObserver } from '../observers/SceneObserver';
 import { SelectionHelper } from '../helpers/SelectionHelper';
 import { InspectMode } from '../helpers/InspectMode';
-import { TransformGizmo, type TransformMode, type TransformSpace, type TransformHistoryEntry } from '../helpers/TransformGizmo';
-import { CameraController, type CameraInfo, type FlyToOptions } from '../helpers/CameraController';
-import { ResourceLifecycleTracker, type ResourceLifecycleEvent, type ResourceLifecycleSummary, type ResourceType, type LifecycleEventType, type LeakAlert, type LeakReport, type LeakAlertCallback } from '../tracking/ResourceLifecycleTracker';
-import { ConfigLoader, type RuleViolation, type RuleCheckResult, type RuleViolationCallback, type ViolationSeverity } from '../config/ConfigLoader';
-import { LogicalEntityManager, type LogicalEntityOptions, type LogicalEntity as NewLogicalEntity, type EntityId, type ModuleId, type ModuleInfo, type EntityFilter, type NavigationResult, type EntityEventCallback } from '../entities';
-import { PluginManager, PluginLoader, PluginRegistry, type DevtoolPlugin, type PluginId, type PluginSource, type PluginLoadResult } from '../plugins';
+import {
+  TransformGizmo,
+  type TransformMode,
+  type TransformSpace,
+  type TransformHistoryEntry,
+} from '../helpers/TransformGizmo';
+import {
+  CameraController,
+  type CameraInfo,
+  type FlyToOptions,
+} from '../helpers/CameraController';
+import {
+  ResourceLifecycleTracker,
+  type ResourceLifecycleEvent,
+  type ResourceLifecycleSummary,
+  type ResourceType,
+  type LifecycleEventType,
+  type LeakAlert,
+  type LeakReport,
+  type LeakAlertCallback,
+} from '../tracking/ResourceLifecycleTracker';
+import {
+  ConfigLoader,
+  type RuleViolation,
+  type RuleCheckResult,
+  type RuleViolationCallback,
+  type ViolationSeverity,
+} from '../config/ConfigLoader';
+import {
+  LogicalEntityManager,
+  type LogicalEntityOptions,
+  type LogicalEntity as NewLogicalEntity,
+  type EntityId,
+  type ModuleId,
+  type ModuleInfo,
+  type EntityFilter,
+  type NavigationResult,
+  type EntityEventCallback,
+} from '../entities';
+import {
+  PluginManager,
+  PluginLoader,
+  PluginRegistry,
+  type DevtoolPlugin,
+  type PluginId,
+  type PluginSource,
+  type PluginLoadResult,
+} from '../plugins';
 
 /**
  * Version of the probe
@@ -58,7 +103,10 @@ export class DevtoolProbe {
   private _rendererAdapter: RendererAdapter | null = null;
   private _transport: Transport | null = null;
   private _sceneObservers: Map<THREE.Scene, SceneObserver> = new Map();
-  private _registeredRenderTargets: Map<string, { rt: THREE.WebGLRenderTarget; usage: RenderTargetUsage }> = new Map();
+  private _registeredRenderTargets: Map<
+    string,
+    { rt: THREE.WebGLRenderTarget; usage: RenderTargetUsage }
+  > = new Map();
   private _selectedObject: THREE.Object3D | null = null;
   private _hoveredObject: THREE.Object3D | null = null;
   private _logicalEntities: Map<string, LogicalEntity> = new Map(); // Legacy
@@ -85,17 +133,20 @@ export class DevtoolProbe {
   private _frameStatsCallbacks: Array<(stats: FrameStats) => void> = [];
   private _snapshotCallbacks: Array<(snapshot: SceneSnapshot) => void> = [];
   private _commandCallbacks: Array<(command: DebugMessage) => void> = [];
-  private _resourceEventCallbacks: Array<(event: ResourceLifecycleEvent) => void> = [];
-  
+  private _resourceEventCallbacks: Array<
+    (event: ResourceLifecycleEvent) => void
+  > = [];
+
   // Global resource lifecycle tracker (aggregates from all scene observers)
-  private _globalLifecycleTracker: ResourceLifecycleTracker = new ResourceLifecycleTracker();
-  
+  private _globalLifecycleTracker: ResourceLifecycleTracker =
+    new ResourceLifecycleTracker();
+
   // Configuration and rule checking
   private _configLoader: ConfigLoader;
   private _ruleCheckEnabled = true;
   private _lastRuleCheck = 0;
   private _ruleCheckIntervalMs = 1000; // Check rules every second (not every frame)
-  
+
   // Sampling optimization state
   private _framesSinceLastSample = 0;
   private _lastSampledStats: FrameStats | null = null;
@@ -195,22 +246,23 @@ export class DevtoolProbe {
 
   /**
    * Observe a three.js renderer (auto-detects WebGL/WebGPU)
-   * 
+   *
    * Supports both WebGLRenderer and WebGPURenderer from Three.js.
    * WebGPURenderer is detected via the `isWebGPURenderer` property.
-   * 
+   *
    * @see https://threejs.org/docs/?q=renderer#WebGPURenderer.isWebGPURenderer
    */
   observeRenderer(renderer: THREE.WebGLRenderer | THREE.Renderer): void {
     // Detect three.js version
-    this._threeVersion = (renderer as unknown as { version?: string }).version ?? null;
-    
+    this._threeVersion =
+      (renderer as unknown as { version?: string }).version ?? null;
+
     // Get sampling config for adapter options
     const gpuTimingEnabled = this.config.sampling?.gpuTiming ?? true;
-    
+
     // Create appropriate adapter based on renderer type
     let adapter: RendererAdapter;
-    
+
     if (isWebGPURenderer(renderer)) {
       // WebGPU renderer detected
       adapter = createWebGPUAdapter(renderer);
@@ -222,7 +274,7 @@ export class DevtoolProbe {
       });
       this.log('Detected WebGL renderer', { gpuTiming: gpuTimingEnabled });
     }
-    
+
     this.attachRendererAdapter(adapter);
     this.log('Observing renderer', { type: adapter.kind });
   }
@@ -381,18 +433,18 @@ export class DevtoolProbe {
       this.log('Cannot observe render target: no valid ID', { usage });
       return;
     }
-    
+
     if (this._registeredRenderTargets.has(rtId)) {
       this.log('Render target already being observed', { uuid: rtId });
       return;
     }
 
     this._registeredRenderTargets.set(rtId, { rt: renderTarget, usage });
-    this.log('Observing render target', { 
+    this.log('Observing render target', {
       uuid: rtId,
       name: renderTarget.texture?.name || '<unnamed>',
       size: `${renderTarget.width}x${renderTarget.height}`,
-      usage
+      usage,
     });
   }
 
@@ -409,14 +461,17 @@ export class DevtoolProbe {
   /**
    * Get all registered render targets
    */
-  getRegisteredRenderTargets(): Map<string, { rt: THREE.WebGLRenderTarget; usage: RenderTargetUsage }> {
+  getRegisteredRenderTargets(): Map<
+    string,
+    { rt: THREE.WebGLRenderTarget; usage: RenderTargetUsage }
+  > {
     return this._registeredRenderTargets;
   }
 
   /**
    * Set the THREE.js library reference for selection highlighting
    * This enables visual bounding box highlights around selected objects
-   * 
+   *
    * @example
    * ```typescript
    * import * as THREE from 'three';
@@ -485,9 +540,9 @@ export class DevtoolProbe {
 
       // Collect materials from each scene
       const { materials, summary: matSummary } = observer.collectMaterials();
-      
+
       // Merge materials (deduplicate by UUID)
-      const existingMatUuids = new Set(allMaterials.map(m => m.uuid));
+      const existingMatUuids = new Set(allMaterials.map((m) => m.uuid));
       for (const mat of materials) {
         if (!existingMatUuids.has(mat.uuid)) {
           allMaterials.push(mat);
@@ -497,17 +552,19 @@ export class DevtoolProbe {
 
       // Merge material summary
       combinedMaterialSummary.totalCount = allMaterials.length;
-      combinedMaterialSummary.shaderMaterialCount += matSummary.shaderMaterialCount;
+      combinedMaterialSummary.shaderMaterialCount +=
+        matSummary.shaderMaterialCount;
       combinedMaterialSummary.transparentCount += matSummary.transparentCount;
       for (const [type, count] of Object.entries(matSummary.byType)) {
-        combinedMaterialSummary.byType[type] = (combinedMaterialSummary.byType[type] || 0) + count;
+        combinedMaterialSummary.byType[type] =
+          (combinedMaterialSummary.byType[type] || 0) + count;
       }
 
       // Collect geometries from each scene
       const { geometries, summary: geoSummary } = observer.collectGeometries();
-      
+
       // Merge geometries (deduplicate by UUID)
-      const existingGeoUuids = new Set(allGeometries.map(g => g.uuid));
+      const existingGeoUuids = new Set(allGeometries.map((g) => g.uuid));
       for (const geo of geometries) {
         if (!existingGeoUuids.has(geo.uuid)) {
           allGeometries.push(geo);
@@ -523,14 +580,15 @@ export class DevtoolProbe {
       combinedGeometrySummary.indexedCount += geoSummary.indexedCount;
       combinedGeometrySummary.morphedCount += geoSummary.morphedCount;
       for (const [type, count] of Object.entries(geoSummary.byType)) {
-        combinedGeometrySummary.byType[type] = (combinedGeometrySummary.byType[type] || 0) + count;
+        combinedGeometrySummary.byType[type] =
+          (combinedGeometrySummary.byType[type] || 0) + count;
       }
 
       // Collect textures from each scene
       const { textures, summary: texSummary } = observer.collectTextures();
-      
+
       // Merge textures (deduplicate by UUID)
-      const existingTexUuids = new Set(allTextures.map(t => t.uuid));
+      const existingTexUuids = new Set(allTextures.map((t) => t.uuid));
       for (const tex of textures) {
         if (!existingTexUuids.has(tex.uuid)) {
           allTextures.push(tex);
@@ -546,14 +604,16 @@ export class DevtoolProbe {
       combinedTextureSummary.videoTextureCount += texSummary.videoTextureCount;
       combinedTextureSummary.renderTargetCount += texSummary.renderTargetCount;
       for (const [type, count] of Object.entries(texSummary.byType)) {
-        combinedTextureSummary.byType[type] = (combinedTextureSummary.byType[type] || 0) + count;
+        combinedTextureSummary.byType[type] =
+          (combinedTextureSummary.byType[type] || 0) + count;
       }
 
       // Collect render targets from each scene
-      const { renderTargets, summary: rtSummary } = observer.collectRenderTargets();
-      
+      const { renderTargets, summary: rtSummary } =
+        observer.collectRenderTargets();
+
       // Merge render targets (deduplicate by UUID)
-      const existingRtUuids = new Set(allRenderTargets.map(rt => rt.uuid));
+      const existingRtUuids = new Set(allRenderTargets.map((rt) => rt.uuid));
       for (const rt of renderTargets) {
         if (!existingRtUuids.has(rt.uuid)) {
           allRenderTargets.push(rt);
@@ -563,33 +623,40 @@ export class DevtoolProbe {
 
       // Merge render targets summary
       combinedRenderTargetsSummary.totalCount = allRenderTargets.length;
-      combinedRenderTargetsSummary.totalMemoryBytes += rtSummary.totalMemoryBytes;
+      combinedRenderTargetsSummary.totalMemoryBytes +=
+        rtSummary.totalMemoryBytes;
       combinedRenderTargetsSummary.shadowMapCount += rtSummary.shadowMapCount;
-      combinedRenderTargetsSummary.postProcessCount += rtSummary.postProcessCount;
+      combinedRenderTargetsSummary.postProcessCount +=
+        rtSummary.postProcessCount;
       combinedRenderTargetsSummary.cubeTargetCount += rtSummary.cubeTargetCount;
       combinedRenderTargetsSummary.mrtCount += rtSummary.mrtCount;
       combinedRenderTargetsSummary.msaaCount += rtSummary.msaaCount;
     }
 
     // Add registered render targets (from observeRenderTarget calls)
-    const existingRtUuids = new Set(allRenderTargets.map(rt => rt.uuid));
-    const firstObserver = this._sceneObservers.values().next().value as SceneObserver | undefined;
-    
+    const existingRtUuids = new Set(allRenderTargets.map((rt) => rt.uuid));
+    const firstObserver = this._sceneObservers.values().next().value as
+      | SceneObserver
+      | undefined;
+
     for (const [uuid, { rt, usage }] of this._registeredRenderTargets) {
       if (existingRtUuids.has(uuid)) continue;
-      
+
       // Use the first observer to create the render target data
       if (firstObserver) {
         const rtData = firstObserver.createRenderTargetDataPublic(rt, usage);
         allRenderTargets.push(rtData);
         existingRtUuids.add(uuid);
-        
+
         // Update summary
         combinedRenderTargetsSummary.totalMemoryBytes += rtData.memoryBytes;
-        if (usage === 'shadow-map') combinedRenderTargetsSummary.shadowMapCount++;
-        if (usage === 'post-process') combinedRenderTargetsSummary.postProcessCount++;
+        if (usage === 'shadow-map')
+          combinedRenderTargetsSummary.shadowMapCount++;
+        if (usage === 'post-process')
+          combinedRenderTargetsSummary.postProcessCount++;
         if (rtData.isCubeTarget) combinedRenderTargetsSummary.cubeTargetCount++;
-        if (rtData.colorAttachmentCount > 1) combinedRenderTargetsSummary.mrtCount++;
+        if (rtData.colorAttachmentCount > 1)
+          combinedRenderTargetsSummary.mrtCount++;
         if (rtData.samples > 0) combinedRenderTargetsSummary.msaaCount++;
       }
     }
@@ -692,7 +759,7 @@ export class DevtoolProbe {
       const obj = observer.findObjectByDebugId(id);
       if (obj) return obj;
     }
-    
+
     // Then try by three.js uuid (traverse scenes)
     for (const scene of this._sceneObservers.keys()) {
       let found: THREE.Object3D | null = null;
@@ -703,7 +770,7 @@ export class DevtoolProbe {
       });
       if (found) return found;
     }
-    
+
     return null;
   }
 
@@ -784,10 +851,15 @@ export class DevtoolProbe {
         if ('isMesh' in obj && (obj as THREE.Mesh).isMesh) {
           const mesh = obj as THREE.Mesh;
           // Skip 3lens helpers
-          if (mesh.name.startsWith('3lens_') || mesh.name.startsWith('__3lens')) {
+          if (
+            mesh.name.startsWith('3lens_') ||
+            mesh.name.startsWith('__3lens')
+          ) {
             return;
           }
-          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          const materials = Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material];
           for (const mat of materials) {
             if (mat && 'wireframe' in mat) {
               (mat as THREE.MeshBasicMaterial).wireframe = enabled;
@@ -821,12 +893,12 @@ export class DevtoolProbe {
     three: ThreeNamespace
   ): void {
     this.transformGizmo.initialize(scene, camera, domElement, three);
-    
+
     // Subscribe to selection changes to update gizmo attachment
     this.onSelectionChanged(() => {
       this.transformGizmo.onSelectionChanged();
     });
-    
+
     this.log('Transform gizmo initialized');
   }
 
@@ -903,14 +975,22 @@ export class DevtoolProbe {
   /**
    * Set snap values
    */
-  setTransformSnapValues(translation?: number, rotation?: number, scale?: number): void {
+  setTransformSnapValues(
+    translation?: number,
+    rotation?: number,
+    scale?: number
+  ): void {
     this.transformGizmo.setSnapValues(translation, rotation, scale);
   }
 
   /**
    * Get snap values
    */
-  getTransformSnapValues(): { translation: number; rotation: number; scale: number } {
+  getTransformSnapValues(): {
+    translation: number;
+    rotation: number;
+    scale: number;
+  } {
     return this.transformGizmo.getSnapValues();
   }
 
@@ -959,14 +1039,18 @@ export class DevtoolProbe {
   /**
    * Subscribe to transform gizmo dragging state changes
    */
-  onTransformDraggingChanged(callback: (isDragging: boolean) => void): () => void {
+  onTransformDraggingChanged(
+    callback: (isDragging: boolean) => void
+  ): () => void {
     return this.transformGizmo.onDraggingChanged(callback);
   }
 
   /**
    * Subscribe to transform changes
    */
-  onTransformChanged(callback: (entry: TransformHistoryEntry) => void): () => void {
+  onTransformChanged(
+    callback: (entry: TransformHistoryEntry) => void
+  ): () => void {
     return this.transformGizmo.onTransformChanged(callback);
   }
 
@@ -1081,7 +1165,9 @@ export class DevtoolProbe {
   /**
    * Subscribe to camera change events
    */
-  onCameraChanged(callback: (camera: THREE.Camera, info: CameraInfo) => void): () => void {
+  onCameraChanged(
+    callback: (camera: THREE.Camera, info: CameraInfo) => void
+  ): () => void {
     return this.cameraController.onCameraChanged(callback);
   }
 
@@ -1124,7 +1210,11 @@ export class DevtoolProbe {
    * Update a material property by UUID
    * Used by the overlay and extension to live-edit materials
    */
-  updateMaterialProperty(materialUuid: string, property: string, value: unknown): void {
+  updateMaterialProperty(
+    materialUuid: string,
+    property: string,
+    value: unknown
+  ): void {
     for (const observer of this._sceneObservers.values()) {
       const material = observer.findMaterialByUuid(materialUuid);
       if (material) {
@@ -1172,7 +1262,7 @@ export class DevtoolProbe {
   /**
    * Initialize inspect mode with canvas and camera
    * This enables interactive object selection via raycasting
-   * 
+   *
    * @example
    * ```typescript
    * import * as THREE from 'three';
@@ -1180,10 +1270,10 @@ export class DevtoolProbe {
    * probe.setThreeReference(THREE);
    * probe.observeRenderer(renderer);
    * probe.observeScene(scene);
-   * 
+   *
    * // Initialize inspect mode
    * probe.initializeInspectMode(renderer.domElement, camera, THREE);
-   * 
+   *
    * // Enable inspect mode (e.g., via UI toggle)
    * probe.setInspectModeEnabled(true);
    * ```
@@ -1243,10 +1333,10 @@ export class DevtoolProbe {
 
   /**
    * Register a logical entity (component ↔ three.js mapping)
-   * 
+   *
    * @param options Entity registration options
    * @returns The entity ID
-   * 
+   *
    * @example
    * ```typescript
    * const playerId = probe.registerLogicalEntity({
@@ -1256,7 +1346,7 @@ export class DevtoolProbe {
    *   tags: ['controllable', 'saveable'],
    *   metadata: { health: 100 },
    * });
-   * 
+   *
    * probe.addObjectToEntity(playerId, playerMesh);
    * ```
    */
@@ -1265,13 +1355,18 @@ export class DevtoolProbe {
    * @deprecated Use the options object form instead
    */
   registerLogicalEntity(entity: LogicalEntity): void;
-  registerLogicalEntity(optionsOrEntity: LogicalEntityOptions | LogicalEntity): EntityId | void {
+  registerLogicalEntity(
+    optionsOrEntity: LogicalEntityOptions | LogicalEntity
+  ): EntityId | void {
     // Handle legacy LogicalEntity format
     if ('label' in optionsOrEntity) {
       const legacy = optionsOrEntity as LogicalEntity;
       this._logicalEntities.set(legacy.id, legacy);
-      this.log('Registered logical entity (legacy)', { id: legacy.id, label: legacy.label });
-      
+      this.log('Registered logical entity (legacy)', {
+        id: legacy.id,
+        label: legacy.label,
+      });
+
       // Also register in new system
       const entityId = this.entityManager.registerLogicalEntity({
         id: legacy.id,
@@ -1280,34 +1375,40 @@ export class DevtoolProbe {
         componentId: legacy.componentId,
         metadata: legacy.metadata,
       });
-      
+
       // Add objects
       for (const obj of legacy.objects) {
         this.entityManager.addObjectToEntity(entityId, obj);
       }
-      
+
       return;
     }
-    
+
     // New format
     const entityId = this.entityManager.registerLogicalEntity(optionsOrEntity);
-    this.log('Registered logical entity', { id: entityId, name: optionsOrEntity.name });
+    this.log('Registered logical entity', {
+      id: entityId,
+      name: optionsOrEntity.name,
+    });
     return entityId;
   }
 
   /**
    * Update an existing logical entity
-   * 
+   *
    * @param entityId Entity ID
    * @param updates Updates to apply
    */
-  updateLogicalEntity(entityId: EntityId, updates: Partial<Omit<LogicalEntityOptions, 'id'>>): void {
+  updateLogicalEntity(
+    entityId: EntityId,
+    updates: Partial<Omit<LogicalEntityOptions, 'id'>>
+  ): void {
     // Handle legacy format
     const legacyEntity = this._logicalEntities.get(entityId);
     if (legacyEntity) {
       Object.assign(legacyEntity, updates);
     }
-    
+
     // Update in new system
     try {
       this.entityManager.updateLogicalEntity(entityId, updates);
@@ -1318,7 +1419,7 @@ export class DevtoolProbe {
 
   /**
    * Unregister a logical entity
-   * 
+   *
    * @param entityId Entity ID
    * @param recursive Whether to also unregister child entities
    */
@@ -1330,13 +1431,13 @@ export class DevtoolProbe {
 
   /**
    * Add a Three.js object to an entity
-   * 
+   *
    * @param entityId Entity ID
    * @param object Three.js object to add
    */
   addObjectToEntity(entityId: EntityId, object: THREE.Object3D): void {
     this.entityManager.addObjectToEntity(entityId, object);
-    
+
     // Also update legacy
     const legacyEntity = this._logicalEntities.get(entityId);
     if (legacyEntity && !legacyEntity.objects.includes(object)) {
@@ -1346,13 +1447,13 @@ export class DevtoolProbe {
 
   /**
    * Remove a Three.js object from an entity
-   * 
+   *
    * @param entityId Entity ID
    * @param object Three.js object to remove
    */
   removeObjectFromEntity(entityId: EntityId, object: THREE.Object3D): void {
     this.entityManager.removeObjectFromEntity(entityId, object);
-    
+
     // Also update legacy
     const legacyEntity = this._logicalEntities.get(entityId);
     if (legacyEntity) {
@@ -1393,12 +1494,12 @@ export class DevtoolProbe {
 
   /**
    * Filter entities by criteria
-   * 
+   *
    * @example
    * ```typescript
    * // Get all entities in the game module
    * const gameEntities = probe.filterEntities({ modulePrefix: '@game/' });
-   * 
+   *
    * // Get all controllable entities
    * const controllables = probe.filterEntities({ tags: ['controllable'] });
    * ```
@@ -1416,7 +1517,7 @@ export class DevtoolProbe {
 
   /**
    * Get module information with aggregated metrics
-   * 
+   *
    * @param moduleId Module ID
    * @returns Module info with entity count, object count, and metrics
    */
@@ -1433,7 +1534,7 @@ export class DevtoolProbe {
 
   /**
    * Navigate from an object to its entity and related info
-   * 
+   *
    * @param object Three.js object
    * @returns Navigation result with entity, module, ancestors, and children
    */
@@ -1443,7 +1544,7 @@ export class DevtoolProbe {
 
   /**
    * Navigate from a component ID to its entity and related info
-   * 
+   *
    * @param componentId Component instance ID
    * @returns Navigation result with entity, module, ancestors, and children
    */
@@ -1453,7 +1554,7 @@ export class DevtoolProbe {
 
   /**
    * Navigate from an entity ID to full navigation info
-   * 
+   *
    * @param entityId Entity ID
    * @returns Navigation result with entity, module, ancestors, and children
    */
@@ -1463,7 +1564,7 @@ export class DevtoolProbe {
 
   /**
    * Subscribe to entity lifecycle events
-   * 
+   *
    * @param callback Event callback
    * @returns Unsubscribe function
    */
@@ -1502,9 +1603,9 @@ export class DevtoolProbe {
 
   /**
    * Register a plugin
-   * 
+   *
    * @param plugin Plugin definition
-   * 
+   *
    * @example
    * ```typescript
    * probe.registerPlugin({
@@ -1531,7 +1632,7 @@ export class DevtoolProbe {
 
   /**
    * Unregister a plugin
-   * 
+   *
    * @param pluginId Plugin ID
    */
   async unregisterPlugin(pluginId: PluginId): Promise<void> {
@@ -1540,7 +1641,7 @@ export class DevtoolProbe {
 
   /**
    * Activate a plugin
-   * 
+   *
    * @param pluginId Plugin ID
    */
   async activatePlugin(pluginId: PluginId): Promise<void> {
@@ -1549,7 +1650,7 @@ export class DevtoolProbe {
 
   /**
    * Deactivate a plugin
-   * 
+   *
    * @param pluginId Plugin ID
    */
   async deactivatePlugin(pluginId: PluginId): Promise<void> {
@@ -1601,12 +1702,12 @@ export class DevtoolProbe {
 
   /**
    * Load and activate a plugin from an npm package
-   * 
+   *
    * @param packageName npm package name
    * @param version Version constraint (default: 'latest')
    * @param options Plugin options
    * @returns Load result
-   * 
+   *
    * @example
    * ```typescript
    * const result = await probe.loadPlugin('@3lens/plugin-shadows');
@@ -1633,12 +1734,15 @@ export class DevtoolProbe {
 
   /**
    * Load and activate a plugin from a URL
-   * 
+   *
    * @param url Plugin URL
    * @param options Plugin options
    * @returns Load result
    */
-  async loadPluginFromUrl(url: string, options?: Record<string, unknown>): Promise<PluginLoadResult> {
+  async loadPluginFromUrl(
+    url: string,
+    options?: Record<string, unknown>
+  ): Promise<PluginLoadResult> {
     const loader = this.getPluginLoader();
     const result = await loader.loadFromUrl(url, options);
 
@@ -1652,7 +1756,7 @@ export class DevtoolProbe {
 
   /**
    * Load plugins from multiple sources
-   * 
+   *
    * @param sources Array of plugin sources
    * @returns Array of load results
    */
@@ -1870,12 +1974,12 @@ export class DevtoolProbe {
    */
   private shouldSampleFrame(): boolean {
     const samplingConfig = this.config.sampling?.frameStats ?? 'every-frame';
-    
+
     // On-demand mode - never auto-sample
     if (samplingConfig === 'on-demand') {
       return false;
     }
-    
+
     // Every-frame mode
     if (samplingConfig === 'every-frame') {
       // Apply adaptive sampling when enabled and performance is stable
@@ -1888,7 +1992,7 @@ export class DevtoolProbe {
       }
       return true;
     }
-    
+
     // N-frames mode (number)
     if (typeof samplingConfig === 'number' && samplingConfig > 0) {
       this._framesSinceLastSample++;
@@ -1898,7 +2002,7 @@ export class DevtoolProbe {
       }
       return false;
     }
-    
+
     return true;
   }
 
@@ -1908,21 +2012,26 @@ export class DevtoolProbe {
    */
   private updateAdaptiveSampling(stats: FrameStats): void {
     if (!this._adaptiveSamplingEnabled) return;
-    
+
     const currentFps = stats.performance?.fps ?? 60;
     const fpsDiff = Math.abs(currentFps - this._lastFps);
     this._lastFps = currentFps;
-    
+
     // Consider performance "stable" if FPS varies less than 5%
     const isStable = fpsDiff < currentFps * 0.05;
-    
+
     if (isStable) {
       this._stableFrameCount++;
       // After 60 stable frames, reduce sampling rate (max 4x reduction)
       if (this._stableFrameCount > 60 && this._adaptiveSamplingRate < 4) {
-        this._adaptiveSamplingRate = Math.min(4, this._adaptiveSamplingRate + 1);
+        this._adaptiveSamplingRate = Math.min(
+          4,
+          this._adaptiveSamplingRate + 1
+        );
         this._stableFrameCount = 0;
-        this.log('Adaptive sampling: reducing rate', { rate: this._adaptiveSamplingRate });
+        this.log('Adaptive sampling: reducing rate', {
+          rate: this._adaptiveSamplingRate,
+        });
       }
     } else {
       // Any instability resets to full sampling
@@ -1940,22 +2049,26 @@ export class DevtoolProbe {
    */
   private hasSignificantChange(stats: FrameStats): boolean {
     if (!this._lastSampledStats) return true;
-    
+
     const last = this._lastSampledStats;
-    
+
     // Check for significant changes in key metrics
-    const fpsChange = Math.abs((stats.performance?.fps ?? 0) - (last.performance?.fps ?? 0));
+    const fpsChange = Math.abs(
+      (stats.performance?.fps ?? 0) - (last.performance?.fps ?? 0)
+    );
     const drawCallChange = Math.abs(stats.drawCalls - last.drawCalls);
     const triangleChange = Math.abs(stats.triangles - last.triangles);
     const memoryChange = Math.abs(
       (stats.memory?.totalGpuMemory ?? 0) - (last.memory?.totalGpuMemory ?? 0)
     );
-    
+
     // Significant if: FPS changed by 2+, draw calls by 10+, triangles by 1000+, or memory by 1MB+
-    return fpsChange >= 2 || 
-           drawCallChange >= 10 || 
-           triangleChange >= 1000 ||
-           memoryChange >= 1024 * 1024;
+    return (
+      fpsChange >= 2 ||
+      drawCallChange >= 10 ||
+      triangleChange >= 1000 ||
+      memoryChange >= 1024 * 1024
+    );
   }
 
   private handleFrameStats(stats: FrameStats): void {
@@ -1964,7 +2077,8 @@ export class DevtoolProbe {
       this._frameStatsHistory.push(stats);
     } else {
       this._frameStatsHistory[this._frameStatsHistoryIndex] = stats;
-      this._frameStatsHistoryIndex = (this._frameStatsHistoryIndex + 1) % this._maxHistorySize;
+      this._frameStatsHistoryIndex =
+        (this._frameStatsHistoryIndex + 1) % this._maxHistorySize;
     }
 
     // Check sampling configuration - may skip this frame
@@ -1980,7 +2094,8 @@ export class DevtoolProbe {
     this.updateAdaptiveSampling(stats);
 
     // Skip expensive operations if nothing is listening
-    const hasListeners = this._frameStatsCallbacks.length > 0 || this._transport?.isConnected();
+    const hasListeners =
+      this._frameStatsCallbacks.length > 0 || this._transport?.isConnected();
     if (!hasListeners && !this._ruleCheckEnabled && !this._selectedObject) {
       return; // Fast path - nothing to do
     }
@@ -1991,11 +2106,13 @@ export class DevtoolProbe {
       if (now - this._lastRuleCheck >= this._ruleCheckIntervalMs) {
         this._lastRuleCheck = now;
         const ruleResults = this._configLoader.checkRules(stats);
-        const violations = ruleResults.filter(r => !r.passed).map(r => ({
-          ruleId: r.ruleId,
-          message: r.message,
-          severity: r.severity as 'info' | 'warning' | 'error',
-        }));
+        const violations = ruleResults
+          .filter((r) => !r.passed)
+          .map((r) => ({
+            ruleId: r.ruleId,
+            message: r.message,
+            severity: r.severity as 'info' | 'warning' | 'error',
+          }));
         if (violations.length > 0) {
           stats.violations = violations;
         }
@@ -2082,7 +2199,9 @@ export class DevtoolProbe {
     });
   }
 
-  private handleSelectObject(message: DebugMessage & { debugId: string | null }): void {
+  private handleSelectObject(
+    message: DebugMessage & { debugId: string | null }
+  ): void {
     if (!message.debugId) {
       this.selectObject(null);
       return;
@@ -2098,7 +2217,9 @@ export class DevtoolProbe {
     }
   }
 
-  private handleHoverObject(message: DebugMessage & { debugId: string | null }): void {
+  private handleHoverObject(
+    message: DebugMessage & { debugId: string | null }
+  ): void {
     if (!message.debugId) {
       // Clear hover highlight
       this._hoveredObject = null;
@@ -2118,18 +2239,28 @@ export class DevtoolProbe {
   }
 
   private handleUpdateMaterialProperty(
-    message: DebugMessage & { materialUuid: string; property: string; value: unknown }
+    message: DebugMessage & {
+      materialUuid: string;
+      property: string;
+      value: unknown;
+    }
   ): void {
     // Find material by UUID across all observers
     for (const observer of this._sceneObservers.values()) {
       const material = observer.findMaterialByUuid(message.materialUuid);
       if (material) {
-        this.applyMaterialPropertyChange(material, message.property, message.value);
+        this.applyMaterialPropertyChange(
+          material,
+          message.property,
+          message.value
+        );
         return;
       }
     }
 
-    this.log('Material not found for property update', { uuid: message.materialUuid });
+    this.log('Material not found for property update', {
+      uuid: message.materialUuid,
+    });
   }
 
   private handleGeometryVisualization(
@@ -2170,7 +2301,9 @@ export class DevtoolProbe {
   ): void {
     const THREE = this._threeRef;
     if (!THREE) {
-      this.log('THREE.js reference not set - cannot create visualization helpers');
+      this.log(
+        'THREE.js reference not set - cannot create visualization helpers'
+      );
       return;
     }
 
@@ -2187,7 +2320,9 @@ export class DevtoolProbe {
       switch (visualization) {
         case 'wireframe': {
           // Toggle wireframe on the material(s)
-          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          const materials = Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material];
           for (const mat of materials) {
             if (mat && 'wireframe' in mat) {
               (mat as THREE.MeshBasicMaterial).wireframe = true;
@@ -2230,7 +2365,9 @@ export class DevtoolProbe {
       if (helper) {
         if (visualization === 'wireframe') {
           // Restore wireframe state
-          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          const materials = Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material];
           for (const mat of materials) {
             if (mat && 'wireframe' in mat) {
               (mat as THREE.MeshBasicMaterial).wireframe = false;
@@ -2258,10 +2395,13 @@ export class DevtoolProbe {
     }
   }
 
-  private createNormalsHelper(mesh: THREE.Mesh, THREE: ThreeNamespace): THREE.LineSegments | null {
+  private createNormalsHelper(
+    mesh: THREE.Mesh,
+    THREE: ThreeNamespace
+  ): THREE.LineSegments | null {
     const geometry = mesh.geometry;
     const normalAttribute = geometry.attributes.normal;
-    
+
     if (!normalAttribute) {
       this.log('No normal attribute found on geometry');
       return null;
@@ -2290,11 +2430,18 @@ export class DevtoolProbe {
       // Start point (vertex position)
       vertices.push(x, y, z);
       // End point (vertex + normal * length)
-      vertices.push(x + nx * normalLength, y + ny * normalLength, z + nz * normalLength);
+      vertices.push(
+        x + nx * normalLength,
+        y + ny * normalLength,
+        z + nz * normalLength
+      );
     }
 
     const lineGeometry = new THREE.BufferGeometry();
-    lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    lineGeometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(vertices, 3)
+    );
 
     const lineMaterial = new THREE.LineBasicMaterial({ color });
     const lineSegments = new THREE.LineSegments(lineGeometry, lineMaterial);
@@ -2317,7 +2464,12 @@ export class DevtoolProbe {
       case 'color':
       case 'emissive': {
         // Value is a hex number
-        if (typeof value === 'number' && mat[property] && typeof (mat[property] as { setHex?: (v: number) => void }).setHex === 'function') {
+        if (
+          typeof value === 'number' &&
+          mat[property] &&
+          typeof (mat[property] as { setHex?: (v: number) => void }).setHex ===
+            'function'
+        ) {
           (mat[property] as { setHex: (v: number) => void }).setHex(value);
         }
         break;
@@ -2407,7 +2559,9 @@ export class DevtoolProbe {
   /**
    * Subscribe to resource lifecycle events (geometry, material, texture creation/disposal)
    */
-  onResourceEvent(callback: (event: ResourceLifecycleEvent) => void): Unsubscribe {
+  onResourceEvent(
+    callback: (event: ResourceLifecycleEvent) => void
+  ): Unsubscribe {
     this._resourceEventCallbacks.push(callback);
     return () => {
       const index = this._resourceEventCallbacks.indexOf(callback);
@@ -2433,10 +2587,14 @@ export class DevtoolProbe {
   /**
    * Get resource lifecycle events filtered by resource type
    */
-  getResourceEventsByType(resourceType: ResourceType): ResourceLifecycleEvent[] {
+  getResourceEventsByType(
+    resourceType: ResourceType
+  ): ResourceLifecycleEvent[] {
     const events: ResourceLifecycleEvent[] = [];
     for (const observer of this._sceneObservers.values()) {
-      events.push(...observer.getLifecycleTracker().getEventsByType(resourceType));
+      events.push(
+        ...observer.getLifecycleTracker().getEventsByType(resourceType)
+      );
     }
     events.sort((a, b) => a.timestamp - b.timestamp);
     return events;
@@ -2445,10 +2603,14 @@ export class DevtoolProbe {
   /**
    * Get resource lifecycle events filtered by event type
    */
-  getResourceEventsByEventType(eventType: LifecycleEventType): ResourceLifecycleEvent[] {
+  getResourceEventsByEventType(
+    eventType: LifecycleEventType
+  ): ResourceLifecycleEvent[] {
     const events: ResourceLifecycleEvent[] = [];
     for (const observer of this._sceneObservers.values()) {
-      events.push(...observer.getLifecycleTracker().getEventsByEventType(eventType));
+      events.push(
+        ...observer.getLifecycleTracker().getEventsByEventType(eventType)
+      );
     }
     events.sort((a, b) => a.timestamp - b.timestamp);
     return events;
@@ -2457,10 +2619,15 @@ export class DevtoolProbe {
   /**
    * Get resource lifecycle events within a time range
    */
-  getResourceEventsInRange(startMs: number, endMs: number): ResourceLifecycleEvent[] {
+  getResourceEventsInRange(
+    startMs: number,
+    endMs: number
+  ): ResourceLifecycleEvent[] {
     const events: ResourceLifecycleEvent[] = [];
     for (const observer of this._sceneObservers.values()) {
-      events.push(...observer.getLifecycleTracker().getEventsInRange(startMs, endMs));
+      events.push(
+        ...observer.getLifecycleTracker().getEventsInRange(startMs, endMs)
+      );
     }
     events.sort((a, b) => a.timestamp - b.timestamp);
     return events;
@@ -2480,28 +2647,31 @@ export class DevtoolProbe {
 
     for (const observer of this._sceneObservers.values()) {
       const observerSummary = observer.getLifecycleTracker().getSummary();
-      
+
       summary.geometries.created += observerSummary.geometries.created;
       summary.geometries.disposed += observerSummary.geometries.disposed;
       summary.geometries.active += observerSummary.geometries.active;
       summary.geometries.leaked += observerSummary.geometries.leaked;
-      
+
       summary.materials.created += observerSummary.materials.created;
       summary.materials.disposed += observerSummary.materials.disposed;
       summary.materials.active += observerSummary.materials.active;
       summary.materials.leaked += observerSummary.materials.leaked;
-      
+
       summary.textures.created += observerSummary.textures.created;
       summary.textures.disposed += observerSummary.textures.disposed;
       summary.textures.active += observerSummary.textures.active;
       summary.textures.leaked += observerSummary.textures.leaked;
-      
+
       summary.totalEvents += observerSummary.totalEvents;
 
       // Track oldest active resource across all observers
       if (observerSummary.oldestActiveResource) {
-        if (!summary.oldestActiveResource || 
-            observerSummary.oldestActiveResource.ageMs > summary.oldestActiveResource.ageMs) {
+        if (
+          !summary.oldestActiveResource ||
+          observerSummary.oldestActiveResource.ageMs >
+            summary.oldestActiveResource.ageMs
+        ) {
           summary.oldestActiveResource = observerSummary.oldestActiveResource;
         }
       }
@@ -2536,7 +2706,7 @@ export class DevtoolProbe {
     const seen = new Set<string>();
     return leaks
       .sort((a, b) => b.ageMs - a.ageMs)
-      .filter(leak => {
+      .filter((leak) => {
         if (seen.has(leak.uuid)) return false;
         seen.add(leak.uuid);
         return true;
@@ -2647,7 +2817,7 @@ export class DevtoolProbe {
     const seen = new Set<string>();
     return orphans
       .sort((a, b) => b.ageMs - a.ageMs)
-      .filter(o => {
+      .filter((o) => {
         if (seen.has(o.uuid)) return false;
         seen.add(o.uuid);
         return true;
@@ -2668,7 +2838,10 @@ export class DevtoolProbe {
   /**
    * Get memory history for charting
    */
-  getResourceMemoryHistory(): Array<{ timestamp: number; estimatedBytes: number }> {
+  getResourceMemoryHistory(): Array<{
+    timestamp: number;
+    estimatedBytes: number;
+  }> {
     // Merge and sort history from all observers
     const allHistory: Array<{ timestamp: number; estimatedBytes: number }> = [];
     for (const observer of this._sceneObservers.values()) {
@@ -2754,7 +2927,12 @@ export class DevtoolProbe {
   /**
    * Get violation summary
    */
-  getViolationSummary(): { errors: number; warnings: number; info: number; total: number } {
+  getViolationSummary(): {
+    errors: number;
+    warnings: number;
+    info: number;
+    total: number;
+  } {
     return this._configLoader.getViolationSummary();
   }
 
@@ -2853,11 +3031,11 @@ export class DevtoolProbe {
     if (this.config.sampling) {
       Object.assign(this.config.sampling, config);
     }
-    
+
     // Reset sampling state when config changes
     this._framesSinceLastSample = 0;
     this._adaptiveSamplingRate = 1;
-    
+
     this.log('Sampling config updated', config);
   }
 
@@ -2911,7 +3089,16 @@ export class DevtoolProbe {
    * Get statistics for all memory pools
    * Useful for debugging and monitoring memory pool efficiency
    */
-  getPoolStats(): Record<string, PoolStats | { available: number; totalCreated: number; acquireCount: number; releaseCount: number }> {
+  getPoolStats(): Record<
+    string,
+    | PoolStats
+    | {
+        available: number;
+        totalCreated: number;
+        acquireCount: number;
+        releaseCount: number;
+      }
+  > {
     try {
       return getPoolManager().getAllStats();
     } catch {
@@ -2967,4 +3154,3 @@ export class DevtoolProbe {
     }
   }
 }
-

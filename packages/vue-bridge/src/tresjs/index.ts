@@ -4,4 +4,3 @@ export {
   type TresProbeOptions,
   type UseTresProbeReturn,
 } from './useTresProbe';
-

@@ -49,9 +49,18 @@ import type {
 export class PluginManager {
   private readonly _probe: DevtoolProbe;
   private readonly _plugins = new Map<PluginId, RegisteredPlugin>();
-  private readonly _panels = new Map<string, { pluginId: PluginId; panel: PanelDefinition }>();
-  private readonly _toolbarActions = new Map<string, { pluginId: PluginId; action: ToolbarActionDefinition }>();
-  private readonly _contextMenuItems = new Map<string, { pluginId: PluginId; item: ContextMenuItemDefinition }>();
+  private readonly _panels = new Map<
+    string,
+    { pluginId: PluginId; panel: PanelDefinition }
+  >();
+  private readonly _toolbarActions = new Map<
+    string,
+    { pluginId: PluginId; action: ToolbarActionDefinition }
+  >();
+  private readonly _contextMenuItems = new Map<
+    string,
+    { pluginId: PluginId; item: ContextMenuItemDefinition }
+  >();
   private readonly _globalMessageHandlers: PluginMessageHandler[] = [];
 
   private _frameStats: FrameStats | null = null;
@@ -59,7 +68,12 @@ export class PluginManager {
   private _selectedNode: THREE.Object3D | null = null;
 
   // Toast callback (set by UI layer)
-  private _toastCallback: ((message: string, type: 'info' | 'success' | 'warning' | 'error') => void) | null = null;
+  private _toastCallback:
+    | ((
+        message: string,
+        type: 'info' | 'success' | 'warning' | 'error'
+      ) => void)
+    | null = null;
 
   // Render request callback (set by UI layer)
   private _renderRequestCallback: ((pluginId: PluginId) => void) | null = null;
@@ -200,8 +214,11 @@ export class PluginManager {
       this._log(`Plugin activated: ${registered.plugin.metadata.name}`);
     } catch (error) {
       registered.state = 'error';
-      registered.error = error instanceof Error ? error : new Error(String(error));
-      this._log(`Plugin activation failed: ${pluginId}`, { error: registered.error.message });
+      registered.error =
+        error instanceof Error ? error : new Error(String(error));
+      this._log(`Plugin activation failed: ${pluginId}`, {
+        error: registered.error.message,
+      });
       throw error;
     }
   }
@@ -237,15 +254,22 @@ export class PluginManager {
       this._log(`Plugin deactivated: ${registered.plugin.metadata.name}`);
     } catch (error) {
       registered.state = 'error';
-      registered.error = error instanceof Error ? error : new Error(String(error));
-      this._log(`Plugin deactivation failed: ${pluginId}`, { error: registered.error.message });
+      registered.error =
+        error instanceof Error ? error : new Error(String(error));
+      this._log(`Plugin deactivation failed: ${pluginId}`, {
+        error: registered.error.message,
+      });
     }
   }
 
   /**
    * Get all registered plugins
    */
-  getPlugins(): Array<{ id: PluginId; metadata: DevtoolPlugin['metadata']; state: RegisteredPlugin['state'] }> {
+  getPlugins(): Array<{
+    id: PluginId;
+    metadata: DevtoolPlugin['metadata'];
+    state: RegisteredPlugin['state'];
+  }> {
     return Array.from(this._plugins.entries()).map(([id, reg]) => ({
       id,
       metadata: reg.plugin.metadata,
@@ -263,7 +287,11 @@ export class PluginManager {
   /**
    * Get all registered panels
    */
-  getPanels(): Array<{ key: string; pluginId: PluginId; panel: PanelDefinition }> {
+  getPanels(): Array<{
+    key: string;
+    pluginId: PluginId;
+    panel: PanelDefinition;
+  }> {
     return Array.from(this._panels.entries())
       .map(([key, { pluginId, panel }]) => ({ key, pluginId, panel }))
       .sort((a, b) => (a.panel.order ?? 100) - (b.panel.order ?? 100));
@@ -272,7 +300,11 @@ export class PluginManager {
   /**
    * Get all registered toolbar actions
    */
-  getToolbarActions(): Array<{ key: string; pluginId: PluginId; action: ToolbarActionDefinition }> {
+  getToolbarActions(): Array<{
+    key: string;
+    pluginId: PluginId;
+    action: ToolbarActionDefinition;
+  }> {
     return Array.from(this._toolbarActions.entries())
       .map(([key, { pluginId, action }]) => ({ key, pluginId, action }))
       .sort((a, b) => (a.action.order ?? 100) - (b.action.order ?? 100));
@@ -281,9 +313,11 @@ export class PluginManager {
   /**
    * Get context menu items for a target
    */
-  getContextMenuItems(
-    target: 'scene-tree' | 'inspector' | 'viewport'
-  ): Array<{ key: string; pluginId: PluginId; item: ContextMenuItemDefinition }> {
+  getContextMenuItems(target: 'scene-tree' | 'inspector' | 'viewport'): Array<{
+    key: string;
+    pluginId: PluginId;
+    item: ContextMenuItemDefinition;
+  }> {
     return Array.from(this._contextMenuItems.entries())
       .filter(([, { item }]) => item.target === target || item.target === 'all')
       .map(([key, { pluginId, item }]) => ({ key, pluginId, item }))
@@ -421,7 +455,12 @@ export class PluginManager {
   /**
    * Send a message between plugins
    */
-  sendMessage(source: PluginId, target: PluginId | '*', type: string, payload: unknown): void {
+  sendMessage(
+    source: PluginId,
+    target: PluginId | '*',
+    type: string,
+    payload: unknown
+  ): void {
     const message: PluginMessage = {
       source,
       target,
@@ -471,7 +510,12 @@ export class PluginManager {
   /**
    * Set the toast callback (called by UI layer)
    */
-  setToastCallback(callback: (message: string, type: 'info' | 'success' | 'warning' | 'error') => void): void {
+  setToastCallback(
+    callback: (
+      message: string,
+      type: 'info' | 'success' | 'warning' | 'error'
+    ) => void
+  ): void {
     this._toastCallback = callback;
   }
 
@@ -509,16 +553,24 @@ export class PluginManager {
   /**
    * Update plugin settings
    */
-  updatePluginSettings(pluginId: PluginId, settings: Record<string, unknown>): void {
+  updatePluginSettings(
+    pluginId: PluginId,
+    settings: Record<string, unknown>
+  ): void {
     const registered = this._plugins.get(pluginId);
     if (!registered) return;
 
     registered.settings = { ...registered.settings, ...settings };
 
     // Notify plugin of settings change
-    if (registered.plugin.onSettingsChange && registered.state === 'activated') {
+    if (
+      registered.plugin.onSettingsChange &&
+      registered.state === 'activated'
+    ) {
       const context = this._createContext(pluginId);
-      this._safeCall(() => registered.plugin.onSettingsChange!(registered.settings, context));
+      this._safeCall(() =>
+        registered.plugin.onSettingsChange!(registered.settings, context)
+      );
     }
   }
 
@@ -533,7 +585,9 @@ export class PluginManager {
    * Get active plugin count
    */
   get activePluginCount(): number {
-    return Array.from(this._plugins.values()).filter((p) => p.state === 'activated').length;
+    return Array.from(this._plugins.values()).filter(
+      (p) => p.state === 'activated'
+    ).length;
   }
 
   private _createContext(pluginId: PluginId): DevtoolContext {
@@ -695,4 +749,3 @@ export class PluginManager {
     }
   }
 }
-

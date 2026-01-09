@@ -11,7 +11,9 @@ import { useThreeLens, useThreeLensOptional } from './useThreeLens';
 import { ThreeLensKey, type ThreeLensContext } from '../types';
 
 // Helper to create a test context
-function createTestContext(overrides: Partial<ThreeLensContext> = {}): ThreeLensContext {
+function createTestContext(
+  overrides: Partial<ThreeLensContext> = {}
+): ThreeLensContext {
   return {
     probe: ref(null),
     isReady: ref(false),
@@ -66,7 +68,9 @@ describe('useThreeLens', () => {
     });
 
     mount(TestComponent);
-    expect(errorMessage).toContain('useThreeLens must be used within a component');
+    expect(errorMessage).toContain(
+      'useThreeLens must be used within a component'
+    );
     expect(errorMessage).toContain('ThreeLensPlugin');
   });
 

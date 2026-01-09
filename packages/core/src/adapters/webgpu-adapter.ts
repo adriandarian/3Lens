@@ -18,35 +18,35 @@ import { WebGpuTimingManager, type GpuFrameTiming } from './webgpu-timing';
 
 /**
  * WebGPU Renderer type from Three.js
- * 
+ *
  * Three.js exposes WebGPURenderer with specific properties:
  * - isWebGPURenderer: boolean (always true for WebGPURenderer)
  * - backend: WebGPUBackend
  * - info: similar to WebGLRenderer.info but adapted for WebGPU
- * 
+ *
  * @see https://threejs.org/docs/?q=renderer#WebGPURenderer
  */
 interface WebGPURenderer extends THREE.Renderer {
   readonly isWebGPURenderer: true;
-  
+
   // Info object similar to WebGLRenderer
   readonly info: WebGPURendererInfo;
-  
+
   // Backend access
   readonly backend?: WebGPUBackend;
-  
+
   // Compute capabilities
   compute?(computeNodes: unknown): Promise<void>;
   computeAsync?(computeNodes: unknown): Promise<void>;
-  
+
   // Async rendering
   renderAsync?(scene: THREE.Scene, camera: THREE.Camera): Promise<void>;
-  
+
   // Standard renderer methods
   render(scene: THREE.Scene, camera: THREE.Camera): void;
   setSize(width: number, height: number, updateStyle?: boolean): void;
   dispose(): void;
-  
+
   // Node material support
   readonly coordinateSystem: number;
 }
@@ -58,14 +58,14 @@ interface WebGPUBackend {
   device?: GPUDevice;
   context?: GPUCanvasContext;
   adapter?: GPUAdapter;
-  
+
   // Timestamp query support
   timestampQuerySet?: GPUQuerySet;
   hasTimestampQuery?: boolean;
-  
+
   // Pipeline cache
   pipelines?: Map<string, GPURenderPipeline | GPUComputePipeline>;
-  
+
   // Buffer management
   buffers?: Map<unknown, GPUBuffer>;
   textures?: Map<unknown, GPUTexture>;
@@ -107,10 +107,12 @@ interface LightInfo {
 
 /**
  * Check if a renderer is a WebGPURenderer
- * 
+ *
  * @see https://threejs.org/docs/?q=renderer#WebGPURenderer.isWebGPURenderer
  */
-export function isWebGPURenderer(renderer: unknown): renderer is WebGPURenderer {
+export function isWebGPURenderer(
+  renderer: unknown
+): renderer is WebGPURenderer {
   return (
     renderer !== null &&
     typeof renderer === 'object' &&
@@ -121,30 +123,28 @@ export function isWebGPURenderer(renderer: unknown): renderer is WebGPURenderer 
 
 /**
  * Create a WebGPU renderer adapter for Three.js WebGPURenderer
- * 
+ *
  * This adapter provides performance metrics and resource tracking
  * specifically optimized for WebGPU's architecture.
- * 
+ *
  * @param renderer - Three.js WebGPURenderer instance
  * @returns RendererAdapter for WebGPU
- * 
+ *
  * @example
  * ```typescript
  * import { WebGPURenderer } from 'three/webgpu';
  * import { createWebGPUAdapter, isWebGPURenderer } from '@3lens/core';
- * 
+ *
  * const renderer = new WebGPURenderer();
  * await renderer.init();
- * 
+ *
  * if (isWebGPURenderer(renderer)) {
  *   const adapter = createWebGPUAdapter(renderer);
  *   probe.setRendererAdapter(adapter);
  * }
  * ```
  */
-export function createWebGPUAdapter(
-  renderer: WebGPURenderer
-): RendererAdapter {
+export function createWebGPUAdapter(renderer: WebGPURenderer): RendererAdapter {
   const frameCallbacks: Array<(stats: FrameStats) => void> = [];
   let frameCount = 0;
   let disposed = false;
@@ -184,24 +184,29 @@ export function createWebGPUAdapter(
   // Try to detect if timestamp queries are available and initialize timing
   const backend = renderer.backend;
   const device = backend?.device;
-  
+
   if (device?.features.has('timestamp-query')) {
     gpuTimingEnabled = true;
     gpuTimingManager = new WebGpuTimingManager({
       maxHistorySize: 120,
       maxPassesPerFrame: 16,
     });
-    
+
     // Initialize async
-    gpuTimingManager.initialize(device).then((success) => {
-      _gpuTimingInitialized = success;
-      if (success) {
-        // eslint-disable-next-line no-console
-        console.log('[3Lens WebGPU] GPU timing initialized with timestamp queries');
-      }
-    }).catch(() => {
-      _gpuTimingInitialized = false;
-    });
+    gpuTimingManager
+      .initialize(device)
+      .then((success) => {
+        _gpuTimingInitialized = success;
+        if (success) {
+          // eslint-disable-next-line no-console
+          console.log(
+            '[3Lens WebGPU] GPU timing initialized with timestamp queries'
+          );
+        }
+      })
+      .catch(() => {
+        _gpuTimingInitialized = false;
+      });
   } else if (backend?.hasTimestampQuery) {
     gpuTimingEnabled = true;
   }
@@ -224,7 +229,8 @@ export function createWebGPUAdapter(
     frameTimeCount++;
 
     // Calculate averages
-    const _avgFrameTime = frameTimeCount > 0 ? totalFrameTime / frameTimeCount : cpuTimeMs;
+    const _avgFrameTime =
+      frameTimeCount > 0 ? totalFrameTime / frameTimeCount : cpuTimeMs;
 
     // Analyze scene if needed
     if (!cachedSceneAnalysis) {
@@ -242,16 +248,24 @@ export function createWebGPUAdapter(
     const memory: MemoryStats = buildMemoryStats(info);
 
     // Build rendering stats
-    const rendering: RenderingStats = buildRenderingStats(scene, info, cachedSceneAnalysis);
+    const rendering: RenderingStats = buildRenderingStats(
+      scene,
+      info,
+      cachedSceneAnalysis
+    );
 
     // Get GPU timing from timestamp queries
     const gpuTiming = lastGpuTiming;
-    const gpuTimeMs = gpuTiming?.totalMs ?? (lastGpuTime > 0 ? lastGpuTime : undefined);
+    const gpuTimeMs =
+      gpuTiming?.totalMs ?? (lastGpuTime > 0 ? lastGpuTime : undefined);
 
     // Calculate FPS values
     const currentFps = cpuTimeMs > 0 ? 1000 / cpuTimeMs : 60;
     const minFps = maxFrameTime > 0 ? 1000 / maxFrameTime : currentFps;
-    const maxFps = minFrameTime > 0 && minFrameTime < Infinity ? 1000 / minFrameTime : currentFps;
+    const maxFps =
+      minFrameTime > 0 && minFrameTime < Infinity
+        ? 1000 / minFrameTime
+        : currentFps;
 
     // Calculate delta time
     const deltaTime = frameCount > 0 ? cpuTimeMs : 0;
@@ -283,11 +297,13 @@ export function createWebGPUAdapter(
         fpsMin: minFps,
         fpsMax: maxFps,
         fps1PercentLow: minFps,
-        frameBudgetUsed: cpuTimeMs / 16.67 * 100,
+        frameBudgetUsed: (cpuTimeMs / 16.67) * 100,
         targetFrameTimeMs: 16.67,
         frameTimeVariance: 0,
-        trianglesPerDrawCall: info.render.calls > 0 ? info.render.triangles / info.render.calls : 0,
-        trianglesPerObject: totalObjects > 0 ? info.render.triangles / totalObjects : 0,
+        trianglesPerDrawCall:
+          info.render.calls > 0 ? info.render.triangles / info.render.calls : 0,
+        trianglesPerObject:
+          totalObjects > 0 ? info.render.triangles / totalObjects : 0,
         drawCallEfficiency: 100,
         isSmooth: cpuTimeMs < 16.67,
         droppedFrames: 0,
@@ -299,14 +315,16 @@ export function createWebGPUAdapter(
         buffersUsed: 0, // Would need deeper instrumentation
         computePasses: 0, // Would need deeper instrumentation
         renderPasses: 1, // At minimum, the main render pass
-        gpuTiming: gpuTiming ? {
-          totalMs: gpuTiming.totalMs,
-          passes: gpuTiming.passes.map(p => ({
-            name: p.name,
-            durationMs: p.durationMs,
-          })),
-          breakdown: gpuTiming.breakdown,
-        } : undefined,
+        gpuTiming: gpuTiming
+          ? {
+              totalMs: gpuTiming.totalMs,
+              passes: gpuTiming.passes.map((p) => ({
+                name: p.name,
+                durationMs: p.durationMs,
+              })),
+              breakdown: gpuTiming.breakdown,
+            }
+          : undefined,
       },
     };
 
@@ -441,7 +459,10 @@ export function createWebGPUAdapter(
       }
 
       // Check for animations
-      if ('animations' in obj && Array.isArray((obj as { animations?: unknown[] }).animations)) {
+      if (
+        'animations' in obj &&
+        Array.isArray((obj as { animations?: unknown[] }).animations)
+      ) {
         animations += (obj as { animations: unknown[] }).animations.length;
       }
     });
@@ -468,7 +489,9 @@ export function createWebGPUAdapter(
 
       // Collect materials
       if ('material' in obj && obj.material) {
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        const mats = Array.isArray(obj.material)
+          ? obj.material
+          : [obj.material];
         for (const mat of mats) {
           if (mat && !materials.has(mat.uuid)) {
             materials.set(mat.uuid, extractMaterialInfo(mat));
@@ -515,7 +538,9 @@ export function createWebGPUAdapter(
     const index = geom.index;
     const vertexCount = position?.count ?? 0;
     const indexCount = index?.count ?? 0;
-    const faceCount = index ? Math.floor(indexCount / 3) : Math.floor(vertexCount / 3);
+    const faceCount = index
+      ? Math.floor(indexCount / 3)
+      : Math.floor(vertexCount / 3);
 
     // Estimate memory
     let memoryBytes = 0;
@@ -548,7 +573,10 @@ export function createWebGPUAdapter(
       ref: mat.uuid,
       type: mat.type,
       name: mat.name || undefined,
-      color: 'color' in mat && mat.color ? (mat.color as THREE.Color).getHex() : undefined,
+      color:
+        'color' in mat && mat.color
+          ? (mat.color as THREE.Color).getHex()
+          : undefined,
       opacity: mat.opacity,
       transparent: mat.transparent,
       visible: mat.visible,
@@ -563,13 +591,25 @@ export function createWebGPUAdapter(
     textures: Map<string, TextureInfo>
   ): void {
     const textureProps = [
-      'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
-      'emissiveMap', 'displacementMap', 'alphaMap', 'envMap',
-      'lightMap', 'bumpMap', 'specularMap', 'gradientMap',
+      'map',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'aoMap',
+      'emissiveMap',
+      'displacementMap',
+      'alphaMap',
+      'envMap',
+      'lightMap',
+      'bumpMap',
+      'specularMap',
+      'gradientMap',
     ];
 
     for (const prop of textureProps) {
-      const tex = (mat as unknown as Record<string, THREE.Texture | null>)[prop];
+      const tex = (mat as unknown as Record<string, THREE.Texture | null>)[
+        prop
+      ];
       if (tex && !textures.has(tex.uuid)) {
         textures.set(tex.uuid, extractTextureInfo(tex, mat.uuid));
       }
@@ -579,13 +619,18 @@ export function createWebGPUAdapter(
   /**
    * Extract texture info
    */
-  function extractTextureInfo(tex: THREE.Texture, materialUuid: string): TextureInfo {
+  function extractTextureInfo(
+    tex: THREE.Texture,
+    materialUuid: string
+  ): TextureInfo {
     const width = tex.image?.width ?? 0;
     const height = tex.image?.height ?? 0;
 
     // Estimate memory (assume RGBA8 format)
     const bytesPerPixel = 4;
-    const mipmapLevels = tex.generateMipmaps ? Math.floor(Math.log2(Math.max(width, height))) + 1 : 1;
+    const mipmapLevels = tex.generateMipmaps
+      ? Math.floor(Math.log2(Math.max(width, height))) + 1
+      : 1;
     let memoryBytes = 0;
     let mipWidth = width;
     let mipHeight = height;
@@ -611,8 +656,14 @@ export function createWebGPUAdapter(
    * Build memory stats
    */
   function buildMemoryStats(info: WebGPURendererInfo): MemoryStats {
-    const textureMemory = cachedTextures.reduce((sum, t) => sum + t.estimatedMemoryBytes, 0);
-    const geometryMemory = cachedGeometries.reduce((sum, g) => sum + g.estimatedMemoryBytes, 0);
+    const textureMemory = cachedTextures.reduce(
+      (sum, t) => sum + t.estimatedMemoryBytes,
+      0
+    );
+    const geometryMemory = cachedGeometries.reduce(
+      (sum, g) => sum + g.estimatedMemoryBytes,
+      0
+    );
 
     return {
       geometries: info.memory.geometries,
@@ -623,7 +674,8 @@ export function createWebGPUAdapter(
       renderTargets: 0, // Would need deeper tracking
       renderTargetMemory: 0,
       programs: cachedPipelines.length, // Approximate with pipelines
-      jsHeapSize: (performance as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize,
+      jsHeapSize: (performance as { memory?: { usedJSHeapSize: number } })
+        .memory?.usedJSHeapSize,
     };
   }
 
@@ -728,7 +780,9 @@ export function createWebGPUAdapter(
 /**
  * Get WebGPU device limits and capabilities
  */
-export function getWebGPUCapabilities(renderer: WebGPURenderer): WebGPUCapabilities | null {
+export function getWebGPUCapabilities(
+  renderer: WebGPURenderer
+): WebGPUCapabilities | null {
   const backend = renderer.backend;
   const device = backend?.device;
   const _adapter = backend?.adapter;
@@ -751,8 +805,10 @@ export function getWebGPUCapabilities(renderer: WebGPURenderer): WebGPUCapabilit
     maxTextureArrayLayers: limits.maxTextureArrayLayers,
     maxBindGroups: limits.maxBindGroups,
     maxBindingsPerBindGroup: limits.maxBindingsPerBindGroup,
-    maxDynamicUniformBuffersPerPipelineLayout: limits.maxDynamicUniformBuffersPerPipelineLayout,
-    maxDynamicStorageBuffersPerPipelineLayout: limits.maxDynamicStorageBuffersPerPipelineLayout,
+    maxDynamicUniformBuffersPerPipelineLayout:
+      limits.maxDynamicUniformBuffersPerPipelineLayout,
+    maxDynamicStorageBuffersPerPipelineLayout:
+      limits.maxDynamicStorageBuffersPerPipelineLayout,
     maxSampledTexturesPerShaderStage: limits.maxSampledTexturesPerShaderStage,
     maxSamplersPerShaderStage: limits.maxSamplersPerShaderStage,
     maxStorageBuffersPerShaderStage: limits.maxStorageBuffersPerShaderStage,
@@ -811,27 +867,27 @@ export interface WebGPUCapabilities {
  */
 export interface WebGPURendererAdapter extends RendererAdapter {
   kind: 'webgpu';
-  
+
   /**
    * Get detailed pipeline information
    */
   getDetailedPipelines(): DetailedPipelineInfo[];
-  
+
   /**
    * Get bind group information
    */
   getBindGroups(): WebGPUBindGroupInfo[];
-  
+
   /**
    * Get shader source for a pipeline
    */
   getShaderSource(pipelineId: string): string | null;
-  
+
   /**
    * Get the WebGPU device
    */
   getDevice(): GPUDevice | null;
-  
+
   /**
    * Get WebGPU capabilities
    */
@@ -845,25 +901,25 @@ export interface DetailedPipelineInfo {
   id: string;
   label: string;
   type: 'render' | 'compute';
-  
+
   // Shader info
   vertexShader?: ShaderStageInfo;
   fragmentShader?: ShaderStageInfo;
   computeShader?: ShaderStageInfo;
-  
+
   // Render state
   primitive?: {
     topology: string;
     cullMode: string;
     frontFace: string;
   };
-  
+
   depthStencil?: {
     format: string;
     depthWriteEnabled: boolean;
     depthCompare: string;
   };
-  
+
   colorTargets?: Array<{
     format: string;
     blend?: {
@@ -871,19 +927,19 @@ export interface DetailedPipelineInfo {
       alpha: string;
     };
   }>;
-  
+
   multisample?: {
     count: number;
     mask: number;
     alphaToCoverageEnabled: boolean;
   };
-  
+
   // Bind groups
   bindGroupLayouts: Array<{
     index: number;
     entries: BindGroupLayoutEntryDetail[];
   }>;
-  
+
   // Stats
   usageCount: number;
   lastUsedFrame: number;
@@ -905,21 +961,31 @@ export interface ShaderStageInfo {
 export interface BindGroupLayoutEntryDetail {
   binding: number;
   visibility: ('VERTEX' | 'FRAGMENT' | 'COMPUTE')[];
-  resourceType: 'buffer' | 'sampler' | 'texture' | 'storageTexture' | 'externalTexture';
-  
+  resourceType:
+    | 'buffer'
+    | 'sampler'
+    | 'texture'
+    | 'storageTexture'
+    | 'externalTexture';
+
   // Buffer specifics
   bufferType?: 'uniform' | 'storage' | 'read-only-storage';
   bufferHasDynamicOffset?: boolean;
   bufferMinBindingSize?: number;
-  
+
   // Sampler specifics
   samplerType?: 'filtering' | 'non-filtering' | 'comparison';
-  
+
   // Texture specifics
-  textureSampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+  textureSampleType?:
+    | 'float'
+    | 'unfilterable-float'
+    | 'depth'
+    | 'sint'
+    | 'uint';
   textureViewDimension?: string;
   textureMultisampled?: boolean;
-  
+
   // Storage texture specifics
   storageTextureAccess?: 'write-only' | 'read-only' | 'read-write';
   storageTextureFormat?: string;
@@ -942,7 +1008,7 @@ export interface WebGPUBindGroupInfo {
 export interface WebGPUBindGroupEntryInfo {
   binding: number;
   resourceType: 'buffer' | 'sampler' | 'texture';
-  
+
   // Buffer info
   buffer?: {
     label: string;
@@ -951,7 +1017,7 @@ export interface WebGPUBindGroupEntryInfo {
     offset: number;
     bindingSize: number;
   };
-  
+
   // Sampler info
   sampler?: {
     label: string;
@@ -964,7 +1030,7 @@ export interface WebGPUBindGroupEntryInfo {
     compare?: string;
     maxAnisotropy: number;
   };
-  
+
   // Texture info
   textureView?: {
     label: string;
@@ -981,56 +1047,66 @@ export interface WebGPUBindGroupEntryInfo {
  * Create an extended WebGPU adapter with detailed pipeline/bind group tracking
  */
 export function createExtendedWebGPUAdapter(
-  renderer: { isWebGPURenderer: true; backend?: WebGPUBackend; info: WebGPURendererInfo } & THREE.Renderer
+  renderer: {
+    isWebGPURenderer: true;
+    backend?: WebGPUBackend;
+    info: WebGPURendererInfo;
+  } & THREE.Renderer
 ): WebGPURendererAdapter {
   // Get the base adapter
-  const baseAdapter = createWebGPUAdapter(renderer as unknown as Parameters<typeof createWebGPUAdapter>[0]);
-  
+  const baseAdapter = createWebGPUAdapter(
+    renderer as unknown as Parameters<typeof createWebGPUAdapter>[0]
+  );
+
   // Track detailed pipeline info
   const detailedPipelines = new Map<string, DetailedPipelineInfo>();
   const bindGroups = new Map<string, WebGPUBindGroupInfo>();
   const shaderSources = new Map<string, string>();
-  
+
   // Extended adapter
   const extendedAdapter: WebGPURendererAdapter = {
     ...baseAdapter,
     kind: 'webgpu',
-    
+
     getDetailedPipelines(): DetailedPipelineInfo[] {
       // Collect from backend if available
       const backend = renderer.backend;
       if (!backend?.pipelines) {
         // Return basic info from base adapter
-        return baseAdapter.getPipelines?.()?.map(p => ({
-          id: p.id,
-          label: p.label ?? p.id,
-          type: p.type,
-          bindGroupLayouts: [],
-          usageCount: p.usageCount ?? 0,
-          lastUsedFrame: 0,
-          createdAt: p.createdAt ?? Date.now(),
-        })) ?? [];
+        return (
+          baseAdapter.getPipelines?.()?.map((p) => ({
+            id: p.id,
+            label: p.label ?? p.id,
+            type: p.type,
+            bindGroupLayouts: [],
+            usageCount: p.usageCount ?? 0,
+            lastUsedFrame: 0,
+            createdAt: p.createdAt ?? Date.now(),
+          })) ?? []
+        );
       }
-      
+
       return Array.from(detailedPipelines.values());
     },
-    
+
     getBindGroups(): WebGPUBindGroupInfo[] {
       return Array.from(bindGroups.values());
     },
-    
+
     getShaderSource(pipelineId: string): string | null {
       return shaderSources.get(pipelineId) ?? null;
     },
-    
+
     getDevice(): GPUDevice | null {
       return renderer.backend?.device ?? null;
     },
-    
+
     getCapabilities(): WebGPUCapabilities | null {
-      return getWebGPUCapabilities(renderer as unknown as Parameters<typeof getWebGPUCapabilities>[0]);
+      return getWebGPUCapabilities(
+        renderer as unknown as Parameters<typeof getWebGPUCapabilities>[0]
+      );
     },
   };
-  
+
   return extendedAdapter;
 }

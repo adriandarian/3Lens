@@ -25,7 +25,11 @@ export interface UseTresProbeReturn {
   /**
    * Connect to TresJS renderer and scene
    */
-  connect: (renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) => void;
+  connect: (
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera
+  ) => void;
 
   /**
    * Disconnect from TresJS
@@ -59,7 +63,9 @@ export interface UseTresProbeReturn {
  * </template>
  * ```
  */
-export function useTresProbe(options: TresProbeOptions = {}): UseTresProbeReturn {
+export function useTresProbe(
+  options: TresProbeOptions = {}
+): UseTresProbeReturn {
   const { autoConnect: _autoConnect = true } = options;
   const context = useThreeLensOptional();
   const isConnected = ref(false);
@@ -86,7 +92,10 @@ export function useTresProbe(options: TresProbeOptions = {}): UseTresProbeReturn
           // Minimal THREE namespace for transform controls
           Object3D: scene.constructor,
         } as unknown as typeof THREE);
-        probe.initializeCameraController?.(camera, {} as unknown as typeof THREE);
+        probe.initializeCameraController?.(
+          camera,
+          {} as unknown as typeof THREE
+        );
       }
     } catch {
       // Helpers not critical
@@ -95,7 +104,11 @@ export function useTresProbe(options: TresProbeOptions = {}): UseTresProbeReturn
     _connectedRenderer = renderer;
     isConnected.value = true;
 
-    if (context.probe.value && (context.probe.value as unknown as { config?: { debug?: boolean } }).config?.debug) {
+    if (
+      context.probe.value &&
+      (context.probe.value as unknown as { config?: { debug?: boolean } })
+        .config?.debug
+    ) {
       // eslint-disable-next-line no-console
       console.log('[3Lens] Connected to TresJS');
     }
@@ -154,7 +167,11 @@ export function createTresConnector(
         }
       } catch (e) {
         // useTres not available or not inside TresCanvas
-        if (context.probe.value && (context.probe.value as unknown as { config?: { debug?: boolean } }).config?.debug) {
+        if (
+          context.probe.value &&
+          (context.probe.value as unknown as { config?: { debug?: boolean } })
+            .config?.debug
+        ) {
           // eslint-disable-next-line no-console
           console.log('[3Lens] TresJS context not available:', e);
         }

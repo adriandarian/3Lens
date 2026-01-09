@@ -1,6 +1,9 @@
 export { useThreeLens, useThreeLensOptional } from './useThreeLens';
 export { useProbe, useProbeOptional } from './useProbe';
-export { useSelectedObject, type UseSelectedObjectReturn } from './useSelectedObject';
+export {
+  useSelectedObject,
+  type UseSelectedObjectReturn,
+} from './useSelectedObject';
 export {
   useMetric,
   useFPS,
@@ -12,4 +15,3 @@ export {
   useGeometryCount,
 } from './useMetric';
 export { useDevtoolEntity, useDevtoolEntityGroup } from './useDevtoolEntity';
-

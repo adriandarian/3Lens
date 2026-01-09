@@ -201,12 +201,12 @@ export interface MaterialComplexityInfo {
  * Object cost analysis data
  */
 export interface ObjectCostData {
-  triangleCost: number;           // Triangle count contribution
-  materialComplexity: number;     // Material complexity score (1-10)
-  textureCost: number;            // Estimated texture memory cost
-  shadowCost: number;             // Shadow casting/receiving cost
-  totalCost: number;              // Combined cost score
-  costLevel: 'low' | 'medium' | 'high' | 'critical';  // Categorized cost level
+  triangleCost: number; // Triangle count contribution
+  materialComplexity: number; // Material complexity score (1-10)
+  textureCost: number; // Estimated texture memory cost
+  shadowCost: number; // Shadow casting/receiving cost
+  totalCost: number; // Combined cost score
+  costLevel: 'low' | 'medium' | 'high' | 'critical'; // Categorized cost level
   materials: MaterialComplexityInfo[];
 }
 
@@ -257,4 +257,3 @@ export interface CameraNodeData {
   top?: number;
   bottom?: number;
 }
-

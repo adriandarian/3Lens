@@ -200,4 +200,3 @@ export interface GeometryVisualizationCommand extends BaseMessage {
   visualization: 'wireframe' | 'boundingBox' | 'normals';
   enabled: boolean;
 }
-

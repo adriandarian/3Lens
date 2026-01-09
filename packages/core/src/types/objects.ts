@@ -84,4 +84,3 @@ export interface LogicalEntity {
    */
   metadata?: Record<string, unknown>;
 }
-

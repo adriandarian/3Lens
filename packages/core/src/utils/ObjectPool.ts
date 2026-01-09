@@ -1,9 +1,9 @@
 /**
  * Object Pool Implementation
- * 
+ *
  * Provides memory-efficient object reuse to reduce garbage collection pressure
  * in hot paths like per-frame statistics collection and scene traversal.
- * 
+ *
  * @module utils/ObjectPool
  */
 
@@ -53,7 +53,7 @@ export interface PoolStats {
 
 /**
  * Generic object pool for reusing objects and reducing GC pressure.
- * 
+ *
  * @example
  * ```typescript
  * const vectorPool = new ObjectPool({
@@ -62,7 +62,7 @@ export interface PoolStats {
  *   initialSize: 10,
  *   maxSize: 100,
  * });
- * 
+ *
  * const vec = vectorPool.acquire();
  * vec.x = 10;
  * // ... use vec ...
@@ -152,7 +152,8 @@ export class ObjectPool<T> {
   getStats(): PoolStats {
     const totalAcquires = this._acquireCount;
     const poolHits = this._releaseCount - this._discardedCount;
-    const hitRate = totalAcquires > 0 ? Math.min(poolHits / totalAcquires, 1) : 0;
+    const hitRate =
+      totalAcquires > 0 ? Math.min(poolHits / totalAcquires, 1) : 0;
 
     return {
       available: this.pool.length,
@@ -181,7 +182,7 @@ export class ObjectPool<T> {
 
 /**
  * ArrayPool - Specialized pool for reusing arrays
- * 
+ *
  * More efficient than ObjectPool for arrays since it can
  * handle different array lengths and properly clear them.
  */
@@ -269,7 +270,12 @@ export class ArrayPool<T> {
   /**
    * Get pool statistics
    */
-  getStats(): { available: number; totalCreated: number; acquireCount: number; releaseCount: number } {
+  getStats(): {
+    available: number;
+    totalCreated: number;
+    acquireCount: number;
+    releaseCount: number;
+  } {
     let available = 0;
     for (const pool of this.pools.values()) {
       available += pool.length;
@@ -418,7 +424,7 @@ export interface PooledTransformData {
 
 /**
  * PoolManager - Central manager for all object pools
- * 
+ *
  * Provides pre-configured pools for common 3Lens objects and
  * utilities for monitoring pool health.
  */
@@ -459,7 +465,11 @@ export class PoolManager {
     // Vector3 pool
     this.vector3 = new ObjectPool<PooledVector3>({
       factory: () => ({ x: 0, y: 0, z: 0 }),
-      reset: (v) => { v.x = 0; v.y = 0; v.z = 0; },
+      reset: (v) => {
+        v.x = 0;
+        v.y = 0;
+        v.z = 0;
+      },
       initialSize: 20,
       maxSize: 100,
       name: 'Vector3Pool',
@@ -491,9 +501,16 @@ export class PoolManager {
         scale: { x: 1, y: 1, z: 1 },
       }),
       reset: (t) => {
-        t.position.x = 0; t.position.y = 0; t.position.z = 0;
-        t.rotation.x = 0; t.rotation.y = 0; t.rotation.z = 0; t.rotation.order = 'XYZ';
-        t.scale.x = 1; t.scale.y = 1; t.scale.z = 1;
+        t.position.x = 0;
+        t.position.y = 0;
+        t.position.z = 0;
+        t.rotation.x = 0;
+        t.rotation.y = 0;
+        t.rotation.z = 0;
+        t.rotation.order = 'XYZ';
+        t.scale.x = 1;
+        t.scale.y = 1;
+        t.scale.z = 1;
       },
       initialSize: 10,
       maxSize: 50,
@@ -537,7 +554,10 @@ export class PoolManager {
   /**
    * Get statistics for all pools
    */
-  getAllStats(): Record<string, PoolStats | ReturnType<ArrayPool<unknown>['getStats']>> {
+  getAllStats(): Record<
+    string,
+    PoolStats | ReturnType<ArrayPool<unknown>['getStats']>
+  > {
     return {
       frameStats: this.frameStats.getStats(),
       vector3: this.vector3.getStats(),

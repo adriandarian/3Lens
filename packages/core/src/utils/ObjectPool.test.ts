@@ -43,7 +43,9 @@ describe('ObjectPool', () => {
     it('should reset objects when reset function provided', () => {
       const pool = new ObjectPool({
         factory: () => ({ value: 0 }),
-        reset: (obj) => { obj.value = 0; },
+        reset: (obj) => {
+          obj.value = 0;
+        },
         name: 'TestPool',
       });
 
@@ -141,7 +143,7 @@ describe('ArrayPool', () => {
 
   it('should reuse released arrays', () => {
     const pool = new ArrayPool<number>({ name: 'NumberArrayPool' });
-    
+
     const arr1 = pool.acquire(8);
     arr1[0] = 42;
     pool.release(arr1);
@@ -153,7 +155,7 @@ describe('ArrayPool', () => {
 
   it('should bucket arrays by size', () => {
     const pool = new ArrayPool<number>({ name: 'NumberArrayPool' });
-    
+
     // Acquire arrays of different sizes
     const small = pool.acquire(5);
     const medium = pool.acquire(20);
@@ -169,10 +171,10 @@ describe('ArrayPool', () => {
 
   it('should clear all pools', () => {
     const pool = new ArrayPool<number>({ name: 'NumberArrayPool' });
-    
+
     pool.release(pool.acquire(5));
     pool.release(pool.acquire(20));
-    
+
     pool.clear();
     expect(pool.getStats().available).toBe(0);
   });
@@ -195,7 +197,7 @@ describe('PoolManager', () => {
 
   it('should provide all pool types', () => {
     const manager = getPoolManager();
-    
+
     expect(manager.frameStats).toBeDefined();
     expect(manager.vector3).toBeDefined();
     expect(manager.arrays).toBeDefined();
@@ -207,7 +209,7 @@ describe('PoolManager', () => {
 
   it('should clear all pools', () => {
     const manager = getPoolManager();
-    
+
     // Acquire and release some objects
     releaseFrameStats(acquireFrameStats());
     releaseVector3(acquireVector3());
@@ -297,7 +299,7 @@ describe('PooledFrameStats', () => {
 
   it('should have all required fields', () => {
     const stats = acquireFrameStats();
-    
+
     // Core timing fields
     expect(stats.frame).toBeDefined();
     expect(stats.timestamp).toBeDefined();
@@ -333,7 +335,7 @@ describe('PooledFrameStats', () => {
 
   it('should reset all fields on release', () => {
     const stats = acquireFrameStats();
-    
+
     // Set various fields
     stats.frame = 999;
     stats.triangles = 10000;
@@ -341,9 +343,9 @@ describe('PooledFrameStats', () => {
     stats.fps = 120;
     stats.memoryEstimateBytes = 1000000;
     stats.gpuTimeMs = 5.5;
-    
+
     releaseFrameStats(stats);
-    
+
     // Acquire again and verify reset
     const stats2 = acquireFrameStats();
     expect(stats2.frame).toBe(0);
@@ -352,7 +354,7 @@ describe('PooledFrameStats', () => {
     expect(stats2.fps).toBe(0);
     expect(stats2.memoryEstimateBytes).toBe(0);
     expect(stats2.gpuTimeMs).toBeUndefined();
-    
+
     releaseFrameStats(stats2);
   });
 });

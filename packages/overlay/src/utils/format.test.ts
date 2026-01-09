@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { formatNumber, formatBytes, getObjectClass, getObjectIcon } from './format';
+import {
+  formatNumber,
+  formatBytes,
+  getObjectClass,
+  getObjectIcon,
+} from './format';
 
 describe('formatNumber', () => {
   it('should format numbers under 1000 as-is', () => {
@@ -122,5 +127,3 @@ describe('getObjectIcon', () => {
     expect(getObjectIcon('')).toBe('O');
   });
 });
-
-

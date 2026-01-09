@@ -1,14 +1,47 @@
-import type { DevtoolProbe, SceneNode, FrameStats, BenchmarkScore, SceneSnapshot, MemoryStats, RenderingStats, PerformanceMetrics, ResourceLifecycleEvent, ResourceLifecycleSummary, ResourceType, LeakAlert, LeakReport, PluginManager, DevtoolPlugin, PluginId, PanelDefinition as CorePanelDefinition, ToolbarActionDefinition } from '@3lens/core';
+import type {
+  DevtoolProbe,
+  SceneNode,
+  FrameStats,
+  BenchmarkScore,
+  SceneSnapshot,
+  MemoryStats,
+  RenderingStats,
+  PerformanceMetrics,
+  ResourceLifecycleEvent,
+  ResourceLifecycleSummary,
+  ResourceType,
+  LeakAlert,
+  LeakReport,
+  PluginManager,
+  DevtoolPlugin,
+  PluginId,
+  PanelDefinition as CorePanelDefinition,
+  ToolbarActionDefinition,
+} from '@3lens/core';
 import { calculateBenchmarkScore } from '@3lens/core';
 
-import { formatNumber, formatBytes, getObjectIcon, getObjectClass } from '../utils/format';
+import {
+  formatNumber,
+  formatBytes,
+  getObjectIcon,
+  getObjectClass,
+} from '../utils/format';
 import { OVERLAY_STYLES } from '../styles/styles';
-import { VirtualScroller, type FlattenedNode, VIRTUAL_SCROLL_STYLES, countTreeNodes } from '../utils/virtual-scroll';
-import { 
-  renderMaterialsPanel, attachMaterialsEvents,
-  renderGeometryPanel, attachGeometryEvents,
-  renderTexturesPanel, attachTexturesEvents,
-  renderRenderTargetsPanel, attachRenderTargetsEvents,
+import {
+  VirtualScroller,
+  type FlattenedNode,
+  VIRTUAL_SCROLL_STYLES,
+  countTreeNodes,
+} from '../utils/virtual-scroll';
+import {
+  renderMaterialsPanel,
+  attachMaterialsEvents,
+  renderGeometryPanel,
+  attachGeometryEvents,
+  renderTexturesPanel,
+  attachTexturesEvents,
+  renderRenderTargetsPanel,
+  attachRenderTargetsEvents,
   getSharedStyles,
   createDefaultUIState,
   type UIState,
@@ -60,18 +93,74 @@ export interface OverlayPanelDefinition {
   onDestroy?: (context: OverlayPanelContext) => void;
 }
 
-const SCENE_PANEL_WIDTH = 560;           // Always show tree + inspector/global tools
-const SCENE_PANEL_MAX_HEIGHT = 450;      // Max auto-height before scrolling
+const SCENE_PANEL_WIDTH = 560; // Always show tree + inspector/global tools
+const SCENE_PANEL_MAX_HEIGHT = 450; // Max auto-height before scrolling
 
 const DEFAULT_PANELS: OverlayPanelDefinition[] = [
-  { id: 'scene', title: 'Scene', icon: 'S', iconClass: 'scene', defaultWidth: SCENE_PANEL_WIDTH, defaultHeight: 0 }, // 0 = auto height
-  { id: 'stats', title: 'Performance', icon: '⚡', iconClass: 'stats', defaultWidth: 320, defaultHeight: 400 },
-  { id: 'materials', title: 'Materials', icon: '🎨', iconClass: 'materials', defaultWidth: 700, defaultHeight: 500 },
-  { id: 'geometry', title: 'Geometry', icon: '📐', iconClass: 'inspector', defaultWidth: 750, defaultHeight: 500 },
-  { id: 'textures', title: 'Textures', icon: '🖼️', iconClass: 'textures', defaultWidth: 800, defaultHeight: 520 },
-  { id: 'render-targets', title: 'Render Targets', icon: '🎯', iconClass: 'render-targets', defaultWidth: 850, defaultHeight: 550 },
-  { id: 'webgpu', title: 'WebGPU', icon: '🔷', iconClass: 'webgpu', defaultWidth: 700, defaultHeight: 500 },
-  { id: 'plugins', title: 'Plugins', icon: '🔌', iconClass: 'plugin', defaultWidth: 420, defaultHeight: 480 },
+  {
+    id: 'scene',
+    title: 'Scene',
+    icon: 'S',
+    iconClass: 'scene',
+    defaultWidth: SCENE_PANEL_WIDTH,
+    defaultHeight: 0,
+  }, // 0 = auto height
+  {
+    id: 'stats',
+    title: 'Performance',
+    icon: '⚡',
+    iconClass: 'stats',
+    defaultWidth: 320,
+    defaultHeight: 400,
+  },
+  {
+    id: 'materials',
+    title: 'Materials',
+    icon: '🎨',
+    iconClass: 'materials',
+    defaultWidth: 700,
+    defaultHeight: 500,
+  },
+  {
+    id: 'geometry',
+    title: 'Geometry',
+    icon: '📐',
+    iconClass: 'inspector',
+    defaultWidth: 750,
+    defaultHeight: 500,
+  },
+  {
+    id: 'textures',
+    title: 'Textures',
+    icon: '🖼️',
+    iconClass: 'textures',
+    defaultWidth: 800,
+    defaultHeight: 520,
+  },
+  {
+    id: 'render-targets',
+    title: 'Render Targets',
+    icon: '🎯',
+    iconClass: 'render-targets',
+    defaultWidth: 850,
+    defaultHeight: 550,
+  },
+  {
+    id: 'webgpu',
+    title: 'WebGPU',
+    icon: '🔷',
+    iconClass: 'webgpu',
+    defaultWidth: 700,
+    defaultHeight: 500,
+  },
+  {
+    id: 'plugins',
+    title: 'Plugins',
+    icon: '🔌',
+    iconClass: 'plugin',
+    defaultWidth: 420,
+    defaultHeight: 480,
+  },
 ];
 
 /**
@@ -91,12 +180,29 @@ export class ThreeLensOverlay {
   private gpuHistory: number[] = [];
   private fpsHistory: number[] = [];
   private topZIndex = 999997;
-  private dragState: { panelId: string; startX: number; startY: number; startPanelX: number; startPanelY: number } | null = null;
-  private resizeState: { panelId: string; startX: number; startY: number; startWidth: number; startHeight: number } | null = null;
+  private dragState: {
+    panelId: string;
+    startX: number;
+    startY: number;
+    startPanelX: number;
+    startPanelY: number;
+  } | null = null;
+  private resizeState: {
+    panelId: string;
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+  } | null = null;
   private lastStatsUpdate = 0;
   private statsUpdateInterval = 500; // Update stats UI every 500ms (2x per second)
-  private statsTab: 'overview' | 'memory' | 'rendering' | 'timeline' | 'resources' = 'overview';
-  
+  private statsTab:
+    | 'overview'
+    | 'memory'
+    | 'rendering'
+    | 'timeline'
+    | 'resources' = 'overview';
+
   // Timeline/Frames state
   private timelineZoom = 1.0;
   private timelineOffset = 0;
@@ -107,19 +213,29 @@ export class ThreeLensOverlay {
   private timelineHoverIndex: number | null = null;
   private timelinePaused = false; // Pause auto-scrolling when hovering
   private isRecording = false;
-  private recordedFrames: { cpu: number; gpu?: number; timestamp: number; drawCalls?: number; triangles?: number }[] = [];
+  private recordedFrames: {
+    cpu: number;
+    gpu?: number;
+    timestamp: number;
+    drawCalls?: number;
+    triangles?: number;
+  }[] = [];
   private maxRecordedFrames = 1800; // 30 seconds at 60fps
   private frameBufferSize = 300; // Configurable buffer size (default 5 seconds at 60fps)
   private panelDefinitions: Map<string, OverlayPanelDefinition> = new Map();
   private panelContexts: Map<string, OverlayPanelContext> = new Map();
-  
+
   // Plugin system
   private pluginPanelUnsubscribers: Map<string, () => void> = new Map();
-  private pluginToolbarActions: Array<{ key: string; pluginId: PluginId; action: ToolbarActionDefinition }> = [];
-  
+  private pluginToolbarActions: Array<{
+    key: string;
+    pluginId: PluginId;
+    action: ToolbarActionDefinition;
+  }> = [];
+
   // Shared UI state for Materials, Geometry, Textures panels
   private uiState: UIState = createDefaultUIState();
-  
+
   // Chart state
   private chartZoom = 1; // 1 = show all 60 frames, 2 = show 30, etc.
   private chartOffset = 0; // Pan offset (0 = showing latest frames)
@@ -128,7 +244,7 @@ export class ThreeLensOverlay {
   private chartDragStartX = 0;
   private chartDragStartOffset = 0;
   private maxHistoryLength = 300; // Store more history for zoom (configurable via frameBufferSize)
-  
+
   // Memory profiler state
   private memoryHistory: {
     timestamp: number;
@@ -141,12 +257,17 @@ export class ThreeLensOverlay {
   private memoryHistoryMaxLength = 60; // 60 samples for memory chart
   private lastMemoryUpdate = 0;
   private memoryUpdateInterval = 1000; // Update memory history every 1 second
-  
+
   // Advanced performance tracking
   private fpsHistogram: number[] = new Array(12).fill(0); // FPS buckets: 0-5, 5-10, 10-15, ... 50-55, 55+
   private drawCallHistory: number[] = [];
   private triangleHistory: number[] = [];
-  private frameTimePercentiles: { p50: number; p90: number; p95: number; p99: number } = { p50: 0, p90: 0, p95: 0, p99: 0 };
+  private frameTimePercentiles: {
+    p50: number;
+    p90: number;
+    p95: number;
+    p99: number;
+  } = { p50: 0, p90: 0, p95: 0, p99: 0 };
   private performanceHistory: {
     timestamp: number;
     fps: number;
@@ -155,7 +276,7 @@ export class ThreeLensOverlay {
     triangles: number;
   }[] = [];
   private performanceHistoryMaxLength = 120;
-  
+
   // Session statistics
   private sessionStartTime = performance.now();
   private totalFramesRendered = 0;
@@ -201,16 +322,21 @@ export class ThreeLensOverlay {
     this.probe.onFrameStats((stats) => {
       this.latestStats = stats;
       this.frameHistory.push(stats.cpuTimeMs);
-      if (this.frameHistory.length > this.frameBufferSize) this.frameHistory.shift();
-      
+      if (this.frameHistory.length > this.frameBufferSize)
+        this.frameHistory.shift();
+
       // Track GPU history
       if (stats.gpuTimeMs !== undefined) {
         this.gpuHistory.push(stats.gpuTimeMs);
-        if (this.gpuHistory.length > this.frameBufferSize) this.gpuHistory.shift();
+        if (this.gpuHistory.length > this.frameBufferSize)
+          this.gpuHistory.shift();
       }
-      
+
       // Record frames if recording is active
-      if (this.isRecording && this.recordedFrames.length < this.maxRecordedFrames) {
+      if (
+        this.isRecording &&
+        this.recordedFrames.length < this.maxRecordedFrames
+      ) {
         this.recordedFrames.push({
           cpu: stats.cpuTimeMs,
           gpu: stats.gpuTimeMs,
@@ -219,28 +345,33 @@ export class ThreeLensOverlay {
           triangles: stats.triangles,
         });
       }
-      
+
       // Track FPS history
       const fps = stats.cpuTimeMs > 0 ? 1000 / stats.cpuTimeMs : 0;
       this.fpsHistory.push(fps);
-      if (this.fpsHistory.length > this.frameBufferSize) this.fpsHistory.shift();
-      
+      if (this.fpsHistory.length > this.frameBufferSize)
+        this.fpsHistory.shift();
+
       // Update FPS histogram
       const fpsBucket = Math.min(11, Math.floor(fps / 5));
       this.fpsHistogram[fpsBucket]++;
-      
+
       // Track draw calls and triangles history
       this.drawCallHistory.push(stats.drawCalls);
-      if (this.drawCallHistory.length > this.frameBufferSize) this.drawCallHistory.shift();
+      if (this.drawCallHistory.length > this.frameBufferSize)
+        this.drawCallHistory.shift();
       this.triangleHistory.push(stats.triangles);
-      if (this.triangleHistory.length > this.frameBufferSize) this.triangleHistory.shift();
-      
+      if (this.triangleHistory.length > this.frameBufferSize)
+        this.triangleHistory.shift();
+
       // Update session statistics
       this.totalFramesRendered++;
       if (fps > this.peakFps) this.peakFps = fps;
       if (fps < this.lowestFps && fps > 0) this.lowestFps = fps;
-      if (stats.drawCalls > this.peakDrawCalls) this.peakDrawCalls = stats.drawCalls;
-      if (stats.triangles > this.peakTriangles) this.peakTriangles = stats.triangles;
+      if (stats.drawCalls > this.peakDrawCalls)
+        this.peakDrawCalls = stats.drawCalls;
+      if (stats.triangles > this.peakTriangles)
+        this.peakTriangles = stats.triangles;
       if (stats.memory && stats.memory.totalGpuMemory > this.peakMemory) {
         this.peakMemory = stats.memory.totalGpuMemory;
       }
@@ -249,7 +380,7 @@ export class ThreeLensOverlay {
       } else {
         this.smoothFrameCount++;
       }
-      
+
       // Calculate frame time percentiles
       if (this.frameHistory.length >= 10) {
         const sorted = [...this.frameHistory].sort((a, b) => a - b);
@@ -261,16 +392,16 @@ export class ThreeLensOverlay {
           p99: sorted[Math.floor(len * 0.99)],
         };
       }
-      
+
       // Calculate benchmark score
       this.latestBenchmark = calculateBenchmarkScore(stats);
-      
+
       const now = performance.now();
-      
+
       // Track performance history (at a slower interval)
       if (now - this.lastMemoryUpdate >= this.memoryUpdateInterval) {
         this.lastMemoryUpdate = now;
-        
+
         // Memory history
         if (stats.memory) {
           this.memoryHistory.push({
@@ -285,7 +416,7 @@ export class ThreeLensOverlay {
             this.memoryHistory.shift();
           }
         }
-        
+
         // Performance history
         this.performanceHistory.push({
           timestamp: stats.timestamp,
@@ -298,7 +429,7 @@ export class ThreeLensOverlay {
           this.performanceHistory.shift();
         }
       }
-      
+
       // Throttle UI updates to prevent flickering
       if (now - this.lastStatsUpdate >= this.statsUpdateInterval) {
         this.lastStatsUpdate = now;
@@ -324,7 +455,7 @@ export class ThreeLensOverlay {
     document.addEventListener('mousemove', this.handleMouseMove.bind(this));
     document.addEventListener('mouseup', this.handleMouseUp.bind(this));
     document.addEventListener('keydown', this.handleKeyDown.bind(this));
-    
+
     // Setup plugin manager integration
     this.initializePluginIntegration();
   }
@@ -338,12 +469,12 @@ export class ThreeLensOverlay {
    */
   private initializePluginIntegration(): void {
     const pluginManager = this.probe.getPluginManager();
-    
+
     // Set toast callback
     pluginManager.setToastCallback((message, type) => {
       this.showToast(message, type);
     });
-    
+
     // Set render request callback
     pluginManager.setRenderRequestCallback((pluginId) => {
       this.refreshPluginPanel(pluginId);
@@ -355,20 +486,20 @@ export class ThreeLensOverlay {
    */
   public registerAndActivatePlugin(plugin: DevtoolPlugin): Promise<void> {
     const pluginManager = this.probe.getPluginManager();
-    
+
     // Register the plugin
     pluginManager.registerPlugin(plugin);
-    
+
     // Create overlay panels for plugin panels
     if (plugin.panels) {
       for (const panel of plugin.panels) {
         this.registerPluginPanel(plugin.metadata.id, panel);
       }
     }
-    
+
     // Sync toolbar actions
     this.syncPluginToolbarActions();
-    
+
     // Activate the plugin
     return pluginManager.activatePlugin(plugin.metadata.id);
   }
@@ -376,12 +507,14 @@ export class ThreeLensOverlay {
   /**
    * Unregister a plugin and remove its panels
    */
-  public async unregisterAndDeactivatePlugin(pluginId: PluginId): Promise<void> {
+  public async unregisterAndDeactivatePlugin(
+    pluginId: PluginId
+  ): Promise<void> {
     const pluginManager = this.probe.getPluginManager();
-    
+
     // Deactivate first
     await pluginManager.deactivatePlugin(pluginId);
-    
+
     // Remove overlay panels
     for (const [key, unsubscribe] of this.pluginPanelUnsubscribers) {
       if (key.startsWith(`${pluginId}:`)) {
@@ -389,10 +522,10 @@ export class ThreeLensOverlay {
         this.pluginPanelUnsubscribers.delete(key);
       }
     }
-    
+
     // Sync toolbar actions
     this.syncPluginToolbarActions();
-    
+
     // Unregister
     await pluginManager.unregisterPlugin(pluginId);
   }
@@ -400,10 +533,13 @@ export class ThreeLensOverlay {
   /**
    * Register a plugin panel as an overlay panel
    */
-  private registerPluginPanel(pluginId: PluginId, corePanel: CorePanelDefinition): void {
+  private registerPluginPanel(
+    pluginId: PluginId,
+    corePanel: CorePanelDefinition
+  ): void {
     const panelKey = `${pluginId}:${corePanel.id}`;
     const pluginManager = this.probe.getPluginManager();
-    
+
     const overlayPanel: OverlayPanelDefinition = {
       id: panelKey,
       title: corePanel.name,
@@ -424,7 +560,7 @@ export class ThreeLensOverlay {
         pluginManager.unmountPanel(panelKey);
       },
     };
-    
+
     const unsubscribe = this.registerPanel(overlayPanel);
     this.pluginPanelUnsubscribers.set(panelKey, unsubscribe);
   }
@@ -435,7 +571,7 @@ export class ThreeLensOverlay {
   private syncPluginToolbarActions(): void {
     const pluginManager = this.probe.getPluginManager();
     this.pluginToolbarActions = pluginManager.getToolbarActions();
-    
+
     // Re-render FAB and menu if visible
     if (this.menuVisible) {
       this.updateMenu();
@@ -456,7 +592,10 @@ export class ThreeLensOverlay {
   /**
    * Show a toast notification
    */
-  public showToast(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info'): void {
+  public showToast(
+    message: string,
+    type: 'info' | 'success' | 'warning' | 'error' = 'info'
+  ): void {
     // Create toast element
     const toast = document.createElement('div');
     toast.className = `three-lens-toast three-lens-toast-${type}`;
@@ -464,7 +603,7 @@ export class ThreeLensOverlay {
       <span class="three-lens-toast-icon">${type === 'success' ? '✓' : type === 'warning' ? '⚠' : type === 'error' ? '✕' : 'ℹ'}</span>
       <span class="three-lens-toast-message">${message}</span>
     `;
-    
+
     // Add to root
     let container = this.root.querySelector('.three-lens-toast-container');
     if (!container) {
@@ -473,12 +612,12 @@ export class ThreeLensOverlay {
       this.root.appendChild(container);
     }
     container.appendChild(toast);
-    
+
     // Animate in
     requestAnimationFrame(() => {
       toast.classList.add('visible');
     });
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
       toast.classList.remove('visible');
@@ -498,7 +637,8 @@ export class ThreeLensOverlay {
     const style = document.createElement('style');
     style.id = 'three-lens-styles';
     // Combine overlay styles with shared panel styles and virtual scroll styles
-    style.textContent = OVERLAY_STYLES + '\n' + getSharedStyles() + '\n' + VIRTUAL_SCROLL_STYLES;
+    style.textContent =
+      OVERLAY_STYLES + '\n' + getSharedStyles() + '\n' + VIRTUAL_SCROLL_STYLES;
     document.head.appendChild(style);
   }
 
@@ -538,12 +678,16 @@ export class ThreeLensOverlay {
   }
 
   private renderMenuItems(): string {
-    return this.getPanelDefinitions().map(panel => `
+    return this.getPanelDefinitions()
+      .map(
+        (panel) => `
           <button class="three-lens-menu-item ${this.openPanels.has(panel.id) ? 'active' : ''}" data-panel="${panel.id}">
             <span class="three-lens-menu-icon ${panel.iconClass}">${panel.icon}</span>
             <span>${panel.title}</span>
           </button>
-        `).join('');
+        `
+      )
+      .join('');
   }
 
   private attachFABEvents(): void {
@@ -559,7 +703,10 @@ export class ThreeLensOverlay {
 
     // Close menu on outside click
     document.addEventListener('click', (e) => {
-      if (this.menuVisible && !(e.target as HTMLElement).closest('.three-lens-menu, .three-lens-fab')) {
+      if (
+        this.menuVisible &&
+        !(e.target as HTMLElement).closest('.three-lens-menu, .three-lens-fab')
+      ) {
         this.menuVisible = false;
         this.updateMenu();
       }
@@ -567,7 +714,7 @@ export class ThreeLensOverlay {
   }
 
   private attachMenuItemEvents(container: ParentNode = document): void {
-    container.querySelectorAll('.three-lens-menu-item').forEach(item => {
+    container.querySelectorAll('.three-lens-menu-item').forEach((item) => {
       item.addEventListener('click', (e) => {
         const panelId = (e.currentTarget as HTMLElement).dataset.panel;
         if (panelId) {
@@ -582,11 +729,13 @@ export class ThreeLensOverlay {
   private updateMenu(): void {
     const fab = document.getElementById('three-lens-fab');
     const menu = document.getElementById('three-lens-menu');
-    if (fab) fab.className = `three-lens-fab ${this.menuVisible ? 'active' : ''}`;
-    if (menu) menu.className = `three-lens-menu ${this.menuVisible ? 'visible' : ''}`;
+    if (fab)
+      fab.className = `three-lens-fab ${this.menuVisible ? 'active' : ''}`;
+    if (menu)
+      menu.className = `three-lens-menu ${this.menuVisible ? 'visible' : ''}`;
 
     // Update active states
-    document.querySelectorAll('.three-lens-menu-item').forEach(item => {
+    document.querySelectorAll('.three-lens-menu-item').forEach((item) => {
       const panelId = (item as HTMLElement).dataset.panel;
       if (panelId) {
         item.classList.toggle('active', this.openPanels.has(panelId));
@@ -594,8 +743,12 @@ export class ThreeLensOverlay {
     });
   }
 
-  private initializePanelDefinitions(customPanels?: OverlayPanelDefinition[]): void {
-    [...DEFAULT_PANELS, ...(customPanels ?? [])].forEach((panel) => this.registerPanelDefinition(panel));
+  private initializePanelDefinitions(
+    customPanels?: OverlayPanelDefinition[]
+  ): void {
+    [...DEFAULT_PANELS, ...(customPanels ?? [])].forEach((panel) =>
+      this.registerPanelDefinition(panel)
+    );
   }
 
   private registerPanelDefinition(panel: OverlayPanelDefinition): void {
@@ -656,10 +809,10 @@ export class ThreeLensOverlay {
 
     // Calculate position (cascade)
     const offset = this.openPanels.size * 30;
-    
+
     // For scene panel, check if there's a selection to determine initial width
     const initialWidth = config.defaultWidth;
-    
+
     const state: PanelState = {
       id: panelId,
       x: 100 + offset,
@@ -672,14 +825,14 @@ export class ThreeLensOverlay {
 
     this.openPanels.set(panelId, state);
     this.createPanelElement(config, state);
-    
+
     // For scene panel, ensure size is correct after mounting (handles edge cases)
     if (panelId === 'scene') {
       requestAnimationFrame(() => {
         this.updateScenePanelSize();
       });
     }
-    
+
     this.updateMenu();
   }
 
@@ -688,17 +841,20 @@ export class ThreeLensOverlay {
     this.updateMenu();
   }
 
-  private createPanelElement(config: OverlayPanelDefinition, state: PanelState): void {
+  private createPanelElement(
+    config: OverlayPanelDefinition,
+    state: PanelState
+  ): void {
     const panel = document.createElement('div');
     panel.id = `three-lens-panel-${config.id}`;
     panel.className = 'three-lens-panel';
-    
+
     // Scene panel uses auto height with max-height constraint
     const isAutoHeight = config.id === 'scene';
-    const heightStyle = isAutoHeight 
-      ? `max-height: ${SCENE_PANEL_MAX_HEIGHT}px` 
+    const heightStyle = isAutoHeight
+      ? `max-height: ${SCENE_PANEL_MAX_HEIGHT}px`
       : `height: ${state.height}px`;
-    
+
     panel.style.cssText = `
       left: ${state.x}px;
       top: ${state.y}px;
@@ -708,15 +864,20 @@ export class ThreeLensOverlay {
     `;
 
     const hasSearch = ['materials', 'geometry', 'textures'].includes(config.id);
-    const searchPlaceholder = config.id === 'materials' ? 'Search materials...' 
-      : config.id === 'geometry' ? 'Search geometry...' 
-      : 'Search textures...';
-    
+    const searchPlaceholder =
+      config.id === 'materials'
+        ? 'Search materials...'
+        : config.id === 'geometry'
+          ? 'Search geometry...'
+          : 'Search textures...';
+
     panel.innerHTML = `
       <div class="three-lens-panel-header" data-panel="${config.id}">
         <span class="three-lens-panel-icon ${config.iconClass}">${config.icon}</span>
         <span class="three-lens-panel-title">${config.title}</span>
-        ${hasSearch ? `
+        ${
+          hasSearch
+            ? `
           <div class="three-lens-header-search">
             <input 
               type="text" 
@@ -725,7 +886,9 @@ export class ThreeLensOverlay {
               placeholder="${searchPlaceholder}" 
             />
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         <div class="three-lens-panel-controls">
           <button class="three-lens-panel-btn minimize" data-action="minimize" title="Minimize">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
@@ -773,7 +936,7 @@ export class ThreeLensOverlay {
         return '<div class="three-lens-inspector-empty">Panel content</div>';
     }
   }
-  
+
   private buildSharedPanelContext(): PanelContext {
     return {
       probe: this.probe,
@@ -784,7 +947,7 @@ export class ThreeLensOverlay {
       requestSnapshot: () => this.refreshSnapshot(),
     };
   }
-  
+
   private handlePanelCommand(command: PanelCommand): void {
     switch (command.type) {
       case 'select-object':
@@ -796,7 +959,11 @@ export class ThreeLensOverlay {
         break;
       case 'update-material-property':
         // Find the material and update it
-        this.probe.updateMaterialProperty(command.materialUuid, command.property, command.value);
+        this.probe.updateMaterialProperty(
+          command.materialUuid,
+          command.property,
+          command.value
+        );
         // Refresh the snapshot after the update
         this.refreshSnapshot();
         break;
@@ -806,33 +973,36 @@ export class ThreeLensOverlay {
         break;
     }
   }
-  
+
   private refreshSnapshot(): void {
     this.latestSnapshot = this.probe.takeSnapshot();
   }
-  
+
   private updateUIState(updates: Partial<UIState>): void {
     this.uiState = { ...this.uiState, ...updates };
   }
-  
+
   private renderMaterialsContent(): string {
     this.refreshSnapshot();
     return renderMaterialsPanel(this.buildSharedPanelContext(), this.uiState);
   }
-  
+
   private renderGeometryContent(): string {
     this.refreshSnapshot();
     return renderGeometryPanel(this.buildSharedPanelContext(), this.uiState);
   }
-  
+
   private renderTexturesContent(): string {
     this.refreshSnapshot();
     return renderTexturesPanel(this.buildSharedPanelContext(), this.uiState);
   }
-  
+
   private renderRenderTargetsContent(): string {
     this.refreshSnapshot();
-    return renderRenderTargetsPanel(this.buildSharedPanelContext(), this.uiState);
+    return renderRenderTargetsPanel(
+      this.buildSharedPanelContext(),
+      this.uiState
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -844,7 +1014,7 @@ export class ThreeLensOverlay {
   private renderPluginsContent(): string {
     const pluginManager = this.probe.getPluginManager();
     const plugins = pluginManager.getPlugins();
-    
+
     return `
       <div class="three-lens-plugins-panel">
         <div class="three-lens-plugins-header">
@@ -855,9 +1025,10 @@ export class ThreeLensOverlay {
         </div>
         
         <div class="three-lens-plugins-list">
-          ${plugins.length === 0 
-            ? '<div class="three-lens-plugins-empty">No plugins installed</div>'
-            : plugins.map(p => this.renderPluginListItem(p)).join('')
+          ${
+            plugins.length === 0
+              ? '<div class="three-lens-plugins-empty">No plugins installed</div>'
+              : plugins.map((p) => this.renderPluginListItem(p)).join('')
           }
         </div>
         
@@ -866,11 +1037,21 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderPluginListItem(plugin: { id: string; metadata: { id: string; name: string; version: string; icon?: string; description?: string }; state: string }): string {
+  private renderPluginListItem(plugin: {
+    id: string;
+    metadata: {
+      id: string;
+      name: string;
+      version: string;
+      icon?: string;
+      description?: string;
+    };
+    state: string;
+  }): string {
     const isSelected = this.selectedPluginId === plugin.id;
     const isActive = plugin.state === 'activated';
     const isError = plugin.state === 'error';
-    
+
     return `
       <div class="three-lens-plugin-item ${isSelected ? 'selected' : ''} ${isError ? 'error' : ''}" data-plugin-id="${plugin.id}">
         <div class="three-lens-plugin-icon">${plugin.metadata.icon ?? '🔌'}</div>
@@ -882,9 +1063,10 @@ export class ThreeLensOverlay {
           ${isActive ? '●' : isError ? '!' : '○'}
         </div>
         <div class="three-lens-plugin-actions">
-          ${isActive 
-            ? `<button class="three-lens-plugin-action-btn" data-action="deactivate" data-plugin-id="${plugin.id}" title="Deactivate">⏸</button>`
-            : `<button class="three-lens-plugin-action-btn" data-action="activate" data-plugin-id="${plugin.id}" title="Activate">▶</button>`
+          ${
+            isActive
+              ? `<button class="three-lens-plugin-action-btn" data-action="deactivate" data-plugin-id="${plugin.id}" title="Deactivate">⏸</button>`
+              : `<button class="three-lens-plugin-action-btn" data-action="activate" data-plugin-id="${plugin.id}" title="Activate">▶</button>`
           }
           <button class="three-lens-plugin-action-btn" data-action="unregister" data-plugin-id="${plugin.id}" title="Unregister">✕</button>
         </div>
@@ -920,14 +1102,14 @@ export class ThreeLensOverlay {
   private renderPluginSettings(pluginId: string): string {
     const pluginManager = this.probe.getPluginManager();
     const registered = pluginManager.getPlugin(pluginId);
-    
+
     if (!registered) {
       return '<div class="three-lens-plugin-settings">Plugin not found</div>';
     }
-    
+
     const { plugin, state, settings } = registered;
     const settingsSchema = plugin.settings;
-    
+
     return `
       <div class="three-lens-plugin-settings">
         <div class="three-lens-plugin-settings-header">
@@ -944,17 +1126,22 @@ export class ThreeLensOverlay {
           </div>
         </div>
         
-        ${settingsSchema && settingsSchema.fields.length > 0 ? `
+        ${
+          settingsSchema && settingsSchema.fields.length > 0
+            ? `
           <div class="three-lens-section-header">Settings</div>
           <div class="three-lens-plugin-settings-fields">
-            ${settingsSchema.fields.map(field => this.renderPluginSettingField(pluginId, field, settings[field.key])).join('')}
+            ${settingsSchema.fields.map((field) => this.renderPluginSettingField(pluginId, field, settings[field.key])).join('')}
           </div>
-        ` : '<div class="three-lens-plugin-no-settings">This plugin has no configurable settings.</div>'}
+        `
+            : '<div class="three-lens-plugin-no-settings">This plugin has no configurable settings.</div>'
+        }
         
         <div class="three-lens-plugin-settings-actions">
-          ${state === 'activated' 
-            ? `<button class="three-lens-plugin-btn danger" data-action="deactivate" data-plugin-id="${pluginId}">Deactivate</button>`
-            : `<button class="three-lens-plugin-btn primary" data-action="activate" data-plugin-id="${pluginId}">Activate</button>`
+          ${
+            state === 'activated'
+              ? `<button class="three-lens-plugin-btn danger" data-action="deactivate" data-plugin-id="${pluginId}">Deactivate</button>`
+              : `<button class="three-lens-plugin-btn primary" data-action="activate" data-plugin-id="${pluginId}">Activate</button>`
           }
           <button class="three-lens-plugin-btn danger" data-action="unregister" data-plugin-id="${pluginId}">Unregister</button>
         </div>
@@ -962,9 +1149,22 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderPluginSettingField(pluginId: string, field: { key: string; label: string; type: string; description?: string; options?: Array<{ value: unknown; label: string }>; min?: number; max?: number; step?: number }, value: unknown): string {
+  private renderPluginSettingField(
+    pluginId: string,
+    field: {
+      key: string;
+      label: string;
+      type: string;
+      description?: string;
+      options?: Array<{ value: unknown; label: string }>;
+      min?: number;
+      max?: number;
+      step?: number;
+    },
+    value: unknown
+  ): string {
     const inputId = `plugin-setting-${pluginId}-${field.key}`;
-    
+
     let inputHtml = '';
     switch (field.type) {
       case 'boolean':
@@ -989,9 +1189,13 @@ export class ThreeLensOverlay {
       case 'select':
         inputHtml = `
           <select class="three-lens-plugin-select" id="${inputId}" data-plugin-id="${pluginId}" data-setting-key="${field.key}">
-            ${(field.options ?? []).map(opt => `
+            ${(field.options ?? [])
+              .map(
+                (opt) => `
               <option value="${opt.value}" ${opt.value === value ? 'selected' : ''}>${opt.label}</option>
-            `).join('')}
+            `
+              )
+              .join('')}
           </select>
         `;
         break;
@@ -1013,7 +1217,7 @@ export class ThreeLensOverlay {
         `;
         break;
     }
-    
+
     return `
       <div class="three-lens-plugin-setting-field">
         <div class="three-lens-plugin-setting-row">
@@ -1027,10 +1231,11 @@ export class ThreeLensOverlay {
 
   private attachPluginsPanelEvents(container: HTMLElement): void {
     // Plugin item selection
-    container.querySelectorAll('.three-lens-plugin-item').forEach(item => {
+    container.querySelectorAll('.three-lens-plugin-item').forEach((item) => {
       item.addEventListener('click', (e) => {
         // Don't select if clicking action buttons
-        if ((e.target as HTMLElement).closest('.three-lens-plugin-action-btn')) return;
+        if ((e.target as HTMLElement).closest('.three-lens-plugin-action-btn'))
+          return;
         const pluginId = (item as HTMLElement).dataset.pluginId;
         if (pluginId) {
           this.selectedPluginId = pluginId;
@@ -1038,49 +1243,57 @@ export class ThreeLensOverlay {
         }
       });
     });
-    
+
     // Action buttons in list
-    container.querySelectorAll('.three-lens-plugin-action-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const action = (btn as HTMLElement).dataset.action;
-        const pluginId = (btn as HTMLElement).dataset.pluginId;
-        if (!pluginId) return;
-        
-        await this.handlePluginAction(action!, pluginId);
+    container
+      .querySelectorAll('.three-lens-plugin-action-btn')
+      .forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const action = (btn as HTMLElement).dataset.action;
+          const pluginId = (btn as HTMLElement).dataset.pluginId;
+          if (!pluginId) return;
+
+          await this.handlePluginAction(action!, pluginId);
+        });
       });
-    });
-    
+
     // Header load plugin button
-    container.querySelector('[data-action="load-plugin"]')?.addEventListener('click', () => {
-      this.selectedPluginId = null;
-      this.updatePluginsPanel();
-    });
-    
-    // Back to list button
-    container.querySelector('[data-action="back-to-list"]')?.addEventListener('click', () => {
-      this.selectedPluginId = null;
-      this.updatePluginsPanel();
-    });
-    
-    // Settings actions
-    container.querySelectorAll('.three-lens-plugin-btn[data-action]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const action = (btn as HTMLElement).dataset.action;
-        const pluginId = (btn as HTMLElement).dataset.pluginId;
-        if (!pluginId) return;
-        
-        await this.handlePluginAction(action!, pluginId);
+    container
+      .querySelector('[data-action="load-plugin"]')
+      ?.addEventListener('click', () => {
+        this.selectedPluginId = null;
+        this.updatePluginsPanel();
       });
-    });
-    
+
+    // Back to list button
+    container
+      .querySelector('[data-action="back-to-list"]')
+      ?.addEventListener('click', () => {
+        this.selectedPluginId = null;
+        this.updatePluginsPanel();
+      });
+
+    // Settings actions
+    container
+      .querySelectorAll('.three-lens-plugin-btn[data-action]')
+      .forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const action = (btn as HTMLElement).dataset.action;
+          const pluginId = (btn as HTMLElement).dataset.pluginId;
+          if (!pluginId) return;
+
+          await this.handlePluginAction(action!, pluginId);
+        });
+      });
+
     // Setting field changes
-    container.querySelectorAll('[data-setting-key]').forEach(input => {
+    container.querySelectorAll('[data-setting-key]').forEach((input) => {
       input.addEventListener('change', () => {
         const pluginId = (input as HTMLElement).dataset.pluginId!;
         const key = (input as HTMLElement).dataset.settingKey!;
         let value: unknown;
-        
+
         if ((input as HTMLInputElement).type === 'checkbox') {
           value = (input as HTMLInputElement).checked;
         } else if ((input as HTMLInputElement).type === 'number') {
@@ -1088,63 +1301,92 @@ export class ThreeLensOverlay {
         } else {
           value = (input as HTMLInputElement).value;
         }
-        
-        this.probe.getPluginManager().updatePluginSettings(pluginId, { [key]: value });
+
+        this.probe
+          .getPluginManager()
+          .updatePluginSettings(pluginId, { [key]: value });
       });
     });
-    
+
     // Load form source change
-    const sourceSelect = container.querySelector('#plugin-load-source') as HTMLSelectElement | null;
+    const sourceSelect = container.querySelector(
+      '#plugin-load-source'
+    ) as HTMLSelectElement | null;
     sourceSelect?.addEventListener('change', () => {
       const npmOnlyFields = container.querySelectorAll('.npm-only');
-      const inputField = container.querySelector('#plugin-load-input') as HTMLInputElement | null;
-      
+      const inputField = container.querySelector(
+        '#plugin-load-input'
+      ) as HTMLInputElement | null;
+
       if (sourceSelect.value === 'npm') {
-        npmOnlyFields.forEach(f => (f as HTMLElement).style.display = '');
+        npmOnlyFields.forEach((f) => ((f as HTMLElement).style.display = ''));
         if (inputField) inputField.placeholder = '@3lens/plugin-example';
       } else {
-        npmOnlyFields.forEach(f => (f as HTMLElement).style.display = 'none');
-        if (inputField) inputField.placeholder = 'https://example.com/plugin.js';
+        npmOnlyFields.forEach(
+          (f) => ((f as HTMLElement).style.display = 'none')
+        );
+        if (inputField)
+          inputField.placeholder = 'https://example.com/plugin.js';
       }
     });
-    
+
     // Submit load form
-    container.querySelector('[data-action="submit-load"]')?.addEventListener('click', async () => {
-      const source = (container.querySelector('#plugin-load-source') as HTMLSelectElement)?.value ?? 'npm';
-      const input = (container.querySelector('#plugin-load-input') as HTMLInputElement)?.value?.trim();
-      const version = (container.querySelector('#plugin-load-version') as HTMLInputElement)?.value?.trim() || 'latest';
-      const statusEl = container.querySelector('#plugin-load-status') as HTMLElement | null;
-      
-      if (!input) {
-        if (statusEl) statusEl.innerHTML = '<span class="error">Please enter a package name or URL</span>';
-        return;
-      }
-      
-      if (statusEl) statusEl.innerHTML = '<span class="loading">Loading plugin...</span>';
-      
-      try {
-        let result;
-        if (source === 'npm') {
-          result = await this.probe.loadPlugin(input, version);
-        } else {
-          result = await this.probe.loadPluginFromUrl(input);
+    container
+      .querySelector('[data-action="submit-load"]')
+      ?.addEventListener('click', async () => {
+        const source =
+          (container.querySelector('#plugin-load-source') as HTMLSelectElement)
+            ?.value ?? 'npm';
+        const input = (
+          container.querySelector('#plugin-load-input') as HTMLInputElement
+        )?.value?.trim();
+        const version =
+          (
+            container.querySelector('#plugin-load-version') as HTMLInputElement
+          )?.value?.trim() || 'latest';
+        const statusEl = container.querySelector(
+          '#plugin-load-status'
+        ) as HTMLElement | null;
+
+        if (!input) {
+          if (statusEl)
+            statusEl.innerHTML =
+              '<span class="error">Please enter a package name or URL</span>';
+          return;
         }
-        
-        if (result.success) {
-          if (statusEl) statusEl.innerHTML = `<span class="success">✓ Loaded ${result.plugin?.metadata.name}</span>`;
-          setTimeout(() => this.updatePluginsPanel(), 1000);
-        } else {
-          if (statusEl) statusEl.innerHTML = `<span class="error">✕ ${result.error?.message ?? 'Failed to load'}</span>`;
+
+        if (statusEl)
+          statusEl.innerHTML = '<span class="loading">Loading plugin...</span>';
+
+        try {
+          let result;
+          if (source === 'npm') {
+            result = await this.probe.loadPlugin(input, version);
+          } else {
+            result = await this.probe.loadPluginFromUrl(input);
+          }
+
+          if (result.success) {
+            if (statusEl)
+              statusEl.innerHTML = `<span class="success">✓ Loaded ${result.plugin?.metadata.name}</span>`;
+            setTimeout(() => this.updatePluginsPanel(), 1000);
+          } else {
+            if (statusEl)
+              statusEl.innerHTML = `<span class="error">✕ ${result.error?.message ?? 'Failed to load'}</span>`;
+          }
+        } catch (error) {
+          if (statusEl)
+            statusEl.innerHTML = `<span class="error">✕ ${error instanceof Error ? error.message : 'Unknown error'}</span>`;
         }
-      } catch (error) {
-        if (statusEl) statusEl.innerHTML = `<span class="error">✕ ${error instanceof Error ? error.message : 'Unknown error'}</span>`;
-      }
-    });
+      });
   }
 
-  private async handlePluginAction(action: string, pluginId: string): Promise<void> {
+  private async handlePluginAction(
+    action: string,
+    pluginId: string
+  ): Promise<void> {
     const pluginManager = this.probe.getPluginManager();
-    
+
     switch (action) {
       case 'activate':
         await pluginManager.activatePlugin(pluginId);
@@ -1159,14 +1401,14 @@ export class ThreeLensOverlay {
         await pluginManager.unregisterPlugin(pluginId);
         break;
     }
-    
+
     this.updatePluginsPanel();
   }
 
   private updatePluginsPanel(): void {
     const content = document.getElementById('three-lens-content-plugins');
     if (!content) return;
-    
+
     content.innerHTML = this.renderPluginsContent();
     this.attachPluginsPanelEvents(content);
   }
@@ -1175,7 +1417,12 @@ export class ThreeLensOverlay {
   // WEBGPU PANEL
   // ═══════════════════════════════════════════════════════════════
 
-  private webgpuTab: 'pipelines' | 'bindgroups' | 'shaders' | 'timing' | 'capabilities' = 'pipelines';
+  private webgpuTab:
+    | 'pipelines'
+    | 'bindgroups'
+    | 'shaders'
+    | 'timing'
+    | 'capabilities' = 'pipelines';
   private selectedPipelineId: string | null = null;
   private selectedBindGroupId: string | null = null;
 
@@ -1218,12 +1465,18 @@ export class ThreeLensOverlay {
 
   private renderWebGPUTabContent(): string {
     switch (this.webgpuTab) {
-      case 'pipelines': return this.renderWebGPUPipelinesTab();
-      case 'bindgroups': return this.renderWebGPUBindGroupsTab();
-      case 'shaders': return this.renderWebGPUShadersTab();
-      case 'timing': return this.renderWebGPUTimingTab();
-      case 'capabilities': return this.renderWebGPUCapabilitiesTab();
-      default: return '';
+      case 'pipelines':
+        return this.renderWebGPUPipelinesTab();
+      case 'bindgroups':
+        return this.renderWebGPUBindGroupsTab();
+      case 'shaders':
+        return this.renderWebGPUShadersTab();
+      case 'timing':
+        return this.renderWebGPUTimingTab();
+      case 'capabilities':
+        return this.renderWebGPUCapabilitiesTab();
+      default:
+        return '';
     }
   }
 
@@ -1240,8 +1493,8 @@ export class ThreeLensOverlay {
       `;
     }
 
-    const renderPipelines = pipelines.filter(p => p.type === 'render');
-    const computePipelines = pipelines.filter(p => p.type === 'compute');
+    const renderPipelines = pipelines.filter((p) => p.type === 'render');
+    const computePipelines = pipelines.filter((p) => p.type === 'compute');
 
     return `
       <div class="webgpu-pipelines">
@@ -1251,35 +1504,48 @@ export class ThreeLensOverlay {
             <span class="webgpu-badge">${renderPipelines.length}</span>
           </div>
           <div class="webgpu-pipeline-list">
-            ${renderPipelines.length === 0 
-              ? '<div class="webgpu-empty-small">No render pipelines</div>'
-              : renderPipelines.map(p => this.renderPipelineItem(p)).join('')
+            ${
+              renderPipelines.length === 0
+                ? '<div class="webgpu-empty-small">No render pipelines</div>'
+                : renderPipelines
+                    .map((p) => this.renderPipelineItem(p))
+                    .join('')
             }
           </div>
         </div>
         
-        ${computePipelines.length > 0 ? `
+        ${
+          computePipelines.length > 0
+            ? `
           <div class="webgpu-section">
             <div class="webgpu-section-header">
               <span>Compute Pipelines</span>
               <span class="webgpu-badge">${computePipelines.length}</span>
             </div>
             <div class="webgpu-pipeline-list">
-              ${computePipelines.map(p => this.renderPipelineItem(p)).join('')}
+              ${computePipelines.map((p) => this.renderPipelineItem(p)).join('')}
             </div>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         
         ${this.selectedPipelineId ? this.renderPipelineDetails(this.selectedPipelineId, pipelines) : ''}
       </div>
     `;
   }
 
-  private renderPipelineItem(pipeline: { id: string; type: string; label?: string; usedByMaterials: string[]; usageCount?: number }): string {
+  private renderPipelineItem(pipeline: {
+    id: string;
+    type: string;
+    label?: string;
+    usedByMaterials: string[];
+    usageCount?: number;
+  }): string {
     const isSelected = this.selectedPipelineId === pipeline.id;
     const icon = pipeline.type === 'render' ? '🎨' : '⚡';
     const label = pipeline.label ?? pipeline.id;
-    
+
     return `
       <div class="webgpu-pipeline-item ${isSelected ? 'selected' : ''}" data-pipeline-id="${pipeline.id}">
         <span class="webgpu-pipeline-icon">${icon}</span>
@@ -1290,8 +1556,19 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderPipelineDetails(pipelineId: string, pipelines: Array<{ id: string; type: string; label?: string; vertexStage?: string; fragmentStage?: string; computeStage?: string; usedByMaterials: string[] }>): string {
-    const pipeline = pipelines.find(p => p.id === pipelineId);
+  private renderPipelineDetails(
+    pipelineId: string,
+    pipelines: Array<{
+      id: string;
+      type: string;
+      label?: string;
+      vertexStage?: string;
+      fragmentStage?: string;
+      computeStage?: string;
+      usedByMaterials: string[];
+    }>
+  ): string {
+    const pipeline = pipelines.find((p) => p.id === pipelineId);
     if (!pipeline) return '';
 
     return `
@@ -1310,33 +1587,49 @@ export class ThreeLensOverlay {
             <span class="webgpu-detail-label">ID</span>
             <span class="webgpu-detail-value mono">${pipeline.id}</span>
           </div>
-          ${pipeline.usedByMaterials.length > 0 ? `
+          ${
+            pipeline.usedByMaterials.length > 0
+              ? `
             <div class="webgpu-detail-row">
               <span class="webgpu-detail-label">Materials</span>
               <span class="webgpu-detail-value">${pipeline.usedByMaterials.length} material(s)</span>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           
-          ${pipeline.vertexStage ? `
+          ${
+            pipeline.vertexStage
+              ? `
             <div class="webgpu-shader-stage">
               <div class="webgpu-shader-stage-header">Vertex Stage</div>
               <div class="webgpu-shader-stage-entry">${pipeline.vertexStage}</div>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           
-          ${pipeline.fragmentStage ? `
+          ${
+            pipeline.fragmentStage
+              ? `
             <div class="webgpu-shader-stage">
               <div class="webgpu-shader-stage-header">Fragment Stage</div>
               <div class="webgpu-shader-stage-entry">${pipeline.fragmentStage}</div>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           
-          ${pipeline.computeStage ? `
+          ${
+            pipeline.computeStage
+              ? `
             <div class="webgpu-shader-stage">
               <div class="webgpu-shader-stage-header">Compute Stage</div>
               <div class="webgpu-shader-stage-entry">${pipeline.computeStage}</div>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
       </div>
     `;
@@ -1387,9 +1680,11 @@ export class ThreeLensOverlay {
   private renderWebGPUShadersTab(): string {
     const adapter = this.probe.getRendererAdapter();
     const pipelines = adapter?.getPipelines?.() ?? [];
-    
+
     // Group by shader stage availability
-    const withShaders = pipelines.filter(p => p.vertexStage || p.fragmentStage || p.computeStage);
+    const withShaders = pipelines.filter(
+      (p) => p.vertexStage || p.fragmentStage || p.computeStage
+    );
 
     return `
       <div class="webgpu-shaders">
@@ -1399,14 +1694,19 @@ export class ThreeLensOverlay {
             <span class="webgpu-badge">${withShaders.length}</span>
           </div>
           
-          ${withShaders.length === 0 ? `
+          ${
+            withShaders.length === 0
+              ? `
             <div class="webgpu-empty">
               <p>No shader sources available.</p>
               <p class="webgpu-hint">Shader source inspection requires additional instrumentation of the WebGPU backend.</p>
             </div>
-          ` : `
+          `
+              : `
             <div class="webgpu-shader-list">
-              ${withShaders.map(p => `
+              ${withShaders
+                .map(
+                  (p) => `
                 <div class="webgpu-shader-item" data-pipeline-id="${p.id}">
                   <span class="webgpu-shader-icon">${p.type === 'compute' ? '⚡' : '🎨'}</span>
                   <span class="webgpu-shader-name">${this.escapeHtml(p.label ?? p.id)}</span>
@@ -1416,9 +1716,12 @@ export class ThreeLensOverlay {
                     ${p.computeStage ? '<span class="webgpu-stage-badge cs">CS</span>' : ''}
                   </span>
                 </div>
-              `).join('')}
+              `
+                )
+                .join('')}
             </div>
-          `}
+          `
+          }
         </div>
         
         <div class="webgpu-section">
@@ -1457,7 +1760,9 @@ export class ThreeLensOverlay {
             </div>
           </div>
           
-          ${gpuTimeMs !== undefined ? `
+          ${
+            gpuTimeMs !== undefined
+              ? `
             <div class="webgpu-section">
               <div class="webgpu-section-header">Estimated GPU Time</div>
               <div class="webgpu-timing-summary">
@@ -1468,7 +1773,9 @@ export class ThreeLensOverlay {
                 <p class="webgpu-hint">This is an estimate. Enable timestamp queries for accurate per-pass breakdown.</p>
               </div>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           
           <div class="webgpu-section">
             <div class="webgpu-section-header">Timestamp Query Requirements</div>
@@ -1492,16 +1799,18 @@ export class ThreeLensOverlay {
     const _breakdown = gpuTiming.breakdown;
 
     // Sort passes by duration
-    const sortedPasses = [...passes].sort((a, b) => b.durationMs - a.durationMs);
+    const sortedPasses = [...passes].sort(
+      (a, b) => b.durationMs - a.durationMs
+    );
 
     // Get pass type colors
     const passColors: Record<string, string> = {
-      'shadow': '#9333EA',
-      'opaque': '#3B82F6',
-      'transparent': '#10B981',
+      shadow: '#9333EA',
+      opaque: '#3B82F6',
+      transparent: '#10B981',
       'post-process': '#F59E0B',
-      'compute': '#EF4444',
-      'copy': '#6B7280',
+      compute: '#EF4444',
+      copy: '#6B7280',
     };
 
     const getPassColor = (name: string): string => {
@@ -1522,19 +1831,23 @@ export class ThreeLensOverlay {
           
           <div class="webgpu-timing-bar-container">
             <div class="webgpu-timing-bar">
-              ${sortedPasses.map((pass, _i) => {
-                const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
-                const color = getPassColor(pass.name);
-                return `<div class="webgpu-timing-bar-segment" style="width: ${pct}%; background: ${color};" title="${pass.name}: ${pass.durationMs.toFixed(2)}ms"></div>`;
-              }).join('')}
+              ${sortedPasses
+                .map((pass, _i) => {
+                  const pct =
+                    totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
+                  const color = getPassColor(pass.name);
+                  return `<div class="webgpu-timing-bar-segment" style="width: ${pct}%; background: ${color};" title="${pass.name}: ${pass.durationMs.toFixed(2)}ms"></div>`;
+                })
+                .join('')}
             </div>
           </div>
           
           <div class="webgpu-timing-legend">
-            ${sortedPasses.map(pass => {
-              const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
-              const color = getPassColor(pass.name);
-              return `
+            ${sortedPasses
+              .map((pass) => {
+                const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
+                const color = getPassColor(pass.name);
+                return `
                 <div class="webgpu-timing-legend-item">
                   <span class="webgpu-timing-legend-color" style="background: ${color};"></span>
                   <span class="webgpu-timing-legend-name">${this.escapeHtml(pass.name)}</span>
@@ -1542,18 +1855,20 @@ export class ThreeLensOverlay {
                   <span class="webgpu-timing-legend-pct">${pct.toFixed(1)}%</span>
                 </div>
               `;
-            }).join('')}
+              })
+              .join('')}
           </div>
         </div>
         
         <div class="webgpu-section">
           <div class="webgpu-section-header">Pass Breakdown</div>
           <div class="webgpu-timing-passes">
-            ${sortedPasses.map(pass => {
-              const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
-              const color = getPassColor(pass.name);
-              const isHot = pass.durationMs > totalMs * 0.3; // > 30% is considered hot
-              return `
+            ${sortedPasses
+              .map((pass) => {
+                const pct = totalMs > 0 ? (pass.durationMs / totalMs) * 100 : 0;
+                const color = getPassColor(pass.name);
+                const isHot = pass.durationMs > totalMs * 0.3; // > 30% is considered hot
+                return `
                 <div class="webgpu-timing-pass ${isHot ? 'hot' : ''}">
                   <div class="webgpu-timing-pass-header">
                     <span class="webgpu-timing-pass-color" style="background: ${color};"></span>
@@ -1565,7 +1880,8 @@ export class ThreeLensOverlay {
                   </div>
                 </div>
               `;
-            }).join('')}
+              })
+              .join('')}
           </div>
         </div>
         
@@ -1588,12 +1904,16 @@ export class ThreeLensOverlay {
               <span class="webgpu-analysis-label">Number of Passes</span>
               <span class="webgpu-analysis-value">${passes.length}</span>
             </div>
-            ${sortedPasses.length > 0 ? `
+            ${
+              sortedPasses.length > 0
+                ? `
               <div class="webgpu-analysis-row">
                 <span class="webgpu-analysis-label">Slowest Pass</span>
                 <span class="webgpu-analysis-value">${this.escapeHtml(sortedPasses[0].name)}</span>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
         </div>
       </div>
@@ -1692,40 +2012,48 @@ export class ThreeLensOverlay {
       { name: 'Max Compute Workgroup', value: '256' },
     ];
 
-    return limits.map(l => `
+    return limits
+      .map(
+        (l) => `
       <div class="webgpu-limit">
         <span class="webgpu-limit-name">${l.name}</span>
         <span class="webgpu-limit-value">${l.value}</span>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
   }
 
   private attachWebGPUPanelEvents(container: HTMLElement): void {
     // Tab switching
-    container.querySelectorAll('.webgpu-tab').forEach(tab => {
+    container.querySelectorAll('.webgpu-tab').forEach((tab) => {
       tab.addEventListener('click', () => {
-        this.webgpuTab = (tab as HTMLElement).dataset.tab as typeof this.webgpuTab;
+        this.webgpuTab = (tab as HTMLElement).dataset
+          .tab as typeof this.webgpuTab;
         this.updateWebGPUPanel();
       });
     });
 
     // Pipeline selection
-    container.querySelectorAll('.webgpu-pipeline-item').forEach(item => {
+    container.querySelectorAll('.webgpu-pipeline-item').forEach((item) => {
       item.addEventListener('click', () => {
         const pipelineId = (item as HTMLElement).dataset.pipelineId;
-        this.selectedPipelineId = this.selectedPipelineId === pipelineId ? null : pipelineId ?? null;
+        this.selectedPipelineId =
+          this.selectedPipelineId === pipelineId ? null : (pipelineId ?? null);
         this.updateWebGPUPanel();
       });
     });
 
     // Close pipeline details
-    container.querySelector('[data-action="close-pipeline-details"]')?.addEventListener('click', () => {
-      this.selectedPipelineId = null;
-      this.updateWebGPUPanel();
-    });
+    container
+      .querySelector('[data-action="close-pipeline-details"]')
+      ?.addEventListener('click', () => {
+        this.selectedPipelineId = null;
+        this.updateWebGPUPanel();
+      });
 
     // Shader item click
-    container.querySelectorAll('.webgpu-shader-item').forEach(item => {
+    container.querySelectorAll('.webgpu-shader-item').forEach((item) => {
       item.addEventListener('click', () => {
         const pipelineId = (item as HTMLElement).dataset.pipelineId;
         if (pipelineId) {
@@ -1740,28 +2068,45 @@ export class ThreeLensOverlay {
   private updateWebGPUPanel(): void {
     const content = document.getElementById('three-lens-content-webgpu');
     if (!content) return;
-    
+
     content.innerHTML = this.renderWebGPUContent();
     this.attachWebGPUPanelEvents(content);
   }
 
   private escapeHtml(str: string): string {
-    return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+    return str.replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[c] ?? c
+    );
   }
 
   private mountPanel(panelId: string, panelElement: HTMLElement): void {
     const definition = this.panelDefinitions.get(panelId);
-    const container = panelElement.querySelector(`#three-lens-content-${panelId}`) as HTMLElement | null;
+    const container = panelElement.querySelector(
+      `#three-lens-content-${panelId}`
+    ) as HTMLElement | null;
     if (!definition || !container) return;
 
     const state = this.openPanels.get(panelId);
-    const context = this.buildPanelContext(panelId, container, panelElement, state);
+    const context = this.buildPanelContext(
+      panelId,
+      container,
+      panelElement,
+      state
+    );
     this.panelContexts.set(panelId, context);
 
     const content = this.renderPanelContent(panelId, context);
     this.applyPanelContent(container, content);
     definition.onMount?.(context);
-    
+
     // Attach panel-specific events
     if (panelId === 'plugins') {
       this.attachPluginsPanelEvents(container);
@@ -1770,7 +2115,10 @@ export class ThreeLensOverlay {
     }
   }
 
-  private applyPanelContent(container: HTMLElement, content: string | HTMLElement | void): void {
+  private applyPanelContent(
+    container: HTMLElement,
+    content: string | HTMLElement | void
+  ): void {
     if (typeof content === 'string') {
       container.innerHTML = content;
       return;
@@ -1843,22 +2191,32 @@ export class ThreeLensOverlay {
 
   private attachPanelEvents(panel: HTMLElement, panelId: string): void {
     // Header drag
-    const header = panel.querySelector('.three-lens-panel-header') as HTMLElement;
+    const header = panel.querySelector(
+      '.three-lens-panel-header'
+    ) as HTMLElement;
     header?.addEventListener('mousedown', (e) => {
       // Don't start drag on buttons or search input
       if ((e.target as HTMLElement).closest('.three-lens-panel-btn')) return;
-      if ((e.target as HTMLElement).closest('.three-lens-header-search')) return;
+      if ((e.target as HTMLElement).closest('.three-lens-header-search'))
+        return;
       this.startDrag(panelId, e);
     });
-    
+
     // Header search input
-    const headerSearch = panel.querySelector('.header-search-input') as HTMLInputElement;
+    const headerSearch = panel.querySelector(
+      '.header-search-input'
+    ) as HTMLInputElement;
     if (headerSearch) {
       headerSearch.addEventListener('input', () => {
-        const searchKey = panelId === 'materials' ? 'materialsSearch' 
-          : panelId === 'geometry' ? 'geometrySearch' 
-          : 'texturesSearch';
-        this.updateUIState({ [searchKey]: headerSearch.value } as Partial<UIState>);
+        const searchKey =
+          panelId === 'materials'
+            ? 'materialsSearch'
+            : panelId === 'geometry'
+              ? 'geometrySearch'
+              : 'texturesSearch';
+        this.updateUIState({
+          [searchKey]: headerSearch.value,
+        } as Partial<UIState>);
         this.updatePanelById(panelId);
       });
     }
@@ -1869,7 +2227,7 @@ export class ThreeLensOverlay {
     });
 
     // Control buttons
-    panel.querySelectorAll('.three-lens-panel-btn').forEach(btn => {
+    panel.querySelectorAll('.three-lens-panel-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const action = (e.currentTarget as HTMLElement).dataset.action;
         if (action === 'close') this.closePanel(panelId);
@@ -1878,7 +2236,9 @@ export class ThreeLensOverlay {
     });
 
     // Resize handle
-    const resize = panel.querySelector('.three-lens-panel-resize') as HTMLElement;
+    const resize = panel.querySelector(
+      '.three-lens-panel-resize'
+    ) as HTMLElement;
     resize?.addEventListener('mousedown', (e) => {
       e.stopPropagation();
       this.startResize(panelId, e);
@@ -1893,29 +2253,31 @@ export class ThreeLensOverlay {
     if (panelId === 'stats') {
       this.attachStatsTabEvents(panel);
     }
-    
+
     // Shared panel events for Materials, Geometry, Textures
     if (panelId === 'materials') {
       this.attachMaterialsPanelEvents(panel);
     }
-    
+
     if (panelId === 'geometry') {
       this.attachGeometryPanelEvents(panel);
     }
-    
+
     if (panelId === 'textures') {
       this.attachTexturesPanelEvents(panel);
     }
-    
+
     if (panelId === 'render-targets') {
       this.attachRenderTargetsPanelEvents(panel);
     }
   }
-  
+
   private attachMaterialsPanelEvents(panel: HTMLElement): void {
-    const container = panel.querySelector(`#three-lens-content-materials`) as HTMLElement;
+    const container = panel.querySelector(
+      `#three-lens-content-materials`
+    ) as HTMLElement;
     if (!container) return;
-    
+
     attachMaterialsEvents(
       container,
       this.buildSharedPanelContext(),
@@ -1924,11 +2286,13 @@ export class ThreeLensOverlay {
       () => this.updateMaterialsPanel()
     );
   }
-  
+
   private attachGeometryPanelEvents(panel: HTMLElement): void {
-    const container = panel.querySelector(`#three-lens-content-geometry`) as HTMLElement;
+    const container = panel.querySelector(
+      `#three-lens-content-geometry`
+    ) as HTMLElement;
     if (!container) return;
-    
+
     attachGeometryEvents(
       container,
       this.buildSharedPanelContext(),
@@ -1937,11 +2301,13 @@ export class ThreeLensOverlay {
       () => this.updateGeometryPanel()
     );
   }
-  
+
   private attachTexturesPanelEvents(panel: HTMLElement): void {
-    const container = panel.querySelector(`#three-lens-content-textures`) as HTMLElement;
+    const container = panel.querySelector(
+      `#three-lens-content-textures`
+    ) as HTMLElement;
     if (!container) return;
-    
+
     attachTexturesEvents(
       container,
       this.buildSharedPanelContext(),
@@ -1950,11 +2316,13 @@ export class ThreeLensOverlay {
       () => this.updateTexturesPanel()
     );
   }
-  
+
   private attachRenderTargetsPanelEvents(panel: HTMLElement): void {
-    const container = panel.querySelector(`#three-lens-content-render-targets`) as HTMLElement;
+    const container = panel.querySelector(
+      `#three-lens-content-render-targets`
+    ) as HTMLElement;
     if (!container) return;
-    
+
     attachRenderTargetsEvents(
       container,
       this.buildSharedPanelContext(),
@@ -1963,49 +2331,59 @@ export class ThreeLensOverlay {
       () => this.updateRenderTargetsPanel()
     );
   }
-  
+
   private updateMaterialsPanel(): void {
     const content = document.getElementById('three-lens-content-materials');
     if (!content) return;
-    
+
     content.innerHTML = this.renderMaterialsContent();
     const panel = document.getElementById('three-lens-panel-materials');
     if (panel) this.attachMaterialsPanelEvents(panel);
   }
-  
+
   private updateGeometryPanel(): void {
     const content = document.getElementById('three-lens-content-geometry');
     if (!content) return;
-    
+
     content.innerHTML = this.renderGeometryContent();
     const panel = document.getElementById('three-lens-panel-geometry');
     if (panel) this.attachGeometryPanelEvents(panel);
   }
-  
+
   private updateTexturesPanel(): void {
     const content = document.getElementById('three-lens-content-textures');
     if (!content) return;
-    
+
     content.innerHTML = this.renderTexturesContent();
     const panel = document.getElementById('three-lens-panel-textures');
     if (panel) this.attachTexturesPanelEvents(panel);
   }
-  
+
   private updateRenderTargetsPanel(): void {
-    const content = document.getElementById('three-lens-content-render-targets');
+    const content = document.getElementById(
+      'three-lens-content-render-targets'
+    );
     if (!content) return;
-    
+
     content.innerHTML = this.renderRenderTargetsContent();
     const panel = document.getElementById('three-lens-panel-render-targets');
     if (panel) this.attachRenderTargetsPanelEvents(panel);
   }
-  
+
   private updatePanelById(panelId: string): void {
     switch (panelId) {
-      case 'materials': this.updateMaterialsPanel(); break;
-      case 'geometry': this.updateGeometryPanel(); break;
-      case 'textures': this.updateTexturesPanel(); break;
-      case 'render-targets': this.updateRenderTargetsPanel(); break;
+      case 'materials':
+        this.updateMaterialsPanel();
+        break;
+      case 'geometry':
+        this.updateGeometryPanel();
+        break;
+      case 'textures':
+        this.updateTexturesPanel();
+        break;
+      case 'render-targets':
+        this.updateRenderTargetsPanel();
+        break;
     }
   }
 
@@ -2017,7 +2395,9 @@ export class ThreeLensOverlay {
     const el = document.getElementById(`three-lens-panel-${panelId}`);
     if (el) {
       el.style.zIndex = String(state.zIndex);
-      document.querySelectorAll('.three-lens-panel').forEach(p => p.classList.remove('focused'));
+      document
+        .querySelectorAll('.three-lens-panel')
+        .forEach((p) => p.classList.remove('focused'));
       el.classList.add('focused');
     }
   }
@@ -2061,10 +2441,10 @@ export class ThreeLensOverlay {
 
     // Get actual computed dimensions (important for auto-height panels)
     const rect = el.getBoundingClientRect();
-    
+
     // Add resizing class to disable transitions
     el.classList.add('resizing');
-    
+
     // For auto-height panels, switch to explicit height mode
     el.style.height = `${rect.height}px`;
     el.style.maxHeight = 'none';
@@ -2092,7 +2472,9 @@ export class ThreeLensOverlay {
       state.x = Math.max(0, this.dragState.startPanelX + dx);
       state.y = Math.max(0, this.dragState.startPanelY + dy);
 
-      const el = document.getElementById(`three-lens-panel-${this.dragState.panelId}`);
+      const el = document.getElementById(
+        `three-lens-panel-${this.dragState.panelId}`
+      );
       if (el) {
         el.style.left = `${state.x}px`;
         el.style.top = `${state.y}px`;
@@ -2109,7 +2491,9 @@ export class ThreeLensOverlay {
       state.width = Math.max(280, this.resizeState.startWidth + dx);
       state.height = Math.max(100, this.resizeState.startHeight + dy);
 
-      const el = document.getElementById(`three-lens-panel-${this.resizeState.panelId}`);
+      const el = document.getElementById(
+        `three-lens-panel-${this.resizeState.panelId}`
+      );
       if (el) {
         el.style.width = `${state.width}px`;
         el.style.height = `${state.height}px`;
@@ -2120,12 +2504,14 @@ export class ThreeLensOverlay {
   private handleMouseUp(): void {
     // Remove resizing class when done
     if (this.resizeState) {
-      const el = document.getElementById(`three-lens-panel-${this.resizeState.panelId}`);
+      const el = document.getElementById(
+        `three-lens-panel-${this.resizeState.panelId}`
+      );
       if (el) {
         el.classList.remove('resizing');
       }
     }
-    
+
     this.dragState = null;
     this.resizeState = null;
   }
@@ -2143,20 +2529,32 @@ export class ThreeLensOverlay {
   // PANEL CONTENT RENDERING
   // ═══════════════════════════════════════════════════════════════
 
-  private renderPanelContent(panelId: string, context?: OverlayPanelContext): string | HTMLElement | void {
+  private renderPanelContent(
+    panelId: string,
+    context?: OverlayPanelContext
+  ): string | HTMLElement | void {
     switch (panelId) {
-      case 'scene': return this.renderSceneContent();
-      case 'stats': return this.renderStatsContent();
-      case 'materials': return this.renderMaterialsContent();
-      case 'geometry': return this.renderGeometryContent();
-      case 'textures': return this.renderTexturesContent();
-      case 'render-targets': return this.renderRenderTargetsContent();
-      case 'webgpu': return this.renderWebGPUContent();
-      case 'plugins': return this.renderPluginsContent();
+      case 'scene':
+        return this.renderSceneContent();
+      case 'stats':
+        return this.renderStatsContent();
+      case 'materials':
+        return this.renderMaterialsContent();
+      case 'geometry':
+        return this.renderGeometryContent();
+      case 'textures':
+        return this.renderTexturesContent();
+      case 'render-targets':
+        return this.renderRenderTargetsContent();
+      case 'webgpu':
+        return this.renderWebGPUContent();
+      case 'plugins':
+        return this.renderPluginsContent();
       default: {
         const definition = this.panelDefinitions.get(panelId);
         if (definition?.render) {
-          if (!context) return '<div class="three-lens-inspector-empty">Panel content</div>';
+          if (!context)
+            return '<div class="three-lens-inspector-empty">Panel content</div>';
           return definition.render(context);
         }
         return '<div class="three-lens-inspector-empty">Panel content</div>';
@@ -2171,7 +2569,7 @@ export class ThreeLensOverlay {
     }
 
     const snapshot = this.probe.takeSnapshot();
-    
+
     // Auto-expand root scenes and their direct children for immediate visibility
     for (const scene of snapshot.scenes) {
       this.expandedNodes.add(scene.ref.debugId);
@@ -2184,12 +2582,15 @@ export class ThreeLensOverlay {
     }
 
     // Find selected node for inspector
-    const selectedNode = this.selectedNodeId 
+    const selectedNode = this.selectedNodeId
       ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
       : null;
 
     // Count total nodes to decide if virtual scrolling is needed
-    const totalNodes = snapshot.scenes.reduce((sum, scene) => sum + countTreeNodes(scene), 0);
+    const totalNodes = snapshot.scenes.reduce(
+      (sum, scene) => sum + countTreeNodes(scene),
+      0
+    );
     const useVirtualScroll = totalNodes > this.virtualScrollThreshold;
 
     if (useVirtualScroll) {
@@ -2209,10 +2610,10 @@ export class ThreeLensOverlay {
     }
 
     // Standard rendering for smaller trees
-      return `
+    return `
         <div class="three-lens-split-view">
           <div class="three-lens-tree-pane">
-            <div class="three-lens-tree">${snapshot.scenes.map(scene => this.renderNode(scene)).join('')}</div>
+            <div class="three-lens-tree">${snapshot.scenes.map((scene) => this.renderNode(scene)).join('')}</div>
           </div>
           <div class="three-lens-inspector-pane">
           ${selectedNode ? this.renderNodeInspector(selectedNode) : this.renderGlobalTools()}
@@ -2262,7 +2663,7 @@ export class ThreeLensOverlay {
     const isExpanded = this.expandedNodes.has(node.ref.debugId);
     const isSelected = this.selectedNodeId === node.ref.debugId;
     const isVisible = node.visible;
-    
+
     // Get cost level for heatmap coloring (only for meshes)
     const costLevel = node.meshData?.costData?.costLevel || '';
     const costClass = costLevel ? `cost-${costLevel}` : '';
@@ -2294,7 +2695,7 @@ export class ThreeLensOverlay {
     const isExpanded = this.expandedNodes.has(node.ref.debugId);
     const isSelected = this.selectedNodeId === node.ref.debugId;
     const isVisible = node.visible;
-    
+
     // Get cost level for heatmap coloring (only for meshes)
     const costLevel = node.meshData?.costData?.costLevel || '';
     const costClass = costLevel ? `cost-${costLevel}` : '';
@@ -2314,18 +2715,23 @@ export class ThreeLensOverlay {
           <span class="three-lens-node-spacer"></span>
           <span class="three-lens-node-type">${node.ref.type}</span>
         </div>
-        ${hasChildren && isExpanded ? `<div class="three-lens-node-children">${node.children.map(c => this.renderNode(c)).join('')}</div>` : ''}
+        ${hasChildren && isExpanded ? `<div class="three-lens-node-children">${node.children.map((c) => this.renderNode(c)).join('')}</div>` : ''}
       </div>
     `;
   }
 
   private getCostIcon(costLevel: string): string {
     switch (costLevel) {
-      case 'low': return '●';
-      case 'medium': return '●';
-      case 'high': return '●';
-      case 'critical': return '🔥';
-      default: return '';
+      case 'low':
+        return '●';
+      case 'medium':
+        return '●';
+      case 'high':
+        return '●';
+      case 'critical':
+        return '🔥';
+      default:
+        return '';
     }
   }
 
@@ -2350,7 +2756,9 @@ export class ThreeLensOverlay {
     }
 
     const benchmark = this.latestBenchmark;
-    const fps = stats.performance?.fps ?? (stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0);
+    const fps =
+      stats.performance?.fps ??
+      (stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0);
     const fpsSmoothed = stats.performance?.fpsSmoothed ?? fps;
     const fps1Low = stats.performance?.fps1PercentLow ?? 0;
 
@@ -2372,9 +2780,16 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderOverviewTab(stats: FrameStats, benchmark: BenchmarkScore | null, fps: number, fpsSmoothed: number, fps1Low: number): string {
-    const budgetUsed = stats.performance?.frameBudgetUsed ?? (stats.cpuTimeMs / 16.67) * 100;
-    const _isSmooth = stats.performance?.isSmooth ?? (stats.cpuTimeMs <= 18);
+  private renderOverviewTab(
+    stats: FrameStats,
+    benchmark: BenchmarkScore | null,
+    fps: number,
+    fpsSmoothed: number,
+    fps1Low: number
+  ): string {
+    const budgetUsed =
+      stats.performance?.frameBudgetUsed ?? (stats.cpuTimeMs / 16.67) * 100;
+    const _isSmooth = stats.performance?.isSmooth ?? stats.cpuTimeMs <= 18;
 
     return `
       ${benchmark ? this.renderBenchmarkScore(benchmark) : ''}
@@ -2387,12 +2802,16 @@ export class ThreeLensOverlay {
           <div class="three-lens-stat-label">CPU Time</div>
           <div class="three-lens-stat-value ${stats.cpuTimeMs > 16.67 ? 'warning' : ''}">${stats.cpuTimeMs.toFixed(1)}<span class="three-lens-stat-unit">ms</span></div>
         </div>
-        ${stats.gpuTimeMs !== undefined ? `
+        ${
+          stats.gpuTimeMs !== undefined
+            ? `
           <div class="three-lens-stat-card gpu">
             <div class="three-lens-stat-label">GPU Time</div>
             <div class="three-lens-stat-value ${stats.gpuTimeMs > 16.67 ? 'warning' : ''}">${stats.gpuTimeMs.toFixed(1)}<span class="three-lens-stat-unit">ms</span></div>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         <div class="three-lens-stat-card">
           <div class="three-lens-stat-label">Draw Calls</div>
           <div class="three-lens-stat-value ${stats.drawCalls > 1000 ? 'warning' : ''}">${formatNumber(stats.drawCalls)}</div>
@@ -2481,13 +2900,13 @@ export class ThreeLensOverlay {
   private renderRuleViolations(): string {
     const violations = this.probe.getRecentViolations();
     const summary = this.probe.getViolationSummary();
-    
+
     if (violations.length === 0) {
       return '';
     }
 
     const recentViolations = violations.slice(-10).reverse();
-    
+
     return `
       <div class="three-lens-rule-violations">
         <div class="three-lens-rule-violations-header">
@@ -2499,13 +2918,17 @@ export class ThreeLensOverlay {
           <button class="three-lens-action-btn small" data-action="clear-violations" title="Clear violations">✕</button>
           </div>
         <div class="three-lens-rule-violations-list">
-          ${recentViolations.map(v => `
+          ${recentViolations
+            .map(
+              (v) => `
             <div class="three-lens-violation-item ${v.severity}">
               <span class="three-lens-violation-severity">${this.getViolationIcon(v.severity)}</span>
               <span class="three-lens-violation-message">${v.message}</span>
               <span class="three-lens-violation-time">${this.formatViolationTime(v.timestamp)}</span>
         </div>
-          `).join('')}
+          `
+            )
+            .join('')}
       </div>
         ${violations.length > 10 ? `<div class="three-lens-violations-more">+ ${violations.length - 10} more violations...</div>` : ''}
       </div>
@@ -2514,10 +2937,14 @@ export class ThreeLensOverlay {
 
   private getViolationIcon(severity: string): string {
     switch (severity) {
-      case 'error': return '🔴';
-      case 'warning': return '🟡';
-      case 'info': return '🔵';
-      default: return '⚪';
+      case 'error':
+        return '🔴';
+      case 'warning':
+        return '🟡';
+      case 'info':
+        return '🔵';
+      default:
+        return '⚪';
     }
   }
 
@@ -2527,11 +2954,11 @@ export class ThreeLensOverlay {
     if (age < 60000) return `${Math.round(age / 1000)}s`;
     return `${Math.round(age / 60000)}m`;
   }
-  
+
   private renderFpsHistogram(): string {
     const maxCount = Math.max(...this.fpsHistogram, 1);
     const totalFrames = this.fpsHistogram.reduce((a, b) => a + b, 0);
-    
+
     if (totalFrames < 10) {
       return `
         <div class="three-lens-histogram">
@@ -2541,8 +2968,21 @@ export class ThreeLensOverlay {
       `;
     }
 
-    const bucketLabels = ['0-5', '5-10', '10-15', '15-20', '20-25', '25-30', '30-35', '35-40', '40-45', '45-50', '50-55', '55+'];
-    
+    const bucketLabels = [
+      '0-5',
+      '5-10',
+      '10-15',
+      '15-20',
+      '20-25',
+      '25-30',
+      '30-35',
+      '35-40',
+      '40-45',
+      '45-50',
+      '50-55',
+      '55+',
+    ];
+
     return `
       <div class="three-lens-histogram">
         <div class="three-lens-histogram-header">
@@ -2550,20 +2990,23 @@ export class ThreeLensOverlay {
           <div class="three-lens-histogram-total">${totalFrames} frames</div>
           </div>
         <div class="three-lens-histogram-chart">
-          ${this.fpsHistogram.map((count, i) => {
-            const height = (count / maxCount) * 100;
-            const percent = totalFrames > 0 ? ((count / totalFrames) * 100).toFixed(1) : 0;
-            const isGood = i >= 10; // 50+ FPS
-            const isOk = i >= 6 && i < 10; // 30-50 FPS
-            const _isBad = i < 6; // <30 FPS
-            const colorClass = isGood ? 'good' : isOk ? 'ok' : 'bad';
-            return `
+          ${this.fpsHistogram
+            .map((count, i) => {
+              const height = (count / maxCount) * 100;
+              const percent =
+                totalFrames > 0 ? ((count / totalFrames) * 100).toFixed(1) : 0;
+              const isGood = i >= 10; // 50+ FPS
+              const isOk = i >= 6 && i < 10; // 30-50 FPS
+              const _isBad = i < 6; // <30 FPS
+              const colorClass = isGood ? 'good' : isOk ? 'ok' : 'bad';
+              return `
               <div class="three-lens-histogram-bar-wrapper" title="${bucketLabels[i]} FPS: ${count} frames (${percent}%)">
                 <div class="three-lens-histogram-bar ${colorClass}" style="height: ${height}%"></div>
-                <div class="three-lens-histogram-label">${i === 11 ? '55+' : (i * 5)}</div>
+                <div class="three-lens-histogram-label">${i === 11 ? '55+' : i * 5}</div>
         </div>
             `;
-          }).join('')}
+            })
+            .join('')}
       </div>
         <div class="three-lens-histogram-legend">
           <span class="three-lens-histogram-legend-item bad">●&nbsp;Slow</span>
@@ -2574,7 +3017,11 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderFrameTimePercentiles(fpsSmoothed: number, fps1Low: number, budgetUsed: number): string {
+  private renderFrameTimePercentiles(
+    fpsSmoothed: number,
+    fps1Low: number,
+    budgetUsed: number
+  ): string {
     return `
       <div class="three-lens-percentiles-section">
         <div class="three-lens-percentiles-title">Frame Time Percentiles</div>
@@ -2615,29 +3062,44 @@ export class ThreeLensOverlay {
   }
 
   private renderBottleneckAnalysis(stats: FrameStats): string {
-    const bottlenecks: { type: string; severity: 'low' | 'medium' | 'high'; message: string; suggestion: string }[] = [];
-    
+    const bottlenecks: {
+      type: string;
+      severity: 'low' | 'medium' | 'high';
+      message: string;
+      suggestion: string;
+    }[] = [];
+
     // Analyze potential bottlenecks
     if (stats.drawCalls > 500) {
-      const severity = stats.drawCalls > 1000 ? 'high' : stats.drawCalls > 750 ? 'medium' : 'low';
+      const severity =
+        stats.drawCalls > 1000
+          ? 'high'
+          : stats.drawCalls > 750
+            ? 'medium'
+            : 'low';
       bottlenecks.push({
         type: 'Draw Calls',
         severity,
         message: `${stats.drawCalls} draw calls per frame`,
-        suggestion: 'Consider using instancing, merging geometries, or LOD'
+        suggestion: 'Consider using instancing, merging geometries, or LOD',
       });
     }
-    
+
     if (stats.triangles > 1000000) {
-      const severity = stats.triangles > 2000000 ? 'high' : stats.triangles > 1500000 ? 'medium' : 'low';
+      const severity =
+        stats.triangles > 2000000
+          ? 'high'
+          : stats.triangles > 1500000
+            ? 'medium'
+            : 'low';
       bottlenecks.push({
         type: 'Geometry',
         severity,
         message: `${formatNumber(stats.triangles)} triangles`,
-        suggestion: 'Use LOD, occlusion culling, or reduce mesh complexity'
+        suggestion: 'Use LOD, occlusion culling, or reduce mesh complexity',
       });
     }
-    
+
     const rendering = stats.rendering;
     if (rendering) {
       if (rendering.shadowCastingLights > 2) {
@@ -2645,29 +3107,29 @@ export class ThreeLensOverlay {
           type: 'Shadows',
           severity: rendering.shadowCastingLights > 4 ? 'high' : 'medium',
           message: `${rendering.shadowCastingLights} shadow-casting lights`,
-          suggestion: 'Reduce shadow-casting lights or use baked shadows'
+          suggestion: 'Reduce shadow-casting lights or use baked shadows',
         });
       }
-      
+
       if (rendering.skinnedMeshes > 10) {
         bottlenecks.push({
           type: 'Animation',
           severity: rendering.skinnedMeshes > 20 ? 'high' : 'medium',
           message: `${rendering.skinnedMeshes} skinned meshes with ${rendering.totalBones} bones`,
-          suggestion: 'Use LOD for animated characters or reduce bone counts'
+          suggestion: 'Use LOD for animated characters or reduce bone counts',
         });
       }
-      
+
       if (rendering.transparentObjects > 50) {
         bottlenecks.push({
           type: 'Transparency',
           severity: rendering.transparentObjects > 100 ? 'high' : 'medium',
           message: `${rendering.transparentObjects} transparent objects`,
-          suggestion: 'Reduce transparent objects or use alpha cutout'
+          suggestion: 'Reduce transparent objects or use alpha cutout',
         });
       }
     }
-    
+
     if (stats.memory) {
       const MB = 1024 * 1024;
       if (stats.memory.textureMemory > 256 * MB) {
@@ -2675,11 +3137,12 @@ export class ThreeLensOverlay {
           type: 'Texture Memory',
           severity: stats.memory.textureMemory > 512 * MB ? 'high' : 'medium',
           message: `${formatBytes(stats.memory.textureMemory)} texture memory`,
-          suggestion: 'Use compressed textures (KTX2/Basis) or reduce texture sizes'
+          suggestion:
+            'Use compressed textures (KTX2/Basis) or reduce texture sizes',
         });
       }
     }
-    
+
     if (bottlenecks.length === 0) {
       return `
         <div class="three-lens-bottleneck-section">
@@ -2691,12 +3154,14 @@ export class ThreeLensOverlay {
         </div>
       `;
     }
-    
+
     return `
       <div class="three-lens-bottleneck-section">
         <div class="three-lens-bottleneck-title">Bottleneck Analysis</div>
         <div class="three-lens-bottleneck-list">
-          ${bottlenecks.map(b => `
+          ${bottlenecks
+            .map(
+              (b) => `
             <div class="three-lens-bottleneck-item ${b.severity}">
               <div class="three-lens-bottleneck-header">
                 <span class="three-lens-bottleneck-type">${b.type}</span>
@@ -2705,29 +3170,43 @@ export class ThreeLensOverlay {
               <div class="three-lens-bottleneck-message">${b.message}</div>
               <div class="three-lens-bottleneck-suggestion">💡 ${b.suggestion}</div>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
         </div>
       </div>
     `;
   }
 
-  private renderFrameBudgetGauge(stats: FrameStats, budgetUsed: number): string {
+  private renderFrameBudgetGauge(
+    stats: FrameStats,
+    budgetUsed: number
+  ): string {
     const targetMs = 16.67; // 60 FPS target
     const frameTime = stats.cpuTimeMs;
     const remaining = Math.max(0, targetMs - frameTime);
     const overBudget = frameTime > targetMs;
-    
+
     // Calculate gauge angle (0-180 degrees, with 0 being fully under budget)
     const angle = Math.min(180, (frameTime / (targetMs * 2)) * 180);
-    
+
     // Determine status
     let status = 'excellent';
     let statusText = 'Excellent';
-    if (budgetUsed > 120) { status = 'critical'; statusText = 'Critical'; }
-    else if (budgetUsed > 100) { status = 'over'; statusText = 'Over Budget'; }
-    else if (budgetUsed > 80) { status = 'warning'; statusText = 'Warning'; }
-    else if (budgetUsed > 60) { status = 'good'; statusText = 'Good'; }
-    
+    if (budgetUsed > 120) {
+      status = 'critical';
+      statusText = 'Critical';
+    } else if (budgetUsed > 100) {
+      status = 'over';
+      statusText = 'Over Budget';
+    } else if (budgetUsed > 80) {
+      status = 'warning';
+      statusText = 'Warning';
+    } else if (budgetUsed > 60) {
+      status = 'good';
+      statusText = 'Good';
+    }
+
     return `
       <div class="three-lens-budget-gauge">
         <div class="three-lens-budget-gauge-header">
@@ -2744,7 +3223,7 @@ export class ThreeLensOverlay {
             <path d="M 100 20 A 80 80 0 0 1 135 32" fill="none" stroke="var(--3lens-warning)" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
             <path d="M 135 32 A 80 80 0 0 1 180 100" fill="none" stroke="var(--3lens-error)" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
             <!-- Needle -->
-            <line x1="100" y1="100" x2="${100 + 60 * Math.cos((angle - 180) * Math.PI / 180)}" y2="${100 + 60 * Math.sin((angle - 180) * Math.PI / 180)}" 
+            <line x1="100" y1="100" x2="${100 + 60 * Math.cos(((angle - 180) * Math.PI) / 180)}" y2="${100 + 60 * Math.sin(((angle - 180) * Math.PI) / 180)}" 
                   stroke="var(--3lens-text-primary)" stroke-width="3" stroke-linecap="round"/>
             <circle cx="100" cy="100" r="6" fill="var(--3lens-text-primary)"/>
           </svg>
@@ -2756,9 +3235,10 @@ export class ThreeLensOverlay {
         <div class="three-lens-budget-gauge-footer">
           <div class="three-lens-budget-gauge-status ${status}">${statusText}</div>
           <div class="three-lens-budget-gauge-remaining">
-            ${overBudget 
-              ? `<span class="over">+${(frameTime - targetMs).toFixed(2)}ms over</span>`
-              : `<span class="under">${remaining.toFixed(2)}ms remaining</span>`
+            ${
+              overBudget
+                ? `<span class="over">+${(frameTime - targetMs).toFixed(2)}ms over</span>`
+                : `<span class="under">${remaining.toFixed(2)}ms remaining</span>`
             }
           </div>
         </div>
@@ -2781,16 +3261,17 @@ export class ThreeLensOverlay {
   private renderSessionStatistics(): string {
     const sessionDuration = (performance.now() - this.sessionStartTime) / 1000; // seconds
     const avgFps = this.totalFramesRendered / sessionDuration;
-    const smoothPercent = this.totalFramesRendered > 0 
-      ? (this.smoothFrameCount / this.totalFramesRendered) * 100 
-      : 100;
-    
+    const smoothPercent =
+      this.totalFramesRendered > 0
+        ? (this.smoothFrameCount / this.totalFramesRendered) * 100
+        : 100;
+
     const formatDuration = (secs: number) => {
       const mins = Math.floor(secs / 60);
       const s = Math.floor(secs % 60);
       return mins > 0 ? `${mins}m ${s}s` : `${s}s`;
     };
-    
+
     return `
       <div class="three-lens-session">
         <div class="three-lens-session-header">
@@ -2842,7 +3323,8 @@ export class ThreeLensOverlay {
   }
 
   private renderBenchmarkScore(benchmark: BenchmarkScore): string {
-    const getBarClass = (score: number) => score >= 80 ? 'good' : score >= 50 ? 'ok' : 'bad';
+    const getBarClass = (score: number) =>
+      score >= 80 ? 'good' : score >= 50 ? 'ok' : 'bad';
 
     return `
       <div class="three-lens-benchmark">
@@ -2895,24 +3377,36 @@ export class ThreeLensOverlay {
   }
 
   private renderIssues(benchmark: BenchmarkScore): string {
-    if (benchmark.topIssues.length === 0 && benchmark.suggestions.length === 0) {
+    if (
+      benchmark.topIssues.length === 0 &&
+      benchmark.suggestions.length === 0
+    ) {
       return '';
     }
 
     return `
       <div class="three-lens-issues">
-        ${benchmark.topIssues.map(issue => `
+        ${benchmark.topIssues
+          .map(
+            (issue) => `
           <div class="three-lens-issue warning">
             <span class="three-lens-issue-icon">⚠️</span>
             <span class="three-lens-issue-text">${issue}</span>
           </div>
-        `).join('')}
-        ${benchmark.suggestions.slice(0, 2).map(suggestion => `
+        `
+          )
+          .join('')}
+        ${benchmark.suggestions
+          .slice(0, 2)
+          .map(
+            (suggestion) => `
           <div class="three-lens-suggestion">
             <span class="three-lens-issue-icon">💡</span>
             <span class="three-lens-suggestion-text">${suggestion}</span>
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     `;
   }
@@ -2926,7 +3420,9 @@ export class ThreeLensOverlay {
     // Calculate memory breakdown percentages
     const totalGpu = memory.totalGpuMemory || 1; // Avoid division by zero
     const texturePercent = Math.round((memory.textureMemory / totalGpu) * 100);
-    const geometryPercent = Math.round((memory.geometryMemory / totalGpu) * 100);
+    const geometryPercent = Math.round(
+      (memory.geometryMemory / totalGpu) * 100
+    );
     const rtPercent = Math.round((memory.renderTargetMemory / totalGpu) * 100);
 
     // Memory thresholds for warnings (in MB)
@@ -2936,11 +3432,17 @@ export class ThreeLensOverlay {
     const totalWarning = memory.totalGpuMemory > 512 * MB;
 
     // Get memory trend (comparing current to average of history)
-    const avgHistoryGpu = this.memoryHistory.length > 0
-      ? this.memoryHistory.reduce((sum, h) => sum + h.totalGpu, 0) / this.memoryHistory.length
-      : memory.totalGpuMemory;
-    const memoryTrend = memory.totalGpuMemory > avgHistoryGpu * 1.1 ? 'rising' 
-      : memory.totalGpuMemory < avgHistoryGpu * 0.9 ? 'falling' : 'stable';
+    const avgHistoryGpu =
+      this.memoryHistory.length > 0
+        ? this.memoryHistory.reduce((sum, h) => sum + h.totalGpu, 0) /
+          this.memoryHistory.length
+        : memory.totalGpuMemory;
+    const memoryTrend =
+      memory.totalGpuMemory > avgHistoryGpu * 1.1
+        ? 'rising'
+        : memory.totalGpuMemory < avgHistoryGpu * 0.9
+          ? 'falling'
+          : 'stable';
 
     return `
       <div class="three-lens-memory-profiler">
@@ -3034,18 +3536,18 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderMemoryEfficiency(memory: MemoryStats, stats: FrameStats): string {
+  private renderMemoryEfficiency(
+    memory: MemoryStats,
+    stats: FrameStats
+  ): string {
     // Calculate memory efficiency metrics
-    const avgMemoryPerObject = stats.objectsTotal > 0 
-      ? memory.totalGpuMemory / stats.objectsTotal 
-      : 0;
-    const avgTextureMemory = memory.textures > 0 
-      ? memory.textureMemory / memory.textures 
-      : 0;
-    const avgGeometryMemory = memory.geometries > 0 
-      ? memory.geometryMemory / memory.geometries 
-      : 0;
-    
+    const avgMemoryPerObject =
+      stats.objectsTotal > 0 ? memory.totalGpuMemory / stats.objectsTotal : 0;
+    const avgTextureMemory =
+      memory.textures > 0 ? memory.textureMemory / memory.textures : 0;
+    const avgGeometryMemory =
+      memory.geometries > 0 ? memory.geometryMemory / memory.geometries : 0;
+
     // Memory efficiency score (0-100)
     const MB = 1024 * 1024;
     let efficiencyScore = 100;
@@ -3056,10 +3558,26 @@ export class ThreeLensOverlay {
     if (memory.geometries > 100) efficiencyScore -= 15;
     if (memory.textures > 50) efficiencyScore -= 10;
     efficiencyScore = Math.max(0, efficiencyScore);
-    
-    const grade = efficiencyScore >= 80 ? 'A' : efficiencyScore >= 60 ? 'B' : efficiencyScore >= 40 ? 'C' : efficiencyScore >= 20 ? 'D' : 'F';
-    const gradeColor = grade === 'A' ? 'var(--3lens-accent-emerald)' : grade === 'B' ? 'var(--3lens-accent-cyan)' : grade === 'C' ? 'var(--3lens-accent-amber)' : 'var(--3lens-error)';
-    
+
+    const grade =
+      efficiencyScore >= 80
+        ? 'A'
+        : efficiencyScore >= 60
+          ? 'B'
+          : efficiencyScore >= 40
+            ? 'C'
+            : efficiencyScore >= 20
+              ? 'D'
+              : 'F';
+    const gradeColor =
+      grade === 'A'
+        ? 'var(--3lens-accent-emerald)'
+        : grade === 'B'
+          ? 'var(--3lens-accent-cyan)'
+          : grade === 'C'
+            ? 'var(--3lens-accent-amber)'
+            : 'var(--3lens-error)';
+
     return `
       <div class="three-lens-memory-efficiency">
         <div class="three-lens-memory-efficiency-header">
@@ -3091,17 +3609,17 @@ export class ThreeLensOverlay {
   private renderMemoryCategoryDetails(memory: MemoryStats): string {
     const KB = 1024;
     const MB = 1024 * KB;
-    
+
     // Get real texture and geometry data from the probe
     const textures = this.probe.getTextures();
     const geometries = this.probe.getGeometries();
-    
+
     // Categorize textures by actual size
     let smallTextures = 0;
     let mediumTextures = 0;
     let largeTextures = 0;
     let largestTexture = { name: '', size: 0, dimensions: '' };
-    
+
     for (const tex of textures) {
       if (tex.estimatedMemoryBytes < 512 * KB) {
         smallTextures++;
@@ -3114,24 +3632,24 @@ export class ThreeLensOverlay {
         largestTexture = {
           name: tex.name || 'unnamed',
           size: tex.estimatedMemoryBytes,
-          dimensions: `${tex.width}×${tex.height}`
+          dimensions: `${tex.width}×${tex.height}`,
         };
       }
     }
-    
+
     // If no textures from probe, fall back to estimates
     if (textures.length === 0 && memory.textures > 0) {
       smallTextures = Math.floor(memory.textures * 0.6);
       mediumTextures = Math.floor(memory.textures * 0.3);
       largeTextures = memory.textures - smallTextures - mediumTextures;
     }
-    
+
     // Categorize geometries by actual vertex count
     let simpleGeos = 0;
     let mediumGeos = 0;
     let complexGeos = 0;
     let largestGeo = { name: '', vertices: 0, faces: 0 };
-    
+
     for (const geo of geometries) {
       if (geo.vertexCount < 1000) {
         simpleGeos++;
@@ -3144,14 +3662,14 @@ export class ThreeLensOverlay {
         largestGeo = {
           name: geo.name || geo.type,
           vertices: geo.vertexCount,
-          faces: geo.faceCount
+          faces: geo.faceCount,
         };
       }
     }
-    
+
     const textureCount = textures.length || memory.textures;
     const geometryCount = geometries.length || memory.geometries;
-    
+
     return `
       <div class="three-lens-memory-categories">
         <div class="three-lens-memory-categories-title">Memory Distribution</div>
@@ -3173,11 +3691,15 @@ export class ThreeLensOverlay {
             <span class="medium">● Medium (${mediumTextures})</span>
             <span class="large">● Large (${largeTextures})</span>
           </div>
-          ${largestTexture.size > 0 ? `
+          ${
+            largestTexture.size > 0
+              ? `
             <div class="three-lens-memory-category-largest">
               Largest: <strong>${largestTexture.name}</strong> (${largestTexture.dimensions}, ${formatBytes(largestTexture.size)})
         </div>
-      ` : ''}
+      `
+              : ''
+          }
         </div>
         
         <!-- Geometry Complexity Distribution -->
@@ -3187,7 +3709,9 @@ export class ThreeLensOverlay {
             <span class="three-lens-memory-category-name">Geometries</span>
             <span class="three-lens-memory-category-count">${geometryCount}</span>
           </div>
-          ${geometries.length > 0 ? `
+          ${
+            geometries.length > 0
+              ? `
             <div class="three-lens-memory-category-bar">
               <div class="three-lens-memory-category-segment small" style="flex: ${simpleGeos || 1}" title="Simple (<1K verts): ${simpleGeos}"></div>
               <div class="three-lens-memory-category-segment medium" style="flex: ${mediumGeos || 0}" title="Medium (1K-10K verts): ${mediumGeos}"></div>
@@ -3198,12 +3722,17 @@ export class ThreeLensOverlay {
               <span class="medium">● Medium (${mediumGeos})</span>
               <span class="large">● Complex (${complexGeos})</span>
             </div>
-            ${largestGeo.vertices > 0 ? `
+            ${
+              largestGeo.vertices > 0
+                ? `
               <div class="three-lens-memory-category-largest">
                 Largest: <strong>${largestGeo.name}</strong> (${formatNumber(largestGeo.vertices)} verts, ${formatNumber(largestGeo.faces)} faces)
               </div>
-            ` : ''}
-          ` : `
+            `
+                : ''
+            }
+          `
+              : `
             <div class="three-lens-memory-category-details">
               <div class="three-lens-memory-category-detail">
                 <span class="label">Total Memory</span>
@@ -3214,7 +3743,8 @@ export class ThreeLensOverlay {
                 <span class="value">${formatBytes(memory.geometries > 0 ? memory.geometryMemory / memory.geometries : 0)}</span>
               </div>
             </div>
-          `}
+          `
+          }
         </div>
         
         <!-- Programs/Shaders -->
@@ -3230,7 +3760,9 @@ export class ThreeLensOverlay {
         </div>
         
         <!-- Render Targets -->
-        ${memory.renderTargets > 0 ? `
+        ${
+          memory.renderTargets > 0
+            ? `
           <div class="three-lens-memory-category">
             <div class="three-lens-memory-category-header">
               <span class="three-lens-memory-category-icon">🎯</span>
@@ -3248,64 +3780,70 @@ export class ThreeLensOverlay {
               </div>
             </div>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
 
   private renderMemoryTips(memory: MemoryStats, stats: FrameStats): string {
-    const tips: { icon: string; tip: string; priority: 'low' | 'medium' | 'high' }[] = [];
+    const tips: {
+      icon: string;
+      tip: string;
+      priority: 'low' | 'medium' | 'high';
+    }[] = [];
     const MB = 1024 * 1024;
-    
+
     // Generate contextual tips based on current memory state
     if (memory.textureMemory > 128 * MB && memory.textures > 10) {
       tips.push({
         icon: '🗜️',
         tip: 'Use KTX2/Basis texture compression to reduce texture memory by 75%+',
-        priority: 'high'
+        priority: 'high',
       });
     }
-    
+
     if (memory.geometries > 50) {
       tips.push({
         icon: '🔗',
         tip: 'Consider merging static geometries with BufferGeometryUtils.mergeBufferGeometries()',
-        priority: 'medium'
+        priority: 'medium',
       });
     }
-    
+
     if (memory.textures > 30) {
       tips.push({
         icon: '🎨',
         tip: 'Use texture atlases to reduce texture count and draw calls',
-        priority: 'medium'
+        priority: 'medium',
       });
     }
-    
+
     if (stats.objectsTotal > 1000 && memory.geometryMemory > 64 * MB) {
       tips.push({
         icon: '📏',
         tip: 'Implement LOD (Level of Detail) for distant objects',
-        priority: 'high'
+        priority: 'high',
       });
     }
-    
+
     if (memory.programs > 15) {
       tips.push({
         icon: '⚙️',
         tip: 'Reduce shader variants by sharing materials when possible',
-        priority: 'low'
+        priority: 'low',
       });
     }
-    
+
     if (memory.renderTargets > 5) {
       tips.push({
         icon: '🎯',
         tip: 'Consolidate post-processing passes to reduce render target memory',
-        priority: 'medium'
+        priority: 'medium',
       });
     }
-    
+
     // Check for memory growth
     if (this.memoryHistory.length >= 10) {
       const first = this.memoryHistory[0].totalGpu;
@@ -3314,29 +3852,34 @@ export class ThreeLensOverlay {
         tips.push({
           icon: '🔍',
           tip: 'Memory is growing - check for texture/geometry leaks. Dispose unused resources.',
-          priority: 'high'
+          priority: 'high',
         });
       }
     }
-    
+
     if (tips.length === 0) return '';
-    
+
     // Sort by priority
     tips.sort((a, b) => {
       const order = { high: 0, medium: 1, low: 2 };
       return order[a.priority] - order[b.priority];
     });
-    
+
     return `
       <div class="three-lens-memory-tips">
         <div class="three-lens-memory-tips-title">💡 Optimization Tips</div>
         <div class="three-lens-memory-tips-list">
-          ${tips.slice(0, 4).map(t => `
+          ${tips
+            .slice(0, 4)
+            .map(
+              (t) => `
             <div class="three-lens-memory-tip ${t.priority}">
               <span class="three-lens-memory-tip-icon">${t.icon}</span>
               <span class="three-lens-memory-tip-text">${t.tip}</span>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
         </div>
       </div>
     `;
@@ -3353,10 +3896,11 @@ export class ThreeLensOverlay {
     }
 
     // Find max memory for scaling
-    const maxMem = Math.max(...this.memoryHistory.map(h => h.totalGpu), 1);
+    const maxMem = Math.max(...this.memoryHistory.map((h) => h.totalGpu), 1);
     const chartHeight = 48;
     const chartWidth = 300;
-    const pointSpacing = chartWidth / Math.max(this.memoryHistory.length - 1, 1);
+    const pointSpacing =
+      chartWidth / Math.max(this.memoryHistory.length - 1, 1);
 
     // Build SVG path for memory line
     const points = this.memoryHistory.map((h, i) => {
@@ -3396,7 +3940,7 @@ export class ThreeLensOverlay {
   private renderJsHeapSection(used: number, limit: number): string {
     const usedPercent = limit > 0 ? Math.round((used / limit) * 100) : 0;
     const isHigh = usedPercent > 80;
-    
+
     return `
       <div class="three-lens-metrics-section">
         <div class="three-lens-metrics-title">JavaScript Heap</div>
@@ -3415,33 +3959,53 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderMemoryWarnings(memory: MemoryStats, _stats: FrameStats): string {
+  private renderMemoryWarnings(
+    memory: MemoryStats,
+    _stats: FrameStats
+  ): string {
     const warnings: string[] = [];
     const MB = 1024 * 1024;
 
     // Check for memory issues
     if (memory.textureMemory > 256 * MB) {
-      warnings.push(`High texture memory: ${formatBytes(memory.textureMemory)}. Consider using compressed textures or reducing texture sizes.`);
+      warnings.push(
+        `High texture memory: ${formatBytes(memory.textureMemory)}. Consider using compressed textures or reducing texture sizes.`
+      );
     }
     if (memory.geometryMemory > 128 * MB) {
-      warnings.push(`High geometry memory: ${formatBytes(memory.geometryMemory)}. Consider using LOD or geometry instancing.`);
+      warnings.push(
+        `High geometry memory: ${formatBytes(memory.geometryMemory)}. Consider using LOD or geometry instancing.`
+      );
     }
     if (memory.totalGpuMemory > 512 * MB) {
-      warnings.push(`Total GPU memory is high: ${formatBytes(memory.totalGpuMemory)}. May cause performance issues on lower-end devices.`);
+      warnings.push(
+        `Total GPU memory is high: ${formatBytes(memory.totalGpuMemory)}. May cause performance issues on lower-end devices.`
+      );
     }
     if (memory.textures > 50) {
-      warnings.push(`Many textures loaded (${memory.textures}). Consider using texture atlases.`);
+      warnings.push(
+        `Many textures loaded (${memory.textures}). Consider using texture atlases.`
+      );
     }
     if (memory.geometries > 100) {
-      warnings.push(`Many geometries (${memory.geometries}). Consider merging static meshes.`);
+      warnings.push(
+        `Many geometries (${memory.geometries}). Consider merging static meshes.`
+      );
     }
 
     // Check for memory leaks (continuously rising memory)
     if (this.memoryHistory.length >= 10) {
       const recent = this.memoryHistory.slice(-10);
-      const isRising = recent.every((h, i) => i === 0 || h.totalGpu >= recent[i - 1].totalGpu);
-      if (isRising && recent[recent.length - 1].totalGpu > recent[0].totalGpu * 1.2) {
-        warnings.push('⚠️ Memory appears to be continuously increasing. Possible memory leak detected.');
+      const isRising = recent.every(
+        (h, i) => i === 0 || h.totalGpu >= recent[i - 1].totalGpu
+      );
+      if (
+        isRising &&
+        recent[recent.length - 1].totalGpu > recent[0].totalGpu * 1.2
+      ) {
+        warnings.push(
+          '⚠️ Memory appears to be continuously increasing. Possible memory leak detected.'
+        );
       }
     }
 
@@ -3450,7 +4014,7 @@ export class ThreeLensOverlay {
     return `
       <div class="three-lens-memory-warnings">
         <div class="three-lens-memory-warnings-title">⚠ Memory Warnings</div>
-        ${warnings.map(w => `<div class="three-lens-memory-warning">${w}</div>`).join('')}
+        ${warnings.map((w) => `<div class="three-lens-memory-warning">${w}</div>`).join('')}
       </div>
     `;
   }
@@ -3458,7 +4022,7 @@ export class ThreeLensOverlay {
   private renderRenderingTab(stats: FrameStats): string {
     const rendering = stats.rendering;
     const perf = stats.performance;
-    
+
     if (!rendering) {
       return `<div class="three-lens-inspector-empty">Rendering stats not available</div>`;
     }
@@ -3522,23 +4086,42 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderPipelineVisualization(stats: FrameStats, rendering: RenderingStats): string {
+  private renderPipelineVisualization(
+    stats: FrameStats,
+    rendering: RenderingStats
+  ): string {
     // Calculate estimated time for each stage (simplified estimation)
     const totalTime = stats.cpuTimeMs;
     const shadowTime = rendering.shadowCastingLights * 0.5; // Rough estimate
     const opaqueTime = totalTime * 0.6;
-    const transparentTime = rendering.transparentObjects > 0 ? totalTime * 0.2 : 0;
+    const transparentTime =
+      rendering.transparentObjects > 0 ? totalTime * 0.2 : 0;
     const postProcessTime = rendering.postProcessingPasses * 0.3;
-    
+
     const stages = [
-      { name: 'Shadow Pass', time: shadowTime, color: '#8b5cf6', active: rendering.shadowCastingLights > 0 },
+      {
+        name: 'Shadow Pass',
+        time: shadowTime,
+        color: '#8b5cf6',
+        active: rendering.shadowCastingLights > 0,
+      },
       { name: 'Opaque', time: opaqueTime, color: '#3b82f6', active: true },
-      { name: 'Transparent', time: transparentTime, color: '#22d3ee', active: rendering.transparentObjects > 0 },
-      { name: 'Post-Process', time: postProcessTime, color: '#f59e0b', active: rendering.postProcessingPasses > 0 },
-    ].filter(s => s.active);
-    
+      {
+        name: 'Transparent',
+        time: transparentTime,
+        color: '#22d3ee',
+        active: rendering.transparentObjects > 0,
+      },
+      {
+        name: 'Post-Process',
+        time: postProcessTime,
+        color: '#f59e0b',
+        active: rendering.postProcessingPasses > 0,
+      },
+    ].filter((s) => s.active);
+
     const totalEstimated = stages.reduce((sum, s) => sum + s.time, 0);
-    
+
     return `
       <div class="three-lens-pipeline">
         <div class="three-lens-pipeline-header">
@@ -3546,38 +4129,63 @@ export class ThreeLensOverlay {
           <div class="three-lens-pipeline-time">${totalTime.toFixed(2)}ms total</div>
           </div>
         <div class="three-lens-pipeline-bar">
-          ${stages.map(s => {
-            const width = totalEstimated > 0 ? (s.time / totalEstimated) * 100 : 0;
-            return `<div class="three-lens-pipeline-segment" style="width: ${width}%; background: ${s.color};" title="${s.name}: ~${s.time.toFixed(1)}ms"></div>`;
-          }).join('')}
+          ${stages
+            .map((s) => {
+              const width =
+                totalEstimated > 0 ? (s.time / totalEstimated) * 100 : 0;
+              return `<div class="three-lens-pipeline-segment" style="width: ${width}%; background: ${s.color};" title="${s.name}: ~${s.time.toFixed(1)}ms"></div>`;
+            })
+            .join('')}
           </div>
         <div class="three-lens-pipeline-legend">
-          ${stages.map(s => `
+          ${stages
+            .map(
+              (s) => `
             <div class="three-lens-pipeline-legend-item">
               <span class="three-lens-pipeline-legend-color" style="background: ${s.color};"></span>
               <span class="three-lens-pipeline-legend-label">${s.name}</span>
         </div>
-          `).join('')}
+          `
+            )
+            .join('')}
       </div>
           </div>
     `;
   }
 
-  private renderDrawCallEfficiency(stats: FrameStats, perf: PerformanceMetrics | undefined): string {
-    const triPerCall = perf?.trianglesPerDrawCall ?? (stats.drawCalls > 0 ? stats.triangles / stats.drawCalls : 0);
-    const efficiency = perf?.drawCallEfficiency ?? Math.min(100, triPerCall / 100);
-    
+  private renderDrawCallEfficiency(
+    stats: FrameStats,
+    perf: PerformanceMetrics | undefined
+  ): string {
+    const triPerCall =
+      perf?.trianglesPerDrawCall ??
+      (stats.drawCalls > 0 ? stats.triangles / stats.drawCalls : 0);
+    const efficiency =
+      perf?.drawCallEfficiency ?? Math.min(100, triPerCall / 100);
+
     // Determine efficiency grade
     let grade = 'A';
     let gradeColor = 'var(--3lens-accent-emerald)';
-    if (efficiency < 25) { grade = 'F'; gradeColor = 'var(--3lens-error)'; }
-    else if (efficiency < 50) { grade = 'D'; gradeColor = 'var(--3lens-warning)'; }
-    else if (efficiency < 65) { grade = 'C'; gradeColor = 'var(--3lens-accent-amber)'; }
-    else if (efficiency < 80) { grade = 'B'; gradeColor = 'var(--3lens-accent-cyan)'; }
-    
+    if (efficiency < 25) {
+      grade = 'F';
+      gradeColor = 'var(--3lens-error)';
+    } else if (efficiency < 50) {
+      grade = 'D';
+      gradeColor = 'var(--3lens-warning)';
+    } else if (efficiency < 65) {
+      grade = 'C';
+      gradeColor = 'var(--3lens-accent-amber)';
+    } else if (efficiency < 80) {
+      grade = 'B';
+      gradeColor = 'var(--3lens-accent-cyan)';
+    }
+
     // Draw call history chart
-    const historyChart = this.drawCallHistory.length > 5 ? this.renderMiniChart(this.drawCallHistory, 'var(--3lens-accent-blue)') : '';
-    
+    const historyChart =
+      this.drawCallHistory.length > 5
+        ? this.renderMiniChart(this.drawCallHistory, 'var(--3lens-accent-blue)')
+        : '';
+
     return `
       <div class="three-lens-efficiency">
         <div class="three-lens-efficiency-header">
@@ -3602,12 +4210,16 @@ export class ThreeLensOverlay {
           </div>
           </div>
           </div>
-        ${historyChart ? `
+        ${
+          historyChart
+            ? `
           <div class="three-lens-efficiency-history">
             <div class="three-lens-efficiency-history-title">Draw Calls Over Time</div>
             ${historyChart}
         </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
@@ -3619,16 +4231,16 @@ export class ThreeLensOverlay {
     const height = 32;
     const width = 200;
     const pointSpacing = width / Math.max(data.length - 1, 1);
-    
+
     const points = data.map((v, i) => {
       const x = i * pointSpacing;
       const y = height - ((v - min) / range) * height;
       return `${x},${y}`;
     });
-    
+
     const linePath = `M${points.join(' L')}`;
     const areaPath = `M0,${height} L${points.join(' L')} L${width},${height} Z`;
-    
+
     return `
       <svg class="three-lens-mini-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
         <defs>
@@ -3643,16 +4255,19 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderObjectVisibilityBreakdown(stats: FrameStats, rendering: RenderingStats): string {
+  private renderObjectVisibilityBreakdown(
+    stats: FrameStats,
+    rendering: RenderingStats
+  ): string {
     const total = stats.objectsTotal || 1;
     const visible = stats.objectsVisible;
     const culled = stats.objectsCulled;
     const transparent = rendering.transparentObjects;
     const opaque = visible - transparent;
-    
+
     const visiblePercent = (visible / total) * 100;
     const culledPercent = (culled / total) * 100;
-    
+
     return `
       <div class="three-lens-visibility-breakdown">
         <div class="three-lens-visibility-title">Object Visibility</div>
@@ -3689,11 +4304,11 @@ export class ThreeLensOverlay {
   private renderLightingAnalysis(rendering: RenderingStats): string {
     const _hasLights = rendering.totalLights > 0;
     const _hasShadows = rendering.shadowCastingLights > 0;
-    
+
     // Calculate shadow cost estimate (rough)
     const shadowCost = rendering.shadowCastingLights * 2; // Assume 2ms per shadow light
     const isShadowCostHigh = shadowCost > 4;
-    
+
     return `
       <div class="three-lens-lighting">
         <div class="three-lens-lighting-title">Lighting & Shadows</div>
@@ -3727,19 +4342,25 @@ export class ThreeLensOverlay {
             </div>
           </div>
         </div>
-        ${isShadowCostHigh ? `
+        ${
+          isShadowCostHigh
+            ? `
           <div class="three-lens-lighting-warning">
             ⚠️ High shadow cost (~${shadowCost.toFixed(0)}ms). Consider reducing shadow-casting lights.
         </div>
-      ` : ''}
+      `
+            : ''
+        }
       </div>
     `;
   }
 
   private renderAnimationInstancing(rendering: RenderingStats): string {
-    const hasAnimation = rendering.skinnedMeshes > 0 || rendering.totalBones > 0;
-    const hasInstancing = rendering.instancedDrawCalls > 0 || rendering.totalInstances > 0;
-    
+    const hasAnimation =
+      rendering.skinnedMeshes > 0 || rendering.totalBones > 0;
+    const hasInstancing =
+      rendering.instancedDrawCalls > 0 || rendering.totalInstances > 0;
+
     if (!hasAnimation && !hasInstancing) {
       return `
         <div class="three-lens-animation">
@@ -3748,12 +4369,14 @@ export class ThreeLensOverlay {
         </div>
       `;
     }
-    
+
     return `
       <div class="three-lens-animation">
         <div class="three-lens-animation-title">Animation & Instancing</div>
         <div class="three-lens-animation-grid">
-          ${hasAnimation ? `
+          ${
+            hasAnimation
+              ? `
             <div class="three-lens-animation-section">
               <div class="three-lens-animation-section-title">Skinned Meshes</div>
               <div class="three-lens-animation-stats">
@@ -3771,8 +4394,12 @@ export class ThreeLensOverlay {
                 </div>
               </div>
             </div>
-          ` : ''}
-          ${hasInstancing ? `
+          `
+              : ''
+          }
+          ${
+            hasInstancing
+              ? `
             <div class="three-lens-animation-section">
               <div class="three-lens-animation-section-title">Instancing</div>
               <div class="three-lens-animation-stats">
@@ -3790,16 +4417,21 @@ export class ThreeLensOverlay {
                 </div>
               </div>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
       </div>
     `;
   }
 
   private renderStateChangesAnalysis(rendering: RenderingStats): string {
-    const totalStateChanges = rendering.programSwitches + rendering.textureBinds + rendering.renderTargetSwitches;
+    const totalStateChanges =
+      rendering.programSwitches +
+      rendering.textureBinds +
+      rendering.renderTargetSwitches;
     const isHigh = totalStateChanges > 200;
-    
+
     return `
       <div class="three-lens-state-changes">
         <div class="three-lens-state-changes-header">
@@ -3844,11 +4476,15 @@ export class ThreeLensOverlay {
             </div>
           </div>
         </div>
-        ${rendering.bytesUploaded > 0 ? `
+        ${
+          rendering.bytesUploaded > 0
+            ? `
           <div class="three-lens-state-changes-upload">
             Data uploaded: ${formatBytes(rendering.bytesUploaded)}/frame
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
@@ -3874,28 +4510,43 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderRenderingWarnings(stats: FrameStats, rendering: RenderingStats): string {
+  private renderRenderingWarnings(
+    stats: FrameStats,
+    rendering: RenderingStats
+  ): string {
     const warnings: string[] = [];
-    
-    if (stats.drawCalls > 500 && stats.performance?.trianglesPerDrawCall && stats.performance.trianglesPerDrawCall < 500) {
-      warnings.push('Low triangles per draw call. Consider batching or using instancing.');
+
+    if (
+      stats.drawCalls > 500 &&
+      stats.performance?.trianglesPerDrawCall &&
+      stats.performance.trianglesPerDrawCall < 500
+    ) {
+      warnings.push(
+        'Low triangles per draw call. Consider batching or using instancing.'
+      );
     }
     if (rendering.transparentObjects > 50) {
-      warnings.push(`${rendering.transparentObjects} transparent objects may cause overdraw issues.`);
+      warnings.push(
+        `${rendering.transparentObjects} transparent objects may cause overdraw issues.`
+      );
     }
     if (rendering.shadowCastingLights > 4) {
-      warnings.push('Many shadow-casting lights. Consider using fewer or baked shadows.');
+      warnings.push(
+        'Many shadow-casting lights. Consider using fewer or baked shadows.'
+      );
     }
     if (rendering.renderTargetSwitches > 10) {
-      warnings.push('High render target switches. Consider consolidating post-processing passes.');
+      warnings.push(
+        'High render target switches. Consider consolidating post-processing passes.'
+      );
     }
-    
+
     if (warnings.length === 0) return '';
-    
+
     return `
       <div class="three-lens-rendering-warnings">
         <div class="three-lens-rendering-warnings-title">⚠ Rendering Warnings</div>
-        ${warnings.map(w => `<div class="three-lens-rendering-warning">${w}</div>`).join('')}
+        ${warnings.map((w) => `<div class="three-lens-rendering-warning">${w}</div>`).join('')}
       </div>
     `;
   }
@@ -3905,11 +4556,17 @@ export class ThreeLensOverlay {
     const visibleFrameCount = this.getTimelineVisibleFrameCount();
     const spikeThreshold = 33.33; // 30 FPS threshold (2x 60fps budget)
     const hasRecording = this.recordedFrames.length > 0;
-    const recordingDuration = hasRecording ? ((this.recordedFrames[this.recordedFrames.length - 1].timestamp - this.recordedFrames[0].timestamp) / 1000).toFixed(1) : '0';
-    
+    const recordingDuration = hasRecording
+      ? (
+          (this.recordedFrames[this.recordedFrames.length - 1].timestamp -
+            this.recordedFrames[0].timestamp) /
+          1000
+        ).toFixed(1)
+      : '0';
+
     // Detect spikes in current view (live or recorded)
     const spikes = this.detectSpikes(spikeThreshold);
-    
+
     return `
       <div class="three-lens-timeline-container">
         <div class="three-lens-timeline-controls">
@@ -3917,10 +4574,14 @@ export class ThreeLensOverlay {
             <button class="three-lens-timeline-record-btn ${this.isRecording ? 'recording' : ''}" id="three-lens-timeline-record" title="${this.isRecording ? 'Stop Recording' : 'Start Recording'}">
               ${this.isRecording ? '⏹' : '⏺'}
             </button>
-            ${hasRecording ? `
+            ${
+              hasRecording
+                ? `
               <button class="three-lens-timeline-btn" id="three-lens-timeline-clear" title="Clear Recording">🗑</button>
               <span class="three-lens-timeline-recording-info">${this.recordedFrames.length}f / ${recordingDuration}s</span>
-            ` : ''}
+            `
+                : ''
+            }
             <div class="three-lens-timeline-divider"></div>
             <button class="three-lens-timeline-btn" id="three-lens-timeline-zoom-out" title="Zoom Out">−</button>
             <span class="three-lens-timeline-zoom-label" id="three-lens-timeline-zoom-label">${visibleFrameCount}f</span>
@@ -3950,12 +4611,16 @@ export class ThreeLensOverlay {
             <span class="three-lens-timeline-legend-color cpu"></span>
             <span>CPU</span>
           </div>
-          ${hasGpuData ? `
+          ${
+            hasGpuData
+              ? `
             <div class="three-lens-timeline-legend-item">
               <span class="three-lens-timeline-legend-color gpu"></span>
               <span>GPU</span>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           <div class="three-lens-timeline-legend-item">
             <span class="three-lens-timeline-legend-color spike"></span>
             <span>Spike</span>
@@ -3966,13 +4631,13 @@ export class ThreeLensOverlay {
       </div>
     `;
   }
-  
+
   private renderTimelineFrameDetails(frameIndex: number): string {
     const cpuTime = this.frameHistory[frameIndex] ?? 0;
     const gpuTime = this.gpuHistory[frameIndex];
     const fps = cpuTime > 0 ? 1000 / cpuTime : 0;
     const perfEntry = this.performanceHistory[frameIndex];
-    
+
     return `
       <div class="three-lens-timeline-frame-details">
         <div class="three-lens-timeline-frame-details-header">
@@ -3984,17 +4649,23 @@ export class ThreeLensOverlay {
             <span class="three-lens-timeline-frame-detail-label">CPU Time</span>
             <span class="three-lens-timeline-frame-detail-value ${cpuTime > 16.67 ? 'warning' : ''}">${cpuTime.toFixed(2)}ms</span>
           </div>
-          ${gpuTime !== undefined ? `
+          ${
+            gpuTime !== undefined
+              ? `
             <div class="three-lens-timeline-frame-detail">
               <span class="three-lens-timeline-frame-detail-label">GPU Time</span>
               <span class="three-lens-timeline-frame-detail-value ${gpuTime > 16.67 ? 'warning' : ''}">${gpuTime.toFixed(2)}ms</span>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           <div class="three-lens-timeline-frame-detail">
             <span class="three-lens-timeline-frame-detail-label">FPS</span>
             <span class="three-lens-timeline-frame-detail-value ${fps < 30 ? 'error' : fps < 55 ? 'warning' : ''}">${fps.toFixed(1)}</span>
           </div>
-          ${perfEntry ? `
+          ${
+            perfEntry
+              ? `
             <div class="three-lens-timeline-frame-detail">
               <span class="three-lens-timeline-frame-detail-label">Draw Calls</span>
               <span class="three-lens-timeline-frame-detail-value">${perfEntry.drawCalls}</span>
@@ -4003,16 +4674,24 @@ export class ThreeLensOverlay {
               <span class="three-lens-timeline-frame-detail-label">Triangles</span>
               <span class="three-lens-timeline-frame-detail-value">${formatNumber(perfEntry.triangles)}</span>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
       </div>
     `;
   }
-  
+
   private getTimelineVisibleFrameCount(): number {
-    return Math.max(10, Math.min(this.maxHistoryLength, Math.floor(this.maxHistoryLength / this.timelineZoom)));
+    return Math.max(
+      10,
+      Math.min(
+        this.maxHistoryLength,
+        Math.floor(this.maxHistoryLength / this.timelineZoom)
+      )
+    );
   }
-  
+
   private detectSpikes(threshold: number): number[] {
     const spikes: number[] = [];
     for (let i = 0; i < this.frameHistory.length; i++) {
@@ -4038,10 +4717,10 @@ export class ThreeLensOverlay {
     const leakAlerts = this.probe.getLeakAlerts();
     const stackTracesEnabled = this.probe.isResourceStackTraceCaptureEnabled();
     const estimatedMemory = this.probe.getEstimatedResourceMemory();
-    
+
     // Get recent events (last 50)
     const recentEvents = events.slice(-50).reverse();
-    
+
     return `
       <div class="three-lens-resources-profiler">
         ${this.renderResourceSummary(summary)}
@@ -4134,17 +4813,19 @@ export class ThreeLensOverlay {
   private renderMemoryUsage(estimatedBytes: number): string {
     const memoryHistory = this.probe.getResourceMemoryHistory();
     const hasHistory = memoryHistory.length > 1;
-    
+
     let trend = '';
     let trendClass = '';
     if (hasHistory) {
       const first = memoryHistory[0].estimatedBytes;
       const last = memoryHistory[memoryHistory.length - 1].estimatedBytes;
       const diff = last - first;
-      if (diff > 1024 * 1024) { // > 1MB growth
+      if (diff > 1024 * 1024) {
+        // > 1MB growth
         trend = `↑ +${formatBytes(diff)}`;
         trendClass = 'growing';
-      } else if (diff < -1024 * 1024) { // > 1MB decrease
+      } else if (diff < -1024 * 1024) {
+        // > 1MB decrease
         trend = `↓ ${formatBytes(Math.abs(diff))}`;
         trendClass = 'shrinking';
       } else {
@@ -4165,9 +4846,9 @@ export class ThreeLensOverlay {
   }
 
   private renderLeakAlerts(alerts: LeakAlert[]): string {
-    const criticalAlerts = alerts.filter(a => a.severity === 'critical');
-    const warningAlerts = alerts.filter(a => a.severity === 'warning');
-    
+    const criticalAlerts = alerts.filter((a) => a.severity === 'critical');
+    const warningAlerts = alerts.filter((a) => a.severity === 'warning');
+
     return `
       <div class="three-lens-leak-alerts">
         <div class="three-lens-leak-alerts-header">
@@ -4178,7 +4859,10 @@ export class ThreeLensOverlay {
           <button class="three-lens-action-btn small" data-action="clear-leak-alerts" title="Clear alerts">✕</button>
         </div>
         <div class="three-lens-leak-alerts-list">
-          ${alerts.slice(0, 5).map(alert => `
+          ${alerts
+            .slice(0, 5)
+            .map(
+              (alert) => `
             <div class="three-lens-leak-alert-item ${alert.severity}">
               <span class="three-lens-alert-severity ${alert.severity}">${this.getSeverityIcon(alert.severity)}</span>
               <div class="three-lens-alert-content">
@@ -4187,14 +4871,24 @@ export class ThreeLensOverlay {
                 <div class="three-lens-alert-suggestion">💡 ${alert.suggestion}</div>
               </div>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
           ${alerts.length > 5 ? `<div class="three-lens-leak-more">+ ${alerts.length - 5} more alerts...</div>` : ''}
         </div>
       </div>
     `;
   }
 
-  private renderOrphanedResources(orphans: Array<{ type: ResourceType; uuid: string; name?: string; subtype?: string; ageMs: number }>): string {
+  private renderOrphanedResources(
+    orphans: Array<{
+      type: ResourceType;
+      uuid: string;
+      name?: string;
+      subtype?: string;
+      ageMs: number;
+    }>
+  ): string {
     return `
       <div class="three-lens-orphaned-resources">
         <div class="three-lens-orphaned-header">
@@ -4203,13 +4897,18 @@ export class ThreeLensOverlay {
         </div>
         <div class="three-lens-orphaned-hint">Not attached to any mesh - consider disposing</div>
         <div class="three-lens-orphaned-list">
-          ${orphans.slice(0, 5).map(orphan => `
+          ${orphans
+            .slice(0, 5)
+            .map(
+              (orphan) => `
             <div class="three-lens-orphan-item">
               <span class="three-lens-orphan-type ${orphan.type}">${this.getResourceIcon(orphan.type)}</span>
               <span class="three-lens-orphan-name">${orphan.name || orphan.subtype || orphan.uuid.substring(0, 8)}</span>
               <span class="three-lens-orphan-age">${this.formatAge(orphan.ageMs)}</span>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
           ${orphans.length > 5 ? `<div class="three-lens-orphan-more">+ ${orphans.length - 5} more...</div>` : ''}
         </div>
       </div>
@@ -4218,14 +4917,26 @@ export class ThreeLensOverlay {
 
   private getSeverityIcon(severity: string): string {
     switch (severity) {
-      case 'critical': return '🔴';
-      case 'warning': return '🟡';
-      case 'info': return '🔵';
-      default: return '⚪';
+      case 'critical':
+        return '🔴';
+      case 'warning':
+        return '🟡';
+      case 'info':
+        return '🔵';
+      default:
+        return '⚪';
     }
   }
 
-  private renderPotentialLeaks(leaks: Array<{ type: ResourceType; uuid: string; name?: string; subtype?: string; ageMs: number }>): string {
+  private renderPotentialLeaks(
+    leaks: Array<{
+      type: ResourceType;
+      uuid: string;
+      name?: string;
+      subtype?: string;
+      ageMs: number;
+    }>
+  ): string {
     return `
       <div class="three-lens-potential-leaks">
         <div class="three-lens-potential-leaks-header">
@@ -4233,13 +4944,18 @@ export class ThreeLensOverlay {
           <span>Potential Memory Leaks (${leaks.length})</span>
         </div>
         <div class="three-lens-potential-leaks-list">
-          ${leaks.slice(0, 5).map(leak => `
+          ${leaks
+            .slice(0, 5)
+            .map(
+              (leak) => `
             <div class="three-lens-leak-item">
               <span class="three-lens-leak-type ${leak.type}">${this.getResourceIcon(leak.type)}</span>
               <span class="three-lens-leak-name">${leak.name || leak.subtype || leak.uuid.substring(0, 8)}</span>
               <span class="three-lens-leak-age">${this.formatAge(leak.ageMs)}</span>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
           ${leaks.length > 5 ? `<div class="three-lens-leak-more">+ ${leaks.length - 5} more...</div>` : ''}
         </div>
       </div>
@@ -4256,8 +4972,13 @@ export class ThreeLensOverlay {
     const timeWindowMs = 60000; // Last 60 seconds
     const bucketCount = 30;
     const bucketSizeMs = timeWindowMs / bucketCount;
-    
-    const buckets: Array<{ geometry: number; material: number; texture: number; disposed: number }> = [];
+
+    const buckets: Array<{
+      geometry: number;
+      material: number;
+      texture: number;
+      disposed: number;
+    }> = [];
     for (let i = 0; i < bucketCount; i++) {
       buckets.push({ geometry: 0, material: 0, texture: 0, disposed: 0 });
     }
@@ -4265,13 +4986,16 @@ export class ThreeLensOverlay {
     for (const event of events) {
       const age = now - event.timestamp;
       if (age > timeWindowMs) continue;
-      
+
       const bucketIndex = Math.floor((timeWindowMs - age) / bucketSizeMs);
       if (bucketIndex >= 0 && bucketIndex < bucketCount) {
         if (event.eventType === 'disposed') {
           buckets[bucketIndex].disposed++;
         } else if (event.eventType === 'created') {
-          const resType = event.resourceType as 'geometry' | 'material' | 'texture';
+          const resType = event.resourceType as
+            | 'geometry'
+            | 'material'
+            | 'texture';
           if (resType in buckets[bucketIndex]) {
             buckets[bucketIndex][resType]++;
           }
@@ -4279,7 +5003,10 @@ export class ThreeLensOverlay {
       }
     }
 
-    const maxValue = Math.max(1, ...buckets.map(b => b.geometry + b.material + b.texture + b.disposed));
+    const maxValue = Math.max(
+      1,
+      ...buckets.map((b) => b.geometry + b.material + b.texture + b.disposed)
+    );
 
     return `
       <div class="three-lens-resource-timeline">
@@ -4293,24 +5020,32 @@ export class ThreeLensOverlay {
           </div>
         </div>
         <div class="three-lens-resource-timeline-chart">
-          ${buckets.map((bucket, _i) => {
-            const totalHeight = ((bucket.geometry + bucket.material + bucket.texture + bucket.disposed) / maxValue * 100);
-            const geoHeight = (bucket.geometry / maxValue * 100);
-            const matHeight = (bucket.material / maxValue * 100);
-            const texHeight = (bucket.texture / maxValue * 100);
-            const dispHeight = (bucket.disposed / maxValue * 100);
-            
-            return `
+          ${buckets
+            .map((bucket, _i) => {
+              const totalHeight =
+                ((bucket.geometry +
+                  bucket.material +
+                  bucket.texture +
+                  bucket.disposed) /
+                  maxValue) *
+                100;
+              const geoHeight = (bucket.geometry / maxValue) * 100;
+              const matHeight = (bucket.material / maxValue) * 100;
+              const texHeight = (bucket.texture / maxValue) * 100;
+              const dispHeight = (bucket.disposed / maxValue) * 100;
+
+              return `
               <div class="three-lens-resource-timeline-bar" title="${bucket.geometry + bucket.material + bucket.texture} created, ${bucket.disposed} disposed">
                 <div class="three-lens-resource-bar-stack" style="height: ${totalHeight}%">
-                  ${geoHeight > 0 ? `<div class="three-lens-resource-bar-segment geometry" style="height: ${geoHeight / totalHeight * 100}%"></div>` : ''}
-                  ${matHeight > 0 ? `<div class="three-lens-resource-bar-segment material" style="height: ${matHeight / totalHeight * 100}%"></div>` : ''}
-                  ${texHeight > 0 ? `<div class="three-lens-resource-bar-segment texture" style="height: ${texHeight / totalHeight * 100}%"></div>` : ''}
-                  ${dispHeight > 0 ? `<div class="three-lens-resource-bar-segment disposed" style="height: ${dispHeight / totalHeight * 100}%"></div>` : ''}
+                  ${geoHeight > 0 ? `<div class="three-lens-resource-bar-segment geometry" style="height: ${(geoHeight / totalHeight) * 100}%"></div>` : ''}
+                  ${matHeight > 0 ? `<div class="three-lens-resource-bar-segment material" style="height: ${(matHeight / totalHeight) * 100}%"></div>` : ''}
+                  ${texHeight > 0 ? `<div class="three-lens-resource-bar-segment texture" style="height: ${(texHeight / totalHeight) * 100}%"></div>` : ''}
+                  ${dispHeight > 0 ? `<div class="three-lens-resource-bar-segment disposed" style="height: ${(dispHeight / totalHeight) * 100}%"></div>` : ''}
                 </div>
               </div>
             `;
-          }).join('')}
+            })
+            .join('')}
         </div>
         <div class="three-lens-resource-timeline-labels">
           <span>60s ago</span>
@@ -4329,7 +5064,10 @@ export class ThreeLensOverlay {
       <div class="three-lens-resource-event-list">
         <div class="three-lens-resource-event-list-header">Recent Events</div>
         <div class="three-lens-resource-event-list-items">
-          ${events.slice(0, 20).map(event => `
+          ${events
+            .slice(0, 20)
+            .map(
+              (event) => `
             <div class="three-lens-resource-event-item ${event.eventType}">
               <span class="three-lens-resource-event-type ${event.resourceType}">${this.getResourceIcon(event.resourceType)}</span>
               <span class="three-lens-resource-event-action ${event.eventType}">${this.getEventTypeLabel(event.eventType)}</span>
@@ -4337,7 +5075,9 @@ export class ThreeLensOverlay {
               ${event.metadata?.textureSlot ? `<span class="three-lens-resource-event-slot">[${event.metadata.textureSlot}]</span>` : ''}
               <span class="three-lens-resource-event-time">${this.formatEventTime(event.timestamp)}</span>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
         </div>
         ${events.length > 20 ? `<div class="three-lens-resource-event-more">${events.length - 20} more events...</div>` : ''}
       </div>
@@ -4346,20 +5086,29 @@ export class ThreeLensOverlay {
 
   private getResourceIcon(type: string): string {
     switch (type) {
-      case 'geometry': return '📐';
-      case 'material': return '🎨';
-      case 'texture': return '🖼';
-      default: return '📦';
+      case 'geometry':
+        return '📐';
+      case 'material':
+        return '🎨';
+      case 'texture':
+        return '🖼';
+      default:
+        return '📦';
     }
   }
 
   private getEventTypeLabel(eventType: string): string {
     switch (eventType) {
-      case 'created': return '+';
-      case 'disposed': return '✕';
-      case 'attached': return '→';
-      case 'detached': return '←';
-      default: return '?';
+      case 'created':
+        return '+';
+      case 'disposed':
+        return '✕';
+      case 'attached':
+        return '→';
+      case 'detached':
+        return '←';
+      default:
+        return '?';
     }
   }
 
@@ -4389,8 +5138,8 @@ export class ThreeLensOverlay {
 
   private renderNodeInspector(node: SceneNode): string {
     const t = node.transform;
-    const toDeg = (r: number) => (r * 180 / Math.PI).toFixed(2);
-    
+    const toDeg = (r: number) => ((r * 180) / Math.PI).toFixed(2);
+
     return `
       <div class="three-lens-section">
         <div class="three-lens-section-header">Transform</div>
@@ -4439,7 +5188,7 @@ export class ThreeLensOverlay {
     const cameraInfo = this.probe.getCameraInfo();
     const hasHome = this.probe.hasHomePosition();
     const availableCameras = this.probe.getAvailableCameras();
-    
+
     // Collect and sort objects by cost
     const costRanking = this.collectCostRanking();
 
@@ -4462,7 +5211,9 @@ export class ThreeLensOverlay {
         </div>
         <div class="three-lens-section">
           <div class="three-lens-section-header">Camera</div>
-          ${cameraInfo ? `
+          ${
+            cameraInfo
+              ? `
             <div class="three-lens-camera-info">
               <div class="three-lens-property-row compact">
                 <span class="three-lens-property-name">Type</span>
@@ -4473,7 +5224,9 @@ export class ThreeLensOverlay {
                 <span class="three-lens-property-value">(${cameraInfo.position.x.toFixed(1)}, ${cameraInfo.position.y.toFixed(1)}, ${cameraInfo.position.z.toFixed(1)})</span>
               </div>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           <div class="three-lens-camera-actions">
             <button class="three-lens-action-btn three-lens-home-btn" data-action="go-home" ${!hasHome ? 'disabled' : ''} title="Return to home position">
               <span class="three-lens-btn-icon">🏠</span>
@@ -4484,11 +5237,15 @@ export class ThreeLensOverlay {
               <span>Save Home</span>
             </button>
           </div>
-          ${availableCameras.length > 1 ? `
+          ${
+            availableCameras.length > 1
+              ? `
             <div class="three-lens-camera-switcher">
               <div class="three-lens-camera-switcher-title">Switch Camera</div>
               <div class="three-lens-camera-list">
-                ${availableCameras.map((cam, index) => `
+                ${availableCameras
+                  .map(
+                    (cam, index) => `
                   <button class="three-lens-camera-item ${index === this.probe.getActiveCameraIndex() ? 'active' : ''}" 
                           data-camera-index="${index}" 
                           data-camera-uuid="${cam.uuid}"
@@ -4496,19 +5253,37 @@ export class ThreeLensOverlay {
                     <span class="three-lens-camera-item-icon">📷</span>
                     <span class="three-lens-camera-item-name">${cam.name}</span>
                   </button>
-                `).join('')}
+                `
+                  )
+                  .join('')}
               </div>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
         ${this.renderCostRankingSection(costRanking)}
       </div>
     `;
   }
 
-  private collectCostRanking(): Array<{ debugId: string; name: string; type: string; cost: number; costLevel: string; triangles: number }> {
+  private collectCostRanking(): Array<{
+    debugId: string;
+    name: string;
+    type: string;
+    cost: number;
+    costLevel: string;
+    triangles: number;
+  }> {
     const snapshot = this.probe.takeSnapshot();
-    const ranking: Array<{ debugId: string; name: string; type: string; cost: number; costLevel: string; triangles: number }> = [];
+    const ranking: Array<{
+      debugId: string;
+      name: string;
+      type: string;
+      cost: number;
+      costLevel: string;
+      triangles: number;
+    }> = [];
 
     const collectFromNode = (node: SceneNode) => {
       if (node.meshData?.costData) {
@@ -4532,22 +5307,36 @@ export class ThreeLensOverlay {
 
     // Sort by cost (highest first)
     ranking.sort((a, b) => b.cost - a.cost);
-    
+
     return ranking;
   }
 
-  private renderCostRankingSection(ranking: Array<{ debugId: string; name: string; type: string; cost: number; costLevel: string; triangles: number }>): string {
+  private renderCostRankingSection(
+    ranking: Array<{
+      debugId: string;
+      name: string;
+      type: string;
+      cost: number;
+      costLevel: string;
+      triangles: number;
+    }>
+  ): string {
     if (ranking.length === 0) {
       return '';
     }
 
     // Get total scene cost
     const totalCost = ranking.reduce((sum, item) => sum + item.cost, 0);
-    const totalTriangles = ranking.reduce((sum, item) => sum + item.triangles, 0);
-    
+    const totalTriangles = ranking.reduce(
+      (sum, item) => sum + item.triangles,
+      0
+    );
+
     // Count by cost level
-    const criticalCount = ranking.filter(r => r.costLevel === 'critical').length;
-    const highCount = ranking.filter(r => r.costLevel === 'high').length;
+    const criticalCount = ranking.filter(
+      (r) => r.costLevel === 'critical'
+    ).length;
+    const highCount = ranking.filter((r) => r.costLevel === 'high').length;
 
     // Take top 5 for display
     const topItems = ranking.slice(0, 5);
@@ -4569,21 +5358,29 @@ export class ThreeLensOverlay {
             <span class="three-lens-cost-summary-label">Meshes</span>
           </div>
         </div>
-        ${criticalCount > 0 || highCount > 0 ? `
+        ${
+          criticalCount > 0 || highCount > 0
+            ? `
           <div class="three-lens-cost-warning">
             ${criticalCount > 0 ? `<span class="cost-critical">🔥 ${criticalCount} critical</span>` : ''}
             ${highCount > 0 ? `<span class="cost-high">⚠ ${highCount} high cost</span>` : ''}
           </div>
-        ` : ''}
+        `
+            : ''
+        }
         <div class="three-lens-cost-ranking-list">
-          ${topItems.map((item, index) => `
+          ${topItems
+            .map(
+              (item, index) => `
             <div class="three-lens-cost-ranking-item" data-id="${item.debugId}" data-action="select-object">
               <span class="three-lens-cost-rank">#${index + 1}</span>
               <span class="three-lens-cost-ranking-name">${item.name}</span>
               <span class="three-lens-cost-ranking-triangles">${formatNumber(item.triangles)}</span>
               <span class="three-lens-cost-ranking-score cost-${item.costLevel}">${item.cost.toFixed(1)}</span>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
         </div>
         ${ranking.length > 5 ? `<div class="three-lens-cost-more">+ ${ranking.length - 5} more objects</div>` : ''}
       </div>
@@ -4605,16 +5402,29 @@ export class ThreeLensOverlay {
     `;
   }
 
-  private renderCostAnalysis(costData: NonNullable<NonNullable<SceneNode['meshData']>['costData']>): string {
+  private renderCostAnalysis(
+    costData: NonNullable<NonNullable<SceneNode['meshData']>['costData']>
+  ): string {
     const costLevelClass = `cost-${costData.costLevel}`;
-    const costLevelLabel = costData.costLevel.charAt(0).toUpperCase() + costData.costLevel.slice(1);
-    
+    const costLevelLabel =
+      costData.costLevel.charAt(0).toUpperCase() + costData.costLevel.slice(1);
+
     // Calculate cost breakdown percentages
-    const total = costData.triangleCost + costData.materialComplexity + costData.textureCost + costData.shadowCost;
-    const triPct = total > 0 ? (costData.triangleCost / total * 100).toFixed(0) : '0';
-    const matPct = total > 0 ? (costData.materialComplexity / total * 100).toFixed(0) : '0';
-    const texPct = total > 0 ? (costData.textureCost / total * 100).toFixed(0) : '0';
-    const shadowPct = total > 0 ? (costData.shadowCost / total * 100).toFixed(0) : '0';
+    const total =
+      costData.triangleCost +
+      costData.materialComplexity +
+      costData.textureCost +
+      costData.shadowCost;
+    const triPct =
+      total > 0 ? ((costData.triangleCost / total) * 100).toFixed(0) : '0';
+    const matPct =
+      total > 0
+        ? ((costData.materialComplexity / total) * 100).toFixed(0)
+        : '0';
+    const texPct =
+      total > 0 ? ((costData.textureCost / total) * 100).toFixed(0) : '0';
+    const shadowPct =
+      total > 0 ? ((costData.shadowCost / total) * 100).toFixed(0) : '0';
 
     return `
       <div class="three-lens-section">
@@ -4673,13 +5483,19 @@ export class ThreeLensOverlay {
     return 'Cast + Receive';
   }
 
-  private renderMaterialDetails(materials: NonNullable<NonNullable<SceneNode['meshData']>['costData']>['materials']): string {
+  private renderMaterialDetails(
+    materials: NonNullable<
+      NonNullable<SceneNode['meshData']>['costData']
+    >['materials']
+  ): string {
     if (materials.length === 0) return '';
 
     return `
       <div class="three-lens-material-details">
         <div class="three-lens-material-details-header">Materials (${materials.length})</div>
-        ${materials.map((mat, _i) => `
+        ${materials
+          .map(
+            (mat, _i) => `
           <div class="three-lens-material-item">
             <span class="three-lens-material-type">${mat.type}</span>
             <span class="three-lens-material-score">${mat.complexityScore.toFixed(1)}/10</span>
@@ -4691,12 +5507,16 @@ export class ThreeLensOverlay {
               ${mat.doubleSided ? `<span class="three-lens-mat-feature" title="Double Sided">⇄</span>` : ''}
             </div>
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     `;
   }
 
-  private renderLightInfo(lightData: NonNullable<SceneNode['lightData']>): string {
+  private renderLightInfo(
+    lightData: NonNullable<SceneNode['lightData']>
+  ): string {
     return `
       <div class="three-lens-section">
         <div class="three-lens-section-header">Light</div>
@@ -4705,12 +5525,14 @@ export class ThreeLensOverlay {
         ${this.renderProp('Intensity', lightData.intensity.toFixed(2))}
         ${this.renderProp('Cast Shadow', lightData.castShadow)}
         ${lightData.distance !== undefined ? this.renderProp('Distance', lightData.distance) : ''}
-        ${lightData.angle !== undefined ? this.renderProp('Angle', (lightData.angle * 180 / Math.PI).toFixed(1) + '°') : ''}
+        ${lightData.angle !== undefined ? this.renderProp('Angle', ((lightData.angle * 180) / Math.PI).toFixed(1) + '°') : ''}
       </div>
     `;
   }
 
-  private renderCameraInfo(cameraData: NonNullable<SceneNode['cameraData']>): string {
+  private renderCameraInfo(
+    cameraData: NonNullable<SceneNode['cameraData']>
+  ): string {
     return `
       <div class="three-lens-section">
         <div class="three-lens-section-header">Camera</div>
@@ -4725,17 +5547,22 @@ export class ThreeLensOverlay {
 
   private renderVisualOverlaysSection(node: SceneNode): string {
     // Only show for meshes (objects that can have wireframe/bounding box)
-    const isMesh = node.ref.type === 'Mesh' || node.ref.type === 'SkinnedMesh' || node.ref.type === 'InstancedMesh';
-    
+    const isMesh =
+      node.ref.type === 'Mesh' ||
+      node.ref.type === 'SkinnedMesh' ||
+      node.ref.type === 'InstancedMesh';
+
     if (!isMesh) {
       // Don't show visual overlays section for non-mesh objects
       return this.renderTransformGizmoSection();
     }
-    
+
     // Get the actual object to check current state
     const obj = this.probe.getSelectedObject();
     const wireframeEnabled = obj ? this.probe.isWireframeEnabled(obj) : false;
-    const boundingBoxEnabled = obj ? this.probe.isBoundingBoxEnabled(obj) : false;
+    const boundingBoxEnabled = obj
+      ? this.probe.isBoundingBoxEnabled(obj)
+      : false;
 
     return `
       <div class="three-lens-section">
@@ -4764,7 +5591,7 @@ export class ThreeLensOverlay {
   private renderCameraControlsSection(_node: SceneNode): string {
     const isAnimating = this.probe.isCameraAnimating();
     const hasHome = this.probe.hasHomePosition();
-    
+
     // Only show object-specific camera controls (Focus, Fly To)
     // Global camera controls (switcher, home) are in Global Tools
     return `
@@ -4795,11 +5622,15 @@ export class ThreeLensOverlay {
           </button>
         </div>
         
-        ${isAnimating ? `
+        ${
+          isAnimating
+            ? `
           <button class="three-lens-action-btn stop" data-action="stop-animation" title="Stop camera animation">
             Stop Animation
           </button>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
   }
@@ -4891,18 +5722,18 @@ export class ThreeLensOverlay {
   private formatLayers(layerMask: number): string {
     if (layerMask === 0) return 'None';
     if (layerMask === 1) return '0 (default)';
-    
+
     const enabledLayers: number[] = [];
     for (let i = 0; i < 32; i++) {
       if (layerMask & (1 << i)) {
         enabledLayers.push(i);
       }
     }
-    
+
     if (enabledLayers.length === 1) {
       return enabledLayers[0] === 0 ? '0 (default)' : String(enabledLayers[0]);
     }
-    
+
     return enabledLayers.join(', ');
   }
 
@@ -4919,7 +5750,11 @@ export class ThreeLensOverlay {
     return `<div class="three-lens-property-row"><span class="three-lens-property-name">${name}</span><span class="three-lens-property-value">${String(value)}</span></div>`;
   }
 
-  private renderVectorProp(name: string, vec: { x: number; y: number; z: number }, isRotation = false): string {
+  private renderVectorProp(
+    name: string,
+    vec: { x: number; y: number; z: number },
+    isRotation = false
+  ): string {
     const m = isRotation ? 180 / Math.PI : 1;
     return `
       <div class="three-lens-property-row">
@@ -4954,10 +5789,10 @@ export class ThreeLensOverlay {
           this.renderTimelineChart();
         }
       } else {
-      tabContent.innerHTML = this.renderCurrentTabContent();
-      if (this.statsTab === 'overview') {
-        this.attachChartEvents();
-        this.renderChart();
+        tabContent.innerHTML = this.renderCurrentTabContent();
+        if (this.statsTab === 'overview') {
+          this.attachChartEvents();
+          this.renderChart();
         }
       }
     } else {
@@ -4978,7 +5813,6 @@ export class ThreeLensOverlay {
         this.attachResourceEvents();
       }
     }
-    
   }
 
   private renderCurrentTabContent(): string {
@@ -4988,13 +5822,21 @@ export class ThreeLensOverlay {
     }
 
     const benchmark = this.latestBenchmark;
-    const fps = stats.performance?.fps ?? (stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0);
+    const fps =
+      stats.performance?.fps ??
+      (stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0);
     const fpsSmoothed = stats.performance?.fpsSmoothed ?? fps;
     const fps1Low = stats.performance?.fps1PercentLow ?? 0;
 
     switch (this.statsTab) {
       case 'overview':
-        return this.renderOverviewTab(stats, benchmark, fps, fpsSmoothed, fps1Low);
+        return this.renderOverviewTab(
+          stats,
+          benchmark,
+          fps,
+          fpsSmoothed,
+          fps1Low
+        );
       case 'memory':
         return this.renderMemoryTab(stats);
       case 'rendering':
@@ -5009,17 +5851,27 @@ export class ThreeLensOverlay {
   }
 
   private attachStatsTabEvents(container: HTMLElement): void {
-    container.querySelectorAll('.three-lens-tab').forEach(tab => {
+    container.querySelectorAll('.three-lens-tab').forEach((tab) => {
       tab.addEventListener('click', (e) => {
-        const tabName = (e.currentTarget as HTMLElement).dataset.tab as 'overview' | 'memory' | 'rendering' | 'timeline' | 'resources';
+        const tabName = (e.currentTarget as HTMLElement).dataset.tab as
+          | 'overview'
+          | 'memory'
+          | 'rendering'
+          | 'timeline'
+          | 'resources';
         if (tabName && tabName !== this.statsTab) {
           this.statsTab = tabName;
           // Update tab active states
-          container.querySelectorAll('.three-lens-tab').forEach(t => {
-            t.classList.toggle('active', (t as HTMLElement).dataset.tab === tabName);
+          container.querySelectorAll('.three-lens-tab').forEach((t) => {
+            t.classList.toggle(
+              'active',
+              (t as HTMLElement).dataset.tab === tabName
+            );
           });
           // Update content
-          const tabContent = document.getElementById('three-lens-stats-tab-content');
+          const tabContent = document.getElementById(
+            'three-lens-stats-tab-content'
+          );
           if (tabContent) {
             tabContent.innerHTML = this.renderCurrentTabContent();
             if (this.statsTab === 'overview') {
@@ -5039,8 +5891,12 @@ export class ThreeLensOverlay {
 
   private attachResourceEvents(): void {
     // Toggle stack traces
-    const stackTraceToggle = document.querySelector('[data-action="toggle-stack-traces"]');
-    const stackTraceBtn = stackTraceToggle?.querySelector('.three-lens-toggle-btn');
+    const stackTraceToggle = document.querySelector(
+      '[data-action="toggle-stack-traces"]'
+    );
+    const stackTraceBtn = stackTraceToggle?.querySelector(
+      '.three-lens-toggle-btn'
+    );
     stackTraceToggle?.addEventListener('click', () => {
       const isEnabled = this.probe.isResourceStackTraceCaptureEnabled();
       this.probe.setResourceStackTraceCapture(!isEnabled);
@@ -5048,28 +5904,36 @@ export class ThreeLensOverlay {
     });
 
     // Clear events button
-    document.querySelector('[data-action="clear-resource-events"]')?.addEventListener('click', () => {
-      this.probe.clearResourceEvents();
-      this.updateResourcesView();
-    });
+    document
+      .querySelector('[data-action="clear-resource-events"]')
+      ?.addEventListener('click', () => {
+        this.probe.clearResourceEvents();
+        this.updateResourcesView();
+      });
 
     // Run leak detection button
-    document.querySelector('[data-action="run-leak-detection"]')?.addEventListener('click', () => {
-      this.probe.runLeakDetection();
-      this.updateResourcesView();
-    });
+    document
+      .querySelector('[data-action="run-leak-detection"]')
+      ?.addEventListener('click', () => {
+        this.probe.runLeakDetection();
+        this.updateResourcesView();
+      });
 
     // Generate leak report button
-    document.querySelector('[data-action="generate-leak-report"]')?.addEventListener('click', () => {
-      const report = this.probe.generateLeakReport();
-      this.showLeakReport(report);
-    });
+    document
+      .querySelector('[data-action="generate-leak-report"]')
+      ?.addEventListener('click', () => {
+        const report = this.probe.generateLeakReport();
+        this.showLeakReport(report);
+      });
 
     // Clear leak alerts button
-    document.querySelector('[data-action="clear-leak-alerts"]')?.addEventListener('click', () => {
-      this.probe.clearLeakAlerts();
-      this.updateResourcesView();
-    });
+    document
+      .querySelector('[data-action="clear-leak-alerts"]')
+      ?.addEventListener('click', () => {
+        this.probe.clearLeakAlerts();
+        this.updateResourcesView();
+      });
   }
 
   private showLeakReport(report: LeakReport): void {
@@ -5103,32 +5967,49 @@ Geometries: ${report.resourceStats.geometries.created} created, ${report.resourc
 Materials:  ${report.resourceStats.materials.created} created, ${report.resourceStats.materials.disposed} disposed, ${report.resourceStats.materials.orphaned} orphaned, ${report.resourceStats.materials.leaked} leaked
 Textures:   ${report.resourceStats.textures.created} created, ${report.resourceStats.textures.disposed} disposed, ${report.resourceStats.textures.orphaned} orphaned, ${report.resourceStats.textures.leaked} leaked
 
-${report.alerts.length > 0 ? `
+${
+  report.alerts.length > 0
+    ? `
 ALERTS
 ───────────────────────────────────────────────────────────────
-${report.alerts.map(a => `[${a.severity.toUpperCase()}] ${a.message}
+${report.alerts
+  .map(
+    (a) => `[${a.severity.toUpperCase()}] ${a.message}
    ${a.details}
    💡 ${a.suggestion}
-`).join('\n')}
-` : ''}
+`
+  )
+  .join('\n')}
+`
+    : ''
+}
 
-${report.recommendations.length > 0 ? `
+${
+  report.recommendations.length > 0
+    ? `
 RECOMMENDATIONS
 ───────────────────────────────────────────────────────────────
 ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
-` : ''}
+`
+    : ''
+}
 
 ═══════════════════════════════════════════════════════════════
 `;
-    
+
     // Log to console for easy copying
     /* eslint-disable no-console */
-    console.log('%c3Lens Leak Report', 'font-size: 16px; font-weight: bold; color: #60a5fa;');
+    console.log(
+      '%c3Lens Leak Report',
+      'font-size: 16px; font-weight: bold; color: #60a5fa;'
+    );
     console.log(reportText);
     /* eslint-enable no-console */
-    
+
     // Also show a brief notification in the UI
-    alert(`Leak Report Generated!\n\nCheck the browser console for the full report.\n\nSummary:\n• ${report.summary.totalAlerts} alerts\n• ${formatBytes(report.summary.estimatedLeakedMemoryBytes)} estimated leaked memory\n• ${report.recommendations.length} recommendations`);
+    alert(
+      `Leak Report Generated!\n\nCheck the browser console for the full report.\n\nSummary:\n• ${report.summary.totalAlerts} alerts\n• ${formatBytes(report.summary.estimatedLeakedMemoryBytes)} estimated leaked memory\n• ${report.recommendations.length} recommendations`
+    );
   }
 
   private updateResourcesView(): void {
@@ -5145,20 +6026,22 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       // Preserve scroll position of the inspector pane
       const inspectorPane = content.querySelector('.three-lens-inspector-pane');
       const scrollTop = inspectorPane?.scrollTop ?? 0;
-      
+
       content.innerHTML = this.renderSceneContent();
       const panel = document.getElementById('three-lens-panel-scene');
       if (panel) this.attachTreeEvents(panel);
-      
+
       // Initialize virtual scroller if needed (after DOM is ready)
       requestAnimationFrame(() => {
         this.initVirtualScroller();
         this.attachVirtualTreeEvents();
       });
-      
+
       // Restore scroll position
       if (scrollTop > 0) {
-        const newInspectorPane = content.querySelector('.three-lens-inspector-pane');
+        const newInspectorPane = content.querySelector(
+          '.three-lens-inspector-pane'
+        );
         if (newInspectorPane) {
           newInspectorPane.scrollTop = scrollTop;
         }
@@ -5174,10 +6057,10 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     // Lock the current width to prevent shrinking during DOM update
     const currentWidth = panel.offsetWidth;
     panel.style.minWidth = `${currentWidth}px`;
-    
+
     // Update the content (this changes the DOM structure)
     this.updateScenePanel();
-    
+
     // Now animate to the target width
     requestAnimationFrame(() => {
       this.updateScenePanelSize();
@@ -5191,7 +6074,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 
     // Scene panel always uses the fixed width (tree + inspector/global tools)
     panel.style.minWidth = `${SCENE_PANEL_WIDTH}px`;
-    
+
     if (state.width !== SCENE_PANEL_WIDTH) {
       state.width = SCENE_PANEL_WIDTH;
       panel.style.width = `${SCENE_PANEL_WIDTH}px`;
@@ -5200,7 +6083,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 
   private attachTreeEvents(panel: HTMLElement): void {
     // Visibility toggle buttons (eye icons)
-    panel.querySelectorAll('.three-lens-visibility-btn').forEach(btn => {
+    panel.querySelectorAll('.three-lens-visibility-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation(); // Don't trigger node selection
         const id = (btn as HTMLElement).dataset.id;
@@ -5211,7 +6094,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     });
 
     // Visual overlays toggle buttons
-    panel.querySelectorAll('.three-lens-toggle-row').forEach(row => {
+    panel.querySelectorAll('.three-lens-toggle-row').forEach((row) => {
       const action = (row as HTMLElement).dataset.action;
       const btn = row.querySelector('.three-lens-toggle-btn');
       if (!btn || !action) return;
@@ -5219,7 +6102,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const isActive = btn.classList.contains('active');
-        
+
         switch (action) {
           case 'toggle-wireframe':
             this.probe.toggleSelectedWireframe(!isActive);
@@ -5254,36 +6137,44 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     });
 
     // Transform mode buttons
-    panel.querySelectorAll('.three-lens-mode-btn').forEach(btn => {
+    panel.querySelectorAll('.three-lens-mode-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const mode = (btn as HTMLElement).dataset.mode as 'translate' | 'rotate' | 'scale';
+        const mode = (btn as HTMLElement).dataset.mode as
+          | 'translate'
+          | 'rotate'
+          | 'scale';
         if (mode && this.probe.isTransformGizmoEnabled()) {
           this.probe.setTransformMode(mode);
           // Update active states
-          panel.querySelectorAll('.three-lens-mode-btn').forEach(b => {
-            b.classList.toggle('active', (b as HTMLElement).dataset.mode === mode);
+          panel.querySelectorAll('.three-lens-mode-btn').forEach((b) => {
+            b.classList.toggle(
+              'active',
+              (b as HTMLElement).dataset.mode === mode
+            );
           });
         }
       });
     });
 
     // Space toggle button
-    panel.querySelectorAll('.three-lens-option-row[data-action="toggle-space"]').forEach(row => {
-      const btn = row.querySelector('.three-lens-space-btn');
-      if (btn) {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (this.probe.isTransformGizmoEnabled()) {
-            const newSpace = this.probe.toggleTransformSpace();
-            btn.textContent = newSpace === 'world' ? 'World' : 'Local';
-          }
-        });
-      }
-    });
+    panel
+      .querySelectorAll('.three-lens-option-row[data-action="toggle-space"]')
+      .forEach((row) => {
+        const btn = row.querySelector('.three-lens-space-btn');
+        if (btn) {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.probe.isTransformGizmoEnabled()) {
+              const newSpace = this.probe.toggleTransformSpace();
+              btn.textContent = newSpace === 'world' ? 'World' : 'Local';
+            }
+          });
+        }
+      });
 
     // Undo/Redo buttons
-    panel.querySelectorAll('.three-lens-undo-btn').forEach(btn => {
+    panel.querySelectorAll('.three-lens-undo-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (this.probe.canUndoTransform()) {
@@ -5293,7 +6184,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       });
     });
 
-    panel.querySelectorAll('.three-lens-redo-btn').forEach(btn => {
+    panel.querySelectorAll('.three-lens-redo-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (this.probe.canRedoTransform()) {
@@ -5304,13 +6195,13 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     });
 
     // Camera control buttons
-    panel.querySelectorAll('.three-lens-action-btn').forEach(btn => {
+    panel.querySelectorAll('.three-lens-action-btn').forEach((btn) => {
       const action = (btn as HTMLElement).dataset.action;
       if (!action) return;
 
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        
+
         switch (action) {
           case 'focus-selected':
             this.probe.focusOnSelected();
@@ -5342,10 +6233,13 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     });
 
     // Camera switcher buttons
-    panel.querySelectorAll('.three-lens-camera-item').forEach(btn => {
+    panel.querySelectorAll('.three-lens-camera-item').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const index = parseInt((btn as HTMLElement).dataset.cameraIndex || '0', 10);
+        const index = parseInt(
+          (btn as HTMLElement).dataset.cameraIndex || '0',
+          10
+        );
         if (this.probe.switchToCamera(index)) {
           this.updateScenePanel();
         }
@@ -5353,7 +6247,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     });
 
     // Cost ranking item selection
-    panel.querySelectorAll('.three-lens-cost-ranking-item').forEach(item => {
+    panel.querySelectorAll('.three-lens-cost-ranking-item').forEach((item) => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const id = (item as HTMLElement).dataset.id;
@@ -5364,7 +6258,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     });
 
     // Tree node events
-    panel.querySelectorAll('.three-lens-node-header').forEach(header => {
+    panel.querySelectorAll('.three-lens-node-header').forEach((header) => {
       header.addEventListener('click', (e) => {
         // Ignore if clicking visibility button
         if ((e.target as HTMLElement).closest('.three-lens-visibility-btn')) {
@@ -5375,7 +6269,9 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
         const id = node?.dataset.id;
         if (!id) return;
 
-        const toggle = (e.target as HTMLElement).closest('.three-lens-node-toggle');
+        const toggle = (e.target as HTMLElement).closest(
+          '.three-lens-node-toggle'
+        );
         if (toggle && !toggle.classList.contains('hidden')) {
           if (this.expandedNodes.has(id)) {
             this.expandedNodes.delete(id);
@@ -5402,7 +6298,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
   private toggleObjectVisibility(debugId: string): void {
     // Save current selection state
     const prevSelectedId = this.selectedNodeId;
-    
+
     // Find the object by selecting it temporarily
     if (this.probe.selectByDebugId(debugId)) {
       const obj = this.probe.getSelectedObject();
@@ -5410,7 +6306,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
         obj.visible = !obj.visible;
       }
     }
-    
+
     // Restore previous selection
     if (prevSelectedId) {
       this.probe.selectByDebugId(prevSelectedId);
@@ -5418,7 +6314,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       this.probe.selectObject(null);
     }
     this.selectedNodeId = prevSelectedId;
-    
+
     // Update UI
     this.updateScenePanel();
     this.updateInspectorPanel();
@@ -5436,9 +6332,11 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     // This is more efficient as rows are dynamically created/destroyed during scrolling
     container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
-      
+
       // Handle visibility button clicks
-      const visibilityBtn = target.closest('.three-lens-visibility-btn') as HTMLElement;
+      const visibilityBtn = target.closest(
+        '.three-lens-visibility-btn'
+      ) as HTMLElement;
       if (visibilityBtn) {
         const id = visibilityBtn.dataset.id;
         if (id) {
@@ -5495,13 +6393,13 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
 
     // Find selected node
     const snapshot = this.probe.takeSnapshot();
-    const selectedNode = this.selectedNodeId 
+    const selectedNode = this.selectedNodeId
       ? this.findNodeById(snapshot.scenes, this.selectedNodeId)
       : null;
 
     // Update inspector content
-    inspectorPane.innerHTML = selectedNode 
-      ? this.renderNodeInspector(selectedNode) 
+    inspectorPane.innerHTML = selectedNode
+      ? this.renderNodeInspector(selectedNode)
       : this.renderGlobalTools();
 
     // Re-attach inspector events
@@ -5544,7 +6442,8 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     const data = this.getVisibleFrameData();
     if (data.length < 2) return 0;
     const avg = this.getFrameTimeAvg();
-    const variance = data.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / data.length;
+    const variance =
+      data.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / data.length;
     return Math.sqrt(variance);
   }
 
@@ -5558,7 +6457,13 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
   private handleChartZoomOut(): void {
     if (this.chartZoom > 0.5) {
       this.chartZoom /= 1.5;
-      this.chartOffset = Math.max(0, Math.min(this.chartOffset, this.frameHistory.length - this.getVisibleFrameCount()));
+      this.chartOffset = Math.max(
+        0,
+        Math.min(
+          this.chartOffset,
+          this.frameHistory.length - this.getVisibleFrameCount()
+        )
+      );
       this.updateChartView();
     }
   }
@@ -5584,32 +6489,45 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     if (minEl) minEl.textContent = `${this.getFrameTimeMin().toFixed(1)}ms`;
     if (avgEl) avgEl.textContent = `${this.getFrameTimeAvg().toFixed(1)}ms`;
     if (maxEl) maxEl.textContent = `${this.getFrameTimeMax().toFixed(1)}ms`;
-    if (jitterEl) jitterEl.textContent = `${this.getFrameTimeJitter().toFixed(1)}ms`;
+    if (jitterEl)
+      jitterEl.textContent = `${this.getFrameTimeJitter().toFixed(1)}ms`;
   }
 
   private attachChartEvents(): void {
     const container = document.getElementById('three-lens-chart-container');
-    const canvas = document.getElementById('three-lens-stats-chart') as HTMLCanvasElement;
+    const canvas = document.getElementById(
+      'three-lens-stats-chart'
+    ) as HTMLCanvasElement;
     const tooltip = document.getElementById('three-lens-chart-tooltip');
-    
+
     if (!container || !canvas) return;
 
     // Zoom controls
-    document.getElementById('three-lens-chart-zoom-in')?.addEventListener('click', () => this.handleChartZoomIn());
-    document.getElementById('three-lens-chart-zoom-out')?.addEventListener('click', () => this.handleChartZoomOut());
-    document.getElementById('three-lens-chart-reset')?.addEventListener('click', () => this.handleChartReset());
+    document
+      .getElementById('three-lens-chart-zoom-in')
+      ?.addEventListener('click', () => this.handleChartZoomIn());
+    document
+      .getElementById('three-lens-chart-zoom-out')
+      ?.addEventListener('click', () => this.handleChartZoomOut());
+    document
+      .getElementById('three-lens-chart-reset')
+      ?.addEventListener('click', () => this.handleChartReset());
 
     // Clear violations button
-    document.querySelector('[data-action="clear-violations"]')?.addEventListener('click', () => {
-      this.probe.clearViolations();
-      // Re-render the tab content
-      const tabContent = document.getElementById('three-lens-stats-tab-content');
-      if (tabContent) {
-        tabContent.innerHTML = this.renderCurrentTabContent();
-        this.attachChartEvents();
-        this.renderChart();
-      }
-    });
+    document
+      .querySelector('[data-action="clear-violations"]')
+      ?.addEventListener('click', () => {
+        this.probe.clearViolations();
+        // Re-render the tab content
+        const tabContent = document.getElementById(
+          'three-lens-stats-tab-content'
+        );
+        if (tabContent) {
+          tabContent.innerHTML = this.renderCurrentTabContent();
+          this.attachChartEvents();
+          this.renderChart();
+        }
+      });
 
     // Mouse wheel zoom
     container.addEventListener('wheel', (e) => {
@@ -5633,10 +6551,14 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       if (this.chartDragging) {
         const dx = e.clientX - this.chartDragStartX;
         const visibleCount = this.getVisibleFrameCount();
-        const framesPerPixel = visibleCount / (canvas.getBoundingClientRect().width);
+        const framesPerPixel =
+          visibleCount / canvas.getBoundingClientRect().width;
         const offsetDelta = Math.round(dx * framesPerPixel);
         const maxOffset = Math.max(0, this.frameHistory.length - visibleCount);
-        this.chartOffset = Math.max(0, Math.min(maxOffset, this.chartDragStartOffset - offsetDelta));
+        this.chartOffset = Math.max(
+          0,
+          Math.min(maxOffset, this.chartDragStartOffset - offsetDelta)
+        );
         this.updateChartView();
       }
     });
@@ -5651,27 +6573,27 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     // Hover tooltip
     canvas.addEventListener('mousemove', (e) => {
       if (this.chartDragging || !tooltip) return;
-      
+
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const data = this.getVisibleFrameData();
       const barWidth = rect.width / data.length;
       const index = Math.floor(x / barWidth);
-      
+
       if (index >= 0 && index < data.length) {
         this.chartHoverIndex = index;
         const frameTime = data[index];
         const fps = frameTime > 0 ? Math.round(1000 / frameTime) : 0;
-        
+
         tooltip.style.display = 'block';
         tooltip.style.left = `${Math.min(x, rect.width - 80)}px`;
         tooltip.style.top = '-40px';
-        
+
         const timeEl = tooltip.querySelector('.three-lens-tooltip-time');
         const fpsEl = tooltip.querySelector('.three-lens-tooltip-fps');
         if (timeEl) timeEl.textContent = `${frameTime.toFixed(2)}ms`;
         if (fpsEl) fpsEl.textContent = `${fps} FPS`;
-        
+
         this.renderChart(); // Re-render to highlight bar
       }
     });
@@ -5684,7 +6606,9 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
   }
 
   private renderChart(): void {
-    const canvas = document.getElementById('three-lens-stats-chart') as HTMLCanvasElement;
+    const canvas = document.getElementById(
+      'three-lens-stats-chart'
+    ) as HTMLCanvasElement;
     const data = this.getVisibleFrameData();
     if (!canvas || data.length < 2) return;
 
@@ -5700,13 +6624,13 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     const padding = { top: 4, bottom: 4, left: 0, right: 0 };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
-    
+
     ctx.clearRect(0, 0, width, height);
 
     // Calculate max value for scale (at least 16.67ms for 60fps reference)
     const dataMax = Math.max(...data, 16.67);
     const maxValue = Math.ceil(dataMax / 8.33) * 8.33; // Round up to nearest ~8ms
-    
+
     const barWidth = chartWidth / data.length;
     const barGap = Math.max(1, barWidth * 0.15);
 
@@ -5714,9 +6638,9 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     ctx.strokeStyle = 'rgba(45, 55, 72, 0.5)';
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
-    
+
     const gridValues = [16.67, 33.33]; // 60fps and 30fps lines
-    gridValues.forEach(value => {
+    gridValues.forEach((value) => {
       if (value <= maxValue) {
         const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
         ctx.beginPath();
@@ -5730,7 +6654,8 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     ctx.strokeStyle = 'rgba(52, 211, 153, 0.6)';
     ctx.setLineDash([4, 4]);
     ctx.lineWidth = 1.5;
-    const target60Y = padding.top + chartHeight - (16.67 / maxValue) * chartHeight;
+    const target60Y =
+      padding.top + chartHeight - (16.67 / maxValue) * chartHeight;
     ctx.beginPath();
     ctx.moveTo(padding.left, target60Y);
     ctx.lineTo(width - padding.right, target60Y);
@@ -5755,11 +6680,11 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     const gradientGood = ctx.createLinearGradient(0, height, 0, 0);
     gradientGood.addColorStop(0, 'rgba(52, 211, 153, 0.9)');
     gradientGood.addColorStop(1, 'rgba(34, 211, 238, 0.9)');
-    
+
     const gradientWarn = ctx.createLinearGradient(0, height, 0, 0);
     gradientWarn.addColorStop(0, 'rgba(251, 191, 36, 0.9)');
     gradientWarn.addColorStop(1, 'rgba(245, 158, 11, 0.9)');
-    
+
     const gradientBad = ctx.createLinearGradient(0, height, 0, 0);
     gradientBad.addColorStop(0, 'rgba(239, 68, 68, 0.9)');
     gradientBad.addColorStop(1, 'rgba(248, 113, 113, 0.9)');
@@ -5770,7 +6695,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       const barHeight = (value / maxValue) * chartHeight;
       const y = padding.top + chartHeight - barHeight;
       const actualBarWidth = barWidth - barGap;
-      
+
       // Color based on performance
       if (value <= 16.67) {
         ctx.fillStyle = gradientGood;
@@ -5779,27 +6704,32 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       } else {
         ctx.fillStyle = gradientBad;
       }
-      
+
       // Highlight hovered bar
       if (this.chartHoverIndex === i) {
         ctx.fillStyle = 'rgba(96, 165, 250, 1)';
         ctx.shadowColor = 'rgba(96, 165, 250, 0.5)';
         ctx.shadowBlur = 8;
       }
-      
+
       // Draw rounded bar
       const radius = Math.min(3, actualBarWidth / 2);
       ctx.beginPath();
       ctx.moveTo(x + radius, y);
       ctx.lineTo(x + actualBarWidth - radius, y);
-      ctx.quadraticCurveTo(x + actualBarWidth, y, x + actualBarWidth, y + radius);
+      ctx.quadraticCurveTo(
+        x + actualBarWidth,
+        y,
+        x + actualBarWidth,
+        y + radius
+      );
       ctx.lineTo(x + actualBarWidth, y + barHeight);
       ctx.lineTo(x, y + barHeight);
       ctx.lineTo(x, y + radius);
       ctx.quadraticCurveTo(x, y, x + radius, y);
       ctx.closePath();
       ctx.fill();
-      
+
       ctx.shadowBlur = 0;
     });
 
@@ -5809,25 +6739,25 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.beginPath();
-    
+
     data.forEach((value, i) => {
       const x = padding.left + i * barWidth + barWidth / 2;
       const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
-      
+
       if (i === 0) {
         ctx.moveTo(x, y);
       } else {
         ctx.lineTo(x, y);
       }
     });
-    
+
     ctx.stroke();
 
     // Draw data points
     data.forEach((value, i) => {
       const x = padding.left + i * barWidth + barWidth / 2;
       const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
-      
+
       // Only draw point for hovered bar
       if (this.chartHoverIndex === i) {
         ctx.beginPath();
@@ -5842,66 +6772,89 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
   }
 
   private attachTimelineEvents(): void {
-    const container = document.getElementById('three-lens-timeline-chart-container');
-    const canvas = document.getElementById('three-lens-timeline-chart') as HTMLCanvasElement;
+    const container = document.getElementById(
+      'three-lens-timeline-chart-container'
+    );
+    const canvas = document.getElementById(
+      'three-lens-timeline-chart'
+    ) as HTMLCanvasElement;
     const tooltip = document.getElementById('three-lens-timeline-tooltip');
-    
+
     if (!container || !canvas) return;
-    
+
     // Record/Stop button
-    document.getElementById('three-lens-timeline-record')?.addEventListener('click', () => {
-      this.isRecording = !this.isRecording;
-      if (this.isRecording) {
-        // Start fresh recording
-        this.recordedFrames = [];
-      }
-      this.updateTimelineView();
-    });
-    
+    document
+      .getElementById('three-lens-timeline-record')
+      ?.addEventListener('click', () => {
+        this.isRecording = !this.isRecording;
+        if (this.isRecording) {
+          // Start fresh recording
+          this.recordedFrames = [];
+        }
+        this.updateTimelineView();
+      });
+
     // Clear recording button
-    document.getElementById('three-lens-timeline-clear')?.addEventListener('click', () => {
-      this.recordedFrames = [];
-      this.updateTimelineView();
-    });
-    
+    document
+      .getElementById('three-lens-timeline-clear')
+      ?.addEventListener('click', () => {
+        this.recordedFrames = [];
+        this.updateTimelineView();
+      });
+
     // Buffer size selector
-    const bufferSelect = document.getElementById('three-lens-timeline-buffer-size') as HTMLSelectElement;
+    const bufferSelect = document.getElementById(
+      'three-lens-timeline-buffer-size'
+    ) as HTMLSelectElement;
     bufferSelect?.addEventListener('change', () => {
       this.frameBufferSize = parseInt(bufferSelect.value, 10);
       this.maxHistoryLength = this.frameBufferSize;
       // Trim existing history if needed
-      while (this.frameHistory.length > this.frameBufferSize) this.frameHistory.shift();
-      while (this.gpuHistory.length > this.frameBufferSize) this.gpuHistory.shift();
-      while (this.fpsHistory.length > this.frameBufferSize) this.fpsHistory.shift();
-      while (this.drawCallHistory.length > this.frameBufferSize) this.drawCallHistory.shift();
-      while (this.triangleHistory.length > this.frameBufferSize) this.triangleHistory.shift();
+      while (this.frameHistory.length > this.frameBufferSize)
+        this.frameHistory.shift();
+      while (this.gpuHistory.length > this.frameBufferSize)
+        this.gpuHistory.shift();
+      while (this.fpsHistory.length > this.frameBufferSize)
+        this.fpsHistory.shift();
+      while (this.drawCallHistory.length > this.frameBufferSize)
+        this.drawCallHistory.shift();
+      while (this.triangleHistory.length > this.frameBufferSize)
+        this.triangleHistory.shift();
       this.updateTimelineView();
     });
-    
+
     // Zoom controls
-    document.getElementById('three-lens-timeline-zoom-in')?.addEventListener('click', () => {
-      this.timelineZoom = Math.min(10, this.timelineZoom * 1.5);
-      this.updateTimelineView();
-    });
-    
-    document.getElementById('three-lens-timeline-zoom-out')?.addEventListener('click', () => {
-      this.timelineZoom = Math.max(0.1, this.timelineZoom / 1.5);
-      this.updateTimelineView();
-    });
-    
-    document.getElementById('three-lens-timeline-reset')?.addEventListener('click', () => {
-      this.timelineZoom = 1.0;
-      this.timelineOffset = 0;
-      this.timelineSelectedFrame = null;
-      this.updateTimelineView();
-    });
-    
+    document
+      .getElementById('three-lens-timeline-zoom-in')
+      ?.addEventListener('click', () => {
+        this.timelineZoom = Math.min(10, this.timelineZoom * 1.5);
+        this.updateTimelineView();
+      });
+
+    document
+      .getElementById('three-lens-timeline-zoom-out')
+      ?.addEventListener('click', () => {
+        this.timelineZoom = Math.max(0.1, this.timelineZoom / 1.5);
+        this.updateTimelineView();
+      });
+
+    document
+      .getElementById('three-lens-timeline-reset')
+      ?.addEventListener('click', () => {
+        this.timelineZoom = 1.0;
+        this.timelineOffset = 0;
+        this.timelineSelectedFrame = null;
+        this.updateTimelineView();
+      });
+
     // Close frame details
-    document.getElementById('three-lens-timeline-close-details')?.addEventListener('click', () => {
-      this.timelineSelectedFrame = null;
-      this.updateTimelineView();
-    });
-    
+    document
+      .getElementById('three-lens-timeline-close-details')
+      ?.addEventListener('click', () => {
+        this.timelineSelectedFrame = null;
+        this.updateTimelineView();
+      });
+
     // Mouse wheel zoom
     container.addEventListener('wheel', (e) => {
       e.preventDefault();
@@ -5912,7 +6865,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       }
       this.updateTimelineView();
     });
-    
+
     // Pan with drag
     container.addEventListener('mousedown', (e) => {
       this.timelineDragging = true;
@@ -5920,7 +6873,7 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       this.timelineDragStartOffset = this.timelineOffset;
       container.style.cursor = 'grabbing';
     });
-    
+
     document.addEventListener('mousemove', (e) => {
       if (this.timelineDragging) {
         const dx = e.clientX - this.timelineDragStartX;
@@ -5929,18 +6882,21 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
         const framesPerPixel = visibleCount / rect.width;
         const offsetDelta = Math.round(dx * framesPerPixel);
         const maxOffset = Math.max(0, this.frameHistory.length - visibleCount);
-        this.timelineOffset = Math.max(0, Math.min(maxOffset, this.timelineDragStartOffset - offsetDelta));
+        this.timelineOffset = Math.max(
+          0,
+          Math.min(maxOffset, this.timelineDragStartOffset - offsetDelta)
+        );
         this.updateTimelineView();
       }
     });
-    
+
     document.addEventListener('mouseup', () => {
       if (this.timelineDragging) {
         this.timelineDragging = false;
         if (container) container.style.cursor = 'default';
       }
     });
-    
+
     // Frame selection on click
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -5948,18 +6904,18 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       const visibleCount = this.getTimelineVisibleFrameCount();
       const barWidth = rect.width / visibleCount;
       const frameIndex = Math.floor(x / barWidth) + this.timelineOffset;
-      
+
       if (frameIndex >= 0 && frameIndex < this.frameHistory.length) {
         this.timelineSelectedFrame = frameIndex;
         this.updateTimelineView();
       }
     });
-    
+
     // Pause on mouse enter to prevent jank
     canvas.addEventListener('mouseenter', () => {
       this.timelinePaused = true;
     });
-    
+
     // Hover tooltip
     canvas.addEventListener('mousemove', (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -5967,14 +6923,14 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       const visibleCount = this.getTimelineVisibleFrameCount();
       const barWidth = rect.width / visibleCount;
       const frameIndex = Math.floor(x / barWidth) + this.timelineOffset;
-      
+
       this.timelineHoverIndex = frameIndex;
-      
+
       if (frameIndex >= 0 && frameIndex < this.frameHistory.length && tooltip) {
         const cpuTime = this.frameHistory[frameIndex];
         const gpuTime = this.gpuHistory[frameIndex];
         const fps = cpuTime > 0 ? 1000 / cpuTime : 0;
-        
+
         tooltip.style.display = 'block';
         tooltip.style.left = `${e.clientX - rect.left + 10}px`;
         tooltip.style.top = `${e.clientY - rect.top - 10}px`;
@@ -5986,14 +6942,14 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
         `;
       }
     });
-    
+
     canvas.addEventListener('mouseleave', () => {
       if (tooltip) tooltip.style.display = 'none';
       this.timelineHoverIndex = null;
       this.timelinePaused = false;
     });
   }
-  
+
   private updateTimelineView(): void {
     const tabContent = document.getElementById('three-lens-stats-tab-content');
     if (tabContent && this.statsTab === 'timeline') {
@@ -6002,56 +6958,66 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
       this.renderTimelineChart();
     }
   }
-  
+
   private renderTimelineChart(): void {
-    const canvas = document.getElementById('three-lens-timeline-chart') as HTMLCanvasElement;
+    const canvas = document.getElementById(
+      'three-lens-timeline-chart'
+    ) as HTMLCanvasElement;
     if (!canvas) return;
-    
+
     const visibleCount = this.getTimelineVisibleFrameCount();
-    const startIndex = Math.max(0, this.frameHistory.length - visibleCount - this.timelineOffset);
-    const endIndex = Math.min(this.frameHistory.length, startIndex + visibleCount);
+    const startIndex = Math.max(
+      0,
+      this.frameHistory.length - visibleCount - this.timelineOffset
+    );
+    const endIndex = Math.min(
+      this.frameHistory.length,
+      startIndex + visibleCount
+    );
     const cpuData = this.frameHistory.slice(startIndex, endIndex);
     const gpuData = this.gpuHistory.slice(startIndex, endIndex);
-    const spikes = this.detectSpikes(33.33).filter(i => i >= startIndex && i < endIndex).map(i => i - startIndex);
-    
+    const spikes = this.detectSpikes(33.33)
+      .filter((i) => i >= startIndex && i < endIndex)
+      .map((i) => i - startIndex);
+
     if (cpuData.length === 0) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
+
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * window.devicePixelRatio;
     canvas.height = rect.height * window.devicePixelRatio;
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    
+
     const { width, height } = rect;
     const padding = { top: 20, bottom: 20, left: 40, right: 10 };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
-    
+
     ctx.clearRect(0, 0, width, height);
-    
+
     // Calculate max value
     const maxCpu = Math.max(...cpuData, 16.67);
     const maxGpu = gpuData.length > 0 ? Math.max(...gpuData, 16.67) : 0;
     const maxValue = Math.ceil(Math.max(maxCpu, maxGpu, 33.33) / 8.33) * 8.33;
-    
+
     const barWidth = chartWidth / cpuData.length;
-    
+
     // Draw gridlines
     ctx.strokeStyle = 'rgba(45, 55, 72, 0.3)';
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
-    
+
     const gridValues = [16.67, 33.33, 50, 66.67];
-    gridValues.forEach(value => {
+    gridValues.forEach((value) => {
       if (value <= maxValue) {
         const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
         ctx.beginPath();
         ctx.moveTo(padding.left, y);
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
-        
+
         // Grid label
         ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
         ctx.font = '10px monospace';
@@ -6059,40 +7025,44 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
         ctx.fillText(`${value.toFixed(0)}ms`, padding.left - 5, y + 3);
       }
     });
-    
+
     // Draw 60fps target line
     ctx.strokeStyle = 'rgba(52, 211, 153, 0.5)';
     ctx.setLineDash([4, 4]);
     ctx.lineWidth = 1;
-    const target60Y = padding.top + chartHeight - (16.67 / maxValue) * chartHeight;
+    const target60Y =
+      padding.top + chartHeight - (16.67 / maxValue) * chartHeight;
     ctx.beginPath();
     ctx.moveTo(padding.left, target60Y);
     ctx.lineTo(width - padding.right, target60Y);
     ctx.stroke();
-    
+
     // Draw 30fps warning line
     ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
-    const target30Y = padding.top + chartHeight - (33.33 / maxValue) * chartHeight;
+    const target30Y =
+      padding.top + chartHeight - (33.33 / maxValue) * chartHeight;
     ctx.beginPath();
     ctx.moveTo(padding.left, target30Y);
     ctx.lineTo(width - padding.right, target30Y);
     ctx.stroke();
-    
+
     ctx.setLineDash([]);
-    
+
     // Draw CPU bars
     cpuData.forEach((value, i) => {
       const x = padding.left + i * barWidth;
       const barHeight = (value / maxValue) * chartHeight;
       const y = padding.top + chartHeight - barHeight;
-      
+
       // Check if spike, selected, or hovered
       const isSpike = spikes.includes(i);
       const isSelected = this.timelineSelectedFrame === startIndex + i;
       const isHovered = this.timelineHoverIndex === startIndex + i;
-      
-      ctx.fillStyle = isSpike ? 'rgba(239, 68, 68, 0.8)' : 'rgba(96, 165, 250, 0.6)';
-      
+
+      ctx.fillStyle = isSpike
+        ? 'rgba(239, 68, 68, 0.8)'
+        : 'rgba(96, 165, 250, 0.6)';
+
       if (isHovered) {
         ctx.fillStyle = 'rgba(147, 197, 253, 1)'; // Lighter blue for hover
       }
@@ -6102,10 +7072,10 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, barWidth - 1, barHeight);
       }
-      
+
       ctx.fillRect(x, y, barWidth - 1, barHeight);
     });
-    
+
     // Draw GPU bars on top (if available)
     if (gpuData.length > 0) {
       gpuData.forEach((value, i) => {
@@ -6113,13 +7083,13 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
           const x = padding.left + i * barWidth;
           const barHeight = (value / maxValue) * chartHeight;
           const y = padding.top + chartHeight - barHeight;
-          
+
           ctx.fillStyle = 'rgba(34, 197, 94, 0.6)';
           ctx.fillRect(x, y, barWidth - 1, barHeight);
         }
       });
     }
-    
+
     // Draw frame numbers on x-axis
     ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
     ctx.font = '9px monospace';

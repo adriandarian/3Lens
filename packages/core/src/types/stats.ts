@@ -693,9 +693,9 @@ export const DEFAULT_BENCHMARK_CONFIG: BenchmarkConfig = {
   maxGeometryMemory: 128 * 1024 * 1024, // 128 MB
   weights: {
     timing: 0.35,
-    drawCalls: 0.20,
-    geometry: 0.20,
+    drawCalls: 0.2,
+    geometry: 0.2,
     memory: 0.15,
-    stateChanges: 0.10,
+    stateChanges: 0.1,
   },
 };

@@ -160,7 +160,18 @@ export interface UniformData {
   /**
    * Uniform type (inferred from value)
    */
-  type: 'float' | 'int' | 'vec2' | 'vec3' | 'vec4' | 'mat3' | 'mat4' | 'sampler2D' | 'samplerCube' | 'struct' | 'unknown';
+  type:
+    | 'float'
+    | 'int'
+    | 'vec2'
+    | 'vec3'
+    | 'vec4'
+    | 'mat3'
+    | 'mat4'
+    | 'sampler2D'
+    | 'samplerCube'
+    | 'struct'
+    | 'unknown';
 
   /**
    * Serialized value (primitives, arrays, or null for complex types)
@@ -192,4 +203,3 @@ export interface MaterialsSummary {
    */
   transparentCount: number;
 }
-

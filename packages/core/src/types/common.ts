@@ -10,4 +10,3 @@ export type Unsubscribe = () => void;
  * Used to pass the THREE module to helpers that need to create THREE objects
  */
 export type ThreeNamespace = typeof THREE;
-

@@ -24,7 +24,9 @@ vi.mock('./useThreeLens', () => ({
     drawCalls: computed(() => frameStatsRef.value?.drawCalls ?? 0),
     triangles: computed(() => frameStatsRef.value?.triangles ?? 0),
     frameTime: computed(() => frameStatsRef.value?.frameTimeMs ?? 0),
-    gpuMemory: computed(() => frameStatsRef.value?.memory?.gpuMemoryEstimate ?? 0),
+    gpuMemory: computed(
+      () => frameStatsRef.value?.memory?.gpuMemoryEstimate ?? 0
+    ),
     isOverlayVisible: ref(false),
     selectObject: vi.fn(),
     clearSelection: vi.fn(),
@@ -141,7 +143,9 @@ describe('useMetric', () => {
   it('should respect sampleRate', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.performance?.fps ?? 0, { sampleRate: 2 });
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0, {
+          sampleRate: 2,
+        });
         return { metric };
       },
       render() {
@@ -167,9 +171,9 @@ describe('useMetric', () => {
   it('should smooth values when enabled', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.performance?.fps ?? 0, { 
-          smoothed: true, 
-          smoothingSamples: 3 
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0, {
+          smoothed: true,
+          smoothingSamples: 3,
         });
         return { metric };
       },
@@ -195,7 +199,9 @@ describe('useMetric', () => {
   it('should not smooth when disabled', async () => {
     const TestComponent = defineComponent({
       setup() {
-        const metric = useMetric((stats) => stats.performance?.fps ?? 0, { smoothed: false });
+        const metric = useMetric((stats) => stats.performance?.fps ?? 0, {
+          smoothed: false,
+        });
         return { metric };
       },
       render() {

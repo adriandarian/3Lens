@@ -1,6 +1,6 @@
 /**
  * 3Lens Theme System
- * 
+ *
  * Provides theme management with auto-detection, custom themes,
  * and accessibility features.
  */
@@ -13,7 +13,7 @@ export type ResolvedTheme = 'dark' | 'light' | 'high-contrast';
  */
 export interface CustomTheme {
   name: string;
-  
+
   // Background colors
   bgPrimary: string;
   bgSecondary: string;
@@ -21,19 +21,19 @@ export interface CustomTheme {
   bgElevated: string;
   bgHover: string;
   bgActive: string;
-  
+
   // Border colors
   border: string;
   borderSubtle: string;
   borderFocus: string;
-  
+
   // Text colors
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
   textDisabled: string;
   textInverse: string;
-  
+
   // Accent colors
   accent: string;
   accentHover: string;
@@ -43,7 +43,7 @@ export interface CustomTheme {
   accentAmber?: string;
   accentRose?: string;
   accentViolet?: string;
-  
+
   // Semantic colors
   success: string;
   successBg?: string;
@@ -53,12 +53,12 @@ export interface CustomTheme {
   errorBg?: string;
   info?: string;
   infoBg?: string;
-  
+
   // Shadows
   shadowSm?: string;
   shadowMd?: string;
   shadowLg?: string;
-  
+
   // Color scheme
   colorScheme: 'dark' | 'light';
 }
@@ -76,7 +76,7 @@ type ThemeChangeCallback = (event: ThemeChangeEvent) => void;
 
 /**
  * Theme Manager
- * 
+ *
  * Handles theme switching, auto-detection, and custom themes.
  */
 export class ThemeManager {
@@ -88,37 +88,37 @@ export class ThemeManager {
   private mediaQuery: MediaQueryList | null = null;
   private mediaQueryHandler: ((e: MediaQueryListEvent) => void) | null = null;
   private storageKey = '3lens-theme';
-  
+
   /**
    * Initialize the theme manager with a root element
    */
   initialize(root: HTMLElement): void {
     this.root = root;
-    
+
     // Load saved preference
     this.loadSavedTheme();
-    
+
     // Set up auto-detection
     this.setupAutoDetection();
-    
+
     // Apply initial theme
     this.applyTheme();
   }
-  
+
   /**
    * Get the current theme mode
    */
   getMode(): ThemeMode {
     return this.mode;
   }
-  
+
   /**
    * Get the resolved theme (actual theme being displayed)
    */
   getResolvedTheme(): ResolvedTheme {
     return this.resolved;
   }
-  
+
   /**
    * Set the theme mode
    */
@@ -128,7 +128,7 @@ export class ThemeManager {
     this.applyTheme();
     this.notifyCallbacks();
   }
-  
+
   /**
    * Toggle between dark and light themes
    */
@@ -142,12 +142,12 @@ export class ThemeManager {
       this.mode = 'dark';
     }
     // high-contrast stays as is unless explicitly changed
-    
+
     this.saveTheme();
     this.applyTheme();
     this.notifyCallbacks();
   }
-  
+
   /**
    * Cycle through all themes
    */
@@ -155,26 +155,26 @@ export class ThemeManager {
     const themes: ThemeMode[] = ['dark', 'light', 'auto'];
     const currentIndex = themes.indexOf(this.mode);
     this.mode = themes[(currentIndex + 1) % themes.length];
-    
+
     this.saveTheme();
     this.applyTheme();
     this.notifyCallbacks();
   }
-  
+
   /**
    * Register a custom theme
    */
   registerCustomTheme(id: string, theme: CustomTheme): void {
     this.customThemes.set(id, theme);
   }
-  
+
   /**
    * Apply a custom theme by ID
    */
   applyCustomTheme(id: string): boolean {
     const theme = this.customThemes.get(id);
     if (!theme || !this.root) return false;
-    
+
     // Apply custom theme as CSS variables
     this.root.style.setProperty('--3lens-bg-primary', theme.bgPrimary);
     this.root.style.setProperty('--3lens-bg-secondary', theme.bgSecondary);
@@ -182,54 +182,70 @@ export class ThemeManager {
     this.root.style.setProperty('--3lens-bg-elevated', theme.bgElevated);
     this.root.style.setProperty('--3lens-bg-hover', theme.bgHover);
     this.root.style.setProperty('--3lens-bg-active', theme.bgActive);
-    
+
     this.root.style.setProperty('--3lens-border', theme.border);
     this.root.style.setProperty('--3lens-border-subtle', theme.borderSubtle);
     this.root.style.setProperty('--3lens-border-focus', theme.borderFocus);
-    
+
     this.root.style.setProperty('--3lens-text-primary', theme.textPrimary);
     this.root.style.setProperty('--3lens-text-secondary', theme.textSecondary);
     this.root.style.setProperty('--3lens-text-tertiary', theme.textTertiary);
     this.root.style.setProperty('--3lens-text-disabled', theme.textDisabled);
     this.root.style.setProperty('--3lens-text-inverse', theme.textInverse);
-    
+
     this.root.style.setProperty('--3lens-accent', theme.accent);
     this.root.style.setProperty('--3lens-accent-hover', theme.accentHover);
-    
-    if (theme.accentBlue) this.root.style.setProperty('--3lens-accent-blue', theme.accentBlue);
-    if (theme.accentCyan) this.root.style.setProperty('--3lens-accent-cyan', theme.accentCyan);
-    if (theme.accentEmerald) this.root.style.setProperty('--3lens-accent-emerald', theme.accentEmerald);
-    if (theme.accentAmber) this.root.style.setProperty('--3lens-accent-amber', theme.accentAmber);
-    if (theme.accentRose) this.root.style.setProperty('--3lens-accent-rose', theme.accentRose);
-    if (theme.accentViolet) this.root.style.setProperty('--3lens-accent-violet', theme.accentViolet);
-    
+
+    if (theme.accentBlue)
+      this.root.style.setProperty('--3lens-accent-blue', theme.accentBlue);
+    if (theme.accentCyan)
+      this.root.style.setProperty('--3lens-accent-cyan', theme.accentCyan);
+    if (theme.accentEmerald)
+      this.root.style.setProperty(
+        '--3lens-accent-emerald',
+        theme.accentEmerald
+      );
+    if (theme.accentAmber)
+      this.root.style.setProperty('--3lens-accent-amber', theme.accentAmber);
+    if (theme.accentRose)
+      this.root.style.setProperty('--3lens-accent-rose', theme.accentRose);
+    if (theme.accentViolet)
+      this.root.style.setProperty('--3lens-accent-violet', theme.accentViolet);
+
     this.root.style.setProperty('--3lens-success', theme.success);
     this.root.style.setProperty('--3lens-warning', theme.warning);
     this.root.style.setProperty('--3lens-error', theme.error);
-    
-    if (theme.successBg) this.root.style.setProperty('--3lens-success-bg', theme.successBg);
-    if (theme.warningBg) this.root.style.setProperty('--3lens-warning-bg', theme.warningBg);
-    if (theme.errorBg) this.root.style.setProperty('--3lens-error-bg', theme.errorBg);
+
+    if (theme.successBg)
+      this.root.style.setProperty('--3lens-success-bg', theme.successBg);
+    if (theme.warningBg)
+      this.root.style.setProperty('--3lens-warning-bg', theme.warningBg);
+    if (theme.errorBg)
+      this.root.style.setProperty('--3lens-error-bg', theme.errorBg);
     if (theme.info) this.root.style.setProperty('--3lens-info', theme.info);
-    if (theme.infoBg) this.root.style.setProperty('--3lens-info-bg', theme.infoBg);
-    
-    if (theme.shadowSm) this.root.style.setProperty('--3lens-shadow-sm', theme.shadowSm);
-    if (theme.shadowMd) this.root.style.setProperty('--3lens-shadow-md', theme.shadowMd);
-    if (theme.shadowLg) this.root.style.setProperty('--3lens-shadow-lg', theme.shadowLg);
-    
+    if (theme.infoBg)
+      this.root.style.setProperty('--3lens-info-bg', theme.infoBg);
+
+    if (theme.shadowSm)
+      this.root.style.setProperty('--3lens-shadow-sm', theme.shadowSm);
+    if (theme.shadowMd)
+      this.root.style.setProperty('--3lens-shadow-md', theme.shadowMd);
+    if (theme.shadowLg)
+      this.root.style.setProperty('--3lens-shadow-lg', theme.shadowLg);
+
     this.root.setAttribute('data-theme', 'custom');
     this.root.style.colorScheme = theme.colorScheme;
-    
+
     return true;
   }
-  
+
   /**
    * Get list of registered custom themes
    */
   getCustomThemes(): string[] {
     return Array.from(this.customThemes.keys());
   }
-  
+
   /**
    * Subscribe to theme changes
    */
@@ -240,7 +256,7 @@ export class ThemeManager {
       if (index !== -1) this.callbacks.splice(index, 1);
     };
   }
-  
+
   /**
    * Dispose and clean up
    */
@@ -251,16 +267,16 @@ export class ThemeManager {
     this.callbacks = [];
     this.root = null;
   }
-  
+
   // ───────────────────────────────────────────────────────────────
   // PRIVATE METHODS
   // ───────────────────────────────────────────────────────────────
-  
+
   private setupAutoDetection(): void {
     if (typeof window === 'undefined') return;
-    
+
     this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     this.mediaQueryHandler = (e: MediaQueryListEvent) => {
       if (this.mode === 'auto') {
         this.resolved = e.matches ? 'dark' : 'light';
@@ -268,13 +284,13 @@ export class ThemeManager {
         this.notifyCallbacks();
       }
     };
-    
+
     this.mediaQuery.addEventListener('change', this.mediaQueryHandler);
   }
-  
+
   private loadSavedTheme(): void {
     if (typeof localStorage === 'undefined') return;
-    
+
     try {
       const saved = localStorage.getItem(this.storageKey);
       if (saved && ['dark', 'light', 'high-contrast', 'auto'].includes(saved)) {
@@ -284,66 +300,89 @@ export class ThemeManager {
       // localStorage not available
     }
   }
-  
+
   private saveTheme(): void {
     if (typeof localStorage === 'undefined') return;
-    
+
     try {
       localStorage.setItem(this.storageKey, this.mode);
     } catch {
       // localStorage not available
     }
   }
-  
+
   private applyTheme(): void {
     if (!this.root) return;
-    
+
     // Resolve 'auto' to actual theme
     if (this.mode === 'auto') {
-      const prefersDark = typeof window !== 'undefined' && 
+      const prefersDark =
+        typeof window !== 'undefined' &&
         window.matchMedia('(prefers-color-scheme: dark)').matches;
       this.resolved = prefersDark ? 'dark' : 'light';
     } else {
       this.resolved = this.mode;
     }
-    
+
     // Clear any custom styles
     this.clearCustomStyles();
-    
+
     // Apply theme attribute
     this.root.setAttribute('data-theme', this.resolved);
   }
-  
+
   private clearCustomStyles(): void {
     if (!this.root) return;
-    
+
     // List of custom properties that might have been set
     const props = [
-      '--3lens-bg-primary', '--3lens-bg-secondary', '--3lens-bg-tertiary',
-      '--3lens-bg-elevated', '--3lens-bg-hover', '--3lens-bg-active',
-      '--3lens-border', '--3lens-border-subtle', '--3lens-border-focus',
-      '--3lens-text-primary', '--3lens-text-secondary', '--3lens-text-tertiary',
-      '--3lens-text-disabled', '--3lens-text-inverse',
-      '--3lens-accent', '--3lens-accent-hover', '--3lens-accent-blue',
-      '--3lens-accent-cyan', '--3lens-accent-emerald', '--3lens-accent-amber',
-      '--3lens-accent-rose', '--3lens-accent-violet',
-      '--3lens-success', '--3lens-success-bg', '--3lens-warning', '--3lens-warning-bg',
-      '--3lens-error', '--3lens-error-bg', '--3lens-info', '--3lens-info-bg',
-      '--3lens-shadow-sm', '--3lens-shadow-md', '--3lens-shadow-lg',
+      '--3lens-bg-primary',
+      '--3lens-bg-secondary',
+      '--3lens-bg-tertiary',
+      '--3lens-bg-elevated',
+      '--3lens-bg-hover',
+      '--3lens-bg-active',
+      '--3lens-border',
+      '--3lens-border-subtle',
+      '--3lens-border-focus',
+      '--3lens-text-primary',
+      '--3lens-text-secondary',
+      '--3lens-text-tertiary',
+      '--3lens-text-disabled',
+      '--3lens-text-inverse',
+      '--3lens-accent',
+      '--3lens-accent-hover',
+      '--3lens-accent-blue',
+      '--3lens-accent-cyan',
+      '--3lens-accent-emerald',
+      '--3lens-accent-amber',
+      '--3lens-accent-rose',
+      '--3lens-accent-violet',
+      '--3lens-success',
+      '--3lens-success-bg',
+      '--3lens-warning',
+      '--3lens-warning-bg',
+      '--3lens-error',
+      '--3lens-error-bg',
+      '--3lens-info',
+      '--3lens-info-bg',
+      '--3lens-shadow-sm',
+      '--3lens-shadow-md',
+      '--3lens-shadow-lg',
     ];
-    
+
     for (const prop of props) {
       this.root.style.removeProperty(prop);
     }
   }
-  
+
   private notifyCallbacks(): void {
     const event: ThemeChangeEvent = {
       mode: this.mode,
       resolved: this.resolved,
       isAuto: this.mode === 'auto',
     };
-    
+
     for (const callback of this.callbacks) {
       try {
         callback(event);
@@ -358,7 +397,7 @@ export class ThemeManager {
  * Pre-built custom themes
  */
 export const PRESET_THEMES: Record<string, CustomTheme> = {
-  'monokai': {
+  monokai: {
     name: 'Monokai',
     bgPrimary: '#272822',
     bgSecondary: '#1e1f1c',
@@ -381,8 +420,8 @@ export const PRESET_THEMES: Record<string, CustomTheme> = {
     error: '#f92672',
     colorScheme: 'dark',
   },
-  
-  'dracula': {
+
+  dracula: {
     name: 'Dracula',
     bgPrimary: '#282a36',
     bgSecondary: '#21222c',
@@ -405,7 +444,7 @@ export const PRESET_THEMES: Record<string, CustomTheme> = {
     error: '#ff5555',
     colorScheme: 'dark',
   },
-  
+
   'github-light': {
     name: 'GitHub Light',
     bgPrimary: '#ffffff',
@@ -429,8 +468,8 @@ export const PRESET_THEMES: Record<string, CustomTheme> = {
     error: '#cf222e',
     colorScheme: 'light',
   },
-  
-  'nord': {
+
+  nord: {
     name: 'Nord',
     bgPrimary: '#2e3440',
     bgSecondary: '#3b4252',
@@ -454,4 +493,3 @@ export const PRESET_THEMES: Record<string, CustomTheme> = {
     colorScheme: 'dark',
   },
 };
-

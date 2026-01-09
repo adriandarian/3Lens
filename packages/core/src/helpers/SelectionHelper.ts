@@ -73,7 +73,7 @@ export class SelectionHelper {
     // Create box helper
     this.boxHelper = new this.THREE.BoxHelper(object, this.highlightColor);
     this.boxHelper.name = '__3lens_selection_helper__';
-    
+
     // Make the lines render properly in 3D space (back lines behind object)
     const material = this.boxHelper.material as THREE.LineBasicMaterial;
     material.linewidth = 2;
@@ -154,7 +154,7 @@ export class SelectionHelper {
     // Create box helper for hover
     this.hoverBoxHelper = new this.THREE.BoxHelper(object, this.hoverColor);
     this.hoverBoxHelper.name = '__3lens_hover_helper__';
-    
+
     // Style for hover - more subtle than selection
     const material = this.hoverBoxHelper.material as THREE.LineBasicMaterial;
     material.linewidth = 1;
@@ -203,4 +203,3 @@ export class SelectionHelper {
     this.THREE = null;
   }
 }
-

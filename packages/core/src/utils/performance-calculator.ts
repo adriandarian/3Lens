@@ -73,7 +73,10 @@ export class PerformanceTracker {
       fpsMin: Math.round(this.getMinFps()),
       fpsMax: Math.round(this.getMaxFps()),
       fps1PercentLow: Math.round(this.get1PercentLowFps()),
-      frameBudgetUsed: Math.min(100, (cpuTimeMs / this.targetFrameTimeMs) * 100),
+      frameBudgetUsed: Math.min(
+        100,
+        (cpuTimeMs / this.targetFrameTimeMs) * 100
+      ),
       targetFrameTimeMs: this.targetFrameTimeMs,
       frameTimeVariance: this.getVariance(),
       trianglesPerDrawCall: 0, // Set by caller
@@ -221,7 +224,8 @@ export function calculateBenchmarkScore(
   // Memory score (0-100)
   let memoryScore = 100;
   if (stats.memory) {
-    const textureMemRatio = stats.memory.textureMemory / config.maxTextureMemory;
+    const textureMemRatio =
+      stats.memory.textureMemory / config.maxTextureMemory;
     const geoMemRatio = stats.memory.geometryMemory / config.maxGeometryMemory;
     const memoryRatio = Math.max(textureMemRatio, geoMemRatio);
     if (memoryRatio <= 0.5) {
@@ -440,4 +444,3 @@ export function estimateGeometryMemory(
 
   return vertexMemory + indexMemory;
 }
-

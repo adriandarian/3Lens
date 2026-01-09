@@ -1,10 +1,10 @@
 /**
  * Virtual Scrolling Utility
- * 
+ *
  * Provides efficient rendering for large lists by only rendering
  * visible items in the viewport. Essential for scene trees with
  * thousands of objects.
- * 
+ *
  * @module utils/virtual-scroll
  */
 
@@ -72,7 +72,7 @@ export interface VirtualScrollState {
 
 /**
  * VirtualScroller - Efficient rendering for large hierarchical lists
- * 
+ *
  * @example
  * ```typescript
  * const scroller = new VirtualScroller({
@@ -83,7 +83,7 @@ export interface VirtualScrollState {
  *   isExpanded: (id) => expandedNodes.has(id),
  *   renderRow: (node, index) => renderTreeNode(node),
  * });
- * 
+ *
  * scroller.setData(sceneNodes);
  * scroller.render();
  * ```
@@ -143,7 +143,11 @@ export class VirtualScroller<T> {
   /**
    * Recursively flatten tree nodes
    */
-  private flattenNodes(nodes: T[], depth: number, parentId: string | null): void {
+  private flattenNodes(
+    nodes: T[],
+    depth: number,
+    parentId: string | null
+  ): void {
     for (const node of nodes) {
       const id = this.getId(node);
       const children = this.getChildren(node);
@@ -215,7 +219,9 @@ export class VirtualScroller<T> {
     if (!this.scrollContainer) return;
 
     // Scroll handler with throttling via requestAnimationFrame
-    this.scrollContainer.addEventListener('scroll', this.handleScroll, { passive: true });
+    this.scrollContainer.addEventListener('scroll', this.handleScroll, {
+      passive: true,
+    });
 
     // Resize observer for container size changes
     this.resizeObserver = new ResizeObserver((entries) => {
@@ -262,10 +268,13 @@ export class VirtualScroller<T> {
 
     const visibleRowCount = Math.ceil(this.containerHeight / this.rowHeight);
     const startIndex = Math.floor(this.scrollTop / this.rowHeight);
-    
+
     // Apply overscan for smooth scrolling
     const start = Math.max(0, startIndex - this.overscan);
-    const end = Math.min(totalRows, startIndex + visibleRowCount + this.overscan);
+    const end = Math.min(
+      totalRows,
+      startIndex + visibleRowCount + this.overscan
+    );
 
     return { start, end };
   }
@@ -286,9 +295,11 @@ export class VirtualScroller<T> {
     const { start, end } = this.getVisibleRange();
 
     // Skip render if range hasn't changed
-    if (this.lastRenderRange && 
-        this.lastRenderRange.start === start && 
-        this.lastRenderRange.end === end) {
+    if (
+      this.lastRenderRange &&
+      this.lastRenderRange.start === start &&
+      this.lastRenderRange.end === end
+    ) {
       return;
     }
     this.lastRenderRange = { start, end };
@@ -299,9 +310,9 @@ export class VirtualScroller<T> {
 
     // Render visible rows
     const visibleNodes = this.flattenedNodes.slice(start, end);
-    const html = visibleNodes.map((node, i) => 
-      this.renderRow(node, start + i)
-    ).join('');
+    const html = visibleNodes
+      .map((node, i) => this.renderRow(node, start + i))
+      .join('');
 
     this.rowsContainer.innerHTML = html;
   }
@@ -324,10 +335,16 @@ export class VirtualScroller<T> {
   /**
    * Scroll to a specific row by index
    */
-  scrollToIndex(index: number, align: 'start' | 'center' | 'end' = 'start'): void {
+  scrollToIndex(
+    index: number,
+    align: 'start' | 'center' | 'end' = 'start'
+  ): void {
     if (!this.scrollContainer) return;
 
-    const targetRow = Math.max(0, Math.min(index, this.flattenedNodes.length - 1));
+    const targetRow = Math.max(
+      0,
+      Math.min(index, this.flattenedNodes.length - 1)
+    );
     let scrollTop: number;
 
     switch (align) {
@@ -335,7 +352,10 @@ export class VirtualScroller<T> {
         scrollTop = targetRow * this.rowHeight;
         break;
       case 'center':
-        scrollTop = targetRow * this.rowHeight - this.containerHeight / 2 + this.rowHeight / 2;
+        scrollTop =
+          targetRow * this.rowHeight -
+          this.containerHeight / 2 +
+          this.rowHeight / 2;
         break;
       case 'end':
         scrollTop = (targetRow + 1) * this.rowHeight - this.containerHeight;
@@ -349,7 +369,7 @@ export class VirtualScroller<T> {
    * Scroll to a specific node by ID
    */
   scrollToId(id: string, align: 'start' | 'center' | 'end' = 'center'): void {
-    const index = this.flattenedNodes.findIndex(n => n.id === id);
+    const index = this.flattenedNodes.findIndex((n) => n.id === id);
     if (index !== -1) {
       this.scrollToIndex(index, align);
     }
@@ -359,7 +379,7 @@ export class VirtualScroller<T> {
    * Get a flattened node by ID
    */
   getNodeById(id: string): FlattenedNode<T> | undefined {
-    return this.flattenedNodes.find(n => n.id === id);
+    return this.flattenedNodes.find((n) => n.id === id);
   }
 
   /**
@@ -451,7 +471,7 @@ export const VIRTUAL_SCROLL_STYLES = `
  * based on node count threshold
  */
 export function shouldUseVirtualScrolling(
-  nodeCount: number, 
+  nodeCount: number,
   threshold: number = 100
 ): boolean {
   return nodeCount >= threshold;
@@ -461,14 +481,12 @@ export function shouldUseVirtualScrolling(
  * Count total nodes in a tree (including all nested children)
  * Works with any node that has a 'children' array property
  */
-export function countTreeNodes<T extends { children: T[] }>(
-  node: T
-): number {
+export function countTreeNodes<T extends { children: T[] }>(node: T): number {
   let count = 1; // Count the node itself
-  
+
   for (const child of node.children) {
     count += countTreeNodes(child);
   }
-  
+
   return count;
 }

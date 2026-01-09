@@ -57,16 +57,19 @@ export const formatBytes = createMemoizedFormatter((bytes: number): string => {
  * Get CSS class for object type
  * Memoized since the same types are queried repeatedly
  */
-export const getObjectClass = createMemoizedFormatter((type: string): string => {
-  const lower = type.toLowerCase();
-  if (lower.includes('scene')) return 'scene';
-  if (lower.includes('mesh')) return 'mesh';
-  if (lower.includes('group')) return 'group';
-  if (lower.includes('light')) return 'light';
-  if (lower.includes('camera')) return 'camera';
-  if (lower.includes('bone')) return 'bone';
-  return 'object';
-}, 100);
+export const getObjectClass = createMemoizedFormatter(
+  (type: string): string => {
+    const lower = type.toLowerCase();
+    if (lower.includes('scene')) return 'scene';
+    if (lower.includes('mesh')) return 'mesh';
+    if (lower.includes('group')) return 'group';
+    if (lower.includes('light')) return 'light';
+    if (lower.includes('camera')) return 'camera';
+    if (lower.includes('bone')) return 'bone';
+    return 'object';
+  },
+  100
+);
 
 /**
  * Get icon letter for object type

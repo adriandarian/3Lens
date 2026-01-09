@@ -42,7 +42,9 @@ async function forceGC(): Promise<void> {
 }
 
 // Helper to create trackable objects with WeakRef
-function createWeakTrackedObject<T extends object>(factory: () => T): {
+function createWeakTrackedObject<T extends object>(
+  factory: () => T
+): {
   ref: WeakRef<T>;
   get: () => T | undefined;
 } {
@@ -111,19 +113,19 @@ function createMockProbe(): any {
     onFrameStats: vi.fn((cb: Function) => {
       callbacks.frameStats.push(cb);
       return () => {
-        callbacks.frameStats = callbacks.frameStats.filter(c => c !== cb);
+        callbacks.frameStats = callbacks.frameStats.filter((c) => c !== cb);
       };
     }),
     onSnapshot: vi.fn((cb: Function) => {
       callbacks.snapshot.push(cb);
       return () => {
-        callbacks.snapshot = callbacks.snapshot.filter(c => c !== cb);
+        callbacks.snapshot = callbacks.snapshot.filter((c) => c !== cb);
       };
     }),
     onSelectionChanged: vi.fn((cb: Function) => {
       callbacks.selection.push(cb);
       return () => {
-        callbacks.selection = callbacks.selection.filter(c => c !== cb);
+        callbacks.selection = callbacks.selection.filter((c) => c !== cb);
       };
     }),
     getLatestStats: vi.fn().mockReturnValue(null),
@@ -138,9 +140,11 @@ function createMockProbe(): any {
     getModuleInfo: vi.fn().mockReturnValue(null),
     // Emit helpers for testing
     _emit: {
-      frameStats: (stats: any) => callbacks.frameStats.forEach(cb => cb(stats)),
-      snapshot: (snapshot: any) => callbacks.snapshot.forEach(cb => cb(snapshot)),
-      selection: (node: any) => callbacks.selection.forEach(cb => cb(node)),
+      frameStats: (stats: any) =>
+        callbacks.frameStats.forEach((cb) => cb(stats)),
+      snapshot: (snapshot: any) =>
+        callbacks.snapshot.forEach((cb) => cb(snapshot)),
+      selection: (node: any) => callbacks.selection.forEach((cb) => cb(node)),
     },
   };
 }
@@ -259,7 +263,7 @@ describe('Memory Leak Tests', () => {
     it('should clean up PoolManager singleton on reset', () => {
       // Reset first to ensure clean state
       PoolManager.reset();
-      
+
       const manager1 = getPoolManager();
 
       // Use the pools
@@ -756,13 +760,15 @@ describe('Memory Leak Tests', () => {
 
       // Just verify the plugin was activated
       const plugins = manager.getPlugins();
-      const activePlugin = plugins.find(p => p.id === 'subscription-test');
+      const activePlugin = plugins.find((p) => p.id === 'subscription-test');
       expect(activePlugin?.state).toBe('activated');
 
       await manager.deactivatePlugin('subscription-test');
 
       // Plugin should be deactivated
-      const deactivatedPlugin = manager.getPlugins().find(p => p.id === 'subscription-test');
+      const deactivatedPlugin = manager
+        .getPlugins()
+        .find((p) => p.id === 'subscription-test');
       expect(deactivatedPlugin?.state).toBe('deactivated');
     });
 

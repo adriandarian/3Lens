@@ -36,7 +36,10 @@ vi.mock('./useThreeLens', () => ({
   }),
 }));
 
-import { useSelectedObject, UseSelectedObjectReturn } from './useSelectedObject';
+import {
+  useSelectedObject,
+  UseSelectedObjectReturn,
+} from './useSelectedObject';
 
 describe('useSelectedObject', () => {
   beforeEach(() => {

@@ -1,12 +1,16 @@
 /**
  * LogicalEntityManager Test Suite
- * 
+ *
  * Tests for logical entity registration, management, and navigation.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LogicalEntityManager } from './LogicalEntityManager';
-import type { LogicalEntityOptions, EntityFilter, LogicalEntity } from './types';
+import type {
+  LogicalEntityOptions,
+  EntityFilter,
+  LogicalEntity,
+} from './types';
 
 // Mock Three.js Object3D
 function createMockObject3D(name?: string): any {
@@ -160,7 +164,7 @@ describe('LogicalEntityManager', () => {
   describe('updateLogicalEntity', () => {
     it('should update entity name', () => {
       const id = manager.registerLogicalEntity({ name: 'Original' });
-      
+
       manager.updateLogicalEntity(id, { name: 'Updated' });
 
       const entity = manager.getEntity(id);
@@ -187,7 +191,7 @@ describe('LogicalEntityManager', () => {
       // Verify module tracking
       const oldModuleInfo = manager.getModuleInfo('@old/module');
       const newModuleInfo = manager.getModuleInfo('@new/module');
-      
+
       // Old module should be undefined or not contain the entity
       expect(oldModuleInfo?.entityIds?.includes(id) ?? false).toBe(false);
       expect(newModuleInfo?.entityIds).toContain(id);
@@ -268,7 +272,7 @@ describe('LogicalEntityManager', () => {
   describe('unregisterLogicalEntity', () => {
     it('should unregister entity', () => {
       const id = manager.registerLogicalEntity({ name: 'ToRemove' });
-      
+
       manager.unregisterLogicalEntity(id);
 
       expect(manager.getEntity(id)).toBeUndefined();
@@ -306,7 +310,9 @@ describe('LogicalEntityManager', () => {
     });
 
     it('should move children to parent when not recursive', () => {
-      const grandparent = manager.registerLogicalEntity({ name: 'Grandparent' });
+      const grandparent = manager.registerLogicalEntity({
+        name: 'Grandparent',
+      });
       const parent = manager.registerLogicalEntity({
         name: 'Parent',
         parentEntityId: grandparent,
@@ -391,7 +397,7 @@ describe('LogicalEntityManager', () => {
       manager.addObjectToEntity(id, obj); // Add again
 
       const entity = manager.getEntity(id);
-      expect(entity?.objectUuids.filter(u => u === obj.uuid)).toHaveLength(1);
+      expect(entity?.objectUuids.filter((u) => u === obj.uuid)).toHaveLength(1);
     });
 
     it('should store entity reference in object userData', () => {
@@ -549,24 +555,26 @@ describe('LogicalEntityManager', () => {
     });
 
     it('should filter by exact module', () => {
-      const entities = manager.filterEntities({ module: '@game/feature-player' });
-      
+      const entities = manager.filterEntities({
+        module: '@game/feature-player',
+      });
+
       expect(entities).toHaveLength(1);
       expect(entities[0].name).toBe('Player');
     });
 
     it('should filter by module prefix', () => {
       const entities = manager.filterEntities({ modulePrefix: '@game/' });
-      
+
       expect(entities).toHaveLength(3);
-      expect(entities.map(e => e.name)).toContain('Player');
-      expect(entities.map(e => e.name)).toContain('Enemy');
-      expect(entities.map(e => e.name)).toContain('Terrain');
+      expect(entities.map((e) => e.name)).toContain('Player');
+      expect(entities.map((e) => e.name)).toContain('Enemy');
+      expect(entities.map((e) => e.name)).toContain('Terrain');
     });
 
     it('should filter by tags (all match)', () => {
       const entities = manager.filterEntities({ tags: ['saveable'] });
-      
+
       expect(entities).toHaveLength(2);
     });
 
@@ -574,20 +582,22 @@ describe('LogicalEntityManager', () => {
       const entities = manager.filterEntities({
         anyTag: ['controllable', 'hostile'],
       });
-      
+
       expect(entities).toHaveLength(2);
     });
 
     it('should filter by component type', () => {
-      const entities = manager.filterEntities({ componentType: 'PlayerComponent' });
-      
+      const entities = manager.filterEntities({
+        componentType: 'PlayerComponent',
+      });
+
       expect(entities).toHaveLength(1);
       expect(entities[0].name).toBe('Player');
     });
 
     it('should filter by name contains', () => {
       const entities = manager.filterEntities({ nameContains: 'er' });
-      
+
       expect(entities).toHaveLength(2); // Player, Terrain
     });
 
@@ -596,10 +606,10 @@ describe('LogicalEntityManager', () => {
         modulePrefix: '@game/',
         tags: ['saveable'],
       });
-      
+
       expect(entities).toHaveLength(2);
-      expect(entities.map(e => e.name)).toContain('Player');
-      expect(entities.map(e => e.name)).toContain('Enemy');
+      expect(entities.map((e) => e.name)).toContain('Player');
+      expect(entities.map((e) => e.name)).toContain('Enemy');
     });
   });
 
@@ -621,9 +631,9 @@ describe('LogicalEntityManager', () => {
 
     it('should return null for untracked object', () => {
       const obj = createMockObject3D();
-      
+
       const result = manager.navigateFromObject(obj);
-      
+
       expect(result.entity).toBeNull();
     });
   });
@@ -822,7 +832,9 @@ describe('LogicalEntityManager', () => {
       });
 
       const updatedParent = manager.getEntity(parent);
-      expect(updatedParent?.updatedAt).toBeGreaterThanOrEqual(originalUpdatedAt!);
+      expect(updatedParent?.updatedAt).toBeGreaterThanOrEqual(
+        originalUpdatedAt!
+      );
     });
   });
 });

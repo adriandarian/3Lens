@@ -11,7 +11,9 @@ import { useDevtoolEntity, useDevtoolEntityGroup } from './useDevtoolEntity';
 import { ThreeLensKey, type ThreeLensContext } from '../types';
 
 // Mock Three.js Object3D
-function createMockObject3D(options: { name?: string; uuid?: string; userData?: any } = {}) {
+function createMockObject3D(
+  options: { name?: string; uuid?: string; userData?: any } = {}
+) {
   return {
     name: options.name || '',
     uuid: options.uuid || `uuid-${Math.random().toString(36).slice(2)}`,
@@ -20,7 +22,9 @@ function createMockObject3D(options: { name?: string; uuid?: string; userData?: 
 }
 
 // Helper to create a test context
-function createTestContext(overrides: Partial<ThreeLensContext> = {}): ThreeLensContext {
+function createTestContext(
+  overrides: Partial<ThreeLensContext> = {}
+): ThreeLensContext {
   const mockProbe = {
     takeSnapshot: vi.fn(),
   };
@@ -246,7 +250,11 @@ describe('useDevtoolEntity', () => {
 describe('useDevtoolEntityGroup', () => {
   it('should mark all objects as part of a group', () => {
     const mockContext = createTestContext();
-    const objects = [createMockObject3D(), createMockObject3D(), createMockObject3D()];
+    const objects = [
+      createMockObject3D(),
+      createMockObject3D(),
+      createMockObject3D(),
+    ];
 
     const TestComponent = defineComponent({
       setup() {

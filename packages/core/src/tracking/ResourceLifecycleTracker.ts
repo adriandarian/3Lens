@@ -1,6 +1,6 @@
 /**
  * Resource Lifecycle Tracker
- * 
+ *
  * Tracks creation and disposal of Three.js resources (geometries, materials, textures)
  * with optional stack traces for debugging memory leaks.
  */
@@ -13,27 +13,32 @@ export type ResourceType = 'geometry' | 'material' | 'texture';
 /**
  * Types of lifecycle events
  */
-export type LifecycleEventType = 'created' | 'disposed' | 'attached' | 'detached';
+export type LifecycleEventType =
+  | 'created'
+  | 'disposed'
+  | 'attached'
+  | 'detached';
 
 /**
  * A lifecycle event for a tracked resource
  */
 export interface ResourceLifecycleEvent {
-  id: string;                    // Unique event ID
-  resourceType: ResourceType;    // Type of resource
-  resourceUuid: string;          // UUID of the resource
-  resourceName?: string;         // Optional name of the resource
-  resourceSubtype?: string;      // e.g., 'MeshStandardMaterial', 'BoxGeometry'
+  id: string; // Unique event ID
+  resourceType: ResourceType; // Type of resource
+  resourceUuid: string; // UUID of the resource
+  resourceName?: string; // Optional name of the resource
+  resourceSubtype?: string; // e.g., 'MeshStandardMaterial', 'BoxGeometry'
   eventType: LifecycleEventType; // What happened
-  timestamp: number;             // When it happened (ms since page load)
-  stackTrace?: string;           // Optional stack trace for debugging
-  metadata?: {                   // Additional context
-    meshUuid?: string;           // UUID of mesh this was attached to/detached from
-    meshName?: string;           // Name of the mesh
-    textureSlot?: string;        // For textures: 'map', 'normalMap', etc.
-    estimatedMemory?: number;    // Estimated memory in bytes
-    vertexCount?: number;        // For geometries
-    faceCount?: number;          // For geometries
+  timestamp: number; // When it happened (ms since page load)
+  stackTrace?: string; // Optional stack trace for debugging
+  metadata?: {
+    // Additional context
+    meshUuid?: string; // UUID of mesh this was attached to/detached from
+    meshName?: string; // Name of the mesh
+    textureSlot?: string; // For textures: 'map', 'normalMap', etc.
+    estimatedMemory?: number; // Estimated memory in bytes
+    vertexCount?: number; // For geometries
+    faceCount?: number; // For geometries
   };
 }
 
@@ -44,8 +49,8 @@ export interface ResourceLifecycleSummary {
   geometries: {
     created: number;
     disposed: number;
-    active: number;             // created - disposed
-    leaked: number;             // Potentially leaked (old, not disposed)
+    active: number; // created - disposed
+    leaked: number; // Potentially leaked (old, not disposed)
   };
   materials: {
     created: number;
@@ -72,9 +77,9 @@ export interface ResourceLifecycleSummary {
  * Options for the ResourceLifecycleTracker
  */
 export interface ResourceTrackerOptions {
-  captureStackTraces?: boolean;  // Whether to capture stack traces (performance impact)
-  maxEvents?: number;            // Maximum events to keep in history
-  leakThresholdMs?: number;      // Time after which an undisposed resource is considered leaked
+  captureStackTraces?: boolean; // Whether to capture stack traces (performance impact)
+  maxEvents?: number; // Maximum events to keep in history
+  leakThresholdMs?: number; // Time after which an undisposed resource is considered leaked
   orphanCheckIntervalMs?: number; // How often to check for orphaned resources
   memoryGrowthThresholdBytes?: number; // Alert threshold for memory growth
 }
@@ -87,10 +92,10 @@ export type LeakAlertSeverity = 'info' | 'warning' | 'critical';
 /**
  * Types of leak alerts
  */
-export type LeakAlertType = 
-  | 'orphaned_resource'     // Resource not attached to any mesh
-  | 'undisposed_resource'   // Resource older than threshold, not disposed
-  | 'memory_growth'         // Memory usage growing consistently
+export type LeakAlertType =
+  | 'orphaned_resource' // Resource not attached to any mesh
+  | 'undisposed_resource' // Resource older than threshold, not disposed
+  | 'memory_growth' // Memory usage growing consistently
   | 'resource_accumulation' // Too many resources of one type
   | 'detached_not_disposed'; // Resource detached but never disposed
 
@@ -126,9 +131,24 @@ export interface LeakReport {
   };
   alerts: LeakAlert[];
   resourceStats: {
-    geometries: { created: number; disposed: number; orphaned: number; leaked: number };
-    materials: { created: number; disposed: number; orphaned: number; leaked: number };
-    textures: { created: number; disposed: number; orphaned: number; leaked: number };
+    geometries: {
+      created: number;
+      disposed: number;
+      orphaned: number;
+      leaked: number;
+    };
+    materials: {
+      created: number;
+      disposed: number;
+      orphaned: number;
+      leaked: number;
+    };
+    textures: {
+      created: number;
+      disposed: number;
+      orphaned: number;
+      leaked: number;
+    };
   };
   memoryHistory: Array<{ timestamp: number; estimatedBytes: number }>;
   recommendations: string[];
@@ -149,27 +169,36 @@ export type LeakAlertCallback = (alert: LeakAlert) => void;
  */
 export class ResourceLifecycleTracker {
   private events: ResourceLifecycleEvent[] = [];
-  private activeResources: Map<string, { 
-    type: ResourceType; 
-    createdAt: number; 
-    name?: string; 
-    subtype?: string;
-    estimatedMemory?: number;
-    attachedMeshes: Set<string>;  // Track which meshes this resource is attached to
-    lastAttachmentTime?: number;
-    detachedAt?: number;  // When it was last detached (if not disposed)
-  }> = new Map();
+  private activeResources: Map<
+    string,
+    {
+      type: ResourceType;
+      createdAt: number;
+      name?: string;
+      subtype?: string;
+      estimatedMemory?: number;
+      attachedMeshes: Set<string>; // Track which meshes this resource is attached to
+      lastAttachmentTime?: number;
+      detachedAt?: number; // When it was last detached (if not disposed)
+    }
+  > = new Map();
   private eventIdCounter = 0;
   private alertIdCounter = 0;
   private callbacks: LifecycleEventCallback[] = [];
   private alertCallbacks: LeakAlertCallback[] = [];
   private alerts: LeakAlert[] = [];
-  private options: Required<Omit<ResourceTrackerOptions, 'orphanCheckIntervalMs' | 'memoryGrowthThresholdBytes'>> & {
+  private options: Required<
+    Omit<
+      ResourceTrackerOptions,
+      'orphanCheckIntervalMs' | 'memoryGrowthThresholdBytes'
+    >
+  > & {
     orphanCheckIntervalMs: number;
     memoryGrowthThresholdBytes: number;
   };
   private sessionStartTime: number;
-  private memoryHistory: Array<{ timestamp: number; estimatedBytes: number }> = [];
+  private memoryHistory: Array<{ timestamp: number; estimatedBytes: number }> =
+    [];
   private lastMemoryCheck = 0;
 
   constructor(options: ResourceTrackerOptions = {}) {
@@ -178,7 +207,8 @@ export class ResourceLifecycleTracker {
       maxEvents: options.maxEvents ?? 1000,
       leakThresholdMs: options.leakThresholdMs ?? 60000, // 1 minute default
       orphanCheckIntervalMs: options.orphanCheckIntervalMs ?? 10000, // 10 seconds
-      memoryGrowthThresholdBytes: options.memoryGrowthThresholdBytes ?? 50 * 1024 * 1024, // 50MB
+      memoryGrowthThresholdBytes:
+        options.memoryGrowthThresholdBytes ?? 50 * 1024 * 1024, // 50MB
     };
     this.sessionStartTime = performance.now();
   }
@@ -335,21 +365,25 @@ export class ResourceLifecycleTracker {
    * Get events filtered by type
    */
   getEventsByType(resourceType: ResourceType): ResourceLifecycleEvent[] {
-    return this.events.filter(e => e.resourceType === resourceType);
+    return this.events.filter((e) => e.resourceType === resourceType);
   }
 
   /**
    * Get events filtered by event type
    */
-  getEventsByEventType(eventType: LifecycleEventType): ResourceLifecycleEvent[] {
-    return this.events.filter(e => e.eventType === eventType);
+  getEventsByEventType(
+    eventType: LifecycleEventType
+  ): ResourceLifecycleEvent[] {
+    return this.events.filter((e) => e.eventType === eventType);
   }
 
   /**
    * Get events within a time range
    */
   getEventsInRange(startMs: number, endMs: number): ResourceLifecycleEvent[] {
-    return this.events.filter(e => e.timestamp >= startMs && e.timestamp <= endMs);
+    return this.events.filter(
+      (e) => e.timestamp >= startMs && e.timestamp <= endMs
+    );
   }
 
   /**
@@ -367,11 +401,16 @@ export class ResourceLifecycleTracker {
     };
 
     // Map resource type to summary key
-    const typeToKey = (type: ResourceType): 'geometries' | 'materials' | 'textures' => {
+    const typeToKey = (
+      type: ResourceType
+    ): 'geometries' | 'materials' | 'textures' => {
       switch (type) {
-        case 'geometry': return 'geometries';
-        case 'material': return 'materials';
-        case 'texture': return 'textures';
+        case 'geometry':
+          return 'geometries';
+        case 'material':
+          return 'materials';
+        case 'texture':
+          return 'textures';
       }
     };
 
@@ -386,7 +425,9 @@ export class ResourceLifecycleTracker {
     }
 
     // Calculate active counts and check for leaks
-    let oldestActive: { type: ResourceType; uuid: string; name?: string; ageMs: number } | undefined;
+    let oldestActive:
+      | { type: ResourceType; uuid: string; name?: string; ageMs: number }
+      | undefined;
 
     for (const [uuid, info] of this.activeResources) {
       const stats = summary[typeToKey(info.type)];
@@ -531,12 +572,17 @@ export class ResourceLifecycleTracker {
     const orphanThresholdMs = 5000; // 5 seconds to get attached
 
     for (const [uuid, resource] of this.activeResources) {
-      if (resource.attachedMeshes.size === 0 && 
-          !resource.lastAttachmentTime &&
-          now - resource.createdAt > orphanThresholdMs) {
-        
+      if (
+        resource.attachedMeshes.size === 0 &&
+        !resource.lastAttachmentTime &&
+        now - resource.createdAt > orphanThresholdMs
+      ) {
         // Check if we already have an alert for this resource
-        if (this.alerts.some(a => a.resourceUuid === uuid && a.type === 'orphaned_resource')) {
+        if (
+          this.alerts.some(
+            (a) => a.resourceUuid === uuid && a.type === 'orphaned_resource'
+          )
+        ) {
           continue;
         }
 
@@ -566,14 +612,19 @@ export class ResourceLifecycleTracker {
 
     for (const [uuid, resource] of this.activeResources) {
       const ageMs = now - resource.createdAt;
-      
+
       if (ageMs > this.options.leakThresholdMs) {
         // Check if we already have an alert for this resource
-        if (this.alerts.some(a => a.resourceUuid === uuid && a.type === 'undisposed_resource')) {
+        if (
+          this.alerts.some(
+            (a) => a.resourceUuid === uuid && a.type === 'undisposed_resource'
+          )
+        ) {
           continue;
         }
 
-        const severity: LeakAlertSeverity = ageMs > this.options.leakThresholdMs * 3 ? 'critical' : 'warning';
+        const severity: LeakAlertSeverity =
+          ageMs > this.options.leakThresholdMs * 3 ? 'critical' : 'warning';
 
         alerts.push({
           id: `alert_${++this.alertIdCounter}`,
@@ -601,11 +652,16 @@ export class ResourceLifecycleTracker {
     const detachedThresholdMs = 10000; // 10 seconds after detachment
 
     for (const [uuid, resource] of this.activeResources) {
-      if (resource.detachedAt && 
-          now - resource.detachedAt > detachedThresholdMs) {
-        
+      if (
+        resource.detachedAt &&
+        now - resource.detachedAt > detachedThresholdMs
+      ) {
         // Check if we already have an alert for this resource
-        if (this.alerts.some(a => a.resourceUuid === uuid && a.type === 'detached_not_disposed')) {
+        if (
+          this.alerts.some(
+            (a) => a.resourceUuid === uuid && a.type === 'detached_not_disposed'
+          )
+        ) {
           continue;
         }
 
@@ -643,18 +699,22 @@ export class ResourceLifecycleTracker {
       counts[resource.type]++;
     }
 
-    for (const [type, count] of Object.entries(counts) as Array<[ResourceType, number]>) {
+    for (const [type, count] of Object.entries(counts) as Array<
+      [ResourceType, number]
+    >) {
       const threshold = thresholds[type];
       if (count > threshold) {
         // Check if we already have a recent accumulation alert for this type
         const existingAlert = this.alerts.find(
-          a => a.type === 'resource_accumulation' && 
-               a.resourceType === type &&
-               performance.now() - a.timestamp < 30000 // Within last 30 seconds
+          (a) =>
+            a.type === 'resource_accumulation' &&
+            a.resourceType === type &&
+            performance.now() - a.timestamp < 30000 // Within last 30 seconds
         );
         if (existingAlert) continue;
 
-        const severity: LeakAlertSeverity = count > threshold * 2 ? 'critical' : 'warning';
+        const severity: LeakAlertSeverity =
+          count > threshold * 2 ? 'critical' : 'warning';
 
         alerts.push({
           id: `alert_${++this.alertIdCounter}`,
@@ -677,7 +737,7 @@ export class ResourceLifecycleTracker {
    */
   private detectMemoryGrowth(): LeakAlert[] {
     const alerts: LeakAlert[] = [];
-    
+
     if (this.memoryHistory.length < 10) return alerts; // Need enough samples
 
     const recentHistory = this.memoryHistory.slice(-10);
@@ -689,7 +749,9 @@ export class ResourceLifecycleTracker {
     // Check if memory is consistently growing
     let isGrowing = true;
     for (let i = 1; i < recentHistory.length; i++) {
-      if (recentHistory[i].estimatedBytes < recentHistory[i - 1].estimatedBytes) {
+      if (
+        recentHistory[i].estimatedBytes < recentHistory[i - 1].estimatedBytes
+      ) {
         isGrowing = false;
         break;
       }
@@ -698,8 +760,8 @@ export class ResourceLifecycleTracker {
     if (isGrowing && growth > this.options.memoryGrowthThresholdBytes) {
       // Check if we already have a recent memory growth alert
       const existingAlert = this.alerts.find(
-        a => a.type === 'memory_growth' && 
-             performance.now() - a.timestamp < 60000 // Within last minute
+        (a) =>
+          a.type === 'memory_growth' && performance.now() - a.timestamp < 60000 // Within last minute
       );
       if (!existingAlert) {
         const growthRate = (growth / timeDelta) * 1000; // bytes per second
@@ -711,7 +773,8 @@ export class ResourceLifecycleTracker {
           message: `Memory growing: +${this.formatBytes(growth)}`,
           details: `Memory increased by ${this.formatBytes(growth)} over ${(timeDelta / 1000).toFixed(1)}s (${this.formatBytes(growthRate)}/s)`,
           timestamp: performance.now(),
-          suggestion: 'Review resource creation patterns. Ensure resources are being disposed when no longer needed.',
+          suggestion:
+            'Review resource creation patterns. Ensure resources are being disposed when no longer needed.',
         });
       }
     }
@@ -724,7 +787,7 @@ export class ResourceLifecycleTracker {
    */
   private updateMemoryHistory(): void {
     const now = performance.now();
-    
+
     // Only update every second to avoid performance impact
     if (now - this.lastMemoryCheck < 1000) return;
     this.lastMemoryCheck = now;
@@ -799,7 +862,7 @@ export class ResourceLifecycleTracker {
    */
   generateLeakReport(): LeakReport {
     const now = performance.now();
-    
+
     // Run leak detection to ensure alerts are up to date
     this.runLeakDetection();
 
@@ -811,7 +874,10 @@ export class ResourceLifecycleTracker {
     };
 
     // Map resource type to stats key
-    const typeToKey: Record<ResourceType, 'geometries' | 'materials' | 'textures'> = {
+    const typeToKey: Record<
+      ResourceType,
+      'geometries' | 'materials' | 'textures'
+    > = {
       geometry: 'geometries',
       material: 'materials',
       texture: 'textures',
@@ -845,27 +911,38 @@ export class ResourceLifecycleTracker {
 
     // Generate recommendations
     const recommendations: string[] = [];
-    
+
     if (resourceStats.geometries.orphaned > 0) {
-      recommendations.push(`Dispose ${resourceStats.geometries.orphaned} orphaned geometries to free memory`);
+      recommendations.push(
+        `Dispose ${resourceStats.geometries.orphaned} orphaned geometries to free memory`
+      );
     }
     if (resourceStats.materials.orphaned > 0) {
-      recommendations.push(`Dispose ${resourceStats.materials.orphaned} orphaned materials`);
+      recommendations.push(
+        `Dispose ${resourceStats.materials.orphaned} orphaned materials`
+      );
     }
     if (resourceStats.textures.orphaned > 0) {
-      recommendations.push(`Dispose ${resourceStats.textures.orphaned} orphaned textures`);
+      recommendations.push(
+        `Dispose ${resourceStats.textures.orphaned} orphaned textures`
+      );
     }
-    
-    const criticalAlerts = this.alerts.filter(a => a.severity === 'critical');
+
+    const criticalAlerts = this.alerts.filter((a) => a.severity === 'critical');
     if (criticalAlerts.length > 0) {
-      recommendations.push('Address critical alerts immediately to prevent memory issues');
+      recommendations.push(
+        'Address critical alerts immediately to prevent memory issues'
+      );
     }
 
     if (this.memoryHistory.length > 1) {
       const first = this.memoryHistory[0].estimatedBytes;
-      const last = this.memoryHistory[this.memoryHistory.length - 1].estimatedBytes;
+      const last =
+        this.memoryHistory[this.memoryHistory.length - 1].estimatedBytes;
       if (last > first * 1.5) {
-        recommendations.push('Memory usage has increased significantly. Review resource lifecycle.');
+        recommendations.push(
+          'Memory usage has increased significantly. Review resource lifecycle.'
+        );
       }
     }
 
@@ -874,9 +951,11 @@ export class ResourceLifecycleTracker {
       sessionDurationMs: now - this.sessionStartTime,
       summary: {
         totalAlerts: this.alerts.length,
-        criticalAlerts: this.alerts.filter(a => a.severity === 'critical').length,
-        warningAlerts: this.alerts.filter(a => a.severity === 'warning').length,
-        infoAlerts: this.alerts.filter(a => a.severity === 'info').length,
+        criticalAlerts: this.alerts.filter((a) => a.severity === 'critical')
+          .length,
+        warningAlerts: this.alerts.filter((a) => a.severity === 'warning')
+          .length,
+        infoAlerts: this.alerts.filter((a) => a.severity === 'info').length,
         estimatedLeakedMemoryBytes: estimatedLeakedMemory,
       },
       alerts: this.alerts,
@@ -975,4 +1054,3 @@ export class ResourceLifecycleTracker {
     }
   }
 }
-

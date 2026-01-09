@@ -1,6 +1,6 @@
 /**
  * Configuration Loader
- * 
+ *
  * Loads and validates 3Lens configuration from various sources:
  * - 3lens.config.js
  * - 3lens.config.ts
@@ -8,7 +8,12 @@
  * - URL parameters
  */
 
-import type { ProbeConfig, RulesConfig, SamplingConfig, CustomRule } from '../types/config';
+import type {
+  ProbeConfig,
+  RulesConfig,
+  SamplingConfig,
+  CustomRule,
+} from '../types/config';
 import type { FrameStats } from '../types/stats';
 
 /**
@@ -116,7 +121,7 @@ export class ConfigLoader {
       // Dynamic import for config file
       const module = await import(/* @vite-ignore */ filePath);
       const config = module.default || module;
-      
+
       // Validate the config
       const validation = ConfigLoader.validateConfig(config);
       if (!validation.valid) {
@@ -125,7 +130,7 @@ export class ConfigLoader {
       if (validation.warnings.length > 0) {
         console.warn('[3Lens] Config warnings:', validation.warnings);
       }
-      
+
       return config;
     } catch (error) {
       console.error(`[3Lens] Failed to load config from ${filePath}:`, error);
@@ -190,11 +195,23 @@ export class ConfigLoader {
       } else {
         const rules = c.rules as Record<string, unknown>;
         const numericRules = [
-          'maxDrawCalls', 'maxTriangles', 'maxFrameTimeMs', 'maxTextures',
-          'maxTextureMemory', 'maxGeometryMemory', 'maxGpuMemory', 'maxVertices',
-          'maxSkinnedMeshes', 'maxBones', 'maxLights', 'maxShadowLights',
-          'maxTransparentObjects', 'maxProgramSwitches', 'minFps', 'min1PercentLowFps',
-          'maxFrameTimeVariance'
+          'maxDrawCalls',
+          'maxTriangles',
+          'maxFrameTimeMs',
+          'maxTextures',
+          'maxTextureMemory',
+          'maxGeometryMemory',
+          'maxGpuMemory',
+          'maxVertices',
+          'maxSkinnedMeshes',
+          'maxBones',
+          'maxLights',
+          'maxShadowLights',
+          'maxTransparentObjects',
+          'maxProgramSwitches',
+          'minFps',
+          'min1PercentLowFps',
+          'maxFrameTimeVariance',
         ];
 
         for (const rule of numericRules) {
@@ -215,13 +232,19 @@ export class ConfigLoader {
             for (let i = 0; i < rules.custom.length; i++) {
               const customRule = rules.custom[i] as Record<string, unknown>;
               if (!customRule.id || typeof customRule.id !== 'string') {
-                errors.push(`rules.custom[${i}].id is required and must be a string`);
+                errors.push(
+                  `rules.custom[${i}].id is required and must be a string`
+                );
               }
               if (!customRule.name || typeof customRule.name !== 'string') {
-                errors.push(`rules.custom[${i}].name is required and must be a string`);
+                errors.push(
+                  `rules.custom[${i}].name is required and must be a string`
+                );
               }
               if (!customRule.check || typeof customRule.check !== 'function') {
-                errors.push(`rules.custom[${i}].check is required and must be a function`);
+                errors.push(
+                  `rules.custom[${i}].check is required and must be a function`
+                );
               }
             }
           }
@@ -235,28 +258,41 @@ export class ConfigLoader {
         errors.push('sampling must be an object');
       } else {
         const sampling = c.sampling as Record<string, unknown>;
-        
+
         if (sampling.frameStats !== undefined) {
-          const valid = sampling.frameStats === 'every-frame' || 
-                       sampling.frameStats === 'on-demand' ||
-                       typeof sampling.frameStats === 'number';
+          const valid =
+            sampling.frameStats === 'every-frame' ||
+            sampling.frameStats === 'on-demand' ||
+            typeof sampling.frameStats === 'number';
           if (!valid) {
-            warnings.push('sampling.frameStats should be "every-frame", "on-demand", or a number');
+            warnings.push(
+              'sampling.frameStats should be "every-frame", "on-demand", or a number'
+            );
           }
         }
 
         if (sampling.snapshots !== undefined) {
-          const valid = ['manual', 'on-change', 'every-frame'].includes(sampling.snapshots as string);
+          const valid = ['manual', 'on-change', 'every-frame'].includes(
+            sampling.snapshots as string
+          );
           if (!valid) {
-            warnings.push('sampling.snapshots should be "manual", "on-change", or "every-frame"');
+            warnings.push(
+              'sampling.snapshots should be "manual", "on-change", or "every-frame"'
+            );
           }
         }
 
-        if (sampling.gpuTiming !== undefined && typeof sampling.gpuTiming !== 'boolean') {
+        if (
+          sampling.gpuTiming !== undefined &&
+          typeof sampling.gpuTiming !== 'boolean'
+        ) {
           warnings.push('sampling.gpuTiming should be a boolean');
         }
 
-        if (sampling.resourceTracking !== undefined && typeof sampling.resourceTracking !== 'boolean') {
+        if (
+          sampling.resourceTracking !== undefined &&
+          typeof sampling.resourceTracking !== 'boolean'
+        ) {
           warnings.push('sampling.resourceTracking should be a boolean');
         }
       }
@@ -268,7 +304,9 @@ export class ConfigLoader {
   /**
    * Merge user thresholds with defaults
    */
-  private mergeThresholds(rules?: RulesConfig): Required<Omit<RulesConfig, 'custom'>> {
+  private mergeThresholds(
+    rules?: RulesConfig
+  ): Required<Omit<RulesConfig, 'custom'>> {
     return {
       ...DEFAULT_THRESHOLDS,
       ...rules,
@@ -303,7 +341,7 @@ export class ConfigLoader {
    * Remove a custom rule by ID
    */
   removeCustomRule(ruleId: string): boolean {
-    const index = this.customRules.findIndex(r => r.id === ruleId);
+    const index = this.customRules.findIndex((r) => r.id === ruleId);
     if (index !== -1) {
       this.customRules.splice(index, 1);
       return true;
@@ -437,7 +475,9 @@ export class ConfigLoader {
     });
 
     // FPS
-    const fps = stats.performance?.fps ?? (stats.cpuTimeMs > 0 ? 1000 / stats.cpuTimeMs : 60);
+    const fps =
+      stats.performance?.fps ??
+      (stats.cpuTimeMs > 0 ? 1000 / stats.cpuTimeMs : 60);
     results.push({
       ruleId: 'minFps',
       ruleName: 'Min FPS',
@@ -466,7 +506,8 @@ export class ConfigLoader {
         ruleId: 'maxTextureMemory',
         ruleName: 'Max Texture Memory',
         passed: memory.textureMemory <= t.maxTextureMemory,
-        severity: memory.textureMemory > t.maxTextureMemory * 1.5 ? 'error' : 'warning',
+        severity:
+          memory.textureMemory > t.maxTextureMemory * 1.5 ? 'error' : 'warning',
         message: `Texture memory: ${this.formatBytes(memory.textureMemory)} (max: ${this.formatBytes(t.maxTextureMemory)})`,
         currentValue: this.formatBytes(memory.textureMemory),
         threshold: this.formatBytes(t.maxTextureMemory),
@@ -477,7 +518,10 @@ export class ConfigLoader {
         ruleId: 'maxGeometryMemory',
         ruleName: 'Max Geometry Memory',
         passed: memory.geometryMemory <= t.maxGeometryMemory,
-        severity: memory.geometryMemory > t.maxGeometryMemory * 1.5 ? 'error' : 'warning',
+        severity:
+          memory.geometryMemory > t.maxGeometryMemory * 1.5
+            ? 'error'
+            : 'warning',
         message: `Geometry memory: ${this.formatBytes(memory.geometryMemory)} (max: ${this.formatBytes(t.maxGeometryMemory)})`,
         currentValue: this.formatBytes(memory.geometryMemory),
         threshold: this.formatBytes(t.maxGeometryMemory),
@@ -488,7 +532,8 @@ export class ConfigLoader {
         ruleId: 'maxGpuMemory',
         ruleName: 'Max GPU Memory',
         passed: memory.totalGpuMemory <= t.maxGpuMemory,
-        severity: memory.totalGpuMemory > t.maxGpuMemory * 1.5 ? 'error' : 'warning',
+        severity:
+          memory.totalGpuMemory > t.maxGpuMemory * 1.5 ? 'error' : 'warning',
         message: `GPU memory: ${this.formatBytes(memory.totalGpuMemory)} (max: ${this.formatBytes(t.maxGpuMemory)})`,
         currentValue: this.formatBytes(memory.totalGpuMemory),
         threshold: this.formatBytes(t.maxGpuMemory),
@@ -502,7 +547,8 @@ export class ConfigLoader {
         ruleId: 'maxLights',
         ruleName: 'Max Lights',
         passed: stats.rendering.totalLights <= t.maxLights,
-        severity: stats.rendering.totalLights > t.maxLights * 1.5 ? 'error' : 'warning',
+        severity:
+          stats.rendering.totalLights > t.maxLights * 1.5 ? 'error' : 'warning',
         message: `Lights: ${stats.rendering.totalLights} (max: ${t.maxLights})`,
         currentValue: stats.rendering.totalLights,
         threshold: t.maxLights,
@@ -513,7 +559,10 @@ export class ConfigLoader {
         ruleId: 'maxShadowLights',
         ruleName: 'Max Shadow Lights',
         passed: stats.rendering.shadowCastingLights <= t.maxShadowLights,
-        severity: stats.rendering.shadowCastingLights > t.maxShadowLights * 1.5 ? 'error' : 'warning',
+        severity:
+          stats.rendering.shadowCastingLights > t.maxShadowLights * 1.5
+            ? 'error'
+            : 'warning',
         message: `Shadow lights: ${stats.rendering.shadowCastingLights} (max: ${t.maxShadowLights})`,
         currentValue: stats.rendering.shadowCastingLights,
         threshold: t.maxShadowLights,
@@ -534,7 +583,7 @@ export class ConfigLoader {
    * Get violations by severity
    */
   getViolationsBySeverity(severity: ViolationSeverity): RuleViolation[] {
-    return this.recentViolations.filter(v => v.severity === severity);
+    return this.recentViolations.filter((v) => v.severity === severity);
   }
 
   /**
@@ -548,11 +597,18 @@ export class ConfigLoader {
   /**
    * Get violation summary
    */
-  getViolationSummary(): { errors: number; warnings: number; info: number; total: number } {
+  getViolationSummary(): {
+    errors: number;
+    warnings: number;
+    info: number;
+    total: number;
+  } {
     return {
-      errors: this.recentViolations.filter(v => v.severity === 'error').length,
-      warnings: this.recentViolations.filter(v => v.severity === 'warning').length,
-      info: this.recentViolations.filter(v => v.severity === 'info').length,
+      errors: this.recentViolations.filter((v) => v.severity === 'error')
+        .length,
+      warnings: this.recentViolations.filter((v) => v.severity === 'warning')
+        .length,
+      info: this.recentViolations.filter((v) => v.severity === 'info').length,
       total: this.recentViolations.length,
     };
   }
@@ -575,18 +631,20 @@ export class ConfigLoader {
    */
   generateConfigFileContent(): string {
     const config = this.exportConfig();
-    
+
     // Remove functions from custom rules for serialization
     const serializableConfig = {
       ...config,
-      rules: config.rules ? {
-        ...config.rules,
-        custom: config.rules.custom?.map(r => ({
-          id: r.id,
-          name: r.name,
-          check: '/* Custom function - define in config file */',
-        })),
-      } : undefined,
+      rules: config.rules
+        ? {
+            ...config.rules,
+            custom: config.rules.custom?.map((r) => ({
+              id: r.id,
+              name: r.name,
+              check: '/* Custom function - define in config file */',
+            })),
+          }
+        : undefined,
     };
 
     return `/**
@@ -607,4 +665,3 @@ export default ${JSON.stringify(serializableConfig, null, 2).replace(/"\/\* Cust
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
   }
 }
-

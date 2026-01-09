@@ -27,19 +27,23 @@ class MockWorker {
       if (this.onmessage && this.messageHandler) {
         try {
           const result = this.messageHandler(data);
-          this.onmessage(new MessageEvent('message', {
-            data: result,
-          }));
+          this.onmessage(
+            new MessageEvent('message', {
+              data: result,
+            })
+          );
         } catch (error) {
-          this.onmessage(new MessageEvent('message', {
-            data: {
-              id: (data as { id: string }).id,
-              type: (data as { type: string }).type,
-              success: false,
-              error: (error as Error).message,
-              processingTimeMs: 1,
-            },
-          }));
+          this.onmessage(
+            new MessageEvent('message', {
+              data: {
+                id: (data as { id: string }).id,
+                type: (data as { type: string }).type,
+                success: false,
+                error: (error as Error).message,
+                processingTimeMs: 1,
+              },
+            })
+          );
         }
       }
     }, 10);
@@ -243,9 +247,21 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
   describe('aggregateStats (fallback)', () => {
     it('should aggregate frame stats', async () => {
       const stats: FrameStats[] = [
-        createMockFrameStats({ cpuTimeMs: 15, drawCalls: 100, triangles: 50000 }),
-        createMockFrameStats({ cpuTimeMs: 17, drawCalls: 120, triangles: 60000 }),
-        createMockFrameStats({ cpuTimeMs: 16, drawCalls: 110, triangles: 55000 }),
+        createMockFrameStats({
+          cpuTimeMs: 15,
+          drawCalls: 100,
+          triangles: 50000,
+        }),
+        createMockFrameStats({
+          cpuTimeMs: 17,
+          drawCalls: 120,
+          triangles: 60000,
+        }),
+        createMockFrameStats({
+          cpuTimeMs: 16,
+          drawCalls: 110,
+          triangles: 55000,
+        }),
       ];
 
       const result = await processor.aggregateStats(stats);
@@ -267,7 +283,11 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
 
     it('should use window size', async () => {
       const stats: FrameStats[] = Array.from({ length: 10 }, (_, i) =>
-        createMockFrameStats({ cpuTimeMs: 10 + i, drawCalls: 100 + i * 10, triangles: 50000 })
+        createMockFrameStats({
+          cpuTimeMs: 10 + i,
+          drawCalls: 100 + i * 10,
+          triangles: 50000,
+        })
       );
 
       const result = await processor.aggregateStats(stats, 5);
@@ -305,7 +325,10 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
     it('should calculate percentiles', async () => {
       const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-      const result = await processor.calculatePercentiles(values, [50, 90, 95, 99]);
+      const result = await processor.calculatePercentiles(
+        values,
+        [50, 90, 95, 99]
+      );
 
       expect(result.min).toBe(1);
       expect(result.max).toBe(10);
@@ -434,13 +457,10 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
 
   describe('analyzeLeaks (fallback)', () => {
     it('should analyze empty events', async () => {
-      const result = await processor.analyzeLeaks(
-        [],
-        [],
-        [],
-        0,
-        { leakThresholdMs: 60000, memoryGrowthThresholdBytes: 50 * 1024 * 1024 }
-      );
+      const result = await processor.analyzeLeaks([], [], [], 0, {
+        leakThresholdMs: 60000,
+        memoryGrowthThresholdBytes: 50 * 1024 * 1024,
+      });
 
       expect(result.summary.totalAlerts).toBe(0);
       expect(result.resourceStats.geometries.created).toBe(0);
@@ -448,21 +468,36 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
 
     it('should count created and disposed resources', async () => {
       const events = [
-        createMockLifecycleEvent({ resourceType: 'geometry', eventType: 'created' }),
-        createMockLifecycleEvent({ resourceType: 'geometry', eventType: 'created' }),
-        createMockLifecycleEvent({ resourceType: 'geometry', eventType: 'disposed' }),
-        createMockLifecycleEvent({ resourceType: 'material', eventType: 'created' }),
-        createMockLifecycleEvent({ resourceType: 'texture', eventType: 'created' }),
-        createMockLifecycleEvent({ resourceType: 'texture', eventType: 'disposed' }),
+        createMockLifecycleEvent({
+          resourceType: 'geometry',
+          eventType: 'created',
+        }),
+        createMockLifecycleEvent({
+          resourceType: 'geometry',
+          eventType: 'created',
+        }),
+        createMockLifecycleEvent({
+          resourceType: 'geometry',
+          eventType: 'disposed',
+        }),
+        createMockLifecycleEvent({
+          resourceType: 'material',
+          eventType: 'created',
+        }),
+        createMockLifecycleEvent({
+          resourceType: 'texture',
+          eventType: 'created',
+        }),
+        createMockLifecycleEvent({
+          resourceType: 'texture',
+          eventType: 'disposed',
+        }),
       ];
 
-      const result = await processor.analyzeLeaks(
-        events,
-        [],
-        [],
-        0,
-        { leakThresholdMs: 60000, memoryGrowthThresholdBytes: 50 * 1024 * 1024 }
-      );
+      const result = await processor.analyzeLeaks(events, [], [], 0, {
+        leakThresholdMs: 60000,
+        memoryGrowthThresholdBytes: 50 * 1024 * 1024,
+      });
 
       expect(result.resourceStats.geometries.created).toBe(2);
       expect(result.resourceStats.geometries.disposed).toBe(1);
@@ -492,7 +527,9 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
       );
 
       expect(result.summary.totalAlerts).toBeGreaterThan(0);
-      expect(result.alerts.some(a => a.type === 'orphaned_resource')).toBe(true);
+      expect(result.alerts.some((a) => a.type === 'orphaned_resource')).toBe(
+        true
+      );
       expect(result.resourceStats.geometries.orphaned).toBe(1);
     });
 
@@ -502,15 +539,12 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
         estimatedBytes: 100 * 1024 * 1024 + i * 10 * 1024 * 1024, // Growing by 10MB each
       }));
 
-      const result = await processor.analyzeLeaks(
-        [],
-        [],
-        memoryHistory,
-        0,
-        { leakThresholdMs: 60000, memoryGrowthThresholdBytes: 50 * 1024 * 1024 }
-      );
+      const result = await processor.analyzeLeaks([], [], memoryHistory, 0, {
+        leakThresholdMs: 60000,
+        memoryGrowthThresholdBytes: 50 * 1024 * 1024,
+      });
 
-      expect(result.alerts.some(a => a.type === 'memory_growth')).toBe(true);
+      expect(result.alerts.some((a) => a.type === 'memory_growth')).toBe(true);
     });
 
     it('should generate recommendations', async () => {

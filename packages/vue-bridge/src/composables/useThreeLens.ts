@@ -54,4 +54,3 @@ export function useThreeLens(): ThreeLensContext {
 export function useThreeLensOptional(): ThreeLensContext | undefined {
   return inject(ThreeLensKey);
 }
-

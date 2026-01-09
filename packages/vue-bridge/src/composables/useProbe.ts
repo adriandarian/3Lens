@@ -58,4 +58,3 @@ export function useProbeOptional(): ComputedRef<DevtoolProbe | null> {
 
   return computed(() => context?.probe.value ?? null);
 }
-

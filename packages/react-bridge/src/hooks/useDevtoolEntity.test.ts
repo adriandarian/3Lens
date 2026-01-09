@@ -34,7 +34,11 @@ function createMockProbe(): any {
 // Context wrapper factory
 function createWrapper(contextValue: ThreeLensContextValue | null) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(ThreeLensContext.Provider, { value: contextValue }, children);
+    return createElement(
+      ThreeLensContext.Provider,
+      { value: contextValue },
+      children
+    );
   };
 }
 
@@ -85,7 +89,9 @@ describe('useDevtoolEntity', () => {
       const obj = createMockObject3D();
       const wrapper = createWrapper(mockContext);
 
-      renderHook(() => useDevtoolEntity(obj, { name: 'TestEntity' }), { wrapper });
+      renderHook(() => useDevtoolEntity(obj, { name: 'TestEntity' }), {
+        wrapper,
+      });
 
       expect(obj.name).toBe('TestEntity');
     });
@@ -95,7 +101,9 @@ describe('useDevtoolEntity', () => {
       obj.name = 'TestEntity';
       const wrapper = createWrapper(mockContext);
 
-      renderHook(() => useDevtoolEntity(obj, { name: 'TestEntity' }), { wrapper });
+      renderHook(() => useDevtoolEntity(obj, { name: 'TestEntity' }), {
+        wrapper,
+      });
 
       expect(obj.name).toBe('TestEntity');
     });
@@ -135,7 +143,10 @@ describe('useDevtoolEntity', () => {
       const obj = createMockObject3D();
       const wrapper = createWrapper(mockContext);
 
-      const { unmount } = renderHook(() => useDevtoolEntity(obj, { name: 'Test' }), { wrapper });
+      const { unmount } = renderHook(
+        () => useDevtoolEntity(obj, { name: 'Test' }),
+        { wrapper }
+      );
 
       expect(obj.userData.__3lens).toBeDefined();
 
@@ -158,7 +169,9 @@ describe('useDevtoolEntity', () => {
       const wrapper = createWrapper(mockContext);
 
       expect(() => {
-        renderHook(() => useDevtoolEntity(undefined, { name: 'Test' }), { wrapper });
+        renderHook(() => useDevtoolEntity(undefined, { name: 'Test' }), {
+          wrapper,
+        });
       }).not.toThrow();
     });
 
@@ -167,7 +180,8 @@ describe('useDevtoolEntity', () => {
       const wrapper = createWrapper(mockContext);
 
       const { rerender } = renderHook(
-        ({ metadata, tags }) => useDevtoolEntity(obj, { name: 'Test', metadata, tags }),
+        ({ metadata, tags }) =>
+          useDevtoolEntity(obj, { name: 'Test', metadata, tags }),
         {
           wrapper,
           initialProps: { metadata: { level: 1 }, tags: ['enemy'] },
@@ -266,19 +280,28 @@ describe('useDevtoolEntityGroup', () => {
     const obj2 = createMockObject3D('uuid-2');
     const wrapper = createWrapper(mockContext);
 
-    renderHook(() => useDevtoolEntityGroup([obj1], { name: 'Group1' }), { wrapper });
-    renderHook(() => useDevtoolEntityGroup([obj2], { name: 'Group2' }), { wrapper });
+    renderHook(() => useDevtoolEntityGroup([obj1], { name: 'Group1' }), {
+      wrapper,
+    });
+    renderHook(() => useDevtoolEntityGroup([obj2], { name: 'Group2' }), {
+      wrapper,
+    });
 
-    expect(obj1.userData.__3lens.groupId).not.toBe(obj2.userData.__3lens.groupId);
+    expect(obj1.userData.__3lens.groupId).not.toBe(
+      obj2.userData.__3lens.groupId
+    );
   });
 
   it('should filter out null and undefined objects', () => {
     const obj1 = createMockObject3D('uuid-1');
     const wrapper = createWrapper(mockContext);
 
-    renderHook(() => useDevtoolEntityGroup([obj1, null, undefined], { name: 'Partial' }), {
-      wrapper,
-    });
+    renderHook(
+      () => useDevtoolEntityGroup([obj1, null, undefined], { name: 'Partial' }),
+      {
+        wrapper,
+      }
+    );
 
     expect(obj1.userData.__3lens.groupName).toBe('Partial');
     expect(obj1.userData.__3lens.groupIndex).toBe(0);
@@ -288,7 +311,10 @@ describe('useDevtoolEntityGroup', () => {
     const wrapper = createWrapper(mockContext);
 
     expect(() => {
-      renderHook(() => useDevtoolEntityGroup([null, undefined], { name: 'Empty' }), { wrapper });
+      renderHook(
+        () => useDevtoolEntityGroup([null, undefined], { name: 'Empty' }),
+        { wrapper }
+      );
     }).not.toThrow();
   });
 
@@ -297,9 +323,12 @@ describe('useDevtoolEntityGroup', () => {
     const obj2 = createMockObject3D('uuid-2');
     const wrapper = createWrapper(mockContext);
 
-    const { unmount } = renderHook(() => useDevtoolEntityGroup([obj1, obj2], { name: 'Group' }), {
-      wrapper,
-    });
+    const { unmount } = renderHook(
+      () => useDevtoolEntityGroup([obj1, obj2], { name: 'Group' }),
+      {
+        wrapper,
+      }
+    );
 
     const groupId = obj1.userData.__3lens.groupId;
     expect(groupId).toBeDefined();
@@ -316,7 +345,9 @@ describe('useDevtoolEntityGroup', () => {
     const wrapper = createWrapper(null);
 
     expect(() => {
-      renderHook(() => useDevtoolEntityGroup([obj], { name: 'Test' }), { wrapper });
+      renderHook(() => useDevtoolEntityGroup([obj], { name: 'Test' }), {
+        wrapper,
+      });
     }).not.toThrow();
 
     expect(obj.userData.__3lens).toBeUndefined();

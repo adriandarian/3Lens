@@ -181,4 +181,3 @@ export interface RuleResult {
   message?: string;
   severity?: 'info' | 'warning' | 'error';
 }
-

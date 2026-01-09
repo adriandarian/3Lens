@@ -126,7 +126,8 @@ export interface PluginLoaderOptions {
   cdnTemplate?: string;
 }
 
-const DEFAULT_CDN_TEMPLATE = 'https://unpkg.com/{package}@{version}/dist/index.js';
+const DEFAULT_CDN_TEMPLATE =
+  'https://unpkg.com/{package}@{version}/dist/index.js';
 
 /**
  * Plugin loader - handles loading plugins from various sources
@@ -151,7 +152,10 @@ const DEFAULT_CDN_TEMPLATE = 'https://unpkg.com/{package}@{version}/dist/index.j
 export class PluginLoader {
   private readonly options: Required<PluginLoaderOptions>;
   private readonly loadedPlugins = new Map<PluginId, DevtoolPlugin>();
-  private readonly loadingPromises = new Map<string, Promise<PluginLoadResult>>();
+  private readonly loadingPromises = new Map<
+    string,
+    Promise<PluginLoadResult>
+  >();
 
   constructor(options: PluginLoaderOptions = {}) {
     this.options = {
@@ -183,7 +187,10 @@ export class PluginLoader {
   /**
    * Load a plugin from a URL
    */
-  async loadFromUrl(url: string, options?: Record<string, unknown>): Promise<PluginLoadResult> {
+  async loadFromUrl(
+    url: string,
+    options?: Record<string, unknown>
+  ): Promise<PluginLoadResult> {
     if (!this.options.allowUrlImports) {
       return {
         success: false,
@@ -356,7 +363,10 @@ export class PluginLoader {
 
   private async loadWithTimeout(url: string): Promise<unknown> {
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error(`Plugin load timeout: ${url}`)), this.options.timeout);
+      setTimeout(
+        () => reject(new Error(`Plugin load timeout: ${url}`)),
+        this.options.timeout
+      );
     });
 
     const loadPromise = this.options.importFn(url);
@@ -369,13 +379,18 @@ export class PluginLoader {
     return import(/* @vite-ignore */ specifier);
   }
 
-  private extractPlugin(module: unknown, options?: Record<string, unknown>): DevtoolPlugin {
+  private extractPlugin(
+    module: unknown,
+    options?: Record<string, unknown>
+  ): DevtoolPlugin {
     // Handle various export formats
     const pkg = module as Record<string, unknown>;
 
     // Check for createPlugin factory
     if (typeof pkg.createPlugin === 'function') {
-      return (pkg.createPlugin as (opts?: Record<string, unknown>) => DevtoolPlugin)(options);
+      return (
+        pkg.createPlugin as (opts?: Record<string, unknown>) => DevtoolPlugin
+      )(options);
     }
 
     // Check for direct plugin export
@@ -388,7 +403,11 @@ export class PluginLoader {
       const defaultExport = pkg.default as Record<string, unknown>;
 
       if (typeof defaultExport.createPlugin === 'function') {
-        return (defaultExport.createPlugin as (opts?: Record<string, unknown>) => DevtoolPlugin)(options);
+        return (
+          defaultExport.createPlugin as (
+            opts?: Record<string, unknown>
+          ) => DevtoolPlugin
+        )(options);
       }
 
       if (defaultExport.plugin && this.isValidPlugin(defaultExport.plugin)) {
@@ -411,7 +430,12 @@ export class PluginLoader {
   private isValidPlugin(obj: unknown): obj is DevtoolPlugin {
     if (!obj || typeof obj !== 'object') return false;
     const plugin = obj as Partial<DevtoolPlugin>;
-    return !!(plugin.metadata?.id && plugin.metadata?.name && plugin.metadata?.version && typeof plugin.activate === 'function');
+    return !!(
+      plugin.metadata?.id &&
+      plugin.metadata?.name &&
+      plugin.metadata?.version &&
+      typeof plugin.activate === 'function'
+    );
   }
 
   private validatePlugin(plugin: DevtoolPlugin): void {
@@ -433,7 +457,9 @@ export class PluginLoader {
 
     // Check for duplicate ID
     if (this.loadedPlugins.has(plugin.metadata.id)) {
-      throw new Error(`Plugin with id "${plugin.metadata.id}" is already loaded`);
+      throw new Error(
+        `Plugin with id "${plugin.metadata.id}" is already loaded`
+      );
     }
   }
 
@@ -483,7 +509,9 @@ export class PluginRegistry {
     for (const source of this.sources) {
       try {
         const response = await fetch(source);
-        const data = (await response.json()) as { plugins?: PluginRegistryEntry[] };
+        const data = (await response.json()) as {
+          plugins?: PluginRegistryEntry[];
+        };
 
         if (Array.isArray(data.plugins)) {
           for (const entry of data.plugins) {
@@ -531,8 +559,12 @@ export class PluginRegistry {
     const lowerQuery = query.toLowerCase();
     return this.getAll().filter((entry) => {
       const nameMatch = entry.metadata.name.toLowerCase().includes(lowerQuery);
-      const descMatch = entry.metadata.description?.toLowerCase().includes(lowerQuery);
-      const tagMatch = entry.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery));
+      const descMatch = entry.metadata.description
+        ?.toLowerCase()
+        .includes(lowerQuery);
+      const tagMatch = entry.tags?.some((tag) =>
+        tag.toLowerCase().includes(lowerQuery)
+      );
       return nameMatch || descMatch || tagMatch;
     });
   }
@@ -542,7 +574,9 @@ export class PluginRegistry {
    */
   getByTag(tag: string): PluginRegistryEntry[] {
     const lowerTag = tag.toLowerCase();
-    return this.getAll().filter((entry) => entry.tags?.some((t) => t.toLowerCase() === lowerTag));
+    return this.getAll().filter((entry) =>
+      entry.tags?.some((t) => t.toLowerCase() === lowerTag)
+    );
   }
 
   /**
@@ -577,4 +611,3 @@ export class PluginRegistry {
     return this.entries.size;
   }
 }
-

@@ -2,7 +2,13 @@
  * Materials Panel - Shared renderer for materials inspection
  */
 
-import type { PanelContext, UIState, MaterialData, SceneSnapshot, SceneNode } from '../types';
+import type {
+  PanelContext,
+  UIState,
+  MaterialData,
+  SceneSnapshot,
+  SceneNode,
+} from '../types';
 import { escapeHtml, getMaterialTypeIcon } from '../utils/format';
 import { highlightGLSL, truncateShader } from '../utils/glsl-highlight';
 
@@ -17,7 +23,7 @@ function buildMeshNameMap(snapshot: SceneSnapshot | null): Map<string, string> {
     // Use the object's name, or fallback to type
     const name = node.ref.name || node.ref.type;
     map.set(node.ref.debugId, name);
-    
+
     if (node.children) {
       for (const child of node.children) {
         traverse(child);
@@ -62,10 +68,12 @@ export function renderMaterialsPanel(
     ? materials.filter((mat: MaterialData) => {
         const matName = (mat.name || mat.type).toLowerCase();
         const meshNamesList = mat.usedByMeshes
-          .map(id => meshNames.get(id) || '')
+          .map((id) => meshNames.get(id) || '')
           .join(' ')
           .toLowerCase();
-        return matName.includes(searchQuery) || meshNamesList.includes(searchQuery);
+        return (
+          matName.includes(searchQuery) || meshNamesList.includes(searchQuery)
+        );
       })
     : materials;
 
@@ -78,9 +86,14 @@ export function renderMaterialsPanel(
       <div class="panel-list materials-list-panel">
         ${renderMaterialsSummary(summary)}
         <div class="materials-list">
-          ${filteredMaterials.length > 0 
-            ? filteredMaterials.map((mat: MaterialData) => renderMaterialListItem(mat, state, meshNames)).join('')
-            : `<div class="no-results">No materials match "${escapeHtml(state.materialsSearch)}"</div>`
+          ${
+            filteredMaterials.length > 0
+              ? filteredMaterials
+                  .map((mat: MaterialData) =>
+                    renderMaterialListItem(mat, state, meshNames)
+                  )
+                  .join('')
+              : `<div class="no-results">No materials match "${escapeHtml(state.materialsSearch)}"</div>`
           }
         </div>
       </div>
@@ -91,7 +104,9 @@ export function renderMaterialsPanel(
   `;
 }
 
-function renderMaterialsSummary(summary: SceneSnapshot['materialsSummary']): string {
+function renderMaterialsSummary(
+  summary: SceneSnapshot['materialsSummary']
+): string {
   if (!summary) return '';
 
   return `
@@ -112,23 +127,29 @@ function renderMaterialsSummary(summary: SceneSnapshot['materialsSummary']): str
   `;
 }
 
-function renderMaterialListItem(mat: MaterialData, state: UIState, meshNames: Map<string, string>): string {
+function renderMaterialListItem(
+  mat: MaterialData,
+  state: UIState,
+  meshNames: Map<string, string>
+): string {
   const isSelected = state.selectedMaterialId === mat.uuid;
-  const colorHex = mat.color !== undefined ? mat.color.toString(16).padStart(6, '0') : null;
+  const colorHex =
+    mat.color !== undefined ? mat.color.toString(16).padStart(6, '0') : null;
   const typeIcon = getMaterialTypeIcon(mat.type);
-  
+
   // Get mesh names that use this material
   const usedByNames = mat.usedByMeshes
-    .map(debugId => meshNames.get(debugId) || debugId.substring(0, 8))
+    .map((debugId) => meshNames.get(debugId) || debugId.substring(0, 8))
     .slice(0, 3); // Show max 3 names
   const moreCount = mat.usedByMeshes.length - usedByNames.length;
-  
+
   // Title: material name or type
   const displayName = mat.name || mat.type;
-  
+
   // Subtitle: object names that use this material
-  const subtitle = usedByNames.join(', ') + (moreCount > 0 ? ` +${moreCount}` : '');
-  
+  const subtitle =
+    usedByNames.join(', ') + (moreCount > 0 ? ` +${moreCount}` : '');
+
   return `
     <div class="list-item material-item ${isSelected ? 'selected' : ''}" data-uuid="${mat.uuid}" data-action="select-material">
       <div class="material-item-color">
@@ -160,12 +181,19 @@ function renderNoMaterialSelected(): string {
   `;
 }
 
-function renderMaterialInspector(mat: MaterialData, meshNames: Map<string, string>): string {
-  const colorHex = mat.color !== undefined ? mat.color.toString(16).padStart(6, '0') : null;
-  const emissiveHex = mat.emissive !== undefined ? mat.emissive.toString(16).padStart(6, '0') : null;
+function renderMaterialInspector(
+  mat: MaterialData,
+  meshNames: Map<string, string>
+): string {
+  const colorHex =
+    mat.color !== undefined ? mat.color.toString(16).padStart(6, '0') : null;
+  const emissiveHex =
+    mat.emissive !== undefined
+      ? mat.emissive.toString(16).padStart(6, '0')
+      : null;
 
   // Get mesh names that use this material
-  const usedByList = mat.usedByMeshes.map(debugId => ({
+  const usedByList = mat.usedByMeshes.map((debugId) => ({
     debugId,
     name: meshNames.get(debugId) || debugId.substring(0, 8),
   }));
@@ -186,19 +214,25 @@ function renderMaterialInspector(mat: MaterialData, meshNames: Map<string, strin
     <div class="inspector-section used-by-section">
       <div class="section-title">Used By (${usedByList.length})</div>
       <div class="used-by-list">
-        ${usedByList.map(item => `
+        ${usedByList
+          .map(
+            (item) => `
           <div class="used-by-item" data-debug-id="${item.debugId}">
             <span class="mesh-icon">M</span>
             <span class="mesh-name">${escapeHtml(item.name)}</span>
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     </div>
 
     <div class="inspector-section">
       <div class="section-title">Properties</div>
       <div class="property-grid">
-        ${colorHex !== null ? `
+        ${
+          colorHex !== null
+            ? `
         <div class="property-row">
           <span class="property-label">Color</span>
           <span class="property-value editable">
@@ -206,8 +240,12 @@ function renderMaterialInspector(mat: MaterialData, meshNames: Map<string, strin
             <span class="color-hex">#${colorHex.toUpperCase()}</span>
           </span>
         </div>
-        ` : ''}
-        ${emissiveHex !== null ? `
+        `
+            : ''
+        }
+        ${
+          emissiveHex !== null
+            ? `
         <div class="property-row">
           <span class="property-label">Emissive</span>
           <span class="property-value editable">
@@ -215,7 +253,9 @@ function renderMaterialInspector(mat: MaterialData, meshNames: Map<string, strin
             <span class="color-hex">#${emissiveHex.toUpperCase()}</span>
           </span>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
         <div class="property-row">
           <span class="property-label">Opacity</span>
           <span class="property-value editable">
@@ -298,7 +338,10 @@ function renderMaterialInspector(mat: MaterialData, meshNames: Map<string, strin
   `;
 }
 
-function renderPBRSection(pbr: NonNullable<MaterialData['pbr']>, materialUuid: string): string {
+function renderPBRSection(
+  pbr: NonNullable<MaterialData['pbr']>,
+  materialUuid: string
+): string {
   return `
     <div class="inspector-section">
       <div class="section-title">PBR Properties</div>
@@ -319,7 +362,9 @@ function renderPBRSection(pbr: NonNullable<MaterialData['pbr']>, materialUuid: s
             <span class="range-value">${pbr.metalness.toFixed(2)}</span>
           </span>
         </div>
-        ${pbr.reflectivity !== undefined ? `
+        ${
+          pbr.reflectivity !== undefined
+            ? `
         <div class="property-row">
           <span class="property-label">Reflectivity</span>
           <span class="property-value editable">
@@ -328,8 +373,12 @@ function renderPBRSection(pbr: NonNullable<MaterialData['pbr']>, materialUuid: s
             <span class="range-value">${pbr.reflectivity.toFixed(2)}</span>
           </span>
         </div>
-        ` : ''}
-        ${pbr.clearcoat !== undefined ? `
+        `
+            : ''
+        }
+        ${
+          pbr.clearcoat !== undefined
+            ? `
         <div class="property-row">
           <span class="property-label">Clearcoat</span>
           <span class="property-value editable">
@@ -338,8 +387,12 @@ function renderPBRSection(pbr: NonNullable<MaterialData['pbr']>, materialUuid: s
             <span class="range-value">${pbr.clearcoat.toFixed(2)}</span>
           </span>
         </div>
-        ` : ''}
-        ${pbr.transmission !== undefined ? `
+        `
+            : ''
+        }
+        ${
+          pbr.transmission !== undefined
+            ? `
         <div class="property-row">
           <span class="property-label">Transmission</span>
           <span class="property-value editable">
@@ -348,8 +401,12 @@ function renderPBRSection(pbr: NonNullable<MaterialData['pbr']>, materialUuid: s
             <span class="range-value">${pbr.transmission.toFixed(2)}</span>
           </span>
         </div>
-        ` : ''}
-        ${pbr.ior !== undefined ? `
+        `
+            : ''
+        }
+        ${
+          pbr.ior !== undefined
+            ? `
         <div class="property-row">
           <span class="property-label">IOR</span>
           <span class="property-value editable">
@@ -358,7 +415,9 @@ function renderPBRSection(pbr: NonNullable<MaterialData['pbr']>, materialUuid: s
             <span class="range-value">${pbr.ior.toFixed(2)}</span>
           </span>
         </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     </div>
   `;
@@ -369,53 +428,75 @@ function renderTexturesSection(textures: MaterialData['textures']): string {
     <div class="inspector-section">
       <div class="section-title">Textures (${textures.length})</div>
       <div class="texture-list">
-        ${textures.map((tex: MaterialData['textures'][0]) => `
+        ${textures
+          .map(
+            (tex: MaterialData['textures'][0]) => `
           <div class="texture-item">
             <span class="texture-slot">${tex.slot}</span>
             <span class="texture-uuid">${tex.uuid.substring(0, 8)}...</span>
             ${tex.name ? `<span class="texture-name">${escapeHtml(tex.name)}</span>` : ''}
           </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     </div>
   `;
 }
 
-function renderShaderSection(shader: NonNullable<MaterialData['shader']>): string {
+function renderShaderSection(
+  shader: NonNullable<MaterialData['shader']>
+): string {
   const hasDefines = Object.keys(shader.defines).length > 0;
-  
+
   return `
     <div class="inspector-section shader-section">
       <div class="section-title">Shader</div>
       
-      ${shader.uniforms.length > 0 ? `
+      ${
+        shader.uniforms.length > 0
+          ? `
       <div class="shader-subsection">
         <div class="subsection-title">Uniforms (${shader.uniforms.length})</div>
         <div class="uniforms-list">
-          ${shader.uniforms.map((u: { type: string; name: string; value: unknown }) => `
+          ${shader.uniforms
+            .map(
+              (u: { type: string; name: string; value: unknown }) => `
             <div class="uniform-item">
               <span class="uniform-type">${u.type}</span>
               <span class="uniform-name">${u.name}</span>
               <span class="uniform-value">${formatUniformValue(u)}</span>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
         </div>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
 
-      ${hasDefines ? `
+      ${
+        hasDefines
+          ? `
       <div class="shader-subsection">
         <div class="subsection-title">Defines</div>
         <div class="defines-list">
-          ${Object.entries(shader.defines).map(([key, value]) => `
+          ${Object.entries(shader.defines)
+            .map(
+              ([key, value]) => `
             <div class="define-item">
               <span class="define-name">${key}</span>
               <span class="define-value">${String(value)}</span>
             </div>
-          `).join('')}
+          `
+            )
+            .join('')}
         </div>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
 
       <div class="shader-subsection">
         <div class="subsection-title">Vertex Shader</div>
@@ -430,7 +511,11 @@ function renderShaderSection(shader: NonNullable<MaterialData['shader']>): strin
   `;
 }
 
-function formatUniformValue(uniform: { type: string; name: string; value: unknown }): string {
+function formatUniformValue(uniform: {
+  type: string;
+  name: string;
+  value: unknown;
+}): string {
   const val = uniform.value;
   if (val === null || val === undefined) return 'null';
   if (typeof val === 'number') return val.toFixed(4);
@@ -472,84 +557,93 @@ export function attachMaterialsEvents(
   rerender: () => void
 ): void {
   // Material list item selection
-  container.querySelectorAll('[data-action="select-material"]').forEach((item) => {
-    const itemEl = item as HTMLElement;
-    const uuid = itemEl.dataset.uuid;
+  container
+    .querySelectorAll('[data-action="select-material"]')
+    .forEach((item) => {
+      const itemEl = item as HTMLElement;
+      const uuid = itemEl.dataset.uuid;
 
-    itemEl.addEventListener('click', () => {
-      if (!uuid) return;
-      // Toggle selection - clicking selected item deselects it
-      const newSelection = state.selectedMaterialId === uuid ? null : uuid;
-      updateState({ selectedMaterialId: newSelection });
-      rerender();
+      itemEl.addEventListener('click', () => {
+        if (!uuid) return;
+        // Toggle selection - clicking selected item deselects it
+        const newSelection = state.selectedMaterialId === uuid ? null : uuid;
+        updateState({ selectedMaterialId: newSelection });
+        rerender();
+      });
     });
-  });
 
   // Color pickers
-  container.querySelectorAll<HTMLInputElement>('.prop-color-input').forEach((input) => {
-    input.addEventListener('input', () => {
-      const property = input.dataset.property;
-      const materialUuid = input.dataset.material;
-      if (!property || !materialUuid) return;
-      const hexValue = parseInt(input.value.replace('#', ''), 16);
-      context.sendCommand({
-        type: 'update-material-property',
-        materialUuid,
-        property,
-        value: hexValue,
+  container
+    .querySelectorAll<HTMLInputElement>('.prop-color-input')
+    .forEach((input) => {
+      input.addEventListener('input', () => {
+        const property = input.dataset.property;
+        const materialUuid = input.dataset.material;
+        if (!property || !materialUuid) return;
+        const hexValue = parseInt(input.value.replace('#', ''), 16);
+        context.sendCommand({
+          type: 'update-material-property',
+          materialUuid,
+          property,
+          value: hexValue,
+        });
       });
     });
-  });
 
   // Range sliders
-  container.querySelectorAll<HTMLInputElement>('.prop-range-input').forEach((input) => {
-    input.addEventListener('input', () => {
-      const property = input.dataset.property;
-      const materialUuid = input.dataset.material;
-      if (!property || !materialUuid) return;
-      const value = parseFloat(input.value);
-      const valueDisplay = input.parentElement?.querySelector('.range-value');
-      if (valueDisplay) {
-        valueDisplay.textContent = value.toFixed(2);
-      }
-      context.sendCommand({
-        type: 'update-material-property',
-        materialUuid,
-        property,
-        value,
+  container
+    .querySelectorAll<HTMLInputElement>('.prop-range-input')
+    .forEach((input) => {
+      input.addEventListener('input', () => {
+        const property = input.dataset.property;
+        const materialUuid = input.dataset.material;
+        if (!property || !materialUuid) return;
+        const value = parseFloat(input.value);
+        const valueDisplay = input.parentElement?.querySelector('.range-value');
+        if (valueDisplay) {
+          valueDisplay.textContent = value.toFixed(2);
+        }
+        context.sendCommand({
+          type: 'update-material-property',
+          materialUuid,
+          property,
+          value,
+        });
       });
     });
-  });
 
   // Checkboxes
-  container.querySelectorAll<HTMLInputElement>('.prop-checkbox-input').forEach((input) => {
-    input.addEventListener('change', () => {
-      const property = input.dataset.property;
-      const materialUuid = input.dataset.material;
-      if (!property || !materialUuid) return;
-      context.sendCommand({
-        type: 'update-material-property',
-        materialUuid,
-        property,
-        value: input.checked,
+  container
+    .querySelectorAll<HTMLInputElement>('.prop-checkbox-input')
+    .forEach((input) => {
+      input.addEventListener('change', () => {
+        const property = input.dataset.property;
+        const materialUuid = input.dataset.material;
+        if (!property || !materialUuid) return;
+        context.sendCommand({
+          type: 'update-material-property',
+          materialUuid,
+          property,
+          value: input.checked,
+        });
       });
     });
-  });
 
   // Select dropdowns
-  container.querySelectorAll<HTMLSelectElement>('.prop-select-input').forEach((select) => {
-    select.addEventListener('change', () => {
-      const property = select.dataset.property;
-      const materialUuid = select.dataset.material;
-      if (!property || !materialUuid) return;
-      const value = parseInt(select.value, 10);
-      context.sendCommand({
-        type: 'update-material-property',
-        materialUuid,
-        property,
-        value,
+  container
+    .querySelectorAll<HTMLSelectElement>('.prop-select-input')
+    .forEach((select) => {
+      select.addEventListener('change', () => {
+        const property = select.dataset.property;
+        const materialUuid = select.dataset.material;
+        if (!property || !materialUuid) return;
+        const value = parseInt(select.value, 10);
+        context.sendCommand({
+          type: 'update-material-property',
+          materialUuid,
+          property,
+          value,
+        });
       });
     });
-  });
 }
-

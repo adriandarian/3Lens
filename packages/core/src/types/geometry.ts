@@ -208,4 +208,3 @@ export interface GeometrySummary {
    */
   morphedCount: number;
 }
-

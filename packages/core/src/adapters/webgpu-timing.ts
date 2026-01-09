@@ -1,9 +1,9 @@
 /**
  * WebGPU GPU Timing Manager
- * 
+ *
  * Implements GPU timing using WebGPU timestamp queries for accurate
  * per-pass breakdown of GPU execution time.
- * 
+ *
  * @module @3lens/core/adapters/webgpu-timing
  */
 
@@ -31,7 +31,7 @@ export interface GpuFrameTiming {
 /**
  * Pass type for categorization
  */
-export type GpuPassType = 
+export type GpuPassType =
   | 'render'
   | 'compute'
   | 'shadow'
@@ -47,12 +47,12 @@ export interface GpuTimingConfig {
    * Maximum number of frames to keep in history
    */
   maxHistorySize: number;
-  
+
   /**
    * Whether to automatically read results
    */
   autoReadback: boolean;
-  
+
   /**
    * Number of query pairs (start/end) per frame
    */
@@ -67,7 +67,7 @@ const DEFAULT_CONFIG: GpuTimingConfig = {
 
 /**
  * WebGPU GPU Timing Manager
- * 
+ *
  * Manages timestamp queries for accurate GPU timing measurement.
  * Uses a double-buffered approach to avoid GPU stalls.
  */
@@ -76,24 +76,24 @@ export class WebGpuTimingManager {
   private querySet: GPUQuerySet | null = null;
   private resolveBuffer: GPUBuffer | null = null;
   private readBuffer: GPUBuffer | null = null;
-  
+
   private config: GpuTimingConfig;
   private enabled = false;
   private disposed = false;
-  
+
   // Current frame tracking
   private currentFrame = 0;
   private currentPassIndex = 0;
   private pendingReadback = false;
-  
+
   // Pass tracking
   private passNames: string[] = [];
   private passTypes: GpuPassType[] = [];
-  
+
   // History
   private history: GpuFrameTiming[] = [];
   private latestTiming: GpuFrameTiming | null = null;
-  
+
   // Double buffering for query results
   private frameBuffers: Array<{
     frameNumber: number;
@@ -114,18 +114,20 @@ export class WebGpuTimingManager {
    */
   async initialize(device: GPUDevice): Promise<boolean> {
     if (this.disposed) return false;
-    
+
     // Check for timestamp query support
     if (!device.features.has('timestamp-query')) {
-      console.warn('[3Lens GPU Timing] Timestamp queries not supported on this device');
+      console.warn(
+        '[3Lens GPU Timing] Timestamp queries not supported on this device'
+      );
       return false;
     }
 
     this.device = device;
-    
+
     // Create query set (2 queries per pass: start + end)
     const queryCount = this.config.maxPassesPerFrame * 2 * this.BUFFER_COUNT;
-    
+
     try {
       this.querySet = device.createQuerySet({
         type: 'timestamp',
@@ -184,7 +186,7 @@ export class WebGpuTimingManager {
     this.currentPassIndex = 0;
     this.passNames = [];
     this.passTypes = [];
-    
+
     // Rotate to next buffer
     this.currentBufferIndex = (this.currentBufferIndex + 1) % this.BUFFER_COUNT;
   }
@@ -193,16 +195,20 @@ export class WebGpuTimingManager {
    * Get the query index for writing timestamp at pass start
    * Call this before the pass begins
    */
-  getPassStartQueryIndex(passName: string, passType: GpuPassType = 'unknown'): number {
+  getPassStartQueryIndex(
+    passName: string,
+    passType: GpuPassType = 'unknown'
+  ): number {
     if (!this.enabled || this.disposed) return -1;
     if (this.currentPassIndex >= this.config.maxPassesPerFrame) return -1;
 
-    const baseIndex = this.currentBufferIndex * this.config.maxPassesPerFrame * 2;
+    const baseIndex =
+      this.currentBufferIndex * this.config.maxPassesPerFrame * 2;
     const queryIndex = baseIndex + this.currentPassIndex * 2;
-    
+
     this.passNames.push(passName);
     this.passTypes.push(passType);
-    
+
     return queryIndex;
   }
 
@@ -214,23 +220,24 @@ export class WebGpuTimingManager {
     if (!this.enabled || this.disposed) return -1;
     if (this.currentPassIndex >= this.config.maxPassesPerFrame) return -1;
 
-    const baseIndex = this.currentBufferIndex * this.config.maxPassesPerFrame * 2;
+    const baseIndex =
+      this.currentBufferIndex * this.config.maxPassesPerFrame * 2;
     const queryIndex = baseIndex + this.currentPassIndex * 2 + 1;
-    
+
     this.currentPassIndex++;
-    
+
     return queryIndex;
   }
 
   /**
    * Write timestamp at the start of a render/compute pass
    * Use with GPURenderPassEncoder or GPUComputePassEncoder
-   * 
+   *
    * Note: writeTimestamp requires the 'timestamp-query' feature
    */
   writeTimestamp(encoder: GPUCommandEncoder, queryIndex: number): void {
     if (!this.enabled || !this.querySet || queryIndex < 0) return;
-    
+
     // writeTimestamp is available when 'timestamp-query' feature is enabled
     // Cast to extended interface for TypeScript compatibility
     const encoderWithTimestamp = encoder as GPUCommandEncoder & {
@@ -243,10 +250,12 @@ export class WebGpuTimingManager {
    * End the current frame and resolve queries
    */
   endFrame(encoder: GPUCommandEncoder): void {
-    if (!this.enabled || this.disposed || !this.querySet || !this.resolveBuffer) return;
+    if (!this.enabled || this.disposed || !this.querySet || !this.resolveBuffer)
+      return;
     if (this.currentPassIndex === 0) return; // No passes recorded
 
-    const baseIndex = this.currentBufferIndex * this.config.maxPassesPerFrame * 2;
+    const baseIndex =
+      this.currentBufferIndex * this.config.maxPassesPerFrame * 2;
     const queryCount = this.currentPassIndex * 2;
     const bufferOffset = baseIndex * 8;
 
@@ -296,17 +305,26 @@ export class WebGpuTimingManager {
    * Returns the results for the oldest pending frame
    */
   async readResults(): Promise<GpuFrameTiming | null> {
-    if (!this.enabled || this.disposed || !this.readBuffer || this.pendingReadback) {
+    if (
+      !this.enabled ||
+      this.disposed ||
+      !this.readBuffer ||
+      this.pendingReadback
+    ) {
       return this.latestTiming;
     }
 
     // Find oldest pending readback
     let oldestIndex = -1;
     let oldestFrame = Infinity;
-    
+
     for (let i = 0; i < this.BUFFER_COUNT; i++) {
       const fb = this.frameBuffers[i];
-      if (fb.readbackPending && fb.frameNumber < oldestFrame && fb.passCount > 0) {
+      if (
+        fb.readbackPending &&
+        fb.frameNumber < oldestFrame &&
+        fb.passCount > 0
+      ) {
         oldestFrame = fb.frameNumber;
         oldestIndex = i;
       }
@@ -334,7 +352,7 @@ export class WebGpuTimingManager {
 
       // Read timestamps as BigInt64
       const timestamps = new BigInt64Array(mappedRange);
-      
+
       // Calculate pass timings
       const passes: GpuPassTiming[] = [];
       let totalNs = BigInt(0);
@@ -343,10 +361,10 @@ export class WebGpuTimingManager {
         const startNs = timestamps[i * 2];
         const endNs = timestamps[i * 2 + 1];
         const durationNs = endNs - startNs;
-        
+
         // Convert to milliseconds (nanoseconds / 1_000_000)
         const durationMs = Number(durationNs) / 1_000_000;
-        
+
         passes.push({
           name: frameBuffer.passNames[i],
           startNs,
@@ -388,7 +406,7 @@ export class WebGpuTimingManager {
 
       this.latestTiming = timing;
       this.pendingReadback = false;
-      
+
       return timing;
     } catch (e) {
       console.warn('[3Lens GPU Timing] Readback failed:', e);
@@ -424,9 +442,12 @@ export class WebGpuTimingManager {
 
     for (const frame of recentFrames) {
       totalMs += frame.totalMs;
-      
+
       for (const pass of frame.passes) {
-        const existing = passAverages.get(pass.name) ?? { totalMs: 0, count: 0 };
+        const existing = passAverages.get(pass.name) ?? {
+          totalMs: 0,
+          count: 0,
+        };
         existing.totalMs += pass.durationMs;
         existing.count++;
         passAverages.set(pass.name, existing);
@@ -477,7 +498,7 @@ export class WebGpuTimingManager {
    */
   dispose(): void {
     if (this.disposed) return;
-    
+
     this.disposed = true;
     this.enabled = false;
 
@@ -516,13 +537,26 @@ export function createTimestampWrites(
  */
 export function categorizePass(passName: string): GpuPassType {
   const name = passName.toLowerCase();
-  
+
   if (name.includes('shadow')) return 'shadow';
   if (name.includes('compute')) return 'compute';
-  if (name.includes('post') || name.includes('bloom') || name.includes('blur') || name.includes('fxaa') || name.includes('ssao')) return 'post-process';
+  if (
+    name.includes('post') ||
+    name.includes('bloom') ||
+    name.includes('blur') ||
+    name.includes('fxaa') ||
+    name.includes('ssao')
+  )
+    return 'post-process';
   if (name.includes('copy') || name.includes('blit')) return 'copy';
-  if (name.includes('render') || name.includes('opaque') || name.includes('transparent') || name.includes('forward') || name.includes('deferred')) return 'render';
-  
+  if (
+    name.includes('render') ||
+    name.includes('opaque') ||
+    name.includes('transparent') ||
+    name.includes('forward') ||
+    name.includes('deferred')
+  )
+    return 'render';
+
   return 'unknown';
 }
-

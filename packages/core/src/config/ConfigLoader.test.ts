@@ -1,6 +1,6 @@
 /**
  * ConfigLoader Test Suite
- * 
+ *
  * Tests for the configuration loading, validation, and rule checking system.
  */
 
@@ -13,7 +13,12 @@ import {
   type ViolationSeverity,
 } from './ConfigLoader';
 import type { ProbeConfig, CustomRule } from '../types/config';
-import type { FrameStats, MemoryStats, RenderingStats, PerformanceMetrics } from '../types/stats';
+import type {
+  FrameStats,
+  MemoryStats,
+  RenderingStats,
+  PerformanceMetrics,
+} from '../types/stats';
 
 // Helper to create mock frame stats
 function createMockFrameStats(overrides: Partial<FrameStats> = {}): FrameStats {
@@ -146,13 +151,17 @@ describe('ConfigLoader', () => {
     it('should reject config without appName', () => {
       const result = ConfigLoader.validateConfig({});
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain('appName is required and must be a string');
+      expect(result.errors).toContain(
+        'appName is required and must be a string'
+      );
     });
 
     it('should reject config with non-string appName', () => {
       const result = ConfigLoader.validateConfig({ appName: 123 });
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain('appName is required and must be a string');
+      expect(result.errors).toContain(
+        'appName is required and must be a string'
+      );
     });
 
     it('should warn about invalid env type', () => {
@@ -188,7 +197,9 @@ describe('ConfigLoader', () => {
         rules: { maxDrawCalls: '100' },
       });
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContain('rules.maxDrawCalls should be a number');
+      expect(result.warnings).toContain(
+        'rules.maxDrawCalls should be a number'
+      );
     });
 
     it('should warn about negative rule values', () => {
@@ -197,7 +208,9 @@ describe('ConfigLoader', () => {
         rules: { maxTriangles: -100 },
       });
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContain('rules.maxTriangles should be positive');
+      expect(result.warnings).toContain(
+        'rules.maxTriangles should be positive'
+      );
     });
 
     it('should reject non-array custom rules', () => {
@@ -219,8 +232,12 @@ describe('ConfigLoader', () => {
         },
       });
       expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.includes('rules.custom[0].id'))).toBe(true);
-      expect(result.errors.some(e => e.includes('rules.custom[0].check'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('rules.custom[0].id'))).toBe(
+        true
+      );
+      expect(
+        result.errors.some((e) => e.includes('rules.custom[0].check'))
+      ).toBe(true);
     });
 
     it('should accept valid custom rules', () => {
@@ -250,7 +267,9 @@ describe('ConfigLoader', () => {
         sampling: { frameStats: 'invalid' },
       });
       expect(result.valid).toBe(true);
-      expect(result.warnings.some(w => w.includes('sampling.frameStats'))).toBe(true);
+      expect(
+        result.warnings.some((w) => w.includes('sampling.frameStats'))
+      ).toBe(true);
     });
 
     it('should accept numeric frameStats', () => {
@@ -259,7 +278,9 @@ describe('ConfigLoader', () => {
         sampling: { frameStats: 5 },
       });
       expect(result.valid).toBe(true);
-      expect(result.warnings.filter(w => w.includes('sampling.frameStats'))).toHaveLength(0);
+      expect(
+        result.warnings.filter((w) => w.includes('sampling.frameStats'))
+      ).toHaveLength(0);
     });
 
     it('should warn about invalid snapshots value', () => {
@@ -268,7 +289,9 @@ describe('ConfigLoader', () => {
         sampling: { snapshots: 'invalid' },
       });
       expect(result.valid).toBe(true);
-      expect(result.warnings.some(w => w.includes('sampling.snapshots'))).toBe(true);
+      expect(
+        result.warnings.some((w) => w.includes('sampling.snapshots'))
+      ).toBe(true);
     });
 
     it('should warn about non-boolean gpuTiming', () => {
@@ -277,7 +300,9 @@ describe('ConfigLoader', () => {
         sampling: { gpuTiming: 'true' },
       });
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContain('sampling.gpuTiming should be a boolean');
+      expect(result.warnings).toContain(
+        'sampling.gpuTiming should be a boolean'
+      );
     });
   });
 
@@ -286,7 +311,7 @@ describe('ConfigLoader', () => {
       const config: ProbeConfig = { appName: 'Test' };
       const loader = new ConfigLoader(config);
       const thresholds = loader.getThresholds();
-      
+
       expect(thresholds.maxDrawCalls).toBe(DEFAULT_THRESHOLDS.maxDrawCalls);
     });
 
@@ -297,7 +322,7 @@ describe('ConfigLoader', () => {
       };
       const loader = new ConfigLoader(config);
       const thresholds = loader.getThresholds();
-      
+
       expect(thresholds.maxDrawCalls).toBe(500);
       expect(thresholds.maxTriangles).toBe(DEFAULT_THRESHOLDS.maxTriangles);
     });
@@ -313,11 +338,11 @@ describe('ConfigLoader', () => {
         rules: { custom: [customRule] },
       };
       const loader = new ConfigLoader(config);
-      
+
       // Custom rules are used in checkRules
       const stats = createMockFrameStats();
       const results = loader.checkRules(stats);
-      const customResult = results.find(r => r.ruleId === 'custom1');
+      const customResult = results.find((r) => r.ruleId === 'custom1');
       expect(customResult).toBeDefined();
     });
   });
@@ -327,7 +352,7 @@ describe('ConfigLoader', () => {
       const loader = new ConfigLoader({ appName: 'Test' });
       const thresholds1 = loader.getThresholds();
       const thresholds2 = loader.getThresholds();
-      
+
       expect(thresholds1).not.toBe(thresholds2);
       expect(thresholds1).toEqual(thresholds2);
     });
@@ -337,16 +362,16 @@ describe('ConfigLoader', () => {
     it('should update specific thresholds', () => {
       const loader = new ConfigLoader({ appName: 'Test' });
       loader.updateThresholds({ maxDrawCalls: 200 });
-      
+
       expect(loader.getThresholds().maxDrawCalls).toBe(200);
     });
 
     it('should preserve other thresholds when updating', () => {
       const loader = new ConfigLoader({ appName: 'Test' });
       const originalTriangles = loader.getThresholds().maxTriangles;
-      
+
       loader.updateThresholds({ maxDrawCalls: 200 });
-      
+
       expect(loader.getThresholds().maxTriangles).toBe(originalTriangles);
     });
   });
@@ -359,12 +384,12 @@ describe('ConfigLoader', () => {
         name: 'New Rule',
         check: () => ({ passed: true }),
       };
-      
+
       loader.addCustomRule(rule);
-      
+
       const stats = createMockFrameStats();
       const results = loader.checkRules(stats);
-      expect(results.some(r => r.ruleId === 'newRule')).toBe(true);
+      expect(results.some((r) => r.ruleId === 'newRule')).toBe(true);
     });
   });
 
@@ -379,17 +404,17 @@ describe('ConfigLoader', () => {
         appName: 'Test',
         rules: { custom: [rule] },
       });
-      
+
       const removed = loader.removeCustomRule('toRemove');
-      
+
       expect(removed).toBe(true);
     });
 
     it('should return false for non-existent rule', () => {
       const loader = new ConfigLoader({ appName: 'Test' });
-      
+
       const removed = loader.removeCustomRule('nonExistent');
-      
+
       expect(removed).toBe(false);
     });
   });
@@ -401,11 +426,11 @@ describe('ConfigLoader', () => {
         rules: { maxDrawCalls: 50 }, // Low threshold to trigger
       });
       const callback = vi.fn();
-      
+
       loader.onViolation(callback);
       const stats = createMockFrameStats({ drawCalls: 100 });
       loader.checkRules(stats);
-      
+
       expect(callback).toHaveBeenCalled();
       expect(callback.mock.calls[0][0].ruleId).toBe('maxDrawCalls');
     });
@@ -416,13 +441,13 @@ describe('ConfigLoader', () => {
         rules: { maxDrawCalls: 50 },
       });
       const callback = vi.fn();
-      
+
       const unsubscribe = loader.onViolation(callback);
       unsubscribe();
-      
+
       const stats = createMockFrameStats({ drawCalls: 100 });
       loader.checkRules(stats);
-      
+
       expect(callback).not.toHaveBeenCalled();
     });
 
@@ -433,16 +458,16 @@ describe('ConfigLoader', () => {
       });
       const callback = vi.fn();
       loader.onViolation(callback);
-      
+
       // Create stats that only violate maxDrawCalls, not other rules
-      const stats = createMockFrameStats({ 
+      const stats = createMockFrameStats({
         drawCalls: 100, // > 50 (violates)
         triangles: 1000, // well under 500000 default
         cpuTimeMs: 5, // well under 16.67 default
       });
       loader.checkRules(stats);
       loader.checkRules(stats); // Should be blocked by cooldown
-      
+
       // Only count calls for the draw calls rule specifically
       const drawCallViolations = callback.mock.calls.filter(
         (call: any) => call[0].ruleId === 'maxDrawCalls'
@@ -455,10 +480,10 @@ describe('ConfigLoader', () => {
     it('should check draw calls threshold', () => {
       const loader = new ConfigLoader({ appName: 'Test' });
       const stats = createMockFrameStats({ drawCalls: 100 });
-      
+
       const results = loader.checkRules(stats);
-      const drawCallResult = results.find(r => r.ruleId === 'maxDrawCalls');
-      
+      const drawCallResult = results.find((r) => r.ruleId === 'maxDrawCalls');
+
       expect(drawCallResult).toBeDefined();
       expect(drawCallResult!.passed).toBe(true);
     });
@@ -469,10 +494,10 @@ describe('ConfigLoader', () => {
         rules: { maxDrawCalls: 50 },
       });
       const stats = createMockFrameStats({ drawCalls: 100 });
-      
+
       const results = loader.checkRules(stats);
-      const drawCallResult = results.find(r => r.ruleId === 'maxDrawCalls');
-      
+      const drawCallResult = results.find((r) => r.ruleId === 'maxDrawCalls');
+
       expect(drawCallResult!.passed).toBe(false);
     });
 
@@ -482,10 +507,10 @@ describe('ConfigLoader', () => {
         rules: { maxDrawCalls: 50 },
       });
       const stats = createMockFrameStats({ drawCalls: 100 }); // > 50 * 1.5
-      
+
       const results = loader.checkRules(stats);
-      const drawCallResult = results.find(r => r.ruleId === 'maxDrawCalls');
-      
+      const drawCallResult = results.find((r) => r.ruleId === 'maxDrawCalls');
+
       expect(drawCallResult!.severity).toBe('error');
     });
 
@@ -495,10 +520,10 @@ describe('ConfigLoader', () => {
         rules: { maxTriangles: 10000 },
       });
       const stats = createMockFrameStats({ triangles: 50000 });
-      
+
       const results = loader.checkRules(stats);
-      const result = results.find(r => r.ruleId === 'maxTriangles');
-      
+      const result = results.find((r) => r.ruleId === 'maxTriangles');
+
       expect(result!.passed).toBe(false);
     });
 
@@ -508,10 +533,10 @@ describe('ConfigLoader', () => {
         rules: { maxFrameTimeMs: 10 },
       });
       const stats = createMockFrameStats({ cpuTimeMs: 20 });
-      
+
       const results = loader.checkRules(stats);
-      const result = results.find(r => r.ruleId === 'maxFrameTimeMs');
-      
+      const result = results.find((r) => r.ruleId === 'maxFrameTimeMs');
+
       expect(result!.passed).toBe(false);
     });
 
@@ -522,11 +547,11 @@ describe('ConfigLoader', () => {
       });
       const stats = createMockFrameStats({
         cpuTimeMs: 33.33, // ~30 FPS
-        performance: { 
-          fps: 30, 
-          fpsMin: 25, 
-          fpsMax: 35, 
-          fps1PercentLow: 20, 
+        performance: {
+          fps: 30,
+          fpsMin: 25,
+          fpsMax: 35,
+          fps1PercentLow: 20,
           frameTimeVariance: 5,
           fpsSmoothed: 30,
           frameBudgetUsed: 200,
@@ -538,10 +563,10 @@ describe('ConfigLoader', () => {
           droppedFrames: 5,
         },
       });
-      
+
       const results = loader.checkRules(stats);
-      const result = results.find(r => r.ruleId === 'minFps');
-      
+      const result = results.find((r) => r.ruleId === 'minFps');
+
       expect(result!.passed).toBe(false);
     });
 
@@ -562,10 +587,10 @@ describe('ConfigLoader', () => {
           renderTargetMemory: 2000000,
         },
       });
-      
+
       const results = loader.checkRules(stats);
-      const result = results.find(r => r.ruleId === 'maxTextures');
-      
+      const result = results.find((r) => r.ruleId === 'maxTextures');
+
       expect(result!.passed).toBe(false);
     });
 
@@ -596,10 +621,10 @@ describe('ConfigLoader', () => {
           viewports: 1,
         },
       });
-      
+
       const results = loader.checkRules(stats);
-      const result = results.find(r => r.ruleId === 'maxLights');
-      
+      const result = results.find((r) => r.ruleId === 'maxLights');
+
       expect(result!.passed).toBe(false);
     });
 
@@ -618,10 +643,10 @@ describe('ConfigLoader', () => {
         rules: { custom: [customRule] },
       });
       const stats = createMockFrameStats({ triangles: 150000 });
-      
+
       const results = loader.checkRules(stats);
-      const result = results.find(r => r.ruleId === 'customCheck');
-      
+      const result = results.find((r) => r.ruleId === 'customCheck');
+
       expect(result!.passed).toBe(false);
       expect(result!.message).toBe('Custom message');
     });
@@ -639,10 +664,10 @@ describe('ConfigLoader', () => {
         rules: { custom: [customRule] },
       });
       const stats = createMockFrameStats();
-      
+
       const results = loader.checkRules(stats);
-      const result = results.find(r => r.ruleId === 'errorRule');
-      
+      const result = results.find((r) => r.ruleId === 'errorRule');
+
       expect(result!.passed).toBe(false);
       expect(result!.severity).toBe('error');
       expect(result!.message).toContain('Test error');
@@ -657,10 +682,10 @@ describe('ConfigLoader', () => {
       });
       const stats = createMockFrameStats({ drawCalls: 100 });
       loader.checkRules(stats);
-      
+
       const violations1 = loader.getRecentViolations();
       const violations2 = loader.getRecentViolations();
-      
+
       expect(violations1).not.toBe(violations2);
       expect(violations1.length).toBeGreaterThan(0);
     });
@@ -671,7 +696,7 @@ describe('ConfigLoader', () => {
       const loader = new ConfigLoader({
         appName: 'Test',
         rules: {
-          maxDrawCalls: 10,   // Will be error (100 > 10 * 1.5)
+          maxDrawCalls: 10, // Will be error (100 > 10 * 1.5)
           maxTriangles: 40000, // Will be warning (50000 < 40000 * 1.5)
         },
       });
@@ -680,12 +705,12 @@ describe('ConfigLoader', () => {
         triangles: 50000,
       });
       loader.checkRules(stats);
-      
+
       const errors = loader.getViolationsBySeverity('error');
       const warnings = loader.getViolationsBySeverity('warning');
-      
-      expect(errors.every(v => v.severity === 'error')).toBe(true);
-      expect(warnings.every(v => v.severity === 'warning')).toBe(true);
+
+      expect(errors.every((v) => v.severity === 'error')).toBe(true);
+      expect(warnings.every((v) => v.severity === 'warning')).toBe(true);
     });
   });
 
@@ -697,11 +722,11 @@ describe('ConfigLoader', () => {
       });
       const stats = createMockFrameStats({ drawCalls: 100 });
       loader.checkRules(stats);
-      
+
       expect(loader.getRecentViolations().length).toBeGreaterThan(0);
-      
+
       loader.clearViolations();
-      
+
       expect(loader.getRecentViolations()).toHaveLength(0);
     });
   });
@@ -714,9 +739,9 @@ describe('ConfigLoader', () => {
       });
       const stats = createMockFrameStats({ drawCalls: 100 });
       loader.checkRules(stats);
-      
+
       const summary = loader.getViolationSummary();
-      
+
       expect(summary.total).toBeGreaterThan(0);
       expect(typeof summary.errors).toBe('number');
       expect(typeof summary.warnings).toBe('number');
@@ -731,9 +756,9 @@ describe('ConfigLoader', () => {
         env: 'development',
         rules: { maxDrawCalls: 500 },
       });
-      
+
       const exported = loader.exportConfig();
-      
+
       expect(exported.appName).toBe('TestApp');
       expect(exported.rules).toBeDefined();
     });
@@ -745,9 +770,9 @@ describe('ConfigLoader', () => {
         appName: 'TestApp',
         rules: { maxDrawCalls: 500 },
       });
-      
+
       const content = loader.generateConfigFileContent();
-      
+
       expect(content).toContain('3Lens Configuration');
       expect(content).toContain('TestApp');
       expect(content).toContain('export default');
@@ -774,10 +799,10 @@ describe('ConfigLoader', () => {
           renderTargetMemory: 2000000,
         },
       });
-      
+
       const results = loader.checkRules(stats);
-      const result = results.find(r => r.ruleId === 'maxTextureMemory');
-      
+      const result = results.find((r) => r.ruleId === 'maxTextureMemory');
+
       expect(result!.message).toContain('MB');
     });
   });

@@ -170,7 +170,10 @@ export class LogicalEntityManager {
     }
 
     // Update component ID tracking
-    if (updates.componentId !== undefined && updates.componentId !== entity.componentId) {
+    if (
+      updates.componentId !== undefined &&
+      updates.componentId !== entity.componentId
+    ) {
       if (entity.componentId) {
         this._componentToEntity.delete(entity.componentId);
       }
@@ -182,17 +185,24 @@ export class LogicalEntityManager {
 
     // Apply other updates
     if (updates.name !== undefined) entity.name = updates.name;
-    if (updates.componentType !== undefined) entity.componentType = updates.componentType;
+    if (updates.componentType !== undefined)
+      entity.componentType = updates.componentType;
     if (updates.tags !== undefined) entity.tags = updates.tags;
-    if (updates.metadata !== undefined) entity.metadata = { ...entity.metadata, ...updates.metadata };
+    if (updates.metadata !== undefined)
+      entity.metadata = { ...entity.metadata, ...updates.metadata };
 
     // Handle parent change
-    if (updates.parentEntityId !== undefined && updates.parentEntityId !== entity.parentEntityId) {
+    if (
+      updates.parentEntityId !== undefined &&
+      updates.parentEntityId !== entity.parentEntityId
+    ) {
       // Remove from old parent
       if (entity.parentEntityId) {
         const oldParent = this._entities.get(entity.parentEntityId);
         if (oldParent) {
-          oldParent.childEntityIds = oldParent.childEntityIds.filter((id) => id !== entityId);
+          oldParent.childEntityIds = oldParent.childEntityIds.filter(
+            (id) => id !== entityId
+          );
           oldParent.updatedAt = Date.now();
         }
       }
@@ -248,7 +258,9 @@ export class LogicalEntityManager {
     if (entity.parentEntityId) {
       const parent = this._entities.get(entity.parentEntityId);
       if (parent) {
-        parent.childEntityIds = parent.childEntityIds.filter((id) => id !== entityId);
+        parent.childEntityIds = parent.childEntityIds.filter(
+          (id) => id !== entityId
+        );
         parent.updatedAt = Date.now();
       }
     }
@@ -403,24 +415,34 @@ export class LogicalEntityManager {
     }
 
     if (filter.modulePrefix) {
-      entities = entities.filter((e) => e.module?.startsWith(filter.modulePrefix!) ?? false);
+      entities = entities.filter(
+        (e) => e.module?.startsWith(filter.modulePrefix!) ?? false
+      );
     }
 
     if (filter.tags && filter.tags.length > 0) {
-      entities = entities.filter((e) => filter.tags!.every((tag) => e.tags.includes(tag)));
+      entities = entities.filter((e) =>
+        filter.tags!.every((tag) => e.tags.includes(tag))
+      );
     }
 
     if (filter.anyTag && filter.anyTag.length > 0) {
-      entities = entities.filter((e) => filter.anyTag!.some((tag) => e.tags.includes(tag)));
+      entities = entities.filter((e) =>
+        filter.anyTag!.some((tag) => e.tags.includes(tag))
+      );
     }
 
     if (filter.componentType) {
-      entities = entities.filter((e) => e.componentType === filter.componentType);
+      entities = entities.filter(
+        (e) => e.componentType === filter.componentType
+      );
     }
 
     if (filter.nameContains) {
       const searchLower = filter.nameContains.toLowerCase();
-      entities = entities.filter((e) => e.name.toLowerCase().includes(searchLower));
+      entities = entities.filter((e) =>
+        e.name.toLowerCase().includes(searchLower)
+      );
     }
 
     if (filter.hasMetadata && filter.hasMetadata.length > 0) {
@@ -522,7 +544,9 @@ export class LogicalEntityManager {
     return this._moduleEntities.size;
   }
 
-  private _buildNavigationResult(entity: LogicalEntity | undefined): NavigationResult {
+  private _buildNavigationResult(
+    entity: LogicalEntity | undefined
+  ): NavigationResult {
     if (!entity) {
       return {
         entity: null,
@@ -552,7 +576,9 @@ export class LogicalEntityManager {
       .filter((e): e is LogicalEntity => e !== undefined);
 
     // Get module info
-    const module = entity.module ? this.getModuleInfo(entity.module) ?? null : null;
+    const module = entity.module
+      ? (this.getModuleInfo(entity.module) ?? null)
+      : null;
 
     return {
       entity,
@@ -642,4 +668,3 @@ export class LogicalEntityManager {
     }
   }
 }
-

@@ -18,7 +18,8 @@ export function formatBytes(bytes: number): string {
   if (bytes <= 0 || Number.isNaN(bytes)) return '0 B';
   if (bytes < 1024) return `${bytes.toFixed(0)} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
@@ -32,8 +33,13 @@ export function formatVector(v: { x: number; y: number; z: number }): string {
 /**
  * Format Euler rotation (radians to degrees)
  */
-export function formatEuler(e: { x: number; y: number; z: number; order?: string }): string {
-  const toDeg = (r: number) => (r * 180 / Math.PI).toFixed(1);
+export function formatEuler(e: {
+  x: number;
+  y: number;
+  z: number;
+  order?: string;
+}): string {
+  const toDeg = (r: number) => ((r * 180) / Math.PI).toFixed(1);
   return `(${toDeg(e.x)}°, ${toDeg(e.y)}°, ${toDeg(e.z)}°)`;
 }
 
@@ -43,18 +49,18 @@ export function formatEuler(e: { x: number; y: number; z: number; order?: string
 export function formatLayers(layerMask: number): string {
   if (layerMask === 0) return 'None';
   if (layerMask === 1) return '0 (default)';
-  
+
   const enabledLayers: number[] = [];
   for (let i = 0; i < 32; i++) {
     if (layerMask & (1 << i)) {
       enabledLayers.push(i);
     }
   }
-  
+
   if (enabledLayers.length === 1) {
     return enabledLayers[0] === 0 ? '0 (default)' : String(enabledLayers[0]);
   }
-  
+
   return enabledLayers.join(', ');
 }
 
@@ -75,13 +81,13 @@ export function escapeHtml(str: string): string {
  */
 export function truncateUrl(url: string, maxLen = 40): string {
   if (url.length <= maxLen) return url;
-  
+
   const parts = url.split('/');
   const filename = parts[parts.length - 1];
   if (filename.length < maxLen - 3) {
     return '...' + filename;
   }
-  
+
   return url.substring(0, maxLen - 3) + '...';
 }
 
@@ -157,7 +163,14 @@ export function getGeometryIcon(type: string): string {
 /**
  * Get icon for texture
  */
-export function getTextureIcon(tex: { isCubeTexture?: boolean; isVideoTexture?: boolean; isCanvasTexture?: boolean; isDataTexture?: boolean; isRenderTarget?: boolean; isCompressed?: boolean }): string {
+export function getTextureIcon(tex: {
+  isCubeTexture?: boolean;
+  isVideoTexture?: boolean;
+  isCanvasTexture?: boolean;
+  isDataTexture?: boolean;
+  isRenderTarget?: boolean;
+  isCompressed?: boolean;
+}): string {
   if (tex.isCubeTexture) return '🎲';
   if (tex.isVideoTexture) return '🎬';
   if (tex.isCanvasTexture) return '🎨';
@@ -172,15 +185,15 @@ export function getTextureIcon(tex: { isCubeTexture?: boolean; isVideoTexture?: 
  */
 export function getShortTypeName(arrayType: string): string {
   const map: Record<string, string> = {
-    'Float32Array': 'f32',
-    'Float64Array': 'f64',
-    'Int8Array': 'i8',
-    'Int16Array': 'i16',
-    'Int32Array': 'i32',
-    'Uint8Array': 'u8',
-    'Uint16Array': 'u16',
-    'Uint32Array': 'u32',
-    'Uint8ClampedArray': 'u8c',
+    Float32Array: 'f32',
+    Float64Array: 'f64',
+    Int8Array: 'i8',
+    Int16Array: 'i16',
+    Int32Array: 'i32',
+    Uint8Array: 'u8',
+    Uint16Array: 'u16',
+    Uint32Array: 'u32',
+    Uint8ClampedArray: 'u8c',
   };
   return map[arrayType] || arrayType;
 }
@@ -190,10 +203,13 @@ export function getShortTypeName(arrayType: string): string {
  */
 export function getSideName(side: number): string {
   switch (side) {
-    case 0: return 'Front';
-    case 1: return 'Back';
-    case 2: return 'Double';
-    default: return `Unknown (${side})`;
+    case 0:
+      return 'Front';
+    case 1:
+      return 'Back';
+    case 2:
+      return 'Double';
+    default:
+      return `Unknown (${side})`;
   }
 }
-

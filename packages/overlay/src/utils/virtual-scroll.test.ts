@@ -8,7 +8,11 @@ interface TestNode {
   children: TestNode[];
 }
 
-function createTestNode(id: string, name: string, children: TestNode[] = []): TestNode {
+function createTestNode(
+  id: string,
+  name: string,
+  children: TestNode[] = []
+): TestNode {
   return { id, name, children };
 }
 
@@ -46,7 +50,7 @@ describe('countTreeNodes', () => {
     const level2 = createTestNode('level2', 'Level 2', [level3]);
     const level1 = createTestNode('level1', 'Level 1', [level2]);
     const root = createTestNode('root', 'Root', [level1]);
-    
+
     expect(countTreeNodes(root)).toBe(5);
   });
 
@@ -56,7 +60,7 @@ describe('countTreeNodes', () => {
       children.push(createTestNode(`child${i}`, `Child ${i}`));
     }
     const root = createTestNode('root', 'Root', children);
-    
+
     expect(countTreeNodes(root)).toBe(11); // root + 10 children
   });
 
@@ -64,16 +68,12 @@ describe('countTreeNodes', () => {
     const node = createTestNode('root', 'Root', [
       createTestNode('a', 'A', [
         createTestNode('a1', 'A1'),
-        createTestNode('a2', 'A2', [
-          createTestNode('a2a', 'A2A'),
-        ]),
+        createTestNode('a2', 'A2', [createTestNode('a2a', 'A2A')]),
       ]),
       createTestNode('b', 'B'),
-      createTestNode('c', 'C', [
-        createTestNode('c1', 'C1'),
-      ]),
+      createTestNode('c', 'C', [createTestNode('c1', 'C1')]),
     ]);
-    
+
     // root, a, a1, a2, a2a, b, c, c1 = 8 nodes
     expect(countTreeNodes(node)).toBe(8);
   });
