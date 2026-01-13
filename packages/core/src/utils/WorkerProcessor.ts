@@ -61,7 +61,7 @@ export interface WorkerResponse<T = unknown> {
  */
 export interface BenchmarkPayload {
   stats: FrameStats;
-  config?: BenchmarkConfig;
+  config?: Partial<BenchmarkConfig>;
 }
 
 /**
@@ -517,7 +517,7 @@ export class WorkerProcessor {
    */
   async calculateBenchmark(
     stats: FrameStats,
-    config?: BenchmarkConfig
+    config?: Partial<BenchmarkConfig>
   ): Promise<BenchmarkScore> {
     return this.sendTask<BenchmarkPayload, BenchmarkScore>('benchmark', {
       stats,
@@ -753,20 +753,37 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
 
   // Default config values
   const targetFps = config?.targetFps ?? 60;
-  const maxDrawCalls = config?.maxDrawCalls ?? 500;
-  const maxTriangles = config?.maxTriangles ?? 1000000;
-  const maxTextureMemory = config?.maxTextureMemory ?? 512 * 1024 * 1024;
-  const maxGeometryMemory = config?.maxGeometryMemory ?? 256 * 1024 * 1024;
+  const maxDrawCalls = config?.maxDrawCalls ?? 1000;
+  const maxTriangles = config?.maxTriangles ?? 2_000_000;
+  const maxObjects = config?.maxObjects ?? 10_000;
+  const maxMaterials = config?.maxMaterials ?? 500;
+  const maxTextures = config?.maxTextures ?? 200;
+  const maxGeometries = config?.maxGeometries ?? 1000;
+  const maxRenderTargets = config?.maxRenderTargets ?? 12;
+  const maxTextureMemory = config?.maxTextureMemory ?? 256 * 1024 * 1024;
+  const maxGeometryMemory = config?.maxGeometryMemory ?? 128 * 1024 * 1024;
   const weights = config?.weights ?? {
-    timing: 0.35,
-    drawCalls: 0.2,
-    geometry: 0.2,
-    memory: 0.15,
+    timing: 0.3,
+    drawCalls: 0.17,
+    geometry: 0.17,
+    memory: 0.12,
     stateChanges: 0.1,
+    objects: 0.06,
+    materials: 0.04,
+    renderTargets: 0.04,
   };
 
   const issues: string[] = [];
   const suggestions: string[] = [];
+  const getRatioScore = (ratio: number): number => {
+    if (ratio <= 0.5) {
+      return 100;
+    }
+    if (ratio <= 1) {
+      return 100 - (ratio - 0.5) * 40;
+    }
+    return Math.max(0, 80 - (ratio - 1) * 40);
+  };
 
   // Timing score (0-100)
   const targetFrameTime = 1000 / targetFps;
@@ -789,14 +806,7 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
 
   // Draw calls score (0-100)
   const drawCallRatio = stats.drawCalls / maxDrawCalls;
-  let drawCallScore: number;
-  if (drawCallRatio <= 0.5) {
-    drawCallScore = 100;
-  } else if (drawCallRatio <= 1) {
-    drawCallScore = 100 - (drawCallRatio - 0.5) * 40;
-  } else {
-    drawCallScore = Math.max(0, 80 - (drawCallRatio - 1) * 40);
-  }
+  const drawCallScore = getRatioScore(drawCallRatio);
 
   if (drawCallScore < 80) {
     issues.push(`${stats.drawCalls} draw calls is high`);
@@ -805,18 +815,29 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
 
   // Geometry score (0-100)
   const triangleRatio = stats.triangles / maxTriangles;
-  let geometryScore: number;
-  if (triangleRatio <= 0.5) {
-    geometryScore = 100;
-  } else if (triangleRatio <= 1) {
-    geometryScore = 100 - (triangleRatio - 0.5) * 40;
-  } else {
-    geometryScore = Math.max(0, 80 - (triangleRatio - 1) * 40);
-  }
+  const geometryScore = getRatioScore(triangleRatio);
 
   if (geometryScore < 80) {
     issues.push(`${formatLargeNumber(stats.triangles)} triangles is high`);
     suggestions.push('Use LOD or reduce polygon count');
+  }
+
+  // Objects score (0-100)
+  const objectRatio = stats.objectsTotal / maxObjects;
+  const objectScore = getRatioScore(objectRatio);
+
+  if (objectScore < 80) {
+    issues.push(`${formatLargeNumber(stats.objectsTotal)} objects is high`);
+    suggestions.push('Hide or merge objects, use LOD, or batch static meshes');
+  }
+
+  // Materials score (0-100)
+  const materialRatio = stats.materialsUsed / maxMaterials;
+  const materialScore = getRatioScore(materialRatio);
+
+  if (materialScore < 80) {
+    issues.push(`${stats.materialsUsed} materials is high`);
+    suggestions.push('Reuse materials or leverage texture atlases');
   }
 
   // Memory score (0-100)
@@ -826,18 +847,34 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
       (stats.memory.textureMemory ?? 0) / maxTextureMemory;
     const geoMemRatio = (stats.memory.geometryMemory ?? 0) / maxGeometryMemory;
     const memoryRatio = Math.max(textureMemRatio, geoMemRatio);
-    if (memoryRatio <= 0.5) {
-      memoryScore = 100;
-    } else if (memoryRatio <= 1) {
-      memoryScore = 100 - (memoryRatio - 0.5) * 40;
-    } else {
-      memoryScore = Math.max(0, 80 - (memoryRatio - 1) * 40);
-    }
+    memoryScore = getRatioScore(memoryRatio);
 
     if (memoryScore < 80) {
       issues.push('High GPU memory usage');
       suggestions.push('Compress textures or reduce resolution');
     }
+
+    const textureRatio = stats.memory.textures / maxTextures;
+    if (getRatioScore(textureRatio) < 80) {
+      issues.push(`${stats.memory.textures} textures loaded`);
+      suggestions.push('Reduce texture count or use atlases');
+    }
+
+    const geometryRatio = stats.memory.geometries / maxGeometries;
+    if (getRatioScore(geometryRatio) < 80) {
+      issues.push(`${stats.memory.geometries} geometries in memory`);
+      suggestions.push('Dispose unused geometry or merge static meshes');
+    }
+  }
+
+  // Render target score (0-100)
+  const renderTargets = stats.memory?.renderTargets ?? 0;
+  const renderTargetRatio = renderTargets / maxRenderTargets;
+  const renderTargetScore = getRatioScore(renderTargetRatio);
+
+  if (renderTargetScore < 80) {
+    issues.push(`${renderTargets} render targets in use`);
+    suggestions.push('Reuse render targets or reduce post-processing passes');
   }
 
   // State changes score (0-100)
@@ -867,7 +904,10 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
     drawCallScore * weights.drawCalls +
     geometryScore * weights.geometry +
     memoryScore * weights.memory +
-    stateChangesScore * weights.stateChanges;
+    stateChangesScore * weights.stateChanges +
+    objectScore * weights.objects +
+    materialScore * weights.materials +
+    renderTargetScore * weights.renderTargets;
 
   // Calculate grade
   let grade: 'A' | 'B' | 'C' | 'D' | 'F';
@@ -885,6 +925,9 @@ function calculateBenchmarkInWorker(payload: BenchmarkPayload): BenchmarkScore {
       geometry: Math.round(geometryScore),
       memory: Math.round(memoryScore),
       stateChanges: Math.round(stateChangesScore),
+      objects: Math.round(objectScore),
+      materials: Math.round(materialScore),
+      renderTargets: Math.round(renderTargetScore),
     },
     grade,
     topIssues: issues,
