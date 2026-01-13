@@ -1930,6 +1930,198 @@ export const PANEL_STYLES = `
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   MATERIAL BUILDER PANEL (ARCHITECTURE)
+   ═══════════════════════════════════════════════════════════════ */
+
+.material-builder-panel {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.material-builder-canvas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--3lens-border);
+  background: radial-gradient(circle at top left, rgba(96, 165, 250, 0.08), transparent 55%);
+}
+
+.material-builder-canvas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--3lens-border);
+  background: var(--3lens-bg-secondary);
+}
+
+.material-builder-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.material-builder-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(96, 165, 250, 0.2);
+  color: var(--3lens-accent-blue);
+}
+
+.material-builder-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.material-builder-action {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--3lens-border);
+  background: var(--3lens-bg-primary);
+  color: var(--3lens-text-secondary);
+  font-size: 11px;
+  cursor: not-allowed;
+}
+
+.material-builder-canvas-body {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+.material-builder-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(transparent 23px, rgba(148, 163, 184, 0.12) 24px),
+    linear-gradient(90deg, transparent 23px, rgba(148, 163, 184, 0.12) 24px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.material-builder-node {
+  position: absolute;
+  width: 190px;
+  border-radius: 10px;
+  border: 1px solid var(--3lens-border);
+  background: var(--3lens-bg-tertiary);
+  box-shadow: var(--3lens-shadow-sm);
+}
+
+.material-builder-node-header {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--3lens-border);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.material-builder-node-body {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  font-size: 11px;
+  color: var(--3lens-text-secondary);
+}
+
+.material-builder-port {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.material-builder-port::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--3lens-accent-cyan);
+}
+
+.material-builder-port.output::before {
+  background: var(--3lens-accent-violet);
+}
+
+.material-builder-wire {
+  position: absolute;
+  left: 220px;
+  top: 130px;
+  width: 110px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--3lens-accent-cyan), var(--3lens-accent-violet));
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.4);
+}
+
+.material-builder-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.material-builder-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--3lens-border-subtle);
+  background: var(--3lens-bg-primary);
+}
+
+.material-builder-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--3lens-text-tertiary);
+}
+
+.material-builder-checklist {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  color: var(--3lens-text-secondary);
+}
+
+.material-builder-checklist .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background: var(--3lens-border);
+}
+
+.material-builder-checklist .dot.planned {
+  background: var(--3lens-accent-amber);
+}
+
+.material-builder-placeholder {
+  color: var(--3lens-text-tertiary);
+  font-size: 12px;
+}
+
+.material-builder-output {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.material-builder-output-row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--3lens-text-secondary);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    SCROLLBAR
    ═══════════════════════════════════════════════════════════════ */
 
