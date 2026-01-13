@@ -26,12 +26,14 @@ import { createPostMessageTransport } from '../transport/postmessage-transport';
  */
 export function createProbe(config: ProbeConfig): DevtoolProbe {
   const probe = new DevtoolProbe(config);
+  const env = config.env ?? 'development';
 
   // Auto-connect to browser extension via postMessage transport
   // This enables the Chrome extension to work without manual setup
   if (
     typeof window !== 'undefined' &&
-    typeof window.postMessage === 'function'
+    typeof window.postMessage === 'function' &&
+    (env !== 'production' || config.allowPostMessageTransport === true)
   ) {
     const transport = createPostMessageTransport();
     probe.connect(transport);

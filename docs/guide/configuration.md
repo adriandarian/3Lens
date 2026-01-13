@@ -55,6 +55,20 @@ const probe = createProbe({
 Enable debug mode temporarily when 3Lens isn't behaving as expected. The logs show exactly what's being observed and sampled.
 :::
 
+### `allowPostMessageTransport`
+
+**Type:** `boolean`  
+**Default:** `false` when `env` is `'production'`, otherwise `true`
+
+Controls whether `createProbe()` auto-connects to the browser extension via the `postMessage` transport. Keep this disabled in production to prevent untrusted scripts from talking to the probe over same-origin messaging.
+
+```typescript
+const probe = createProbe({
+  env: 'production',
+  allowPostMessageTransport: false,
+});
+```
+
 ### `autoConnect`
 
 **Type:** `boolean`  
