@@ -43,6 +43,7 @@ export type PanelCommand =
   | { type: 'geometry-visualization'; geometryUuid: string; visualization: 'boundingBox' | 'wireframe' | 'normals'; enabled: boolean };
 
 /**
+  isNodeLibraryOpen: boolean;
  * State managed by the UI system
  */
 export interface UIState {
@@ -132,3 +133,4 @@ export type PanelEventAttacher = (
 // Re-export types from core for convenience
 export type { SceneSnapshot, SceneNode, FrameStats, MaterialData, GeometryData, TextureData, RenderTargetData, BenchmarkScore };
 
+      isNodeLibraryOpen: true,
