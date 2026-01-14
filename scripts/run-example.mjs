@@ -11,11 +11,11 @@
  */
 
 import { readdirSync, statSync, existsSync, readFileSync } from 'fs';
-import { join, relative } from 'path';
-import { spawn } from 'child_process';
-import { createInterface } from 'readline';
+import { join } from 'path';
+import { spawn, execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { createServer } from 'net';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -127,56 +127,342 @@ function formatCategory(name) {
 }
 
 /**
- * Create readline interface for user input
+ * Interactive TUI for selecting examples using Bubble Tea (via Go binary)
  */
-function createPrompt() {
-  return createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+async function interactiveSelect(examples) {
+  // Check if stdin is a TTY (interactive terminal)
+  if (!process.stdin.isTTY) {
+    console.error(
+      `${colors.red}Error: Interactive mode requires a TTY terminal.${colors.reset}\n` +
+      `Please run this command in an interactive terminal.\n`
+    );
+    process.exit(1);
+  }
+
+  // Serialize examples to JSON for the Go program
+  const examplesJson = JSON.stringify(examples.map((ex, idx) => ({
+    index: idx + 1,
+    name: ex.name,
+    shortName: ex.name.replace('@3lens/example-', ''),
+    category: ex.path.split('/')[0],
+    categoryName: formatCategory(ex.path.split('/')[0]),
+    description: ex.description || '',
+    path: ex.path,
+  })));
+
+  // Use a temporary file instead of environment variable (more reliable, especially on Windows)
+  const { writeFileSync, unlinkSync } = await import('fs');
+  const tmpFile = join(__dirname, `.tui-examples-${Date.now()}.json`);
+  
+  try {
+    writeFileSync(tmpFile, examplesJson, 'utf-8');
+  } catch (err) {
+    console.error(`${colors.red}Failed to create temporary file: ${err.message}${colors.reset}`);
+    process.exit(1);
+  }
+
+  // Call the Go Bubble Tea binary
+  const { execSync, spawn } = await import('child_process');
+  const isWindows = process.platform === 'win32';
+  const binaryName = isWindows ? 'tui-selector.exe' : 'tui-selector';
+  const goBinaryPath = join(__dirname, binaryName);
+  
+  try {
+    // Check if Go binary exists, if not, try to build it
+    if (!existsSync(goBinaryPath)) {
+      console.log(
+        `${colors.yellow}Building Bubble Tea TUI binary...${colors.reset}\n`
+      );
+      try {
+        // Try to build the Go binary
+        execSync('go build -o ' + binaryName + ' tui-selector.go', {
+          cwd: __dirname,
+          stdio: 'inherit',
+        });
+      } catch (buildError) {
+        console.error(
+          `${colors.red}Failed to build Go TUI binary.${colors.reset}\n` +
+          `${colors.yellow}Please ensure Go is installed and run:${colors.reset}\n` +
+          `  ${colors.cyan}cd scripts && go mod tidy && go build -o ${binaryName} tui-selector.go${colors.reset}\n`
+        );
+        process.exit(1);
+      }
+    }
+
+    // Use spawn for interactive TUI
+    // Pass JSON file path and result file path via environment variables
+    // Use 'inherit' for all stdio so TUI can render directly to terminal
+    const resultFile = join(__dirname, `.tui-result-${Date.now()}.json`);
+    
+    return new Promise((resolve, reject) => {
+      const child = spawn(goBinaryPath, [], {
+        stdio: 'inherit', // All streams inherit so TUI can render to terminal
+        cwd: __dirname,
+        env: {
+          ...process.env,
+          EXAMPLES_JSON_FILE: tmpFile,
+          RESULT_FILE: resultFile,
+        },
+      });
+
+      child.on('close', (code) => {
+        // Clean up temporary input file
+        try {
+          if (existsSync(tmpFile)) {
+            unlinkSync(tmpFile);
+          }
+        } catch (err) {
+          // Ignore cleanup errors
+        }
+
+        if (code !== 0 && code !== null) {
+          // Clean up result file if it exists
+          try {
+            if (existsSync(resultFile)) {
+              unlinkSync(resultFile);
+            }
+          } catch (err) {
+            // Ignore cleanup errors
+          }
+
+          if (code === 130 || code === 1) {
+            // Ctrl+C or user cancellation
+            console.log(`\n${colors.yellow}Selection cancelled. Goodbye!${colors.reset}`);
+            process.exit(0);
+          }
+          reject(new Error(`Go TUI exited with code ${code}`));
+          return;
+        }
+
+        // Read results from file
+        let selectedIndices = [];
+        try {
+          if (existsSync(resultFile)) {
+            const resultData = readFileSync(resultFile, 'utf-8');
+            selectedIndices = resultData.trim().split('\n')
+              .filter(line => line.trim())
+              .map(line => parseInt(line.trim(), 10) - 1)
+              .filter(idx => idx >= 0 && idx < examples.length);
+            
+            // Clean up result file
+            unlinkSync(resultFile);
+          }
+        } catch (err) {
+          // If result file doesn't exist or can't be read, user likely cancelled
+        }
+
+        if (selectedIndices.length === 0) {
+          console.log(`\n${colors.yellow}No examples selected. Goodbye!${colors.reset}`);
+          process.exit(0);
+        }
+
+        // Map indices back to example objects
+        resolve(selectedIndices.map(idx => examples[idx]));
+      });
+
+      child.on('error', (error) => {
+        reject(error);
+      });
+    });
+  } catch (error) {
+    // Handle Ctrl+C gracefully
+    if (error.signal === 'SIGINT' || error.code === 130) {
+      console.log(`\n${colors.yellow}Selection cancelled. Goodbye!${colors.reset}`);
+      process.exit(0);
+    }
+    // Re-throw unexpected errors
+    throw error;
+  }
 }
 
 /**
- * Prompt user for input
+ * Check if a port is available
  */
-function prompt(rl, question) {
+function isPortAvailable(port) {
   return new Promise((resolve) => {
-    rl.question(question, resolve);
+    const server = createServer();
+    server.listen(port, () => {
+      server.once('close', () => resolve(true));
+      server.close();
+    });
+    server.on('error', () => resolve(false));
   });
 }
 
 /**
- * Run selected examples with pnpm
+ * Find the next available port starting from a given port
  */
-function runExamples(examples, alsoRunPackages = true) {
-  const filters = examples.map((e) => `--filter "${e.name}"`).join(' ');
-  const packagesFilter = alsoRunPackages ? "--filter './packages/**'" : '';
+async function findAvailablePort(startPort) {
+  let port = startPort;
+  while (port < 65535) {
+    const available = await isPortAvailable(port);
+    if (available) {
+      return port;
+    }
+    port++;
+  }
+  throw new Error('No available ports found');
+}
 
+/**
+ * Parse dev script and extract command and arguments
+ */
+function parseDevScript(devScript) {
+  // Handle different dev command formats
+  const parts = devScript.trim().split(/\s+/);
+  const command = parts[0];
+  const args = parts.slice(1);
+  
+  return { command, args };
+}
+
+/**
+ * Override port in command arguments or add it
+ */
+function overridePort(command, args, port) {
+  const newArgs = [...args];
+  
+  // Remove existing port arguments
+  const portPatterns = [
+    /^--port$/,
+    /^-p$/,
+    /^--port=\d+$/,
+    /^-p=\d+$/,
+  ];
+  
+  const filteredArgs = [];
+  for (let i = 0; i < newArgs.length; i++) {
+    const arg = newArgs[i];
+    const isPortFlag = portPatterns.some(pattern => pattern.test(arg));
+    const isPortValue = i > 0 && portPatterns.some(pattern => pattern.test(newArgs[i - 1]));
+    
+    if (!isPortFlag && !isPortValue) {
+      filteredArgs.push(arg);
+    }
+  }
+  
+  // Add new port argument based on command
+  if (command === 'vite') {
+    filteredArgs.push('--port', port.toString(), '--strictPort', '--no-open');
+  } else if (command === 'next') {
+    // Next.js doesn't auto-open by default, but we can explicitly disable it
+    filteredArgs.push('-p', port.toString());
+  } else if (command === 'ng') {
+    // Angular CLI: use --no-open flag
+    filteredArgs.push('--port', port.toString(), '--no-open');
+  } else {
+    // Generic fallback - try --port
+    filteredArgs.push('--port', port.toString());
+  }
+  
+  return filteredArgs;
+}
+
+/**
+ * Run selected examples with dynamically assigned ports
+ * Examples use built packages or source aliases - they don't need packages in watch mode
+ */
+async function runExamples(examples, alsoRunPackages = false) {
   console.log(
     `\n${colors.bold}${colors.green}🚀 Starting examples...${colors.reset}\n`
   );
 
+  // Assign ports starting from 3000
+  let nextPort = 3000;
+  const processes = [];
+  const portMap = new Map();
+
   for (const example of examples) {
     const shortName = example.name.replace('@3lens/example-', '');
-    console.log(`   ${colors.cyan}•${colors.reset} ${shortName}`);
+    
+    // Find available port
+    const port = await findAvailablePort(nextPort);
+    portMap.set(example.name, port);
+    nextPort = port + 1;
+    
+    // Read package.json to get dev script
+    const packageJsonPath = join(example.fullPath, 'package.json');
+    let devScript = 'vite'; // default
+    
+    try {
+      const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+      if (pkg.scripts?.dev) {
+        devScript = pkg.scripts.dev;
+      }
+    } catch (err) {
+      console.warn(`${colors.yellow}Warning: Could not read package.json for ${example.name}${colors.reset}`);
+    }
+    
+    // Parse dev script
+    const { command, args } = parseDevScript(devScript);
+    const finalArgs = overridePort(command, args, port);
+    
+    console.log(`   ${colors.cyan}•${colors.reset} ${shortName} on port ${colors.green}${port}${colors.reset}`);
+    
+    // Spawn the dev process
+    const child = spawn(command, finalArgs, {
+      cwd: example.fullPath,
+      stdio: 'inherit',
+      shell: true,
+    });
+    
+    child.on('error', (err) => {
+      console.error(`${colors.red}Failed to start ${shortName}: ${err.message}${colors.reset}`);
+    });
+    
+    processes.push({ child, example: shortName, port });
   }
+  
   console.log();
+  
+  // Print summary after a short delay
+  setTimeout(() => {
+    console.log('\n' + '─'.repeat(50));
+    console.log(`\n${colors.bold}📋 Example URLs:\n${colors.reset}`);
+    for (const [name, port] of portMap.entries()) {
+      const shortName = name.replace('@3lens/example-', '');
+      console.log(`   ${colors.cyan}${shortName}${colors.reset}: http://localhost:${port}`);
+    }
+    console.log('\n');
+  }, 2000);
 
-  const command = `pnpm ${packagesFilter} ${filters} --parallel dev`;
+  // Handle shutdown
+  const shutdown = () => {
+    console.log(`\n${colors.yellow}Shutting down example servers...${colors.reset}`);
+    const isWindows = process.platform === 'win32';
+    
+    for (const { child } of processes) {
+      try {
+        if (isWindows && child.pid) {
+          // On Windows, use taskkill to forcefully kill the process tree without confirmation
+          try {
+            execSync(`taskkill /F /T /PID ${child.pid}`, { stdio: 'ignore' });
+          } catch (err) {
+            // Process might already be dead, try regular kill as fallback
+            child.kill('SIGKILL');
+          }
+        } else {
+          // On Unix-like systems, use SIGKILL for forceful termination
+          child.kill('SIGKILL');
+        }
+      } catch (err) {
+        // Ignore errors - process might already be dead
+      }
+    }
+    // Exit immediately without waiting
+    process.exit(0);
+  };
 
-  const child = spawn(command, {
-    shell: true,
-    stdio: 'inherit',
-    cwd: ROOT_DIR,
-  });
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 
-  child.on('error', (err) => {
-    console.error(`${colors.red}Failed to start: ${err.message}${colors.reset}`);
-    process.exit(1);
-  });
-
-  child.on('exit', (code) => {
-    process.exit(code || 0);
+  // Wait for all processes
+  Promise.all(processes.map(({ child }) => 
+    new Promise((resolve) => {
+      child.on('exit', resolve);
+    })
+  )).then(() => {
+    process.exit(0);
   });
 }
 
@@ -258,72 +544,20 @@ async function main() {
     }
 
     if (selectedExamples.length > 0) {
-      runExamples(selectedExamples);
+      await runExamples(selectedExamples);
       return;
     }
   }
 
-  // Interactive mode
-  listExamples(examples);
-
-  console.log(`${colors.bold}${colors.magenta}How to select:${colors.reset}`);
-  console.log(`  • Enter number(s) separated by spaces: ${colors.dim}1 3 5${colors.reset}`);
-  console.log(`  • Enter a range: ${colors.dim}1-5${colors.reset}`);
-  console.log(`  • Enter name(s): ${colors.dim}vanilla-threejs react-three-fiber${colors.reset}`);
-  console.log(`  • Press ${colors.dim}Enter${colors.reset} for the default (vanilla-threejs)`);
-  console.log(`  • Type ${colors.dim}q${colors.reset} to quit\n`);
-
-  const rl = createPrompt();
-
-  const answer = await prompt(
-    rl,
-    `${colors.cyan}Select example(s): ${colors.reset}`
-  );
-
-  rl.close();
-
-  if (answer.toLowerCase() === 'q' || answer.toLowerCase() === 'quit') {
-    console.log('Goodbye!');
-    process.exit(0);
-  }
-
-  // Default to vanilla-threejs if empty
-  const input = answer.trim() || 'vanilla-threejs';
-  const selectedExamples = [];
-
-  // Parse input
-  const parts = input.split(/\s+/);
-
-  for (const part of parts) {
-    // Handle ranges like "1-5"
-    if (/^\d+-\d+$/.test(part)) {
-      const [start, end] = part.split('-').map(Number);
-      for (let i = start; i <= end && i <= examples.length; i++) {
-        if (i > 0) {
-          const example = examples[i - 1];
-          if (!selectedExamples.includes(example)) {
-            selectedExamples.push(example);
-          }
-        }
-      }
-    } else {
-      const example = findExampleByQuery(examples, part);
-      if (example && !selectedExamples.includes(example)) {
-        selectedExamples.push(example);
-      } else if (!example) {
-        console.warn(
-          `${colors.yellow}Warning: Could not find example "${part}", skipping...${colors.reset}`
-        );
-      }
-    }
-  }
-
+  // Interactive TUI mode
+  const selectedExamples = await interactiveSelect(examples);
+  
   if (selectedExamples.length === 0) {
-    console.error(`${colors.red}No valid examples selected.${colors.reset}`);
+    console.error(`${colors.red}No examples selected.${colors.reset}`);
     process.exit(1);
   }
 
-  runExamples(selectedExamples);
+  await runExamples(selectedExamples);
 }
 
 main().catch((err) => {

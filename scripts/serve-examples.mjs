@@ -11,18 +11,48 @@
  *   node scripts/serve-examples.mjs --list
  */
 
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { existsSync, readdirSync, statSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'net';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const rootDir = join(__dirname, '..');
 const examplesDir = join(rootDir, 'examples');
 
-// Port allocation starts at 5173
-let nextPort = 5173;
+// Port allocation starts at 3000
+let nextPort = 3000;
 const portMap = new Map();
+
+/**
+ * Check if a port is available
+ */
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.listen(port, () => {
+      server.once('close', () => resolve(true));
+      server.close();
+    });
+    server.on('error', () => resolve(false));
+  });
+}
+
+/**
+ * Find the next available port starting from a given port
+ */
+async function findAvailablePort(startPort) {
+  let port = startPort;
+  while (port < 65535) {
+    const available = await isPortAvailable(port);
+    if (available) {
+      return port;
+    }
+    port++;
+  }
+  throw new Error('No available ports found');
+}
 
 // ANSI colors
 const colors = {
@@ -151,15 +181,16 @@ function listExamples(examples) {
 /**
  * Start a development server for an example
  */
-function startExampleServer(example) {
+async function startExampleServer(example) {
   const exampleId = example.relativePath;
-  const port = nextPort++;
+  const port = await findAvailablePort(nextPort);
+  nextPort = port + 1;
   
   portMap.set(exampleId, port);
   
   log(`\n${colors.cyan}[${exampleId}]${colors.reset} Starting on port ${port}...`);
   
-  const child = spawn('pnpm', ['vite', '--port', port.toString(), '--strictPort'], {
+  const child = spawn('pnpm', ['vite', '--port', port.toString(), '--strictPort', '--no-open'], {
     cwd: example.path,
     stdio: 'pipe',
     shell: true,
@@ -228,7 +259,7 @@ async function main() {
   // Start selected example servers
   const processes = [];
   for (const example of selectedExamples) {
-    processes.push(startExampleServer(example));
+    processes.push(await startExampleServer(example));
   }
   
   // Wait a bit for servers to start
@@ -243,13 +274,34 @@ async function main() {
   log('\n');
   
   // Handle shutdown
-  process.on('SIGINT', () => {
+  const shutdown = () => {
     log('\n\nShutting down example servers...', colors.yellow);
+    const isWindows = process.platform === 'win32';
+    
     for (const proc of processes) {
-      proc.kill();
+      try {
+        if (isWindows && proc.pid) {
+          // On Windows, use taskkill to forcefully kill the process tree without confirmation
+          try {
+            execSync(`taskkill /F /T /PID ${proc.pid}`, { stdio: 'ignore' });
+          } catch (err) {
+            // Process might already be dead, try regular kill as fallback
+            proc.kill('SIGKILL');
+          }
+        } else {
+          // On Unix-like systems, use SIGKILL for forceful termination
+          proc.kill('SIGKILL');
+        }
+      } catch (err) {
+        // Ignore errors - process might already be dead
+      }
     }
+    // Exit immediately without waiting
     process.exit(0);
-  });
+  };
+  
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 main().catch(console.error);

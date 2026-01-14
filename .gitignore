@@ -7,6 +7,14 @@ dist/
 build/
 *.tsbuildinfo
 
+# Go binaries
+scripts/tui-selector
+scripts/tui-selector.exe
+
+# Temporary TUI files
+scripts/.tui-examples-*.json
+scripts/.tui-result-*.json
+
 # IDE
 .idea/
 .vscode/
