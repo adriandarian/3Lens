@@ -107,6 +107,7 @@ export default defineConfig({
         items: [
           { text: '@3lens/core', link: '/packages/core/' },
           { text: '@3lens/overlay', link: '/packages/overlay/' },
+          { text: '@3lens/themes', link: '/api/themes/' },
           { text: '@3lens/react-bridge', link: '/packages/react-bridge/' },
           { text: '@3lens/angular-bridge', link: '/packages/angular-bridge/' },
           { text: '@3lens/vue-bridge', link: '/packages/vue-bridge/' },
@@ -259,6 +260,17 @@ export default defineConfig({
           ]
         },
         {
+          text: 'Themes',
+          items: [
+            { text: 'Overview', link: '/api/themes/' },
+            { text: 'CSS Variables', link: '/api/themes/css-variables' },
+            { text: 'Themes', link: '/api/themes/themes' },
+            { text: 'Utility Classes', link: '/api/themes/utility-classes' },
+            { text: 'TypeScript API', link: '/api/themes/typescript-api' },
+            { text: 'Framework Integration', link: '/api/themes/framework-integration' },
+          ]
+        },
+        {
           text: 'Hooks & Composables',
           items: [
             { text: 'React Hooks', link: '/api/react/' },
@@ -282,10 +294,24 @@ export default defineConfig({
           items: [
             { text: '@3lens/core', link: '/packages/core/' },
             { text: '@3lens/overlay', link: '/packages/overlay/' },
+            { text: '@3lens/themes', link: '/api/themes/' },
             { text: '@3lens/react-bridge', link: '/packages/react-bridge/' },
             { text: '@3lens/angular-bridge', link: '/packages/angular-bridge/' },
             { text: '@3lens/vue-bridge', link: '/packages/vue-bridge/' },
             { text: '@3lens/ui', link: '/packages/ui/' },
+          ]
+        }
+      ],
+      '/api/themes/': [
+        {
+          text: '@3lens/themes',
+          items: [
+            { text: 'Overview', link: '/api/themes/' },
+            { text: 'CSS Variables', link: '/api/themes/css-variables' },
+            { text: 'Themes', link: '/api/themes/themes' },
+            { text: 'Utility Classes', link: '/api/themes/utility-classes' },
+            { text: 'TypeScript API', link: '/api/themes/typescript-api' },
+            { text: 'Framework Integration', link: '/api/themes/framework-integration' },
           ]
         }
       ],

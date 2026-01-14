@@ -155,6 +155,22 @@ That's it! Press `Ctrl+Shift+D` to toggle the devtools panel.
 
 [View Framework Guides →](/guide/react-r3f)
 
+## Design System
+
+Use the 3Lens design system to match your application's UI with the devtools:
+
+| Package | Description | Install |
+|---------|-------------|---------|
+| `@3lens/themes` | Design system themes and styles | `npm i @3lens/themes` |
+
+Themes package includes:
+- **Complete Theme System** - Dark, light, and high-contrast themes
+- **CSS Custom Properties** - All design tokens as CSS variables
+- **Utility Classes** - Pre-built component styles
+- **TypeScript Utilities** - Programmatic theme management
+
+[View Themes Documentation →](/api/themes/)
+
 ## Sponsors
 
 <p style="text-align: center; color: var(--vp-c-text-2); margin: 2rem 0;">
