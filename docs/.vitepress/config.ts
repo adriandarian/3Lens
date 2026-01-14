@@ -23,6 +23,10 @@ export default defineConfig({
     server: {
       // During development, if examples aren't built, show a helpful message
       // For production, examples are pre-built to docs/public/examples/
+      fs: {
+        // Allow serving files from the examples directory
+        allow: ['..']
+      }
     }
   },
   

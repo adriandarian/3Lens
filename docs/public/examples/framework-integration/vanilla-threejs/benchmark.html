@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3Lens Performance Benchmark</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --bg-primary: #0f1419;
+      --bg-secondary: #1a1f2e;
+      --bg-tertiary: #252d3d;
+      --text-primary: #e4e7eb;
+      --text-secondary: #9ca3af;
+      --accent-cyan: #22d3ee;
+      --accent-green: #34d399;
+      --accent-red: #fb7185;
+      --accent-yellow: #fbbf24;
+      --border: #2d3748;
+    }
+    
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 700px;
+      width: 100%;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 8px;
+    }
+    
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+    
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    
+    .status-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 24px 32px;
+    }
+    
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--bg-tertiary);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .status-text {
+      font-size: 1.1rem;
+    }
+    
+    .results {
+      display: none;
+    }
+    
+    .results.show {
+      display: block;
+    }
+    
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    
+    .result-header h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+    
+    .badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    
+    .badge.pass {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--accent-green);
+      border: 1px solid var(--accent-green);
+    }
+    
+    .badge.fail {
+      background: rgba(251, 113, 133, 0.15);
+      color: var(--accent-red);
+      border: 1px solid var(--accent-red);
+    }
+    
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .metric {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    
+    .metric-unit {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-left: 4px;
+    }
+    
+    .overhead-display {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    
+    .overhead-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+    
+    .overhead-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 3rem;
+      font-weight: 700;
+    }
+    
+    .overhead-value.pass {
+      color: var(--accent-green);
+    }
+    
+    .overhead-value.fail {
+      color: var(--accent-red);
+    }
+    
+    .threshold-note {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    
+    .details {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 16px;
+      white-space: pre-wrap;
+    }
+    
+    .run-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: var(--accent-cyan);
+      color: var(--bg-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .run-btn:hover {
+      background: #06b6d4;
+      transform: translateY(-1px);
+    }
+    
+    .run-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .action-bar {
+      display: flex;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.15;
+    }
+    
+    canvas {
+      display: block;
+    }
+  </style>
+  <script type="module" crossorigin src="/examples/framework-integration/vanilla-threejs/assets/benchmark-CTLpQQt9.js"></script>
+  <link rel="modulepreload" crossorigin href="/examples/framework-integration/vanilla-threejs/assets/createProbe-AfBl9El3.js">
+</head>
+<body>
+  <div id="canvas-container"></div>
+  
+  <div class="container">
+    <header>
+      <h1>🔬 Performance Benchmark</h1>
+      <p class="subtitle">Measuring 3Lens probe overhead on three.js rendering</p>
+    </header>
+    
+    <div id="status-card" class="card status-card">
+      <div class="spinner"></div>
+      <span class="status-text">Initializing benchmark...</span>
+    </div>
+    
+    <div id="results" class="card results">
+      <div class="result-header">
+        <h2>Benchmark Results</h2>
+        <span id="result-badge" class="badge pass">PASS</span>
+      </div>
+      
+      <div class="overhead-display">
+        <div class="overhead-label">Probe Overhead</div>
+        <div id="overhead-value" class="overhead-value pass">0.00%</div>
+        <div class="threshold-note">Target: &lt; 5% overhead</div>
+      </div>
+      
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Baseline Avg</div>
+          <div class="metric-value"><span id="baseline-value">0.00</span><span class="metric-unit">ms</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Instrumented Avg</div>
+          <div class="metric-value"><span id="instrumented-value">0.00</span><span class="metric-unit">ms</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Frames Tested</div>
+          <div class="metric-value"><span id="frames-value">0</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Warmup Frames</div>
+          <div class="metric-value"><span id="warmup-value">0</span></div>
+        </div>
+      </div>
+      
+      <div id="details" class="details"></div>
+      
+      <div class="action-bar">
+        <button id="rerun-btn" class="run-btn">
+          ↻ Run Again
+        </button>
+      </div>
+    </div>
+  </div>
+  
+</body>
+</html>
+

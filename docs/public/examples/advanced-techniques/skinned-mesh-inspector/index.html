@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skinned Mesh Inspector - 3Lens Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      background: rgba(20, 20, 30, 0.95);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      backdrop-filter: blur(10px);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      z-index: 1000;
+    }
+
+    .panel::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .panel::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    .panel::-webkit-scrollbar-thumb {
+      background: rgba(139, 92, 246, 0.4);
+      border-radius: 3px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #8b5cf6;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title::before {
+      content: '🦴';
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    /* Animation Selector */
+    .animation-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .animation-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .animation-item:hover {
+      background: rgba(139, 92, 246, 0.1);
+      border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .animation-item.active {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: #8b5cf6;
+    }
+
+    .animation-name {
+      font-size: 13px;
+      color: #ddd;
+    }
+
+    .animation-duration {
+      font-size: 11px;
+      color: #666;
+      font-family: monospace;
+    }
+
+    /* Bone Tree */
+    .bone-tree {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 8px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .bone-node {
+      padding: 4px 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bone-node:hover {
+      color: #8b5cf6;
+    }
+
+    .bone-node.selected {
+      color: #22c55e;
+      font-weight: 600;
+    }
+
+    .bone-icon {
+      font-size: 10px;
+    }
+
+    .bone-children {
+      margin-left: 16px;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      padding-left: 8px;
+    }
+
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .stat-item {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #8b5cf6;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    /* Controls */
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .control-row:last-child {
+      border-bottom: none;
+    }
+
+    .control-label {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .control-value {
+      font-size: 12px;
+      color: #8b5cf6;
+      font-family: monospace;
+    }
+
+    input[type="range"] {
+      width: 100px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      background: #8b5cf6;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Toggle */
+    .toggle {
+      width: 40px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #666;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: all 0.2s;
+    }
+
+    .toggle.active {
+      background: rgba(139, 92, 246, 0.4);
+    }
+
+    .toggle.active::after {
+      background: #8b5cf6;
+      left: 22px;
+    }
+
+    /* Visualization Options */
+    .viz-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .viz-btn {
+      padding: 10px 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .viz-btn:hover {
+      background: rgba(139, 92, 246, 0.1);
+      border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .viz-btn.active {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: #8b5cf6;
+    }
+
+    .viz-btn-icon {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .viz-btn-label {
+      font-size: 10px;
+      color: #aaa;
+    }
+
+    /* Weight Preview */
+    .weight-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .weight-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .weight-bone-name {
+      font-size: 10px;
+      color: #888;
+      width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .weight-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .weight-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .weight-value {
+      font-size: 10px;
+      color: #666;
+      font-family: monospace;
+      width: 40px;
+      text-align: right;
+    }
+
+    /* Playback Controls */
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .playback-btn {
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .playback-btn:hover {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: #8b5cf6;
+    }
+
+    .playback-btn.active {
+      background: #8b5cf6;
+      border-color: #8b5cf6;
+    }
+
+    .timeline-slider {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    .timeline-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #666;
+      font-family: monospace;
+    }
+
+    /* Right Panel */
+    .panel-right {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 280px;
+      background: rgba(20, 20, 30, 0.95);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+    }
+
+    .panel-right .panel-title::before {
+      content: '📊';
+    }
+
+    /* Bone Inspector */
+    .bone-inspector {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .bone-inspector-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #8b5cf6;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bone-property {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 11px;
+    }
+
+    .bone-property-label {
+      color: #666;
+    }
+
+    .bone-property-value {
+      color: #aaa;
+      font-family: monospace;
+    }
+
+    /* Transform Display */
+    .transform-group {
+      margin-bottom: 12px;
+    }
+
+    .transform-label {
+      font-size: 10px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .transform-values {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .transform-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 10px;
+      color: #aaa;
+      font-family: monospace;
+      text-align: center;
+    }
+
+    .transform-axis {
+      font-size: 9px;
+      color: #666;
+      margin-bottom: 2px;
+    }
+
+    .transform-axis.x { color: #ef4444; }
+    .transform-axis.y { color: #22c55e; }
+    .transform-axis.z { color: #3b82f6; }
+
+    /* Color Legend */
+    .color-legend {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: #888;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+
+    /* Skin Info */
+    .skin-info {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .skin-info-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #8b5cf6;
+      margin-bottom: 8px;
+    }
+
+    .skin-info-desc {
+      font-size: 11px;
+      color: #888;
+      line-height: 1.5;
+    }
+  </style>
+  <script type="module" crossorigin src="/examples/advanced-techniques/skinned-mesh-inspector/assets/index-DtMtSDbf.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Main Control Panel -->
+  <div class="panel">
+    <div class="panel-title">Skinned Mesh Inspector</div>
+
+    <!-- Stats -->
+    <div class="section">
+      <div class="section-title">Skeleton Stats</div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value" id="bone-count">24</div>
+          <div class="stat-label">Bones</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="vertex-count">5.2K</div>
+          <div class="stat-label">Vertices</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="influences">4</div>
+          <div class="stat-label">Max Influences</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="animation-count">3</div>
+          <div class="stat-label">Animations</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Animation Playback -->
+    <div class="section">
+      <div class="section-title">Animation Playback</div>
+      <div class="playback-controls">
+        <button class="playback-btn" id="prev-frame">⏮</button>
+        <button class="playback-btn" id="play-pause">▶</button>
+        <button class="playback-btn" id="next-frame">⏭</button>
+        <button class="playback-btn" id="loop-toggle">🔁</button>
+      </div>
+      <input type="range" class="timeline-slider" id="timeline" min="0" max="100" value="0">
+      <div class="timeline-labels">
+        <span id="current-time">0.00s</span>
+        <span id="total-time">2.00s</span>
+      </div>
+    </div>
+
+    <!-- Animation List -->
+    <div class="section">
+      <div class="section-title">Animations</div>
+      <div class="animation-list" id="animation-list">
+        <div class="animation-item active" data-anim="idle">
+          <span class="animation-name">Idle</span>
+          <span class="animation-duration">2.0s</span>
+        </div>
+        <div class="animation-item" data-anim="walk">
+          <span class="animation-name">Walk</span>
+          <span class="animation-duration">1.0s</span>
+        </div>
+        <div class="animation-item" data-anim="run">
+          <span class="animation-name">Run</span>
+          <span class="animation-duration">0.8s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visualization Options -->
+    <div class="section">
+      <div class="section-title">Visualization</div>
+      <div class="viz-options">
+        <div class="viz-btn active" data-viz="skeleton">
+          <div class="viz-btn-icon">🦴</div>
+          <div class="viz-btn-label">Skeleton</div>
+        </div>
+        <div class="viz-btn" data-viz="weights">
+          <div class="viz-btn-icon">🎨</div>
+          <div class="viz-btn-label">Weights</div>
+        </div>
+        <div class="viz-btn" data-viz="bindpose">
+          <div class="viz-btn-icon">👤</div>
+          <div class="viz-btn-label">Bind Pose</div>
+        </div>
+        <div class="viz-btn" data-viz="axes">
+          <div class="viz-btn-icon">📐</div>
+          <div class="viz-btn-label">Bone Axes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="section">
+      <div class="section-title">Settings</div>
+      <div class="control-row">
+        <span class="control-label">Bone Size</span>
+        <input type="range" id="bone-size" min="1" max="20" value="10">
+        <span class="control-value" id="bone-size-value">1.0</span>
+      </div>
+      <div class="control-row">
+        <span class="control-label">Playback Speed</span>
+        <input type="range" id="speed" min="1" max="200" value="100">
+        <span class="control-value" id="speed-value">1.0x</span>
+      </div>
+      <div class="control-row">
+        <span class="control-label">Show Mesh</span>
+        <div class="toggle active" id="mesh-toggle"></div>
+      </div>
+      <div class="control-row">
+        <span class="control-label">Auto Rotate</span>
+        <div class="toggle" id="rotate-toggle"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel - Bone Inspector -->
+  <div class="panel-right">
+    <div class="panel-title">Bone Details</div>
+
+    <!-- Skin Info -->
+    <div class="section">
+      <div class="skin-info">
+        <div class="skin-info-title">Skeletal Animation</div>
+        <div class="skin-info-desc">
+          Click on a bone in the 3D view or select from the hierarchy to inspect its properties, transforms, and vertex influences.
+        </div>
+      </div>
+    </div>
+
+    <!-- Bone Hierarchy -->
+    <div class="section">
+      <div class="section-title">Bone Hierarchy</div>
+      <div class="bone-tree" id="bone-tree">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Selected Bone Inspector -->
+    <div class="section" id="bone-inspector-section">
+      <div class="section-title">Selected Bone</div>
+      <div class="bone-inspector">
+        <div class="bone-inspector-title">
+          <span>🦴</span>
+          <span id="selected-bone-name">Hips</span>
+        </div>
+        
+        <div class="transform-group">
+          <div class="transform-label">Position</div>
+          <div class="transform-values">
+            <div>
+              <div class="transform-axis x">X</div>
+              <div class="transform-input" id="pos-x">0.00</div>
+            </div>
+            <div>
+              <div class="transform-axis y">Y</div>
+              <div class="transform-input" id="pos-y">1.00</div>
+            </div>
+            <div>
+              <div class="transform-axis z">Z</div>
+              <div class="transform-input" id="pos-z">0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="transform-group">
+          <div class="transform-label">Rotation (deg)</div>
+          <div class="transform-values">
+            <div>
+              <div class="transform-axis x">X</div>
+              <div class="transform-input" id="rot-x">0.0</div>
+            </div>
+            <div>
+              <div class="transform-axis y">Y</div>
+              <div class="transform-input" id="rot-y">0.0</div>
+            </div>
+            <div>
+              <div class="transform-axis z">Z</div>
+              <div class="transform-input" id="rot-z">0.0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="transform-group">
+          <div class="transform-label">Scale</div>
+          <div class="transform-values">
+            <div>
+              <div class="transform-axis x">X</div>
+              <div class="transform-input" id="scale-x">1.00</div>
+            </div>
+            <div>
+              <div class="transform-axis y">Y</div>
+              <div class="transform-input" id="scale-y">1.00</div>
+            </div>
+            <div>
+              <div class="transform-axis z">Z</div>
+              <div class="transform-input" id="scale-z">1.00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bone-property">
+          <span class="bone-property-label">Index</span>
+          <span class="bone-property-value" id="bone-index">0</span>
+        </div>
+        <div class="bone-property">
+          <span class="bone-property-label">Children</span>
+          <span class="bone-property-value" id="bone-children">2</span>
+        </div>
+        <div class="bone-property">
+          <span class="bone-property-label">Influenced Verts</span>
+          <span class="bone-property-value" id="bone-verts">324</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weight Distribution -->
+    <div class="section">
+      <div class="section-title">Vertex Weights (Selected)</div>
+      <div class="weight-preview" id="weight-preview">
+        <div class="weight-bar">
+          <span class="weight-bone-name">Spine</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width: 60%; background: linear-gradient(90deg, #8b5cf6, #6366f1);"></div>
+          </div>
+          <span class="weight-value">0.60</span>
+        </div>
+        <div class="weight-bar">
+          <span class="weight-bone-name">Hips</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width: 30%; background: linear-gradient(90deg, #22c55e, #10b981);"></div>
+          </div>
+          <span class="weight-value">0.30</span>
+        </div>
+        <div class="weight-bar">
+          <span class="weight-bone-name">LeftUpLeg</span>
+          <div class="weight-bar-bg">
+            <div class="weight-bar-fill" style="width: 10%; background: linear-gradient(90deg, #ef4444, #dc2626);"></div>
+          </div>
+          <span class="weight-value">0.10</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Color Legend -->
+    <div class="section">
+      <div class="section-title">Weight Color Legend</div>
+      <div class="color-legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background: #ef4444;"></div>
+          <span>1.0</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #f97316;"></div>
+          <span>0.75</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #fbbf24;"></div>
+          <span>0.5</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #22c55e;"></div>
+          <span>0.25</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #3b82f6;"></div>
+          <span>0.0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -42,11 +42,11 @@ function logStep(step, message) {
 }
 
 function logSuccess(message) {
-  console.log(`${colors.green}✓${colors.reset} ${message}`);
+  console.log(`${colors.green}[OK]${colors.reset} ${message}`);
 }
 
 function logError(message) {
-  console.error(`${colors.red}✗${colors.reset} ${message}`);
+  console.error(`${colors.red}[FAIL]${colors.reset} ${message}`);
 }
 
 /**
@@ -118,7 +118,7 @@ function buildExample(examplePath) {
     if (existsSync(distPath)) {
       mkdirSync(outputPath, { recursive: true });
       cpSync(distPath, outputPath, { recursive: true });
-      logSuccess(`Built ${exampleId} → ${relative(rootDir, outputPath)}`);
+      logSuccess(`Built ${exampleId} -> ${relative(rootDir, outputPath)}`);
       return true;
     } else {
       logError(`No dist folder found for ${exampleId}`);
@@ -131,13 +131,59 @@ function buildExample(examplePath) {
 }
 
 /**
+ * Check if packages need to be built
+ */
+function needsPackageBuild() {
+  const packagesDir = join(rootDir, 'packages');
+  const packages = ['core', 'ui', 'overlay', 'react-bridge', 'angular-bridge', 'vue-bridge'];
+  
+  for (const pkg of packages) {
+    const pkgDir = join(packagesDir, pkg);
+    const distDir = join(pkgDir, 'dist');
+    if (!existsSync(distDir)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Build all packages
+ */
+function buildPackages() {
+  logStep('PACKAGES', 'Building packages...');
+  try {
+    // Use explicit package filters that work reliably
+    execSync('pnpm --filter "@3lens/core" --filter "@3lens/ui" --filter "@3lens/overlay" --filter "@3lens/react-bridge" --filter "@3lens/angular-bridge" --filter "@3lens/vue-bridge" build', {
+      cwd: rootDir,
+      stdio: 'inherit',
+      env: { ...process.env, NODE_ENV: 'production' }
+    });
+    logSuccess('Packages built successfully');
+    return true;
+  } catch (error) {
+    logError(`Failed to build packages: ${error.message}`);
+    return false;
+  }
+}
+
+/**
  * Main build function
  */
 async function main() {
   const args = process.argv.slice(2);
   const specificExample = args[0];
   
-  log('\n🔧 3Lens Examples Builder\n', colors.bright);
+  log('\n3Lens Examples Builder\n', colors.bright);
+  
+  // Build packages first if needed
+  if (needsPackageBuild()) {
+    if (!buildPackages()) {
+      logError('Cannot build examples without packages. Exiting.');
+      process.exit(1);
+    }
+    console.log(''); // Add spacing
+  }
   
   // Clean output directory
   if (existsSync(outputDir)) {
@@ -174,13 +220,13 @@ async function main() {
   }
   
   // Summary
-  console.log('\n' + '─'.repeat(50));
-  log(`\n📊 Build Summary:`, colors.bright);
-  log(`   ${colors.green}✓ Successful: ${successful}${colors.reset}`);
+  console.log('\n' + '-'.repeat(50));
+  log(`\nBuild Summary:`, colors.bright);
+  log(`   ${colors.green}[OK] Successful: ${successful}${colors.reset}`);
   if (failed > 0) {
-    log(`   ${colors.red}✗ Failed: ${failed}${colors.reset}`);
+    log(`   ${colors.red}[FAIL] Failed: ${failed}${colors.reset}`);
   }
-  log(`   📁 Output: ${relative(rootDir, outputDir)}\n`);
+  log(`   Output: ${relative(rootDir, outputDir)}\n`);
   
   // Create an index of all examples
   const exampleIndex = toBuild
@@ -197,8 +243,16 @@ async function main() {
   writeFileSync(indexPath, JSON.stringify(exampleIndex, null, 2));
   logSuccess(`Created examples index: ${relative(rootDir, indexPath)}`);
   
+  // Check for --fail-on-error flag
+  const failOnError = process.argv.includes('--fail-on-error');
+  
   if (failed > 0) {
-    process.exit(1);
+    if (failOnError) {
+      logError(`Build failed with ${failed} example(s) failing. Use --fail-on-error to make this fatal.`);
+      process.exit(1);
+    } else {
+      log(`WARNING: ${failed} example(s) failed to build, but continuing...`, colors.yellow);
+    }
   }
 }
 

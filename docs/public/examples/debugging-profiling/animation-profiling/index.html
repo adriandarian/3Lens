@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3Lens - Animation Profiling Example</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0f;
+      }
+      #app {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+      .control-panel {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 100;
+        max-width: 360px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+      .control-panel h2 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        color: #9b59b6;
+      }
+      .control-panel h3 {
+        margin: 16px 0 8px 0;
+        font-size: 14px;
+        color: #3498db;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 12px;
+      }
+      .control-panel p {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+      .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .button-row {
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      button.toggle {
+        background: #2a2a3e;
+        color: #888;
+      }
+      button.toggle:hover {
+        background: #3a3a4e;
+        color: #aaa;
+      }
+      button.toggle.active {
+        background: #9b59b6;
+        color: white;
+      }
+      button.action {
+        background: #3498db;
+        color: white;
+      }
+      button.action:hover {
+        background: #2980b9;
+      }
+      button.danger {
+        background: #e74c3c;
+        color: white;
+      }
+      button.danger:hover {
+        background: #c0392b;
+      }
+      .stats-display {
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 12px;
+      }
+      .stats-display h4 {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      .stat-row:last-child {
+        border-bottom: none;
+      }
+      .stat-label {
+        color: #888;
+      }
+      .stat-value {
+        color: #fff;
+        font-weight: 500;
+        font-family: 'Monaco', 'Consolas', monospace;
+      }
+      .stat-value.warning {
+        color: #f39c12;
+      }
+      .stat-value.danger {
+        color: #e74c3c;
+      }
+      .stat-value.good {
+        color: #2ecc71;
+      }
+      .slider-group {
+        margin: 8px 0;
+      }
+      .slider-group label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+      }
+      .slider-group input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #2a2a3e;
+        outline: none;
+        -webkit-appearance: none;
+      }
+      .slider-group input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #9b59b6;
+        cursor: pointer;
+      }
+      .info-box {
+        background: rgba(155, 89, 182, 0.15);
+        border: 1px solid rgba(155, 89, 182, 0.3);
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 12px;
+        font-size: 11px;
+        color: #b8a4c9;
+        line-height: 1.5;
+      }
+      .issue-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-left: 8px;
+      }
+      .issue-badge.high {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+      }
+      .issue-badge.medium {
+        background: rgba(243, 156, 18, 0.2);
+        color: #f39c12;
+      }
+      .issue-badge.low {
+        background: rgba(52, 152, 219, 0.2);
+        color: #3498db;
+      }
+      .timeline {
+        background: rgba(0,0,0,0.3);
+        border-radius: 6px;
+        padding: 8px;
+        margin-top: 8px;
+      }
+      .timeline-bar {
+        height: 20px;
+        background: #1a1a2e;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+      .timeline-segment {
+        height: 100%;
+        position: absolute;
+        top: 0;
+      }
+      .timeline-legend {
+        display: flex;
+        gap: 12px;
+        margin-top: 6px;
+        font-size: 10px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #888;
+      }
+      .legend-color {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+      }
+    </style>
+    <script type="module" crossorigin src="/examples/debugging-profiling/animation-profiling/assets/index-Cy5wkApE.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    
+    <div class="control-panel">
+      <h2>🎬 Animation Profiling Lab</h2>
+      <p>
+        Toggle animation scenarios to observe their performance impact.
+        Use the 3Lens overlay (press <kbd>Ctrl+Shift+D</kbd>) to inspect detailed metrics.
+      </p>
+
+      <h3>Skeletal Animation <span class="issue-badge high">HIGH</span></h3>
+      <p>Test skeletal animation with varying bone counts and skin weights.</p>
+      <div class="button-group">
+        <div class="button-row">
+          <button class="toggle" id="btn-simple-skeleton">Simple (20 bones)</button>
+          <button class="toggle" id="btn-complex-skeleton">Complex (100 bones)</button>
+        </div>
+        <div class="slider-group">
+          <label>
+            <span>Characters:</span>
+            <span id="skeleton-count-display">1</span>
+          </label>
+          <input type="range" id="skeleton-count" min="1" max="50" value="1">
+        </div>
+      </div>
+
+      <h3>Morph Targets <span class="issue-badge medium">MEDIUM</span></h3>
+      <p>Test morph target animations with multiple blend shapes.</p>
+      <div class="button-group">
+        <div class="button-row">
+          <button class="toggle" id="btn-morph-simple">Few Targets (4)</button>
+          <button class="toggle" id="btn-morph-complex">Many Targets (32)</button>
+        </div>
+      </div>
+
+      <h3>Animation Mixers <span class="issue-badge medium">MEDIUM</span></h3>
+      <p>Test animation blending and multiple animation clips.</p>
+      <div class="button-group">
+        <div class="button-row">
+          <button class="toggle" id="btn-single-clip">Single Clip</button>
+          <button class="toggle" id="btn-blended">Blended (3 clips)</button>
+        </div>
+        <div class="button-row">
+          <button class="toggle" id="btn-many-mixers">Many Mixers (20)</button>
+        </div>
+      </div>
+
+      <h3>Keyframe Density <span class="issue-badge low">LOW</span></h3>
+      <p>Compare sparse vs dense keyframe tracks.</p>
+      <div class="button-group">
+        <div class="button-row">
+          <button class="toggle" id="btn-sparse-keys">Sparse (10 keys)</button>
+          <button class="toggle" id="btn-dense-keys">Dense (1000 keys)</button>
+        </div>
+      </div>
+
+      <h3>Animation Controls</h3>
+      <div class="button-group">
+        <div class="slider-group">
+          <label>
+            <span>Time Scale:</span>
+            <span id="timescale-display">1.0x</span>
+          </label>
+          <input type="range" id="timescale" min="0" max="3" step="0.1" value="1">
+        </div>
+        <div class="button-row">
+          <button class="action" id="btn-pause">⏸ Pause</button>
+          <button class="action" id="btn-step">⏭ Step Frame</button>
+        </div>
+        <div class="button-row">
+          <button class="danger" id="btn-reset">🔄 Reset All</button>
+        </div>
+      </div>
+
+      <div class="stats-display">
+        <h4>Animation Stats</h4>
+        <div class="stat-row">
+          <span class="stat-label">Active Mixers</span>
+          <span class="stat-value" id="stat-mixers">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Active Actions</span>
+          <span class="stat-value" id="stat-actions">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Total Bones</span>
+          <span class="stat-value" id="stat-bones">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Morph Influences</span>
+          <span class="stat-value" id="stat-morphs">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Animation Update</span>
+          <span class="stat-value" id="stat-anim-time">0.00 ms</span>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-bar" id="timeline-bar">
+          <div class="timeline-segment" id="seg-skeleton" style="background: #e74c3c; left: 0%;"></div>
+          <div class="timeline-segment" id="seg-morph" style="background: #f39c12; left: 0%;"></div>
+          <div class="timeline-segment" id="seg-mixer" style="background: #3498db; left: 0%;"></div>
+        </div>
+        <div class="timeline-legend">
+          <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div>Skeleton</div>
+          <div class="legend-item"><div class="legend-color" style="background: #f39c12;"></div>Morph</div>
+          <div class="legend-item"><div class="legend-color" style="background: #3498db;"></div>Mixer</div>
+        </div>
+      </div>
+
+      <div class="info-box">
+        💡 <strong>Tip:</strong> Open 3Lens overlay to see real-time performance metrics. 
+        Watch the frame time chart spike when enabling expensive animations.
+        Use the Scene Explorer to inspect individual animated objects.
+      </div>
+    </div>
+
+  </body>
+</html>

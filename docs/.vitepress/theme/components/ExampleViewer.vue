@@ -106,9 +106,9 @@
         <pre><code>{{ sourceCode }}</code></pre>
       </div>
 
-      <!-- Example iframe -->
+      <!-- Example iframe - only render if URL exists and not showing source -->
       <iframe
-        v-show="!showSource"
+        v-if="!showSource && !error && urlExists === true && iframeSrc"
         ref="iframeRef"
         :src="iframeSrc"
         :key="iframeKey"
@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
 interface Props {
   /** The URL of the example to embed */
@@ -163,8 +163,18 @@ const showSource = ref(false)
 const sourceCode = ref('')
 const isFullscreen = ref(false)
 const iframeKey = ref(0)
+const urlExists = ref<boolean | null>(null) // null = checking, true = exists, false = 404
 
-const iframeSrc = computed(() => props.src)
+// Only set iframe src if URL exists (prevents loading 404 pages)
+const iframeSrc = computed(() => {
+  // Don't set src until we've checked the URL and confirmed it exists
+  // If we know the URL doesn't exist or we're still checking, return empty string
+  if (urlExists.value !== true) {
+    return ''
+  }
+  // Only return src if URL exists
+  return props.src
+})
 
 const difficultyClass = computed(() => {
   switch (props.difficulty) {
@@ -175,20 +185,198 @@ const difficultyClass = computed(() => {
   }
 })
 
+let loadTimeout: ReturnType<typeof setTimeout> | null = null
+
 function onIframeLoad() {
-  loading.value = false
-  error.value = false
+  // Clear any pending timeout
+  if (loadTimeout) {
+    clearTimeout(loadTimeout)
+    loadTimeout = null
+  }
+  
+  // Check if the iframe content is actually a 404 page
+  // This handles cases where the URL check passed but the page itself is a 404
+  const iframe = iframeRef.value
+  if (iframe) {
+    // Use a small delay to ensure content is loaded
+    setTimeout(() => {
+      try {
+        // Try to access iframe content (may fail due to CORS)
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+        if (iframeDoc) {
+          const bodyText = iframeDoc.body?.textContent || ''
+          const title = iframeDoc.title || ''
+          const url = iframeDoc.location?.href || iframe.contentWindow?.location.href || ''
+          
+          // Check for 404 indicators in the page content
+          const is404Page = (
+            (bodyText.includes('404') && (bodyText.includes('NOT FOUND') || bodyText.includes('Page Not Found'))) ||
+            title.includes('404') ||
+            url.includes('404')
+          )
+          
+          if (is404Page) {
+            loading.value = false
+            error.value = true
+            urlExists.value = false
+            // Clear iframe src to prevent further loading
+            if (iframe.src) {
+              iframe.src = 'about:blank'
+            }
+            return
+          }
+        }
+      } catch (e) {
+        // Cross-origin or other error - can't check content directly
+        // Check the iframe URL instead
+        try {
+          const iframeUrl = iframe.contentWindow?.location.href || ''
+          if (iframeUrl.includes('404') || iframeUrl === 'about:blank') {
+            loading.value = false
+            error.value = true
+            urlExists.value = false
+            return
+          }
+        } catch (e2) {
+          // Can't access iframe URL either - might be cross-origin
+          // In this case, assume it loaded successfully
+        }
+      }
+      
+      // If we get here, the iframe loaded successfully
+      loading.value = false
+      error.value = false
+    }, 200)
+  } else {
+    // No iframe ref - something went wrong
+    loading.value = false
+    error.value = true
+  }
 }
 
 function onIframeError() {
+  if (loadTimeout) {
+    clearTimeout(loadTimeout)
+    loadTimeout = null
+  }
   loading.value = false
   error.value = true
 }
 
-function reloadIframe() {
+// Check if URL exists before loading iframe
+async function checkUrlBeforeLoad() {
+  urlExists.value = null // Set to checking state
   loading.value = true
   error.value = false
+  
+  try {
+    // Since examples are served from the same origin, we can check the status
+    // Use GET to check if the page exists
+    const response = await fetch(props.src, { 
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html'
+      }
+    })
+    
+    // Check status code first - this is the most reliable indicator
+    if (response.status === 404) {
+      urlExists.value = false
+      loading.value = false
+      error.value = true
+      return false
+    }
+    
+    if (!response.ok) {
+      // Any other non-OK status means the example isn't available
+      urlExists.value = false
+      loading.value = false
+      error.value = true
+      return false
+    }
+    
+    // If status is OK (200), assume the URL exists
+    // We'll do a lightweight content check only if we're suspicious
+    const contentType = response.headers.get('content-type') || ''
+    if (contentType.includes('text/html')) {
+      // Only check content if response is suspiciously small (likely a 404 page)
+      const contentLength = response.headers.get('content-length')
+      if (contentLength && parseInt(contentLength) < 1000) {
+        // Small response might be a 404 page, check it
+        const reader = response.body?.getReader()
+        if (reader) {
+          const { value, done } = await reader.read()
+          reader.cancel() // Cancel to avoid reading the whole response
+          if (!done && value) {
+            const decoder = new TextDecoder()
+            const text = decoder.decode(value, { stream: true })
+            // Very specific check for VitePress 404 page - only match exact patterns
+            const is404Page = (
+              // VitePress 404 page has very specific structure
+              text.includes('404 PAGE NOT FOUND') && 
+              text.includes('But if you don\'t change your direction') &&
+              text.includes('Take me home')
+            )
+            if (is404Page) {
+              urlExists.value = false
+              loading.value = false
+              error.value = true
+              return false
+            }
+          }
+        }
+      }
+    }
+    
+    // URL exists and is valid (status 200 and passes checks)
+    urlExists.value = true
+    return true
+  } catch (e) {
+    // If fetch fails, it could be:
+    // 1. Network error (temporary - allow retry)
+    // 2. CORS issue (shouldn't happen for same-origin)
+    // 3. Actual 404 (browser might throw instead of returning 404)
+    // Be conservative but allow the iframe to try loading anyway
+    // The iframe's onLoad handler will catch actual 404s
+    console.warn('URL check failed for:', props.src, e)
+    // Don't immediately fail - let the iframe try to load
+    // The timeout and onLoad handler will catch real 404s
+    urlExists.value = true // Assume it exists, let iframe handle errors
+    return true
+  }
+}
+
+// Set up timeout to detect 404s (iframes don't reliably fire error events)
+function setupLoadTimeout() {
+  // Clear any existing timeout
+  if (loadTimeout) {
+    clearTimeout(loadTimeout)
+  }
+  
+  // Set a timeout - if still loading after 5 seconds, assume 404 or network error
+  loadTimeout = setTimeout(() => {
+    if (loading.value) {
+      loading.value = false
+      error.value = true
+    }
+  }, 5000)
+}
+
+function reloadIframe() {
+  if (loadTimeout) {
+    clearTimeout(loadTimeout)
+    loadTimeout = null
+  }
+  loading.value = true
+  error.value = false
+  urlExists.value = null // Reset URL check state
   iframeKey.value++
+  // Re-check URL and set up timeout
+  checkUrlBeforeLoad().then((exists) => {
+    if (exists) {
+      setupLoadTimeout()
+    }
+  })
 }
 
 function toggleFullscreen() {
@@ -220,12 +408,37 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+// Watch for src changes and reset loading state
+watch(() => props.src, async (newSrc) => {
+  if (!newSrc) {
+    error.value = true
+    loading.value = false
+    urlExists.value = false
+    return
+  }
+  
+  loading.value = true
+  error.value = false
+  urlExists.value = null // Reset URL check state
+  
+  // Check if URL exists before setting up timeout
+  const exists = await checkUrlBeforeLoad()
+  if (exists) {
+    setupLoadTimeout()
+  }
+}, { immediate: true })
+
 onMounted(() => {
   fetchSourceCode()
   document.addEventListener('keydown', handleKeydown)
+  // Don't set up timeout here - it's handled in the watch function
+  // Only set up timeout if URL check passes
 })
 
 onUnmounted(() => {
+  if (loadTimeout) {
+    clearTimeout(loadTimeout)
+  }
   document.removeEventListener('keydown', handleKeydown)
   document.body.style.overflow = ''
 })

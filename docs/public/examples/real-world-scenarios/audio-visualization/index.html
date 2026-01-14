@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Audio Visualization - 3Lens Example</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0f;
+        color: #fff;
+        overflow: hidden;
+      }
+
+      #app {
+        display: flex;
+        height: 100vh;
+      }
+
+      #canvas-container {
+        flex: 1;
+        position: relative;
+      }
+
+      #canvas-container canvas {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Audio Prompt Overlay */
+      #audio-prompt {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+
+      #audio-prompt.hidden {
+        display: none;
+      }
+
+      .prompt-icon {
+        font-size: 80px;
+        margin-bottom: 24px;
+      }
+
+      .prompt-title {
+        font-size: 28px;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      .prompt-subtitle {
+        font-size: 16px;
+        color: #94a3b8;
+        margin-bottom: 32px;
+        text-align: center;
+        max-width: 400px;
+      }
+
+      .prompt-buttons {
+        display: flex;
+        gap: 16px;
+      }
+
+      /* Control Panel */
+      #controls {
+        width: 320px;
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        padding: 16px;
+        overflow-y: auto;
+        border-left: 1px solid #333;
+      }
+
+      .control-section {
+        margin-bottom: 20px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 12px;
+      }
+
+      .control-section h3 {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* Audio Source */
+      .audio-source-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 12px;
+      }
+
+      .audio-tab {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        border-radius: 6px;
+        background: #1e3a5f;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 11px;
+        transition: all 0.2s;
+      }
+
+      .audio-tab:hover {
+        background: #2563eb;
+        color: #fff;
+      }
+
+      .audio-tab.active {
+        background: #3b82f6;
+        color: #fff;
+      }
+
+      /* File Upload */
+      .file-drop-zone {
+        border: 2px dashed #374151;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .file-drop-zone:hover,
+      .file-drop-zone.dragover {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.1);
+      }
+
+      .file-drop-zone input {
+        display: none;
+      }
+
+      .file-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+      }
+
+      .file-text {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .file-name {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #3b82f6;
+        word-break: break-all;
+      }
+
+      /* Visualizer Selection */
+      .visualizer-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .visualizer-option {
+        padding: 12px;
+        border: 2px solid #374151;
+        border-radius: 8px;
+        background: #1e293b;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+      }
+
+      .visualizer-option:hover {
+        border-color: #3b82f6;
+      }
+
+      .visualizer-option.active {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.2);
+      }
+
+      .visualizer-icon {
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+
+      .visualizer-name {
+        font-size: 11px;
+        color: #94a3b8;
+      }
+
+      /* Sliders */
+      .slider-group {
+        margin-bottom: 12px;
+      }
+
+      .slider-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+
+      .slider-label span:first-child {
+        color: #94a3b8;
+      }
+
+      .slider-label span:last-child {
+        color: #3b82f6;
+        font-family: monospace;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #1e293b;
+        outline: none;
+        -webkit-appearance: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+      }
+
+      /* Frequency Display */
+      .frequency-bars {
+        display: flex;
+        align-items: flex-end;
+        height: 60px;
+        gap: 2px;
+        background: #0f172a;
+        border-radius: 6px;
+        padding: 8px;
+      }
+
+      .freq-bar {
+        flex: 1;
+        background: linear-gradient(180deg, #8b5cf6, #3b82f6);
+        border-radius: 2px;
+        transition: height 0.05s;
+        min-height: 2px;
+      }
+
+      /* Waveform Display */
+      .waveform-container {
+        height: 60px;
+        background: #0f172a;
+        border-radius: 6px;
+        padding: 8px;
+        position: relative;
+      }
+
+      .waveform-canvas {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      }
+
+      .btn-secondary {
+        background: #374151;
+        color: #fff;
+      }
+
+      .btn-secondary:hover {
+        background: #4b5563;
+      }
+
+      .btn-lg {
+        padding: 14px 28px;
+        font-size: 16px;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn-group .btn {
+        flex: 1;
+      }
+
+      /* Playback Controls */
+      .playback-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .playback-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        background: #3b82f6;
+        color: #fff;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .playback-btn:hover {
+        transform: scale(1.05);
+        background: #2563eb;
+      }
+
+      .playback-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .time-display {
+        font-family: monospace;
+        font-size: 14px;
+        color: #94a3b8;
+      }
+
+      /* Progress Bar */
+      .progress-bar {
+        height: 6px;
+        background: #1e293b;
+        border-radius: 3px;
+        overflow: hidden;
+        cursor: pointer;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        border-radius: 3px;
+        transition: width 0.1s;
+      }
+
+      /* Stats Grid */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .stat-card {
+        padding: 10px;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #3b82f6;
+      }
+
+      .stat-label {
+        font-size: 10px;
+        color: #64748b;
+        margin-top: 2px;
+        text-transform: uppercase;
+      }
+
+      /* Color Scheme */
+      .color-presets {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .color-preset {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+      }
+
+      .color-preset:hover {
+        transform: scale(1.1);
+      }
+
+      .color-preset.active {
+        border-color: #fff;
+        box-shadow: 0 0 0 2px #3b82f6;
+      }
+
+      /* Toggle */
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+      }
+
+      .toggle-label {
+        font-size: 12px;
+        color: #94a3b8;
+      }
+
+      .toggle {
+        width: 40px;
+        height: 22px;
+        background: #374151;
+        border-radius: 11px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .toggle.active {
+        background: #3b82f6;
+      }
+
+      .toggle::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        background: #fff;
+        border-radius: 50%;
+        top: 2px;
+        left: 2px;
+        transition: transform 0.2s;
+      }
+
+      .toggle.active::after {
+        transform: translateX(18px);
+      }
+
+      /* Keyboard shortcuts */
+      .shortcuts {
+        font-size: 11px;
+        color: #64748b;
+        line-height: 1.8;
+      }
+
+      .shortcut-key {
+        display: inline-block;
+        padding: 2px 6px;
+        background: #374151;
+        border-radius: 3px;
+        font-family: monospace;
+        margin-right: 4px;
+      }
+
+      /* Beat indicator */
+      .beat-indicator {
+        width: 100%;
+        height: 8px;
+        background: #1e293b;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 8px;
+      }
+
+      .beat-fill {
+        height: 100%;
+        background: #ef4444;
+        border-radius: 4px;
+        transition: width 0.05s, opacity 0.1s;
+      }
+    </style>
+    <script type="module" crossorigin src="/examples/real-world-scenarios/audio-visualization/assets/index-D97PriGs.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <div id="canvas-container">
+        <div id="audio-prompt">
+          <div class="prompt-icon">🎵</div>
+          <div class="prompt-title">Audio Visualization</div>
+          <div class="prompt-subtitle">
+            Choose an audio source to begin the visualization experience
+          </div>
+          <div class="prompt-buttons">
+            <button class="btn btn-primary btn-lg" id="mic-btn">
+              🎤 Use Microphone
+            </button>
+            <button class="btn btn-secondary btn-lg" id="demo-btn">
+              🎶 Play Demo Track
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="controls">
+        <div class="control-section">
+          <h3>🎵 Audio Source</h3>
+          <div class="audio-source-tabs">
+            <button class="audio-tab" data-source="mic">🎤 Mic</button>
+            <button class="audio-tab active" data-source="file">📁 File</button>
+            <button class="audio-tab" data-source="demo">🎶 Demo</button>
+          </div>
+          <div class="file-drop-zone" id="file-drop">
+            <input type="file" id="audio-file" accept="audio/*" />
+            <div class="file-icon">📂</div>
+            <div class="file-text">Drop audio file or click to browse</div>
+            <div class="file-name" id="file-name"></div>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>▶️ Playback</h3>
+          <div class="playback-controls">
+            <button class="playback-btn" id="play-btn" disabled>▶</button>
+            <div class="time-display">
+              <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+            </div>
+          </div>
+          <div class="progress-bar" id="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+          </div>
+          <div class="slider-group" style="margin-top: 12px">
+            <div class="slider-label">
+              <span>Volume</span>
+              <span id="volume-value">80%</span>
+            </div>
+            <input type="range" id="volume" min="0" max="100" value="80" />
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>📊 Visualizer</h3>
+          <div class="visualizer-grid">
+            <div class="visualizer-option active" data-viz="bars">
+              <div class="visualizer-icon">📊</div>
+              <div class="visualizer-name">Bars</div>
+            </div>
+            <div class="visualizer-option" data-viz="wave">
+              <div class="visualizer-icon">🌊</div>
+              <div class="visualizer-name">Wave</div>
+            </div>
+            <div class="visualizer-option" data-viz="circle">
+              <div class="visualizer-icon">⭕</div>
+              <div class="visualizer-name">Circle</div>
+            </div>
+            <div class="visualizer-option" data-viz="particles">
+              <div class="visualizer-icon">✨</div>
+              <div class="visualizer-name">Particles</div>
+            </div>
+            <div class="visualizer-option" data-viz="terrain">
+              <div class="visualizer-icon">🏔️</div>
+              <div class="visualizer-name">Terrain</div>
+            </div>
+            <div class="visualizer-option" data-viz="sphere">
+              <div class="visualizer-icon">🔮</div>
+              <div class="visualizer-name">Sphere</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>📈 Audio Analysis</h3>
+          <div class="frequency-bars" id="frequency-bars"></div>
+          <div class="beat-indicator">
+            <div class="beat-fill" id="beat-fill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>🎨 Colors</h3>
+          <div class="color-presets">
+            <div class="color-preset active" data-colors="neon" style="background: linear-gradient(135deg, #8b5cf6, #06b6d4)"></div>
+            <div class="color-preset" data-colors="fire" style="background: linear-gradient(135deg, #ef4444, #f59e0b)"></div>
+            <div class="color-preset" data-colors="ocean" style="background: linear-gradient(135deg, #0ea5e9, #22d3d1)"></div>
+            <div class="color-preset" data-colors="forest" style="background: linear-gradient(135deg, #22c55e, #84cc16)"></div>
+            <div class="color-preset" data-colors="sunset" style="background: linear-gradient(135deg, #f43f5e, #fb923c)"></div>
+            <div class="color-preset" data-colors="mono" style="background: linear-gradient(135deg, #fff, #64748b)"></div>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>⚙️ Settings</h3>
+          <div class="slider-group">
+            <div class="slider-label">
+              <span>Sensitivity</span>
+              <span id="sensitivity-value">1.0</span>
+            </div>
+            <input type="range" id="sensitivity" min="1" max="30" value="10" />
+          </div>
+          <div class="slider-group">
+            <div class="slider-label">
+              <span>Smoothing</span>
+              <span id="smoothing-value">0.8</span>
+            </div>
+            <input type="range" id="smoothing" min="0" max="99" value="80" />
+          </div>
+          <div class="slider-group">
+            <div class="slider-label">
+              <span>FFT Size</span>
+              <span id="fft-value">2048</span>
+            </div>
+            <input type="range" id="fft-size" min="5" max="15" value="11" step="1" />
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Auto-rotate camera</span>
+            <div class="toggle active" id="auto-rotate"></div>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Beat detection</span>
+            <div class="toggle active" id="beat-detection"></div>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Bloom effect</span>
+            <div class="toggle active" id="bloom-toggle"></div>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>📊 Stats</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="stat-bass">0</div>
+              <div class="stat-label">Bass</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-mid">0</div>
+              <div class="stat-label">Mid</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-high">0</div>
+              <div class="stat-label">High</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="stat-bpm">--</div>
+              <div class="stat-label">Est. BPM</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>⌨️ Shortcuts</h3>
+          <div class="shortcuts">
+            <span class="shortcut-key">Space</span> Play/Pause<br>
+            <span class="shortcut-key">M</span> Toggle mute<br>
+            <span class="shortcut-key">1-6</span> Switch visualizer<br>
+            <span class="shortcut-key">R</span> Toggle rotation<br>
+            <span class="shortcut-key">B</span> Toggle bloom<br>
+            <span class="shortcut-key">D</span> Toggle 3Lens
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3Lens - Performance Debugging Example</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0f;
+      }
+      #app {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+      .control-panel {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 100;
+        max-width: 320px;
+      }
+      .control-panel h2 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        color: #ff6b6b;
+      }
+      .control-panel h3 {
+        margin: 16px 0 8px 0;
+        font-size: 14px;
+        color: #4ecdc4;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 12px;
+      }
+      .control-panel p {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+      .issue-toggle {
+        display: flex;
+        align-items: center;
+        margin: 8px 0;
+        padding: 8px 12px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .issue-toggle:hover {
+        background: rgba(255,255,255,0.1);
+      }
+      .issue-toggle input {
+        margin-right: 10px;
+      }
+      .issue-toggle label {
+        font-size: 13px;
+        cursor: pointer;
+        flex: 1;
+      }
+      .issue-toggle .impact {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+      }
+      .impact.high { background: #e74c3c; }
+      .impact.medium { background: #f39c12; }
+      .impact.low { background: #27ae60; }
+      .stats-display {
+        margin-top: 16px;
+        padding: 12px;
+        background: rgba(0,0,0,0.3);
+        border-radius: 8px;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 12px;
+      }
+      .stats-display .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 4px 0;
+      }
+      .stats-display .stat-value {
+        color: #4ecdc4;
+      }
+      .stats-display .stat-value.bad {
+        color: #e74c3c;
+      }
+      .stats-display .stat-value.warn {
+        color: #f39c12;
+      }
+      .hint {
+        margin-top: 16px;
+        padding: 12px;
+        background: rgba(78, 205, 196, 0.1);
+        border: 1px solid rgba(78, 205, 196, 0.3);
+        border-radius: 8px;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      .hint strong {
+        color: #4ecdc4;
+      }
+    </style>
+    <script type="module" crossorigin src="/examples/debugging-profiling/performance-debugging/assets/index-CF1HKJr8.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <div class="control-panel">
+        <h2>🔧 Performance Issues Lab</h2>
+        <p>Toggle performance issues below and use 3Lens to identify and diagnose them.</p>
+        
+        <h3>Common Issues</h3>
+        
+        <div class="issue-toggle">
+          <input type="checkbox" id="issue-too-many-objects" />
+          <label for="issue-too-many-objects">Too Many Draw Calls</label>
+          <span class="impact high">HIGH</span>
+        </div>
+        
+        <div class="issue-toggle">
+          <input type="checkbox" id="issue-high-poly" />
+          <label for="issue-high-poly">High Poly Meshes</label>
+          <span class="impact high">HIGH</span>
+        </div>
+        
+        <div class="issue-toggle">
+          <input type="checkbox" id="issue-large-textures" />
+          <label for="issue-large-textures">Large Textures</label>
+          <span class="impact medium">MED</span>
+        </div>
+        
+        <div class="issue-toggle">
+          <input type="checkbox" id="issue-shadow-quality" />
+          <label for="issue-shadow-quality">Excessive Shadows</label>
+          <span class="impact medium">MED</span>
+        </div>
+        
+        <div class="issue-toggle">
+          <input type="checkbox" id="issue-no-frustum-culling" />
+          <label for="issue-no-frustum-culling">Disabled Frustum Culling</label>
+          <span class="impact low">LOW</span>
+        </div>
+        
+        <div class="issue-toggle">
+          <input type="checkbox" id="issue-memory-leak" />
+          <label for="issue-memory-leak">Memory Leak</label>
+          <span class="impact high">HIGH</span>
+        </div>
+        
+        <div class="stats-display">
+          <div class="stat-row">
+            <span>FPS:</span>
+            <span id="stat-fps" class="stat-value">--</span>
+          </div>
+          <div class="stat-row">
+            <span>Draw Calls:</span>
+            <span id="stat-drawcalls" class="stat-value">--</span>
+          </div>
+          <div class="stat-row">
+            <span>Triangles:</span>
+            <span id="stat-triangles" class="stat-value">--</span>
+          </div>
+          <div class="stat-row">
+            <span>Textures:</span>
+            <span id="stat-textures" class="stat-value">--</span>
+          </div>
+          <div class="stat-row">
+            <span>Geometries:</span>
+            <span id="stat-geometries" class="stat-value">--</span>
+          </div>
+        </div>
+        
+        <div class="hint">
+          <strong>💡 Tip:</strong> Open the 3Lens overlay (bottom-right) to see detailed performance metrics, memory usage, and scene analysis.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

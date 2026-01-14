@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Scene Management - 3Lens Example</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #1a1a2e;
+        color: #fff;
+        overflow: hidden;
+      }
+
+      #app {
+        display: flex;
+        height: 100vh;
+      }
+
+      /* Scene viewports container */
+      #viewports {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        gap: 2px;
+        background: #333;
+        position: relative;
+      }
+
+      .viewport {
+        position: relative;
+        background: #1a1a2e;
+        overflow: hidden;
+      }
+
+      .viewport canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .viewport-label {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        padding: 4px 12px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .viewport-label .status {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4ade80;
+      }
+
+      .viewport-label .status.inactive {
+        background: #6b7280;
+      }
+
+      .viewport.active {
+        outline: 2px solid #3b82f6;
+      }
+
+      .viewport.fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 100;
+      }
+
+      /* Control panel */
+      #controls {
+        width: 320px;
+        background: #16213e;
+        padding: 16px;
+        overflow-y: auto;
+        border-left: 1px solid #333;
+      }
+
+      .control-section {
+        margin-bottom: 20px;
+      }
+
+      .control-section h3 {
+        font-size: 14px;
+        color: #94a3b8;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .scene-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .scene-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        background: #1e3a5f;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .scene-item:hover {
+        background: #2563eb;
+      }
+
+      .scene-item.selected {
+        background: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+      }
+
+      .scene-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .scene-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+
+      .scene-name {
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      .scene-stats {
+        font-size: 11px;
+        color: #94a3b8;
+      }
+
+      .scene-actions {
+        display: flex;
+        gap: 4px;
+      }
+
+      .scene-actions button {
+        padding: 4px 8px;
+        font-size: 11px;
+        border: none;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        cursor: pointer;
+      }
+
+      .scene-actions button:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* Layout controls */
+      .layout-options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .layout-btn {
+        padding: 12px;
+        border: 2px solid #333;
+        border-radius: 8px;
+        background: #1e3a5f;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .layout-btn:hover {
+        border-color: #3b82f6;
+      }
+
+      .layout-btn.active {
+        border-color: #3b82f6;
+        background: #2563eb;
+      }
+
+      .layout-preview {
+        display: grid;
+        gap: 2px;
+        height: 40px;
+      }
+
+      .layout-preview div {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+      }
+
+      .layout-1x1 { grid-template-columns: 1fr; }
+      .layout-2x1 { grid-template-columns: 1fr 1fr; }
+      .layout-2x2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+      .layout-1-2 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; }
+      .layout-3x1 { grid-template-columns: 1fr 1fr 1fr; }
+      .layout-tabs { grid-template-columns: 1fr; }
+
+      /* Communication panel */
+      .message-log {
+        max-height: 200px;
+        overflow-y: auto;
+        background: #0f172a;
+        border-radius: 6px;
+        padding: 8px;
+        font-family: monospace;
+        font-size: 11px;
+      }
+
+      .message-item {
+        padding: 4px 0;
+        border-bottom: 1px solid #1e293b;
+        display: flex;
+        gap: 8px;
+      }
+
+      .message-time {
+        color: #64748b;
+      }
+
+      .message-from {
+        color: #3b82f6;
+      }
+
+      .message-to {
+        color: #10b981;
+      }
+
+      .message-content {
+        color: #e2e8f0;
+      }
+
+      /* Stats display */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .stat-card {
+        padding: 12px;
+        background: #1e3a5f;
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #3b82f6;
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 4px;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: #3b82f6;
+        color: #fff;
+      }
+
+      .btn-primary:hover {
+        background: #2563eb;
+      }
+
+      .btn-secondary {
+        background: #374151;
+        color: #fff;
+      }
+
+      .btn-secondary:hover {
+        background: #4b5563;
+      }
+
+      .btn-danger {
+        background: #ef4444;
+        color: #fff;
+      }
+
+      .btn-danger:hover {
+        background: #dc2626;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      /* Toggle */
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+      }
+
+      .toggle-label {
+        font-size: 13px;
+      }
+
+      .toggle {
+        width: 40px;
+        height: 22px;
+        background: #374151;
+        border-radius: 11px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .toggle.active {
+        background: #3b82f6;
+      }
+
+      .toggle::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        background: #fff;
+        border-radius: 50%;
+        top: 2px;
+        left: 2px;
+        transition: transform 0.2s;
+      }
+
+      .toggle.active::after {
+        transform: translateX(18px);
+      }
+
+      /* Object transfer UI */
+      .transfer-ui {
+        padding: 12px;
+        background: #0f172a;
+        border-radius: 6px;
+        margin-top: 8px;
+      }
+
+      .transfer-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .transfer-row select {
+        flex: 1;
+        padding: 6px;
+        border: 1px solid #374151;
+        border-radius: 4px;
+        background: #1e293b;
+        color: #fff;
+        font-size: 12px;
+      }
+
+      .transfer-arrow {
+        font-size: 16px;
+        color: #64748b;
+      }
+
+      /* Keyboard shortcuts */
+      .shortcuts {
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.8;
+      }
+
+      .shortcut-key {
+        display: inline-block;
+        padding: 2px 6px;
+        background: #374151;
+        border-radius: 3px;
+        font-family: monospace;
+        margin-right: 4px;
+      }
+
+      /* Tabs for layout mode */
+      .scene-tabs {
+        display: none;
+        background: #1e3a5f;
+        border-bottom: 1px solid #333;
+      }
+
+      .scene-tabs.visible {
+        display: flex;
+      }
+
+      .scene-tab {
+        padding: 10px 20px;
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+      }
+
+      .scene-tab:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .scene-tab.active {
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+      }
+    </style>
+    <script type="module" crossorigin src="/examples/real-world-scenarios/multi-scene-management/assets/index-DdFVksa1.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <div id="viewport-container">
+        <div class="scene-tabs" id="scene-tabs"></div>
+        <div id="viewports">
+          <!-- Viewports will be created dynamically -->
+        </div>
+      </div>
+      <div id="controls">
+        <div class="control-section">
+          <h3>📦 Scenes</h3>
+          <div class="scene-list" id="scene-list"></div>
+          <div class="btn-group">
+            <button class="btn btn-primary" id="add-scene">+ Add Scene</button>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>🖼️ Layout</h3>
+          <div class="layout-options">
+            <button class="layout-btn" data-layout="single">
+              <div class="layout-preview layout-1x1"><div></div></div>
+            </button>
+            <button class="layout-btn active" data-layout="2x2">
+              <div class="layout-preview layout-2x2"><div></div><div></div><div></div><div></div></div>
+            </button>
+            <button class="layout-btn" data-layout="2x1">
+              <div class="layout-preview layout-2x1"><div></div><div></div></div>
+            </button>
+            <button class="layout-btn" data-layout="1-2">
+              <div class="layout-preview layout-1-2"><div></div><div></div><div></div></div>
+            </button>
+            <button class="layout-btn" data-layout="3x1">
+              <div class="layout-preview layout-3x1"><div></div><div></div><div></div></div>
+            </button>
+            <button class="layout-btn" data-layout="tabs">
+              <div class="layout-preview layout-tabs"><div></div></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>📊 Combined Stats</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="total-objects">0</div>
+              <div class="stat-label">Total Objects</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="total-triangles">0</div>
+              <div class="stat-label">Triangles</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="total-draw-calls">0</div>
+              <div class="stat-label">Draw Calls</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="active-scenes">0</div>
+              <div class="stat-label">Active Scenes</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>🔄 Object Transfer</h3>
+          <div class="transfer-ui">
+            <div class="transfer-row">
+              <select id="transfer-source"></select>
+              <span class="transfer-arrow">→</span>
+              <select id="transfer-target"></select>
+            </div>
+            <div class="transfer-row">
+              <select id="transfer-object"></select>
+            </div>
+            <button class="btn btn-secondary" id="transfer-btn" style="width: 100%">Transfer Object</button>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>💬 Scene Messages</h3>
+          <div class="message-log" id="message-log"></div>
+        </div>
+
+        <div class="control-section">
+          <h3>⚙️ Options</h3>
+          <div class="toggle-row">
+            <span class="toggle-label">Sync cameras</span>
+            <div class="toggle" id="sync-cameras"></div>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Shared resources</span>
+            <div class="toggle active" id="shared-resources"></div>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Auto-pause hidden</span>
+            <div class="toggle active" id="auto-pause"></div>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <h3>⌨️ Shortcuts</h3>
+          <div class="shortcuts">
+            <span class="shortcut-key">1-4</span> Select scene<br>
+            <span class="shortcut-key">F</span> Fullscreen viewport<br>
+            <span class="shortcut-key">Tab</span> Cycle scenes<br>
+            <span class="shortcut-key">Space</span> Pause/resume<br>
+            <span class="shortcut-key">R</span> Reset all scenes<br>
+            <span class="shortcut-key">D</span> Toggle 3Lens
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

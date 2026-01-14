@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Particle System Debugger - 3Lens Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow: hidden;
+      background: #0a0e14;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    canvas {
+      display: block;
+    }
+
+    /* Header Panel */
+    .header {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      color: #e4e7eb;
+      font-size: 14px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.9);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(12px);
+      max-width: 320px;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f472b6;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header p {
+      color: #9ca3af;
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    /* Controls Panel */
+    .controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      color: #e4e7eb;
+      font-size: 13px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.9);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(12px);
+      min-width: 300px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    .controls h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f472b6;
+      margin-bottom: 12px;
+    }
+
+    .control-section {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    .control-section:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .control-section h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #22d3ee;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .control-group {
+      margin-bottom: 12px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-group label {
+      display: block;
+      color: #9ca3af;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 60px;
+      padding: 8px 12px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e4e7eb;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #374151;
+      border-color: #4b5563;
+    }
+
+    .btn.active {
+      background: #f472b6;
+      border-color: #f472b6;
+      color: #0a0e14;
+    }
+
+    .btn-icon {
+      padding: 8px;
+      min-width: auto;
+      flex: 0;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e4e7eb;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #f472b6;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: #374151;
+      border-radius: 2px;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #f472b6;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    input[type="color"] {
+      width: 40px;
+      height: 30px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-row span {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    /* Stats Panel */
+    .stats {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      color: #e4e7eb;
+      font-size: 12px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.9);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(12px);
+      min-width: 280px;
+    }
+
+    .stats h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f472b6;
+      margin-bottom: 10px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .stat-item {
+      background: #1f2937;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+
+    .stat-label {
+      color: #9ca3af;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      color: #22d3ee;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .stat-value.warning {
+      color: #fbbf24;
+    }
+
+    .stat-value.danger {
+      color: #ef4444;
+    }
+
+    /* Shortcuts Panel */
+    .shortcuts {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      color: #e4e7eb;
+      font-size: 12px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.9);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(12px);
+    }
+
+    .shortcuts h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f472b6;
+      margin-bottom: 10px;
+    }
+
+    .shortcut-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      gap: 20px;
+    }
+
+    kbd {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #f472b6;
+    }
+
+    .shortcut-text {
+      color: #9ca3af;
+    }
+
+    /* Emitter Presets */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .preset-btn {
+      padding: 10px 8px;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .preset-btn .emoji {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+  </style>
+  <script type="module" crossorigin src="/examples/real-world-scenarios/particle-system/assets/index-CXnyVhkn.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>✨ Particle System Debugger</h1>
+    <p>Interactive particle system with real-time parameter tuning, multiple emitter types, and performance monitoring.</p>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <h2>⚙️ Particle Controls</h2>
+    
+    <div class="control-section">
+      <h3>🎯 Emitter Presets</h3>
+      <div class="preset-grid">
+        <button class="btn preset-btn active" id="preset-fountain">
+          <span class="emoji">⛲</span>Fountain
+        </button>
+        <button class="btn preset-btn" id="preset-fire">
+          <span class="emoji">🔥</span>Fire
+        </button>
+        <button class="btn preset-btn" id="preset-snow">
+          <span class="emoji">❄️</span>Snow
+        </button>
+        <button class="btn preset-btn" id="preset-sparks">
+          <span class="emoji">⚡</span>Sparks
+        </button>
+        <button class="btn preset-btn" id="preset-smoke">
+          <span class="emoji">💨</span>Smoke
+        </button>
+        <button class="btn preset-btn" id="preset-confetti">
+          <span class="emoji">🎉</span>Confetti
+        </button>
+        <button class="btn preset-btn" id="preset-rain">
+          <span class="emoji">🌧️</span>Rain
+        </button>
+        <button class="btn preset-btn" id="preset-magic">
+          <span class="emoji">🌟</span>Magic
+        </button>
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>📊 Emission</h3>
+      <div class="control-group">
+        <label>Emission Rate: <span id="rate-value">500</span>/s</label>
+        <input type="range" id="emission-rate" min="10" max="2000" step="10" value="500">
+      </div>
+      <div class="control-group">
+        <label>Max Particles: <span id="max-value">10000</span></label>
+        <input type="range" id="max-particles" min="1000" max="50000" step="1000" value="10000">
+      </div>
+      <div class="control-group">
+        <label>Lifetime: <span id="lifetime-value">2.0</span>s</label>
+        <input type="range" id="particle-lifetime" min="0.5" max="10" step="0.1" value="2">
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>🚀 Velocity</h3>
+      <div class="control-group">
+        <label>Initial Speed: <span id="speed-value">5.0</span></label>
+        <input type="range" id="initial-speed" min="0.5" max="20" step="0.5" value="5">
+      </div>
+      <div class="control-group">
+        <label>Spread Angle: <span id="spread-value">30</span>°</label>
+        <input type="range" id="spread-angle" min="0" max="180" step="5" value="30">
+      </div>
+      <div class="control-group">
+        <label>Gravity: <span id="gravity-value">-9.8</span></label>
+        <input type="range" id="gravity" min="-20" max="5" step="0.5" value="-9.8">
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>📐 Size</h3>
+      <div class="control-group">
+        <label>Start Size: <span id="start-size-value">0.1</span></label>
+        <input type="range" id="start-size" min="0.01" max="1" step="0.01" value="0.1">
+      </div>
+      <div class="control-group">
+        <label>End Size: <span id="end-size-value">0.02</span></label>
+        <input type="range" id="end-size" min="0" max="1" step="0.01" value="0.02">
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>🎨 Colors</h3>
+      <div class="control-group">
+        <label>Start Color</label>
+        <div class="color-row">
+          <input type="color" id="start-color" value="#f472b6">
+          <span id="start-color-hex">#f472b6</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>End Color</label>
+        <div class="color-row">
+          <input type="color" id="end-color" value="#22d3ee">
+          <span id="end-color-hex">#22d3ee</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>Opacity: <span id="opacity-value">1.0</span></label>
+        <input type="range" id="opacity" min="0.1" max="1" step="0.1" value="1">
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>🔧 Options</h3>
+      <div class="control-row">
+        <button class="btn active" id="btn-emit">▶️ Emit</button>
+        <button class="btn" id="btn-burst">💥 Burst</button>
+        <button class="btn" id="btn-clear">🗑️ Clear</button>
+      </div>
+      <div class="control-group" style="margin-top: 10px;">
+        <div class="control-row">
+          <button class="btn" id="btn-additive">Additive</button>
+          <button class="btn active" id="btn-transparent">Transparent</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <h3>📈 Performance Stats</h3>
+    <div class="stat-grid">
+      <div class="stat-item">
+        <div class="stat-label">Active Particles</div>
+        <div class="stat-value" id="stat-active">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Pool Size</div>
+        <div class="stat-value" id="stat-pool">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Emitted/s</div>
+        <div class="stat-value" id="stat-emitted">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Recycled/s</div>
+        <div class="stat-value" id="stat-recycled">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Draw Calls</div>
+        <div class="stat-value" id="stat-drawcalls">1</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">GPU Memory</div>
+        <div class="stat-value" id="stat-memory">0 KB</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shortcuts -->
+  <div class="shortcuts">
+    <h3>⌨️ Shortcuts</h3>
+    <div class="shortcut-row">
+      <kbd>Space</kbd>
+      <span class="shortcut-text">Toggle emission</span>
+    </div>
+    <div class="shortcut-row">
+      <kbd>B</kbd>
+      <span class="shortcut-text">Trigger burst</span>
+    </div>
+    <div class="shortcut-row">
+      <kbd>C</kbd>
+      <span class="shortcut-text">Clear particles</span>
+    </div>
+    <div class="shortcut-row">
+      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>
+      <span class="shortcut-text">Toggle devtool</span>
+    </div>
+  </div>
+
+  <div id="canvas-container"></div>
+</body>
+</html>

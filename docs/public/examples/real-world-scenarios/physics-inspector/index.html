@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physics Scene Inspector - 3Lens Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      overflow: hidden;
+      background: #0a0e14;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    canvas {
+      display: block;
+    }
+
+    /* Header Panel */
+    .header {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      color: #e4e7eb;
+      font-size: 14px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.9);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(12px);
+      max-width: 340px;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #34d399;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header p {
+      color: #9ca3af;
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    /* Controls Panel */
+    .controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      color: #e4e7eb;
+      font-size: 13px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.9);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(12px);
+      min-width: 280px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    .controls h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #34d399;
+      margin-bottom: 12px;
+    }
+
+    .control-section {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    .control-section:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .control-section h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #22d3ee;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .control-group {
+      margin-bottom: 12px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-group label {
+      display: block;
+      color: #9ca3af;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 70px;
+      padding: 8px 12px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e4e7eb;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #374151;
+      border-color: #4b5563;
+    }
+
+    .btn.active {
+      background: #34d399;
+      border-color: #34d399;
+      color: #0a0e14;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      border-color: #dc2626;
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e4e7eb;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #34d399;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: #374151;
+      border-radius: 2px;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #34d399;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e4e7eb;
+      font-size: 12px;
+    }
+
+    /* Stats Panel */
+    .stats {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      color: #e4e7eb;
+      font-size: 12px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.9);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(12px);
+      min-width: 300px;
+    }
+
+    .stats h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #34d399;
+      margin-bottom: 10px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat-item {
+      background: #1f2937;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+
+    .stat-label {
+      color: #9ca3af;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      color: #22d3ee;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Selected Object Panel */
+    .selected-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      color: #e4e7eb;
+      font-size: 12px;
+      z-index: 100;
+      background: rgba(10, 14, 20, 0.9);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid #2d3748;
+      backdrop-filter: blur(12px);
+      min-width: 260px;
+    }
+
+    .selected-panel h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #34d399;
+      margin-bottom: 10px;
+    }
+
+    .selected-panel.hidden {
+      display: none;
+    }
+
+    .prop-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    .prop-row:last-child {
+      border-bottom: none;
+    }
+
+    .prop-label {
+      color: #9ca3af;
+    }
+
+    .prop-value {
+      color: #60a5fa;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .vector-value {
+      color: #f472b6;
+    }
+
+    /* Shortcuts */
+    .shortcuts {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #1f2937;
+    }
+
+    .shortcut-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 0;
+      gap: 12px;
+    }
+
+    kbd {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #34d399;
+    }
+
+    .shortcut-text {
+      color: #9ca3af;
+      font-size: 11px;
+    }
+
+    /* Debug visualization toggle */
+    .debug-toggles {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .debug-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: #1f2937;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .debug-toggle input {
+      accent-color: #34d399;
+    }
+
+    .debug-toggle.active {
+      background: #065f46;
+    }
+  </style>
+  <script type="module" crossorigin src="/examples/real-world-scenarios/physics-inspector/assets/index-BbP-qQa9.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>⚛️ Physics Scene Inspector</h1>
+    <p>Interactive physics simulation with collision visualization, velocity vectors, force indicators, and real-time property inspection.</p>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <h2>⚙️ Physics Controls</h2>
+    
+    <div class="control-section">
+      <h3>🎮 Simulation</h3>
+      <div class="control-row">
+        <button class="btn active" id="btn-play">▶️ Play</button>
+        <button class="btn" id="btn-step">⏭️ Step</button>
+        <button class="btn" id="btn-reset">🔄 Reset</button>
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>🌍 World Settings</h3>
+      <div class="control-group">
+        <label>Gravity: <span id="gravity-value">-9.8</span> m/s²</label>
+        <input type="range" id="gravity" min="-20" max="5" step="0.5" value="-9.8">
+      </div>
+      <div class="control-group">
+        <label>Time Scale: <span id="timescale-value">1.0</span>x</label>
+        <input type="range" id="timescale" min="0.1" max="3" step="0.1" value="1">
+      </div>
+      <div class="control-group">
+        <label>Restitution (Bounciness): <span id="restitution-value">0.6</span></label>
+        <input type="range" id="restitution" min="0" max="1" step="0.05" value="0.6">
+      </div>
+      <div class="control-group">
+        <label>Friction: <span id="friction-value">0.3</span></label>
+        <input type="range" id="friction" min="0" max="1" step="0.05" value="0.3">
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>➕ Spawn Objects</h3>
+      <div class="control-row">
+        <button class="btn" id="spawn-sphere">🔴 Sphere</button>
+        <button class="btn" id="spawn-box">📦 Box</button>
+      </div>
+      <div class="control-row" style="margin-top: 8px;">
+        <button class="btn" id="spawn-cylinder">🛢️ Cylinder</button>
+        <button class="btn" id="spawn-random">🎲 Random</button>
+      </div>
+      <div class="control-group" style="margin-top: 12px;">
+        <label>Spawn Height: <span id="spawn-height-value">8</span>m</label>
+        <input type="range" id="spawn-height" min="2" max="15" step="1" value="8">
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>🔍 Debug Visualization</h3>
+      <div class="debug-toggles">
+        <label class="debug-toggle active">
+          <input type="checkbox" id="show-colliders" checked> Colliders
+        </label>
+        <label class="debug-toggle active">
+          <input type="checkbox" id="show-velocity" checked> Velocity
+        </label>
+        <label class="debug-toggle">
+          <input type="checkbox" id="show-contacts"> Contacts
+        </label>
+        <label class="debug-toggle">
+          <input type="checkbox" id="show-aabb"> AABB
+        </label>
+      </div>
+    </div>
+
+    <div class="control-section">
+      <h3>🗑️ Scene</h3>
+      <div class="control-row">
+        <button class="btn btn-danger" id="clear-dynamic">Clear Dynamic</button>
+      </div>
+    </div>
+
+    <div class="shortcuts">
+      <div class="shortcut-row">
+        <kbd>Space</kbd>
+        <span class="shortcut-text">Toggle simulation</span>
+      </div>
+      <div class="shortcut-row">
+        <kbd>S</kbd>
+        <span class="shortcut-text">Step simulation</span>
+      </div>
+      <div class="shortcut-row">
+        <kbd>R</kbd>
+        <span class="shortcut-text">Reset scene</span>
+      </div>
+      <div class="shortcut-row">
+        <kbd>1-4</kbd>
+        <span class="shortcut-text">Spawn objects</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <h3>📊 Physics Stats</h3>
+    <div class="stat-grid">
+      <div class="stat-item">
+        <div class="stat-label">Bodies</div>
+        <div class="stat-value" id="stat-bodies">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Dynamic</div>
+        <div class="stat-value" id="stat-dynamic">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Static</div>
+        <div class="stat-value" id="stat-static">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Contacts</div>
+        <div class="stat-value" id="stat-contacts">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Physics Time</div>
+        <div class="stat-value" id="stat-physics-time">0 ms</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Sim Time</div>
+        <div class="stat-value" id="stat-sim-time">0.0s</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected Object Panel -->
+  <div class="selected-panel hidden" id="selected-panel">
+    <h3>📋 Selected Body</h3>
+    <div class="prop-row">
+      <span class="prop-label">Name</span>
+      <span class="prop-value" id="sel-name">-</span>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">Type</span>
+      <span class="prop-value" id="sel-type">-</span>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">Shape</span>
+      <span class="prop-value" id="sel-shape">-</span>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">Mass</span>
+      <span class="prop-value" id="sel-mass">-</span>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">Position</span>
+      <span class="prop-value vector-value" id="sel-position">-</span>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">Velocity</span>
+      <span class="prop-value vector-value" id="sel-velocity">-</span>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">Speed</span>
+      <span class="prop-value" id="sel-speed">-</span>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">Angular Vel</span>
+      <span class="prop-value vector-value" id="sel-angular">-</span>
+    </div>
+  </div>
+
+  <div id="canvas-container"></div>
+</body>
+</html>

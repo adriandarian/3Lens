@@ -1,0 +1,212 @@
+[
+  {
+    "id": "advanced-techniques/compute-shaders",
+    "path": "/examples/advanced-techniques/compute-shaders/",
+    "name": "compute-shaders"
+  },
+  {
+    "id": "advanced-techniques/custom-render-pipeline",
+    "path": "/examples/advanced-techniques/custom-render-pipeline/",
+    "name": "custom-render-pipeline"
+  },
+  {
+    "id": "advanced-techniques/environment-mapping",
+    "path": "/examples/advanced-techniques/environment-mapping/",
+    "name": "environment-mapping"
+  },
+  {
+    "id": "advanced-techniques/morph-target-analyzer",
+    "path": "/examples/advanced-techniques/morph-target-analyzer/",
+    "name": "morph-target-analyzer"
+  },
+  {
+    "id": "advanced-techniques/shadow-comparison",
+    "path": "/examples/advanced-techniques/shadow-comparison/",
+    "name": "shadow-comparison"
+  },
+  {
+    "id": "advanced-techniques/skinned-mesh-inspector",
+    "path": "/examples/advanced-techniques/skinned-mesh-inspector/",
+    "name": "skinned-mesh-inspector"
+  },
+  {
+    "id": "data-visualization/3d-charts",
+    "path": "/examples/data-visualization/3d-charts/",
+    "name": "3d-charts"
+  },
+  {
+    "id": "data-visualization/geographic-data",
+    "path": "/examples/data-visualization/geographic-data/",
+    "name": "geographic-data"
+  },
+  {
+    "id": "data-visualization/realtime-streaming",
+    "path": "/examples/data-visualization/realtime-streaming/",
+    "name": "realtime-streaming"
+  },
+  {
+    "id": "data-visualization/scientific-viz",
+    "path": "/examples/data-visualization/scientific-viz/",
+    "name": "scientific-viz"
+  },
+  {
+    "id": "debugging-profiling/animation-profiling",
+    "path": "/examples/debugging-profiling/animation-profiling/",
+    "name": "animation-profiling"
+  },
+  {
+    "id": "debugging-profiling/draw-call-batching",
+    "path": "/examples/debugging-profiling/draw-call-batching/",
+    "name": "draw-call-batching"
+  },
+  {
+    "id": "debugging-profiling/large-scene-optimization",
+    "path": "/examples/debugging-profiling/large-scene-optimization/",
+    "name": "large-scene-optimization"
+  },
+  {
+    "id": "debugging-profiling/memory-leak-detection",
+    "path": "/examples/debugging-profiling/memory-leak-detection/",
+    "name": "memory-leak-detection"
+  },
+  {
+    "id": "debugging-profiling/performance-debugging",
+    "path": "/examples/debugging-profiling/performance-debugging/",
+    "name": "performance-debugging"
+  },
+  {
+    "id": "debugging-profiling/raycasting-debugger",
+    "path": "/examples/debugging-profiling/raycasting-debugger/",
+    "name": "raycasting-debugger"
+  },
+  {
+    "id": "debugging-profiling/shader-debugging",
+    "path": "/examples/debugging-profiling/shader-debugging/",
+    "name": "shader-debugging"
+  },
+  {
+    "id": "debugging-profiling/texture-optimization",
+    "path": "/examples/debugging-profiling/texture-optimization/",
+    "name": "texture-optimization"
+  },
+  {
+    "id": "feature-showcase/camera-controls",
+    "path": "/examples/feature-showcase/camera-controls/",
+    "name": "camera-controls"
+  },
+  {
+    "id": "feature-showcase/configuration-rules",
+    "path": "/examples/feature-showcase/configuration-rules/",
+    "name": "configuration-rules"
+  },
+  {
+    "id": "feature-showcase/cost-analysis",
+    "path": "/examples/feature-showcase/cost-analysis/",
+    "name": "cost-analysis"
+  },
+  {
+    "id": "feature-showcase/custom-plugin",
+    "path": "/examples/feature-showcase/custom-plugin/",
+    "name": "custom-plugin"
+  },
+  {
+    "id": "feature-showcase/timeline-recording",
+    "path": "/examples/feature-showcase/timeline-recording/",
+    "name": "timeline-recording"
+  },
+  {
+    "id": "feature-showcase/transform-gizmo",
+    "path": "/examples/feature-showcase/transform-gizmo/",
+    "name": "transform-gizmo"
+  },
+  {
+    "id": "feature-showcase/visual-overlays",
+    "path": "/examples/feature-showcase/visual-overlays/",
+    "name": "visual-overlays"
+  },
+  {
+    "id": "feature-showcase/webgpu-features",
+    "path": "/examples/feature-showcase/webgpu-features/",
+    "name": "webgpu-features"
+  },
+  {
+    "id": "framework-integration/react-three-fiber",
+    "path": "/examples/framework-integration/react-three-fiber/",
+    "name": "react-three-fiber"
+  },
+  {
+    "id": "framework-integration/svelte-threlte",
+    "path": "/examples/framework-integration/svelte-threlte/",
+    "name": "svelte-threlte"
+  },
+  {
+    "id": "framework-integration/vanilla-threejs",
+    "path": "/examples/framework-integration/vanilla-threejs/",
+    "name": "vanilla-threejs"
+  },
+  {
+    "id": "framework-integration/vue-tresjs",
+    "path": "/examples/framework-integration/vue-tresjs/",
+    "name": "vue-tresjs"
+  },
+  {
+    "id": "game-development/first-person-shooter",
+    "path": "/examples/game-development/first-person-shooter/",
+    "name": "first-person-shooter"
+  },
+  {
+    "id": "game-development/platformer-physics",
+    "path": "/examples/game-development/platformer-physics/",
+    "name": "platformer-physics"
+  },
+  {
+    "id": "game-development/racing-game",
+    "path": "/examples/game-development/racing-game/",
+    "name": "racing-game"
+  },
+  {
+    "id": "game-development/top-down-rpg",
+    "path": "/examples/game-development/top-down-rpg/",
+    "name": "top-down-rpg"
+  },
+  {
+    "id": "real-world-scenarios/3d-model-viewer",
+    "path": "/examples/real-world-scenarios/3d-model-viewer/",
+    "name": "3d-model-viewer"
+  },
+  {
+    "id": "real-world-scenarios/audio-visualization",
+    "path": "/examples/real-world-scenarios/audio-visualization/",
+    "name": "audio-visualization"
+  },
+  {
+    "id": "real-world-scenarios/multi-scene-management",
+    "path": "/examples/real-world-scenarios/multi-scene-management/",
+    "name": "multi-scene-management"
+  },
+  {
+    "id": "real-world-scenarios/particle-system",
+    "path": "/examples/real-world-scenarios/particle-system/",
+    "name": "particle-system"
+  },
+  {
+    "id": "real-world-scenarios/physics-inspector",
+    "path": "/examples/real-world-scenarios/physics-inspector/",
+    "name": "physics-inspector"
+  },
+  {
+    "id": "real-world-scenarios/post-processing",
+    "path": "/examples/real-world-scenarios/post-processing/",
+    "name": "post-processing"
+  },
+  {
+    "id": "real-world-scenarios/procedural-generation",
+    "path": "/examples/real-world-scenarios/procedural-generation/",
+    "name": "procedural-generation"
+  },
+  {
+    "id": "real-world-scenarios/vr-xr-debugging",
+    "path": "/examples/real-world-scenarios/vr-xr-debugging/",
+    "name": "vr-xr-debugging"
+  }
+]

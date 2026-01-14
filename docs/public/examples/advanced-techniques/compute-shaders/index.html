@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compute Shader Debugging - 3Lens Example</title>
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a24;
+      --border-color: #2a2a3a;
+      --text-primary: #e0e0e0;
+      --text-secondary: #888;
+      --accent-compute: #00d9ff;
+      --accent-buffer: #ff6b9d;
+      --accent-timing: #a855f7;
+      --accent-success: #22c55e;
+      --accent-warning: #f59e0b;
+      --accent-error: #ef4444;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* UI Panel */
+    .ui-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 340px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 13px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .panel-header {
+      background: linear-gradient(135deg, var(--accent-compute), var(--accent-buffer));
+      padding: 16px;
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-header svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .panel-section {
+      padding: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .panel-section:last-child {
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    /* Compute Shader Selector */
+    .shader-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .shader-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .shader-btn:hover {
+      border-color: var(--accent-compute);
+      background: rgba(0, 217, 255, 0.1);
+    }
+
+    .shader-btn.active {
+      border-color: var(--accent-compute);
+      background: rgba(0, 217, 255, 0.15);
+      box-shadow: 0 0 12px rgba(0, 217, 255, 0.2);
+    }
+
+    .shader-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .shader-info {
+      flex: 1;
+    }
+
+    .shader-name {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .shader-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-value.compute { color: var(--accent-compute); }
+    .stat-value.buffer { color: var(--accent-buffer); }
+    .stat-value.timing { color: var(--accent-timing); }
+    .stat-value.success { color: var(--accent-success); }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Buffer Inspector */
+    .buffer-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .buffer-item {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .buffer-item:hover {
+      border-color: var(--accent-buffer);
+    }
+
+    .buffer-item.selected {
+      border-color: var(--accent-buffer);
+      background: rgba(255, 107, 157, 0.1);
+    }
+
+    .buffer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .buffer-name {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .buffer-type {
+      font-size: 10px;
+      padding: 2px 6px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    .buffer-size {
+      font-size: 11px;
+      color: var(--accent-buffer);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .buffer-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Dispatch Info */
+    .dispatch-info {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .dispatch-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .dispatch-row:last-child {
+      border-bottom: none;
+    }
+
+    .dispatch-label {
+      color: var(--text-secondary);
+    }
+
+    .dispatch-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-compute);
+    }
+
+    /* Controls */
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .control-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      width: 120px;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-compute);
+      cursor: pointer;
+    }
+
+    .slider-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent-compute);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .action-btn.primary {
+      background: var(--accent-compute);
+      color: #000;
+    }
+
+    .action-btn.primary:hover {
+      background: #33e0ff;
+    }
+
+    .action-btn.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .action-btn.secondary:hover {
+      border-color: var(--accent-compute);
+    }
+
+    /* Timing Panel */
+    .timing-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timing-bar {
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .timing-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .timing-name {
+      color: var(--text-primary);
+    }
+
+    .timing-value {
+      color: var(--accent-timing);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .timing-progress {
+      height: 4px;
+      background: var(--bg-primary);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .timing-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-timing), var(--accent-compute));
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+
+    /* Right Panel - Buffer Data */
+    .data-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 380px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 13px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .data-header {
+      background: linear-gradient(135deg, var(--accent-buffer), var(--accent-timing));
+      padding: 14px 16px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .data-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .data-tab.active {
+      color: var(--accent-compute);
+      border-bottom: 2px solid var(--accent-compute);
+    }
+
+    .data-content {
+      padding: 14px;
+    }
+
+    /* Data Grid */
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .data-cell {
+      background: var(--bg-tertiary);
+      padding: 6px;
+      text-align: center;
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    .data-cell.header {
+      background: var(--bg-primary);
+      color: var(--accent-compute);
+      font-weight: 600;
+    }
+
+    .data-cell.highlight {
+      background: rgba(0, 217, 255, 0.2);
+      color: var(--accent-compute);
+    }
+
+    /* WGSL Code Preview */
+    .code-preview {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      overflow-x: auto;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .code-preview .keyword {
+      color: var(--accent-compute);
+    }
+
+    .code-preview .function {
+      color: var(--accent-buffer);
+    }
+
+    .code-preview .number {
+      color: var(--accent-timing);
+    }
+
+    .code-preview .comment {
+      color: var(--text-secondary);
+    }
+
+    .code-preview .type {
+      color: var(--accent-success);
+    }
+
+    /* Bottom Bar */
+    .bottom-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 20px;
+      display: flex;
+      gap: 24px;
+      z-index: 100;
+    }
+
+    .bar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .bar-icon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .bar-icon.active {
+      background: var(--accent-success);
+      box-shadow: 0 0 8px var(--accent-success);
+    }
+
+    .bar-icon.warning {
+      background: var(--accent-warning);
+    }
+
+    .bar-label {
+      color: var(--text-secondary);
+    }
+
+    .bar-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-primary);
+    }
+
+    /* WebGPU Not Supported */
+    .not-supported {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg-secondary);
+      border: 2px solid var(--accent-error);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      max-width: 500px;
+      z-index: 1000;
+    }
+
+    .not-supported h2 {
+      color: var(--accent-error);
+      margin-bottom: 16px;
+    }
+
+    .not-supported p {
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .not-supported a {
+      color: var(--accent-compute);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+  </style>
+  <script type="module" crossorigin src="/examples/advanced-techniques/compute-shaders/assets/index-BM1hkmUj.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Left Panel - Compute Shaders -->
+  <div class="ui-panel">
+    <div class="panel-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="4" y="4" width="16" height="16" rx="2"/>
+        <path d="M9 9h6M9 12h6M9 15h6"/>
+      </svg>
+      Compute Shader Debugger
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Select Compute Shader</div>
+      <div class="shader-selector">
+        <button class="shader-btn active" data-shader="particles">
+          <div class="shader-icon" style="background: linear-gradient(135deg, #ff6b9d, #ff8c42);">🔮</div>
+          <div class="shader-info">
+            <div class="shader-name">Particle Simulation</div>
+            <div class="shader-desc">GPU-based particle physics</div>
+          </div>
+        </button>
+        <button class="shader-btn" data-shader="boids">
+          <div class="shader-icon" style="background: linear-gradient(135deg, #00d9ff, #00ff88);">🐦</div>
+          <div class="shader-info">
+            <div class="shader-name">Boids Flocking</div>
+            <div class="shader-desc">Emergent swarm behavior</div>
+          </div>
+        </button>
+        <button class="shader-btn" data-shader="cloth">
+          <div class="shader-icon" style="background: linear-gradient(135deg, #a855f7, #6366f1);">🧵</div>
+          <div class="shader-info">
+            <div class="shader-name">Cloth Simulation</div>
+            <div class="shader-desc">Mass-spring system</div>
+          </div>
+        </button>
+        <button class="shader-btn" data-shader="nbody">
+          <div class="shader-icon" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">⭐</div>
+          <div class="shader-info">
+            <div class="shader-name">N-Body Gravity</div>
+            <div class="shader-desc">Gravitational simulation</div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Dispatch Statistics</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value compute" id="workgroup-count">64</div>
+          <div class="stat-label">Workgroups</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value buffer" id="invocations">16384</div>
+          <div class="stat-label">Invocations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value timing" id="compute-time">0.42</div>
+          <div class="stat-label">Compute ms</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value success" id="throughput">39.1M</div>
+          <div class="stat-label">Items/sec</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Dispatch Configuration</div>
+      <div class="dispatch-info">
+        <div class="dispatch-row">
+          <span class="dispatch-label">Workgroup Size</span>
+          <span class="dispatch-value" id="workgroup-size">256 × 1 × 1</span>
+        </div>
+        <div class="dispatch-row">
+          <span class="dispatch-label">Dispatch Size</span>
+          <span class="dispatch-value" id="dispatch-size">64 × 1 × 1</span>
+        </div>
+        <div class="dispatch-row">
+          <span class="dispatch-label">Total Threads</span>
+          <span class="dispatch-value" id="total-threads">16,384</span>
+        </div>
+        <div class="dispatch-row">
+          <span class="dispatch-label">Shared Memory</span>
+          <span class="dispatch-value" id="shared-memory">4 KB</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">GPU Buffers</div>
+      <div class="buffer-list">
+        <div class="buffer-item selected" data-buffer="positions">
+          <div class="buffer-header">
+            <span class="buffer-name">📍 Positions</span>
+            <span class="buffer-size">256 KB</span>
+          </div>
+          <div class="buffer-meta">
+            <span>vec4&lt;f32&gt;</span>
+            <span>16,384 elements</span>
+            <span class="buffer-type">Storage R/W</span>
+          </div>
+        </div>
+        <div class="buffer-item" data-buffer="velocities">
+          <div class="buffer-header">
+            <span class="buffer-name">🚀 Velocities</span>
+            <span class="buffer-size">256 KB</span>
+          </div>
+          <div class="buffer-meta">
+            <span>vec4&lt;f32&gt;</span>
+            <span>16,384 elements</span>
+            <span class="buffer-type">Storage R/W</span>
+          </div>
+        </div>
+        <div class="buffer-item" data-buffer="uniforms">
+          <div class="buffer-header">
+            <span class="buffer-name">⚙️ Uniforms</span>
+            <span class="buffer-size">64 B</span>
+          </div>
+          <div class="buffer-meta">
+            <span>struct</span>
+            <span>1 element</span>
+            <span class="buffer-type">Uniform</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Simulation Controls</div>
+      <div class="control-row">
+        <span class="control-label">Particle Count</span>
+        <div class="slider-container">
+          <input type="range" id="particle-slider" min="10" max="16" value="14">
+          <span class="slider-value" id="particle-value">16,384</span>
+        </div>
+      </div>
+      <div class="control-row">
+        <span class="control-label">Time Step</span>
+        <div class="slider-container">
+          <input type="range" id="timestep-slider" min="1" max="100" value="16">
+          <span class="slider-value" id="timestep-value">0.016</span>
+        </div>
+      </div>
+      <div class="control-row">
+        <span class="control-label">Force Strength</span>
+        <div class="slider-container">
+          <input type="range" id="force-slider" min="0" max="100" value="50">
+          <span class="slider-value" id="force-value">50%</span>
+        </div>
+      </div>
+      <div class="action-buttons">
+        <button class="action-btn primary" id="run-btn">▶ Run</button>
+        <button class="action-btn secondary" id="step-btn">⏭ Step</button>
+        <button class="action-btn secondary" id="reset-btn">↺ Reset</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Pass Timing</div>
+      <div class="timing-bars">
+        <div class="timing-bar">
+          <div class="timing-header">
+            <span class="timing-name">Force Compute</span>
+            <span class="timing-value" id="force-time">0.18 ms</span>
+          </div>
+          <div class="timing-progress">
+            <div class="timing-fill" id="force-bar" style="width: 40%;"></div>
+          </div>
+        </div>
+        <div class="timing-bar">
+          <div class="timing-header">
+            <span class="timing-name">Integration</span>
+            <span class="timing-value" id="integration-time">0.14 ms</span>
+          </div>
+          <div class="timing-progress">
+            <div class="timing-fill" id="integration-bar" style="width: 30%;"></div>
+          </div>
+        </div>
+        <div class="timing-bar">
+          <div class="timing-header">
+            <span class="timing-name">Collision</span>
+            <span class="timing-value" id="collision-time">0.10 ms</span>
+          </div>
+          <div class="timing-progress">
+            <div class="timing-fill" id="collision-bar" style="width: 22%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel - Buffer Data -->
+  <div class="data-panel">
+    <div class="data-header">
+      <span>Buffer Inspector</span>
+      <span id="selected-buffer-name">Positions</span>
+    </div>
+    
+    <div class="data-tabs">
+      <button class="data-tab active" data-tab="data">Data View</button>
+      <button class="data-tab" data-tab="shader">WGSL Code</button>
+      <button class="data-tab" data-tab="debug">Debug</button>
+    </div>
+
+    <div class="data-content" id="data-view">
+      <div class="section-title">Buffer Contents (First 32 elements)</div>
+      <div class="data-grid" id="buffer-data">
+        <div class="data-cell header">X</div>
+        <div class="data-cell header">Y</div>
+        <div class="data-cell header">Z</div>
+        <div class="data-cell header">W</div>
+        <!-- Data cells populated by JS -->
+      </div>
+    </div>
+
+    <div class="data-content" id="shader-view" style="display: none;">
+      <div class="section-title">Compute Shader Source</div>
+      <pre class="code-preview" id="shader-code">
+<span class="comment">// Particle simulation compute shader</span>
+<span class="keyword">struct</span> <span class="type">Particle</span> {
+  position: <span class="type">vec4</span>&lt;<span class="type">f32</span>&gt;,
+  velocity: <span class="type">vec4</span>&lt;<span class="type">f32</span>&gt;,
+}
+
+<span class="keyword">struct</span> <span class="type">SimParams</span> {
+  deltaTime: <span class="type">f32</span>,
+  gravity: <span class="type">f32</span>,
+  damping: <span class="type">f32</span>,
+  particleCount: <span class="type">u32</span>,
+}
+
+<span class="keyword">@group</span>(<span class="number">0</span>) <span class="keyword">@binding</span>(<span class="number">0</span>) <span class="keyword">var</span>&lt;storage, read_write&gt; positions: <span class="type">array</span>&lt;<span class="type">vec4</span>&lt;<span class="type">f32</span>&gt;&gt;;
+<span class="keyword">@group</span>(<span class="number">0</span>) <span class="keyword">@binding</span>(<span class="number">1</span>) <span class="keyword">var</span>&lt;storage, read_write&gt; velocities: <span class="type">array</span>&lt;<span class="type">vec4</span>&lt;<span class="type">f32</span>&gt;&gt;;
+<span class="keyword">@group</span>(<span class="number">0</span>) <span class="keyword">@binding</span>(<span class="number">2</span>) <span class="keyword">var</span>&lt;uniform&gt; params: <span class="type">SimParams</span>;
+
+<span class="keyword">@compute</span> <span class="keyword">@workgroup_size</span>(<span class="number">256</span>)
+<span class="keyword">fn</span> <span class="function">main</span>(<span class="keyword">@builtin</span>(global_invocation_id) id: <span class="type">vec3</span>&lt;<span class="type">u32</span>&gt;) {
+  <span class="keyword">let</span> index = id.x;
+  <span class="keyword">if</span> (index >= params.particleCount) {
+    <span class="keyword">return</span>;
+  }
+  
+  <span class="comment">// Apply gravity</span>
+  <span class="keyword">var</span> vel = velocities[index];
+  vel.y -= params.gravity * params.deltaTime;
+  
+  <span class="comment">// Apply damping</span>
+  vel *= (<span class="number">1.0</span> - params.damping);
+  
+  <span class="comment">// Update position</span>
+  <span class="keyword">var</span> pos = positions[index];
+  pos += vel * params.deltaTime;
+  
+  <span class="comment">// Boundary collision</span>
+  <span class="keyword">if</span> (pos.y &lt; <span class="number">-5.0</span>) {
+    pos.y = <span class="number">-5.0</span>;
+    vel.y *= <span class="number">-0.8</span>;
+  }
+  
+  positions[index] = pos;
+  velocities[index] = vel;
+}
+      </pre>
+    </div>
+
+    <div class="data-content" id="debug-view" style="display: none;">
+      <div class="section-title">Debug Information</div>
+      <div class="dispatch-info">
+        <div class="dispatch-row">
+          <span class="dispatch-label">GPU Device</span>
+          <span class="dispatch-value" id="gpu-device">Unknown</span>
+        </div>
+        <div class="dispatch-row">
+          <span class="dispatch-label">Max Workgroup Size</span>
+          <span class="dispatch-value" id="max-workgroup">256</span>
+        </div>
+        <div class="dispatch-row">
+          <span class="dispatch-label">Max Storage Buffers</span>
+          <span class="dispatch-value" id="max-storage">8</span>
+        </div>
+        <div class="dispatch-row">
+          <span class="dispatch-label">Pipeline State</span>
+          <span class="dispatch-value" id="pipeline-state">Active</span>
+        </div>
+        <div class="dispatch-row">
+          <span class="dispatch-label">Buffer Sync</span>
+          <span class="dispatch-value" id="buffer-sync">Synced</span>
+        </div>
+        <div class="dispatch-row">
+          <span class="dispatch-label">Validation Errors</span>
+          <span class="dispatch-value" id="validation-errors">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Status Bar -->
+  <div class="bottom-bar">
+    <div class="bar-item">
+      <div class="bar-icon active"></div>
+      <span class="bar-label">WebGPU</span>
+      <span class="bar-value" id="webgpu-status">Active</span>
+    </div>
+    <div class="bar-item">
+      <span class="bar-label">Frame</span>
+      <span class="bar-value" id="frame-count">0</span>
+    </div>
+    <div class="bar-item">
+      <span class="bar-label">FPS</span>
+      <span class="bar-value" id="fps">60</span>
+    </div>
+    <div class="bar-item">
+      <span class="bar-label">GPU Memory</span>
+      <span class="bar-value" id="gpu-memory">512 KB</span>
+    </div>
+  </div>
+
+</body>
+</html>

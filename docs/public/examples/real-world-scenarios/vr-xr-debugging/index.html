@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VR/XR Debugging - 3Lens Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0e14;
+      color: #e6e6e6;
+      overflow: hidden;
+    }
+
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      background: rgba(20, 25, 35, 0.95);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .control-panel h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #8b5cf6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section {
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    /* XR Status */
+    .xr-status {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    .status-label {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .status-value {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-value.supported { color: #22c55e; }
+    .status-value.unsupported { color: #ef4444; }
+    .status-value.active { color: #3b82f6; }
+    .status-value.warning { color: #f59e0b; }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: rgba(139, 92, 246, 0.2);
+      border: 1px solid #8b5cf6;
+      border-radius: 8px;
+      color: #e6e6e6;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .btn:hover {
+      background: rgba(139, 92, 246, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn.vr { border-color: #3b82f6; background: rgba(59, 130, 246, 0.2); }
+    .btn.ar { border-color: #22c55e; background: rgba(34, 197, 94, 0.2); }
+    .btn.exit { border-color: #ef4444; background: rgba(239, 68, 68, 0.2); }
+
+    /* Controller Display */
+    .controller-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .controller-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .controller-name {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .controller-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .controller-status.disconnected {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .controller-data {
+      font-size: 11px;
+      color: #888;
+      font-family: monospace;
+    }
+
+    .controller-data div {
+      margin-bottom: 4px;
+    }
+
+    /* Debug Toggles */
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .toggle-item.active {
+      background: rgba(139, 92, 246, 0.2);
+      border: 1px solid rgba(139, 92, 246, 0.5);
+    }
+
+    .toggle-item input {
+      display: none;
+    }
+
+    .toggle-item label {
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    /* Stats Panel */
+    .stats-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 260px;
+      background: rgba(20, 25, 35, 0.95);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+
+    .stats-panel h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #3b82f6;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: #888;
+    }
+
+    .stat-value {
+      color: #e6e6e6;
+      font-family: monospace;
+    }
+
+    .stat-value.good { color: #22c55e; }
+    .stat-value.warn { color: #f59e0b; }
+    .stat-value.bad { color: #ef4444; }
+
+    /* Pose Display */
+    .pose-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .pose-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #888;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .pose-data {
+      font-family: monospace;
+      font-size: 10px;
+      color: #aaa;
+      line-height: 1.6;
+    }
+
+    /* Help Text */
+    .help-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      line-height: 1.5;
+    }
+
+    kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: monospace;
+    }
+
+    /* XR Not Supported Banner */
+    .xr-banner {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+      z-index: 200;
+    }
+
+    .xr-banner.visible {
+      display: block;
+    }
+
+    /* Reference Space Indicator */
+    .ref-space-indicator {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(20, 25, 35, 0.95);
+      border-radius: 8px;
+      padding: 10px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 12px;
+      z-index: 100;
+    }
+
+    .ref-space-indicator span {
+      color: #888;
+    }
+
+    .ref-space-indicator strong {
+      color: #8b5cf6;
+    }
+
+    /* Scrollbar */
+    .control-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .control-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .control-panel::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+  </style>
+  <script type="module" crossorigin src="/examples/real-world-scenarios/vr-xr-debugging/assets/index-BIKyzJiw.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- Control Panel -->
+  <div class="control-panel">
+    <h2>🥽 VR/XR Debugging</h2>
+
+    <!-- XR Status -->
+    <div class="section">
+      <div class="section-title">WebXR Status</div>
+      <div class="xr-status">
+        <div class="status-item">
+          <span class="status-label">WebXR API</span>
+          <span class="status-value" id="webxr-status">Checking...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">VR Support</span>
+          <span class="status-value" id="vr-status">Checking...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">AR Support</span>
+          <span class="status-value" id="ar-status">Checking...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Session</span>
+          <span class="status-value" id="session-status">None</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Controls -->
+    <div class="section">
+      <div class="section-title">Session Controls</div>
+      <button class="btn vr" id="btn-vr">🎮 Enter VR</button>
+      <button class="btn ar" id="btn-ar">📱 Enter AR</button>
+      <button class="btn exit" id="btn-exit" disabled>❌ Exit XR</button>
+    </div>
+
+    <!-- Controllers -->
+    <div class="section">
+      <div class="section-title">Controllers</div>
+      <div id="controllers-container">
+        <div class="controller-card">
+          <div class="controller-header">
+            <span class="controller-name">Left Controller</span>
+            <span class="controller-status disconnected" id="left-status">Disconnected</span>
+          </div>
+          <div class="controller-data" id="left-data">
+            <div>Position: --</div>
+            <div>Rotation: --</div>
+            <div>Buttons: --</div>
+          </div>
+        </div>
+        <div class="controller-card">
+          <div class="controller-header">
+            <span class="controller-name">Right Controller</span>
+            <span class="controller-status disconnected" id="right-status">Disconnected</span>
+          </div>
+          <div class="controller-data" id="right-data">
+            <div>Position: --</div>
+            <div>Rotation: --</div>
+            <div>Buttons: --</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug Visualization -->
+    <div class="section">
+      <div class="section-title">Debug Visualization</div>
+      <div class="toggle-grid">
+        <div class="toggle-item active" data-toggle="controllers">
+          <input type="checkbox" id="show-controllers" checked>
+          <label for="show-controllers">Controllers</label>
+        </div>
+        <div class="toggle-item active" data-toggle="rays">
+          <input type="checkbox" id="show-rays" checked>
+          <label for="show-rays">Pointer Rays</label>
+        </div>
+        <div class="toggle-item active" data-toggle="hands">
+          <input type="checkbox" id="show-hands" checked>
+          <label for="show-hands">Hand Models</label>
+        </div>
+        <div class="toggle-item" data-toggle="bounds">
+          <input type="checkbox" id="show-bounds">
+          <label for="show-bounds">Play Bounds</label>
+        </div>
+        <div class="toggle-item active" data-toggle="floor">
+          <input type="checkbox" id="show-floor" checked>
+          <label for="show-floor">Floor Grid</label>
+        </div>
+        <div class="toggle-item" data-toggle="axes">
+          <input type="checkbox" id="show-axes">
+          <label for="show-axes">World Axes</label>
+        </div>
+        <div class="toggle-item" data-toggle="frustum">
+          <input type="checkbox" id="show-frustum">
+          <label for="show-frustum">View Frustum</label>
+        </div>
+        <div class="toggle-item" data-toggle="performance">
+          <input type="checkbox" id="show-performance">
+          <label for="show-performance">Perf Overlay</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reference Space -->
+    <div class="section">
+      <div class="section-title">Reference Space</div>
+      <select class="btn" id="ref-space-select" style="text-align: left;">
+        <option value="local-floor">local-floor (recommended)</option>
+        <option value="local">local</option>
+        <option value="bounded-floor">bounded-floor</option>
+        <option value="unbounded">unbounded (AR)</option>
+      </select>
+    </div>
+
+    <div class="help-text">
+      <strong>Without VR Hardware:</strong><br>
+      Use browser WebXR emulator extension to simulate VR.<br><br>
+      <kbd>Ctrl+Shift+D</kbd> Toggle devtools
+    </div>
+  </div>
+
+  <!-- Stats Panel -->
+  <div class="stats-panel">
+    <h3>📊 XR Performance</h3>
+    <div class="stat-row">
+      <span class="stat-label">Frame Rate</span>
+      <span class="stat-value" id="stat-fps">-- Hz</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Frame Time</span>
+      <span class="stat-value" id="stat-frametime">-- ms</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Target FPS</span>
+      <span class="stat-value" id="stat-target">72 Hz</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">IPD</span>
+      <span class="stat-value" id="stat-ipd">-- mm</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Resolution/Eye</span>
+      <span class="stat-value" id="stat-resolution">--</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Draw Calls</span>
+      <span class="stat-value" id="stat-draws">--</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Triangles</span>
+      <span class="stat-value" id="stat-triangles">--</span>
+    </div>
+
+    <div class="pose-section">
+      <div class="pose-title">Head Pose</div>
+      <div class="pose-data" id="head-pose">
+        Position: 0.00, 1.60, 0.00<br>
+        Rotation: 0°, 0°, 0°
+      </div>
+    </div>
+  </div>
+
+  <!-- Reference Space Indicator -->
+  <div class="ref-space-indicator">
+    <span>Reference Space:</span> <strong id="current-ref-space">local-floor</strong>
+  </div>
+
+  <!-- XR Not Supported Banner -->
+  <div class="xr-banner" id="xr-banner">
+    ⚠️ WebXR not available. Install a WebXR emulator extension for testing.
+  </div>
+
+</body>
+</html>
