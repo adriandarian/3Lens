@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { createProbe } from '@3lens/core';
 import { createOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 // ───────────────────────────────────────────────────────────────
 // Types

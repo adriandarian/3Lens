@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createProbe } from '@3lens/core';
 import { createOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 // ============================================================================
 // TYPES

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import '@3lens/themes/styles.css';
 import './globals.css';
 
 export const metadata: Metadata = {

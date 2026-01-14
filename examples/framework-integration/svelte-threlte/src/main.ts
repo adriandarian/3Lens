@@ -1,3 +1,4 @@
+import '@3lens/themes/styles.css';
 import App from './App.svelte';
 
 const app = new App({

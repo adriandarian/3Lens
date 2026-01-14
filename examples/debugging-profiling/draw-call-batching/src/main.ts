@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { createProbe } from '@3lens/core';
 import { bootstrapOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 /**
  * Draw Call Batching Example

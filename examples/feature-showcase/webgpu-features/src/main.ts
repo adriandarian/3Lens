@@ -18,6 +18,7 @@ import {
   type FrameStats
 } from '@3lens/core';
 import { createOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 // Type declarations for WebGPU renderer
 interface WebGPURenderer extends THREE.Renderer {

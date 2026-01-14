@@ -4,6 +4,7 @@ import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFa
 import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 import { createProbe } from '@3lens/core';
 import { createOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 // ───────────────────────────────────────────────────────────────
 // Types

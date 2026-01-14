@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createProbe, type CustomRule, type RulesConfig } from '@3lens/core';
 import { bootstrapOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 /**
  * Configuration Rules Example

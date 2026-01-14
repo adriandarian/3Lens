@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DevtoolProbe, type CameraInfo, type FlyToOptions } from '@3lens/core';
 import { createOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 // State
 let probe: DevtoolProbe;

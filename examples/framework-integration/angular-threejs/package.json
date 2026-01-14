@@ -14,6 +14,7 @@
   "dependencies": {
     "@3lens/core": "workspace:*",
     "@3lens/overlay": "workspace:*",
+    "@3lens/themes": "workspace:*",
     "@angular/animations": "^17.0.0",
     "@angular/common": "^17.0.0",
     "@angular/compiler": "^17.0.0",

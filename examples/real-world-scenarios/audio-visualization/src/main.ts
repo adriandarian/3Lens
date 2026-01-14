@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createProbe } from '@3lens/core';
 import { createOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 // ============================================================================
 // Audio Visualization Scene - 3Lens Example

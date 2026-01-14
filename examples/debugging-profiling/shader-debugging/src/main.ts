@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { createProbe } from '@3lens/core';
 import { bootstrapOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
 
 // ============================================================================
 // Shader Definitions

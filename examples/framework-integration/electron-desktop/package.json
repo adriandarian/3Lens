@@ -17,6 +17,7 @@
   "dependencies": {
     "@3lens/core": "workspace:*",
     "@3lens/overlay": "workspace:*",
+    "@3lens/themes": "workspace:*",
     "three": "^0.160.0"
   },
   "devDependencies": {

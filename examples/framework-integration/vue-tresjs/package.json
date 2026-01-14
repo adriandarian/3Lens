@@ -13,6 +13,7 @@
     "@3lens/core": "workspace:*",
     "@3lens/overlay": "workspace:*",
     "@3lens/vue-bridge": "workspace:*",
+    "@3lens/themes": "workspace:*",
     "@tresjs/core": "^4.0.0",
     "@tresjs/cientos": "^3.8.0",
     "three": "^0.160.0",

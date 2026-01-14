@@ -9,6 +9,7 @@ export default defineConfig({
       '@3lens/overlay': resolve(__dirname, '../../../packages/overlay/src/index.ts'),
       '@3lens/ui': resolve(__dirname, '../../../packages/ui/src/index.ts'),
       '@3lens/react-bridge': resolve(__dirname, '../../../packages/react-bridge/src/index.ts'),
+      '@3lens/themes': resolve(__dirname, '../../../packages/themes/dist'),
     },
   },
   plugins: [react()],
