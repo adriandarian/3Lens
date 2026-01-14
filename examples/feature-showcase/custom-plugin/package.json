@@ -2,6 +2,7 @@
   "name": "custom-plugin",
   "version": "1.0.0",
   "private": true,
+  "description": "Learn how to create custom 3Lens plugins with panels, settings, toolbar actions, and inter-plugin messaging",
   "type": "module",
   "scripts": {
     "dev": "vite",
