@@ -35,6 +35,8 @@
         border-radius: 12px;
         padding: 20px;
         max-width: 380px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
         backdrop-filter: blur(10px);
       }
 
@@ -132,6 +134,26 @@
       .btn-warn:hover {
         background: #f57c00;
         transform: translateY(-1px);
+      }
+
+      button.active {
+        background: #ff6b6b !important;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 8px rgba(255, 107, 107, 0);
+        }
       }
 
       #stats-display {
