@@ -22,7 +22,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "build:packages": "pnpm --filter './packages/**' build",
+    "build:packages": "pnpm --filter \"./packages/*\" build",
     "build:examples": "node scripts/build-examples.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:quick": "pnpm --filter './packages/**' --filter '@3lens/example-vanilla-threejs' --parallel dev",

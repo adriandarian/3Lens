@@ -6,6 +6,7 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+docs/public/examples/
 
 # Go binaries
 scripts/tui-selector
