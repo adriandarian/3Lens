@@ -2,6 +2,7 @@
   "name": "environment-mapping",
   "version": "1.0.0",
   "private": true,
+  "description": "Environment mapping and Image-Based Lighting (IBL) debugging with 3Lens integration",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -2,6 +2,7 @@
   "name": "vr-xr-debugging-example",
   "version": "1.0.0",
   "private": true,
+  "description": "WebXR debugging showcase demonstrating 3Lens integration for inspecting VR/AR sessions, controllers, and XR performance metrics",
   "type": "module",
   "scripts": {
     "dev": "vite",

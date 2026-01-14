@@ -28,6 +28,7 @@
     "dev:quick": "pnpm --filter './packages/**' --filter '@3lens/example-vanilla-threejs' --parallel dev",
     "dev:packages": "pnpm --filter './packages/**' --parallel dev",
     "dev:examples": "node scripts/serve-examples.mjs",
+    "dev:examples:list": "node scripts/serve-examples.mjs --list",
     "example": "node scripts/run-example.mjs",
     "example:list": "node scripts/run-example.mjs --list",
     "lint": "oxlint packages/*/src -A no-unused-vars -A no-unassigned-vars -A unicorn/no-new-array -A unicorn/no-useless-spread -A unicorn/no-useless-fallback-in-spread",

@@ -2,6 +2,7 @@
   "name": "skinned-mesh-inspector",
   "version": "1.0.0",
   "private": true,
+  "description": "Skeletal animation debugging with 3Lens integration for inspecting bones, weights, and animation playback",
   "type": "module",
   "scripts": {
     "dev": "vite",

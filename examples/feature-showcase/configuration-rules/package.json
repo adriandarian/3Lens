@@ -2,6 +2,7 @@
   "name": "configuration-rules",
   "version": "1.0.0",
   "private": true,
+  "description": "3Lens configuration and rules system demonstration for performance monitoring and custom validation",
   "type": "module",
   "scripts": {
     "dev": "vite",
