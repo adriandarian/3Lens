@@ -1,0 +1,84 @@
+/* 3Lens High Contrast Theme - Maximum accessibility */
+
+:root {
+  /* Fonts */
+  --3lens-font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+  --3lens-font-sans: 'Geist', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Base colors - High contrast */
+  --3lens-bg-primary: #000000;
+  --3lens-bg-secondary: #1a1a1a;
+  --3lens-bg-tertiary: #2a2a2a;
+  --3lens-bg-elevated: #1a1a1a;
+  --3lens-bg-hover: #333333;
+  --3lens-bg-active: #404040;
+
+  /* Borders */
+  --3lens-border: #ffffff;
+  --3lens-border-subtle: #cccccc;
+  --3lens-border-focus: #ffff00;
+
+  /* Text colors */
+  --3lens-text-primary: #ffffff;
+  --3lens-text-secondary: #ffffff;
+  --3lens-text-tertiary: #ffffff;
+  --3lens-text-disabled: #888888;
+  --3lens-text-inverse: #000000;
+
+  /* Accent colors */
+  --3lens-accent-blue: #00aaff;
+  --3lens-accent-cyan: #00ffff;
+  --3lens-accent-emerald: #00ff00;
+  --3lens-accent-amber: #ffff00;
+  --3lens-accent-rose: #ff0088;
+  --3lens-accent-violet: #aa00ff;
+  --3lens-accent-pink: #ff00ff;
+
+  /* Status colors */
+  --3lens-success: #00ff00;
+  --3lens-success-bg: rgba(0, 255, 0, 0.2);
+  --3lens-warning: #ffff00;
+  --3lens-warning-bg: rgba(255, 255, 0, 0.2);
+  --3lens-error: #ff0000;
+  --3lens-error-bg: rgba(255, 0, 0, 0.2);
+  --3lens-info: #00aaff;
+  --3lens-info-bg: rgba(0, 170, 255, 0.2);
+
+  /* Object type colors */
+  --3lens-color-scene: #00ff00;
+  --3lens-color-mesh: #00aaff;
+  --3lens-color-group: #aa00ff;
+  --3lens-color-light: #ffff00;
+  --3lens-color-camera: #ff00ff;
+  --3lens-color-bone: #ff8800;
+  --3lens-color-helper: #ffffff;
+
+  /* Sizing */
+  --3lens-panel-width: 360px;
+  --3lens-header-height: 40px;
+  --3lens-spacing-xs: 4px;
+  --3lens-spacing-sm: 8px;
+  --3lens-spacing-md: 12px;
+  --3lens-spacing-lg: 16px;
+  --3lens-spacing-xl: 24px;
+
+  /* Border radius */
+  --3lens-radius-sm: 4px;
+  --3lens-radius-md: 6px;
+  --3lens-radius-lg: 8px;
+  --3lens-radius-xl: 12px;
+
+  /* Shadows */
+  --3lens-shadow-sm: 0 1px 2px rgba(255, 255, 255, 0.3);
+  --3lens-shadow-md: 0 4px 6px rgba(255, 255, 255, 0.3);
+  --3lens-shadow-lg: 0 10px 15px rgba(255, 255, 255, 0.3);
+  --3lens-shadow-glow: 0 0 20px rgba(255, 255, 0, 0.5);
+
+  /* Transitions */
+  --3lens-transition-fast: 100ms ease;
+  --3lens-transition-normal: 200ms ease;
+  --3lens-transition-slow: 300ms ease;
+
+  /* Color scheme */
+  color-scheme: dark;
+}

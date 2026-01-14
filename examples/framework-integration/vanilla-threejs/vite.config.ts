@@ -11,6 +11,7 @@ export default defineConfig({
       '@3lens/core': resolve(__dirname, '../../../packages/core/src/index.ts'),
       '@3lens/overlay': resolve(__dirname, '../../../packages/overlay/src/index.ts'),
       '@3lens/ui': resolve(__dirname, '../../../packages/ui/src/index.ts'),
+      '@3lens/themes': resolve(__dirname, '../../../packages/themes/src'),
     },
   },
   build: {
