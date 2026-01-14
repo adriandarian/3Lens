@@ -189,6 +189,9 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
       expect(result.breakdown.geometry).toBeDefined();
       expect(result.breakdown.memory).toBeDefined();
       expect(result.breakdown.stateChanges).toBeDefined();
+      expect(result.breakdown.objects).toBeDefined();
+      expect(result.breakdown.materials).toBeDefined();
+      expect(result.breakdown.renderTargets).toBeDefined();
     });
 
     it('should handle excellent performance', async () => {
@@ -229,14 +232,22 @@ describe('WorkerProcessor - Main Thread Fallback', () => {
         targetFps: 30, // Lower target makes it easier to pass
         maxDrawCalls: 1000,
         maxTriangles: 2000000,
+        maxObjects: 10000,
+        maxMaterials: 500,
+        maxTextures: 200,
+        maxGeometries: 1000,
+        maxRenderTargets: 12,
         maxTextureMemory: 1024 * 1024 * 1024,
         maxGeometryMemory: 512 * 1024 * 1024,
         weights: {
-          timing: 0.4,
-          drawCalls: 0.15,
-          geometry: 0.15,
-          memory: 0.15,
-          stateChanges: 0.15,
+          timing: 0.3,
+          drawCalls: 0.17,
+          geometry: 0.17,
+          memory: 0.12,
+          stateChanges: 0.1,
+          objects: 0.06,
+          materials: 0.04,
+          renderTargets: 0.04,
         },
       });
 

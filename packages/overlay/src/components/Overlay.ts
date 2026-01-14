@@ -3,6 +3,8 @@ import type {
   SceneNode,
   FrameStats,
   BenchmarkScore,
+  BenchmarkConfig,
+  DEFAULT_BENCHMARK_CONFIG,
   SceneSnapshot,
   MemoryStats,
   RenderingStats,
@@ -198,6 +200,7 @@ export class ThreeLensOverlay {
   private statsUpdateInterval = 500; // Update stats UI every 500ms (2x per second)
   private statsTab:
     | 'overview'
+    | 'benchmark'
     | 'memory'
     | 'rendering'
     | 'timeline'
@@ -394,7 +397,10 @@ export class ThreeLensOverlay {
       }
 
       // Calculate benchmark score
-      this.latestBenchmark = calculateBenchmarkScore(stats);
+      this.latestBenchmark = calculateBenchmarkScore(
+        stats,
+        this.getBenchmarkConfig()
+      );
 
       const now = performance.now();
 
@@ -2749,6 +2755,18 @@ export class ThreeLensOverlay {
     </svg>`;
   }
 
+  private getBenchmarkConfig(): BenchmarkConfig {
+    const override = this.probe.config.benchmark;
+    return {
+      ...DEFAULT_BENCHMARK_CONFIG,
+      ...override,
+      weights: {
+        ...DEFAULT_BENCHMARK_CONFIG.weights,
+        ...(override?.weights ?? {}),
+      },
+    };
+  }
+
   private renderStatsContent(): string {
     const stats = this.latestStats;
     if (!stats) {
@@ -2765,6 +2783,7 @@ export class ThreeLensOverlay {
     return `
       <div class="three-lens-tabs" id="three-lens-stats-tabs">
         <button class="three-lens-tab ${this.statsTab === 'overview' ? 'active' : ''}" data-tab="overview">Overview</button>
+        <button class="three-lens-tab ${this.statsTab === 'benchmark' ? 'active' : ''}" data-tab="benchmark">Benchmark</button>
         <button class="three-lens-tab ${this.statsTab === 'memory' ? 'active' : ''}" data-tab="memory">Memory</button>
         <button class="three-lens-tab ${this.statsTab === 'rendering' ? 'active' : ''}" data-tab="rendering">Rendering</button>
         <button class="three-lens-tab ${this.statsTab === 'timeline' ? 'active' : ''}" data-tab="timeline">Frames</button>
@@ -2772,6 +2791,7 @@ export class ThreeLensOverlay {
       </div>
       <div class="three-lens-stats-tab-content" id="three-lens-stats-tab-content">
         ${this.statsTab === 'overview' ? this.renderOverviewTab(stats, benchmark, fps, fpsSmoothed, fps1Low) : ''}
+        ${this.statsTab === 'benchmark' ? this.renderBenchmarkTab(stats, benchmark) : ''}
         ${this.statsTab === 'memory' ? this.renderMemoryTab(stats) : ''}
         ${this.statsTab === 'rendering' ? this.renderRenderingTab(stats) : ''}
         ${this.statsTab === 'timeline' ? this.renderTimelineTab(stats) : ''}
@@ -3358,6 +3378,20 @@ export class ThreeLensOverlay {
             <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.geometry}</span>
           </div>
           <div class="three-lens-benchmark-bar">
+            <span class="three-lens-benchmark-bar-label">Objects</span>
+            <div class="three-lens-benchmark-bar-track">
+              <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.objects)}" style="width: ${benchmark.breakdown.objects}%"></div>
+            </div>
+            <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.objects}</span>
+          </div>
+          <div class="three-lens-benchmark-bar">
+            <span class="three-lens-benchmark-bar-label">Materials</span>
+            <div class="three-lens-benchmark-bar-track">
+              <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.materials)}" style="width: ${benchmark.breakdown.materials}%"></div>
+            </div>
+            <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.materials}</span>
+          </div>
+          <div class="three-lens-benchmark-bar">
             <span class="three-lens-benchmark-bar-label">Memory</span>
             <div class="three-lens-benchmark-bar-track">
               <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.memory)}" style="width: ${benchmark.breakdown.memory}%"></div>
@@ -3365,11 +3399,199 @@ export class ThreeLensOverlay {
             <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.memory}</span>
           </div>
           <div class="three-lens-benchmark-bar">
+            <span class="three-lens-benchmark-bar-label">RT Usage</span>
+            <div class="three-lens-benchmark-bar-track">
+              <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.renderTargets)}" style="width: ${benchmark.breakdown.renderTargets}%"></div>
+            </div>
+            <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.renderTargets}</span>
+          </div>
+          <div class="three-lens-benchmark-bar">
             <span class="three-lens-benchmark-bar-label">State Chg</span>
             <div class="three-lens-benchmark-bar-track">
               <div class="three-lens-benchmark-bar-fill ${getBarClass(benchmark.breakdown.stateChanges)}" style="width: ${benchmark.breakdown.stateChanges}%"></div>
             </div>
             <span class="three-lens-benchmark-bar-value">${benchmark.breakdown.stateChanges}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderBenchmarkTab(
+    stats: FrameStats,
+    benchmark: BenchmarkScore | null
+  ): string {
+    const config = this.getBenchmarkConfig();
+    const memory = stats.memory;
+    const rendering = stats.rendering;
+    const fps =
+      stats.performance?.fps ??
+      (stats.cpuTimeMs > 0 ? Math.round(1000 / stats.cpuTimeMs) : 0);
+    const targetFrameTime = 1000 / config.targetFps;
+    const budgetUsed = (stats.cpuTimeMs / targetFrameTime) * 100;
+    const visibleRatio =
+      stats.objectsTotal > 0
+        ? Math.round((stats.objectsVisible / stats.objectsTotal) * 100)
+        : 0;
+    const getStatus = (value: number, max: number) => {
+      if (value > max * 1.1) return 'bad';
+      if (value > max * 0.85) return 'warning';
+      return 'good';
+    };
+    const drawCallStatus = getStatus(stats.drawCalls, config.maxDrawCalls);
+    const triangleStatus = getStatus(stats.triangles, config.maxTriangles);
+    const textureStatus = getStatus(memory.textures, config.maxTextures);
+    const geometryStatus = getStatus(memory.geometries, config.maxGeometries);
+    const renderTargetStatus = getStatus(
+      memory.renderTargets,
+      config.maxRenderTargets
+    );
+    const objectStatus = getStatus(stats.objectsTotal, config.maxObjects);
+    const materialStatus = getStatus(stats.materialsUsed, config.maxMaterials);
+
+    return `
+      <div class="three-lens-benchmark-tab">
+        ${
+          benchmark
+            ? this.renderBenchmarkScore(benchmark)
+            : `<div class="three-lens-inspector-empty">Collecting benchmark score...</div>`
+        }
+
+        <div class="three-lens-benchmark-summary">
+          <div class="three-lens-benchmark-summary-item">
+            <div class="three-lens-benchmark-summary-label">FPS</div>
+            <div class="three-lens-benchmark-summary-value ${fps < 30 ? 'bad' : fps < 55 ? 'warning' : 'good'}">${fps}</div>
+          </div>
+          <div class="three-lens-benchmark-summary-item">
+            <div class="three-lens-benchmark-summary-label">CPU Frame</div>
+            <div class="three-lens-benchmark-summary-value ${stats.cpuTimeMs > targetFrameTime * 1.2 ? 'bad' : stats.cpuTimeMs > targetFrameTime ? 'warning' : 'good'}">${stats.cpuTimeMs.toFixed(1)}ms</div>
+          </div>
+          <div class="three-lens-benchmark-summary-item">
+            <div class="three-lens-benchmark-summary-label">Budget Used</div>
+            <div class="three-lens-benchmark-summary-value ${budgetUsed > 120 ? 'bad' : budgetUsed > 100 ? 'warning' : 'good'}">${budgetUsed.toFixed(0)}% @ ${config.targetFps}fps</div>
+          </div>
+          <div class="three-lens-benchmark-summary-item">
+            <div class="three-lens-benchmark-summary-label">Visible Ratio</div>
+            <div class="three-lens-benchmark-summary-value">${visibleRatio}%</div>
+          </div>
+        </div>
+
+        <div class="three-lens-metrics-section">
+          <div class="three-lens-metrics-title">Scene Composition</div>
+          <div class="three-lens-metrics-grid three-lens-metrics-grid-compact">
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value ${objectStatus}">${formatNumber(stats.objectsTotal)}</div>
+              <div class="three-lens-metric-label">Objects</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(stats.objectsVisible)}</div>
+              <div class="three-lens-metric-label">Visible</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value ${materialStatus}">${formatNumber(stats.materialsUsed)}</div>
+              <div class="three-lens-metric-label">Materials</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value ${geometryStatus}">${formatNumber(memory.geometries)}</div>
+              <div class="three-lens-metric-label">Geometries</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value ${textureStatus}">${formatNumber(memory.textures)}</div>
+              <div class="three-lens-metric-label">Textures</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(memory.programs)}</div>
+              <div class="three-lens-metric-label">Programs</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value ${renderTargetStatus}">${formatNumber(memory.renderTargets)}</div>
+              <div class="three-lens-metric-label">Render Targets</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(stats.points)}</div>
+              <div class="three-lens-metric-label">Points</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(stats.lines)}</div>
+              <div class="three-lens-metric-label">Lines</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="three-lens-metrics-section">
+          <div class="three-lens-metrics-title">Render Workload</div>
+          <div class="three-lens-metrics-grid three-lens-metrics-grid-compact">
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value ${drawCallStatus}">${formatNumber(stats.drawCalls)}</div>
+              <div class="three-lens-metric-label">Draw Calls</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value ${triangleStatus}">${formatNumber(stats.triangles)}</div>
+              <div class="three-lens-metric-label">Triangles</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(stats.vertices)}</div>
+              <div class="three-lens-metric-label">Vertices</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(rendering.renderTargetSwitches)}</div>
+              <div class="three-lens-metric-label">RT Switches</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(rendering.programSwitches)}</div>
+              <div class="three-lens-metric-label">Program Swaps</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(rendering.textureBinds)}</div>
+              <div class="three-lens-metric-label">Texture Binds</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(rendering.bufferUploads)}</div>
+              <div class="three-lens-metric-label">Buffer Uploads</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatBytes(rendering.bytesUploaded)}</div>
+              <div class="three-lens-metric-label">Upload Size</div>
+            </div>
+            <div class="three-lens-metric">
+              <div class="three-lens-metric-value">${formatNumber(rendering.postProcessingPasses)}</div>
+              <div class="three-lens-metric-label">Post FX</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="three-lens-benchmark-checks">
+          <div class="three-lens-benchmark-check ${drawCallStatus}">
+            <span>Draw call budget</span>
+            <span class="three-lens-benchmark-pill">${formatNumber(stats.drawCalls)} / ${formatNumber(config.maxDrawCalls)}</span>
+          </div>
+          <div class="three-lens-benchmark-check ${triangleStatus}">
+            <span>Triangle budget</span>
+            <span class="three-lens-benchmark-pill">${formatNumber(stats.triangles)} / ${formatNumber(config.maxTriangles)}</span>
+          </div>
+          <div class="three-lens-benchmark-check ${textureStatus}">
+            <span>Texture count</span>
+            <span class="three-lens-benchmark-pill">${formatNumber(memory.textures)} / ${formatNumber(config.maxTextures)}</span>
+          </div>
+          <div class="three-lens-benchmark-check ${geometryStatus}">
+            <span>Geometry count</span>
+            <span class="three-lens-benchmark-pill">${formatNumber(memory.geometries)} / ${formatNumber(config.maxGeometries)}</span>
+          </div>
+          <div class="three-lens-benchmark-check ${objectStatus}">
+            <span>Object count</span>
+            <span class="three-lens-benchmark-pill">${formatNumber(stats.objectsTotal)} / ${formatNumber(config.maxObjects)}</span>
+          </div>
+          <div class="three-lens-benchmark-check ${materialStatus}">
+            <span>Material count</span>
+            <span class="three-lens-benchmark-pill">${formatNumber(stats.materialsUsed)} / ${formatNumber(config.maxMaterials)}</span>
+          </div>
+          <div class="three-lens-benchmark-check ${renderTargetStatus}">
+            <span>Render target churn</span>
+            <span class="three-lens-benchmark-pill">${formatNumber(memory.renderTargets)} / ${formatNumber(config.maxRenderTargets)}</span>
+          </div>
+          <div class="three-lens-benchmark-check ${budgetUsed > 100 ? 'bad' : budgetUsed > 85 ? 'warning' : 'good'}">
+            <span>Frame time budget</span>
+            <span class="three-lens-benchmark-pill">${stats.cpuTimeMs.toFixed(1)}ms / ${targetFrameTime.toFixed(1)}ms</span>
           </div>
         </div>
       </div>
@@ -5837,6 +6059,8 @@ export class ThreeLensOverlay {
           fpsSmoothed,
           fps1Low
         );
+      case 'benchmark':
+        return this.renderBenchmarkTab(stats, benchmark);
       case 'memory':
         return this.renderMemoryTab(stats);
       case 'rendering':
@@ -5855,6 +6079,7 @@ export class ThreeLensOverlay {
       tab.addEventListener('click', (e) => {
         const tabName = (e.currentTarget as HTMLElement).dataset.tab as
           | 'overview'
+          | 'benchmark'
           | 'memory'
           | 'rendering'
           | 'timeline'

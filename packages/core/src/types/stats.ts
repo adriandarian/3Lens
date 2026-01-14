@@ -588,6 +588,21 @@ export interface BenchmarkScore {
      * State changes efficiency score (0-100)
      */
     stateChanges: number;
+
+    /**
+     * Object count efficiency score (0-100)
+     */
+    objects: number;
+
+    /**
+     * Material usage efficiency score (0-100)
+     */
+    materials: number;
+
+    /**
+     * Render target usage efficiency score (0-100)
+     */
+    renderTargets: number;
   };
 
   /**
@@ -661,6 +676,31 @@ export interface BenchmarkConfig {
   maxTriangles: number;
 
   /**
+   * Maximum acceptable total objects
+   */
+  maxObjects: number;
+
+  /**
+   * Maximum acceptable materials used
+   */
+  maxMaterials: number;
+
+  /**
+   * Maximum acceptable textures count
+   */
+  maxTextures: number;
+
+  /**
+   * Maximum acceptable geometries count
+   */
+  maxGeometries: number;
+
+  /**
+   * Maximum acceptable render targets count
+   */
+  maxRenderTargets: number;
+
+  /**
    * Maximum acceptable texture memory (bytes)
    */
   maxTextureMemory: number;
@@ -679,6 +719,9 @@ export interface BenchmarkConfig {
     geometry: number;
     memory: number;
     stateChanges: number;
+    objects: number;
+    materials: number;
+    renderTargets: number;
   };
 }
 
@@ -689,13 +732,21 @@ export const DEFAULT_BENCHMARK_CONFIG: BenchmarkConfig = {
   targetFps: 60,
   maxDrawCalls: 1000,
   maxTriangles: 2_000_000,
+  maxObjects: 10_000,
+  maxMaterials: 500,
+  maxTextures: 200,
+  maxGeometries: 1000,
+  maxRenderTargets: 12,
   maxTextureMemory: 256 * 1024 * 1024, // 256 MB
   maxGeometryMemory: 128 * 1024 * 1024, // 128 MB
   weights: {
-    timing: 0.35,
-    drawCalls: 0.2,
-    geometry: 0.2,
-    memory: 0.15,
+    timing: 0.3,
+    drawCalls: 0.17,
+    geometry: 0.17,
+    memory: 0.12,
     stateChanges: 0.1,
+    objects: 0.06,
+    materials: 0.04,
+    renderTargets: 0.04,
   },
 };

@@ -549,6 +549,10 @@ export const OVERLAY_STYLES = `
   color: var(--3lens-text-secondary);
 }
 
+.three-lens-metric-value.good { color: var(--3lens-success); }
+.three-lens-metric-value.warning { color: var(--3lens-warning); }
+.three-lens-metric-value.bad { color: var(--3lens-error); }
+
 /* Chart */
 .three-lens-chart {
   margin-top: 8px;
@@ -2056,6 +2060,10 @@ export const OVERLAY_STYLES = `
   gap: 6px;
 }
 
+.three-lens-metrics-grid.three-lens-metrics-grid-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .three-lens-metric {
   background: var(--3lens-bg-secondary);
   border: 1px solid var(--3lens-border-subtle);
@@ -2078,6 +2086,80 @@ export const OVERLAY_STYLES = `
   letter-spacing: 0.05em;
   color: var(--3lens-text-disabled);
   margin-top: 2px;
+}
+
+.three-lens-benchmark-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.three-lens-benchmark-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.three-lens-benchmark-summary-item {
+  background: var(--3lens-bg-tertiary);
+  border: 1px solid var(--3lens-border-subtle);
+  border-radius: var(--3lens-radius-sm);
+  padding: 6px 8px;
+}
+
+.three-lens-benchmark-summary-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--3lens-text-tertiary);
+  margin-bottom: 3px;
+}
+
+.three-lens-benchmark-summary-value {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--3lens-font-mono);
+  color: var(--3lens-text-primary);
+}
+
+.three-lens-benchmark-summary-value.good { color: var(--3lens-success); }
+.three-lens-benchmark-summary-value.warning { color: var(--3lens-warning); }
+.three-lens-benchmark-summary-value.bad { color: var(--3lens-error); }
+
+.three-lens-benchmark-checks {
+  display: grid;
+  gap: 6px;
+}
+
+.three-lens-benchmark-check {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--3lens-bg-secondary);
+  border: 1px solid var(--3lens-border-subtle);
+  border-left-width: 3px;
+  border-radius: var(--3lens-radius-sm);
+  padding: 6px 8px;
+  font-size: 10px;
+  color: var(--3lens-text-secondary);
+}
+
+.three-lens-benchmark-check.good {
+  border-left-color: var(--3lens-success);
+}
+
+.three-lens-benchmark-check.warning {
+  border-left-color: var(--3lens-warning);
+}
+
+.three-lens-benchmark-check.bad {
+  border-left-color: var(--3lens-error);
+}
+
+.three-lens-benchmark-pill {
+  font-family: var(--3lens-font-mono);
+  font-size: 10px;
+  color: var(--3lens-text-primary);
 }
 
 /* ═══════════════════════════════════════════════════════════════
