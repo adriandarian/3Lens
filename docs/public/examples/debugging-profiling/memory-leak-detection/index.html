@@ -38,6 +38,13 @@
         max-height: calc(100vh - 40px);
         overflow-y: auto;
         backdrop-filter: blur(10px);
+        /* Hide scrollbar visually but keep scrolling functionality */
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+      }
+
+      #controls::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
       }
 
       #controls h2 {
