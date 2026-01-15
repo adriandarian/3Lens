@@ -73,11 +73,16 @@ constructor(config: ProbeConfig) {
 
 ### Auto-Connection (createProbe only)
 
-The `createProbe()` factory automatically establishes a connection:
+The `createProbe()` factory automatically establishes a connection (except in production unless explicitly enabled):
 
 ```typescript
 // In createProbe():
-if (typeof window !== 'undefined' && typeof window.postMessage === 'function') {
+const env = config.env ?? 'development';
+if (
+  typeof window !== 'undefined' &&
+  typeof window.postMessage === 'function' &&
+  (env !== 'production' || config.allowPostMessageTransport === true)
+) {
   const transport = createPostMessageTransport();
   probe.connect(transport);
 }

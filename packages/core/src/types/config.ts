@@ -35,6 +35,12 @@ export interface ProbeConfig {
    * @default false
    */
   debug?: boolean;
+
+  /**
+   * Allow automatic postMessage transport in production environments.
+   * Defaults to false when env is 'production'.
+   */
+  allowPostMessageTransport?: boolean;
 }
 
 /**
