@@ -9,3 +9,4 @@ export {
   renderRenderTargetsPanel,
   attachRenderTargetsEvents,
 } from './renderTargets';
+export { renderMaterialBuilderPanel } from './materialBuilder';

@@ -135,6 +135,7 @@ The overlay comes with several built-in panels:
 | `scene` | Scene | Scene tree explorer and object inspector |
 | `stats` | Performance | FPS, frame time, draw calls, memory |
 | `materials` | Materials | Material browser and editor |
+| `material-builder` | Material Builder | Node-based material authoring panel |
 | `geometry` | Geometry | Geometry analysis and statistics |
 | `textures` | Textures | Texture browser with previews |
 | `render-targets` | Render Targets | Render target inspector |
