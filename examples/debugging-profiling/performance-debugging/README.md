@@ -1,191 +1,129 @@
-# 3Lens Performance Debugging Example
+# Performance Debugging Example
 
-This example demonstrates how to use 3Lens to identify and diagnose common Three.js performance issues. It provides an interactive "lab" where you can toggle various performance problems on and off while observing their impact in real-time.
+A hands-on lab for diagnosing common Three.js performance issues using 3Lens.
 
-## Getting Started
+## What This Example Shows
+
+This example creates a test environment where you can toggle various performance anti-patterns:
+
+- **Too Many Draw Calls**: 500 individual meshes vs. instancing
+- **High Poly Meshes**: 512-segment spheres (~500K triangles each)
+- **Large Textures**: 4K textures on small objects
+- **Excessive Shadows**: 8 point lights with 2K shadow maps
+- **Disabled Frustum Culling**: Objects rendered even when off-screen
+- **Memory Leak**: Geometries created without disposal
+
+Enable each issue and use 3Lens to observe and diagnose the impact.
+
+## Using 3Lens to Debug This
+
+### Opening 3Lens
+
+The 3Lens overlay is automatically initialized. Click the floating button or use the keyboard shortcut to open it.
+
+### Recommended Workflow
+
+1. **Start with baseline**: Open 3Lens and note the Performance stats (FPS, draw calls, triangles)
+2. **Enable an issue**: Toggle one of the checkboxes on the left panel
+3. **Observe impact**: Watch the Performance panel in 3Lens update
+4. **Explore details**: Use Scene Explorer to find the problematic objects
+5. **Disable and compare**: Turn off the issue to confirm it was the cause
+
+### Key Panels to Use
+
+**Performance Stats**
+- FPS counter shows frame rate impact
+- Draw calls increase with "Too Many Objects"
+- Triangle count spikes with "High Poly Meshes"
+- Memory usage grows with "Large Textures" and "Memory Leak"
+
+**Scene Explorer**
+- Find the issue groups (e.g., `TooManyObjects_Group`, `HighPoly_Group`)
+- See child count for object explosion issues
+- Check `frustumCulled` property on objects
+
+**Entities Panel**
+Each issue is registered as a logical entity:
+- `issue-too-many-objects`: Draw call problem
+- `issue-high-poly`: Triangle count problem
+- `issue-large-textures`: VRAM problem
+- `issue-shadow-quality`: Shadow map problem
+- `issue-no-frustum-culling`: Culling problem
+- `issue-memory-leak`: Resource disposal problem
+
+### What to Look For
+
+| Issue | What Changes in 3Lens |
+|-------|----------------------|
+| Too Many Objects | Draw calls: 10 → 510+ |
+| High Poly | Triangles: 5K → 5M+ |
+| Large Textures | Texture memory spikes |
+| Excessive Shadows | Shadow map count & memory |
+| No Frustum Culling | Draw calls stay high when looking away |
+| Memory Leak | Geometry count continuously grows |
+
+## Performance Issue Details
+
+### Issue 1: Too Many Draw Calls
+
+Creates 500 individual cubes. Each mesh = 1 draw call.
+
+**3Lens diagnosis**: Performance → Draw Calls jumps from ~10 to 510+
+
+**Fix**: Use `THREE.InstancedMesh` for repeated geometry
+
+### Issue 2: High Poly Meshes
+
+Creates 10 spheres with 512×512 segments (~500K triangles each = 5M total).
+
+**3Lens diagnosis**: Performance → Triangles jumps from ~5K to 5M+
+
+**Fix**: Use 32-64 segments for spheres. Implement LOD for detail at distance.
+
+### Issue 3: Large Textures
+
+Creates 5 cubes with 4096×4096 canvas textures (~80MB VRAM total).
+
+**3Lens diagnosis**: Memory panel shows texture VRAM spike
+
+**Fix**: Size textures appropriately. Use compressed formats. Generate mipmaps.
+
+### Issue 4: Excessive Shadows
+
+Adds 8 point lights, each casting shadows with 2048×2048 shadow maps.
+
+**3Lens diagnosis**: Memory shows shadow map allocations. Each point light = 6 shadow maps (cube faces).
+
+**Fix**: Limit shadow-casting lights. Use lower resolution for distant lights. Bake static shadows.
+
+### Issue 5: No Frustum Culling
+
+Creates 100 spheres spread across 200 units with `frustumCulled = false`.
+
+**3Lens diagnosis**: Draw calls stay high even when objects aren't visible
+
+**Fix**: Keep `frustumCulled = true` (default). Only disable for always-visible objects like skyboxes.
+
+### Issue 6: Memory Leak
+
+Creates new geometry/material every 100ms, removes from scene but doesn't `.dispose()`.
+
+**3Lens diagnosis**: Watch geometry count grow continuously over time
+
+**Fix**: Always call `.dispose()` on geometries, materials, and textures when done.
+
+## Running the Example
 
 ```bash
-# From the monorepo root
+cd examples/debugging-profiling/performance-debugging
 pnpm install
-pnpm --filter @3lens/example-performance-debugging dev
+pnpm dev
 ```
 
-Then open http://localhost:3006 in your browser.
+Open http://localhost:3006 in your browser.
 
-## Performance Issues Demonstrated
+## Related Examples
 
-### 1. Too Many Draw Calls (HIGH Impact)
-
-**The Problem:** Creates 500 individual mesh objects instead of using instanced rendering.
-
-**Symptoms:**
-- Draw calls spike to 500+
-- FPS drops significantly
-- CPU-bound rendering
-
-**How 3Lens Helps:**
-- Performance Panel → Overview shows draw call count
-- Scene Panel shows the large number of child objects
-- Cost Analysis highlights expensive objects
-
-**Solution:** Use `THREE.InstancedMesh` for repeated geometry.
-
----
-
-### 2. High Poly Meshes (HIGH Impact)
-
-**The Problem:** Creates spheres with 512 segments (~500K triangles each), when 32 would suffice.
-
-**Symptoms:**
-- Triangle count explodes to millions
-- GPU-bound rendering
-- Slow scene updates
-
-**How 3Lens Helps:**
-- Performance Panel → Overview shows triangle count
-- Scene Panel → Object inspector shows geometry details
-- Memory Panel shows geometry memory usage
-
-**Solution:** Use appropriate LOD levels. 32-64 segments is usually enough for most spheres.
-
----
-
-### 3. Large Textures (MEDIUM Impact)
-
-**The Problem:** Uses 4096x4096 textures for small cubes where 256x256 would be sufficient.
-
-**Symptoms:**
-- GPU memory usage spikes
-- Texture loading stalls
-- Mobile devices struggle
-
-**How 3Lens Helps:**
-- Memory Panel → Textures tab shows texture dimensions and memory
-- Resources Panel shows texture creation events
-- Configuration rules can warn about oversized textures
-
-**Solution:** Size textures appropriately for their screen space coverage. Use mipmaps.
-
----
-
-### 4. Excessive Shadows (MEDIUM Impact)
-
-**The Problem:** 8 point lights all casting 2048x2048 shadow maps.
-
-**Symptoms:**
-- Shadow map memory explodes (8 × 6 faces × 2048² per light)
-- Render time increases with each shadow pass
-- Frame rate drops, especially on mobile
-
-**How 3Lens Helps:**
-- Memory Panel shows shadow map memory
-- Performance Panel → Rendering shows shadow pass timing
-- Scene Panel → Lights shows shadow configuration
-
-**Solution:** Limit shadow-casting lights. Use lower resolution for distant lights. Bake static shadows.
-
----
-
-### 5. Disabled Frustum Culling (LOW Impact)
-
-**The Problem:** Creates 100 spheres spread across a large area with `frustumCulled = false`.
-
-**Symptoms:**
-- Objects outside view still consume draw calls
-- GPU processes invisible geometry
-
-**How 3Lens Helps:**
-- Scene Panel shows objects marked with culling disabled
-- Performance Panel shows unexpectedly high draw calls for visible objects
-
-**Solution:** Keep `frustumCulled = true` (default). Only disable for objects that must always render (like skyboxes).
-
----
-
-### 6. Memory Leak (HIGH Impact)
-
-**The Problem:** Creates new geometries/materials every 100ms without calling `.dispose()`.
-
-**Symptoms:**
-- Geometry count continuously increases
-- GPU memory grows unbounded
-- Eventually crashes or severe slowdown
-
-**How 3Lens Helps:**
-- Memory Panel shows growing geometry/material count
-- Resources Panel → Lifecycle shows creation without disposal
-- Leak Detection alerts for orphaned resources
-- Memory trend chart shows growth pattern
-
-**Solution:** Always call `.dispose()` on geometries, materials, and textures when removing objects.
-
----
-
-## Using 3Lens to Debug
-
-### Step 1: Open the Overlay
-
-Click the 3Lens button in the bottom-right corner of the viewport, or use the keyboard shortcut.
-
-### Step 2: Monitor the Performance Panel
-
-- **Overview Tab:** Watch FPS, draw calls, and triangles
-- **Memory Tab:** Track GPU memory, textures, geometries
-- **Frames Tab:** See frame-by-frame timing and spikes
-
-### Step 3: Analyze the Scene
-
-- **Scene Panel:** Inspect object hierarchy and properties
-- **Cost Analysis:** See which objects are most expensive
-- **Bounding Boxes:** Visualize object extents
-
-### Step 4: Check Resources
-
-- **Resources Panel:** See resource lifecycle events
-- **Leak Alerts:** Identify orphaned or undisposed resources
-- **Memory Trends:** Spot growing memory usage
-
-### Step 5: Use Configuration Rules
-
-Create a `3lens.config.json` to set thresholds:
-
-```json
-{
-  "rules": [
-    {
-      "id": "max-triangles",
-      "type": "triangles",
-      "threshold": 100000,
-      "severity": "warning"
-    },
-    {
-      "id": "max-draw-calls",
-      "type": "drawCalls", 
-      "threshold": 100,
-      "severity": "error"
-    }
-  ]
-}
-```
-
----
-
-## Quick Reference
-
-| Issue | Key Metric | 3Lens Location |
-|-------|-----------|----------------|
-| Too many objects | Draw Calls | Performance → Overview |
-| High poly | Triangles | Performance → Overview |
-| Large textures | GPU Memory | Memory → Textures |
-| Excessive shadows | Shadow Maps | Memory → Render Targets |
-| No frustum culling | Wasted draws | Scene → Object Inspector |
-| Memory leaks | Geometry count | Memory → Resources |
-
----
-
-## Dependencies
-
-- `@3lens/core` - Core devtool probe
-- `@3lens/overlay` - Floating overlay UI
-- `three` - Three.js library
-
+- [Memory Leak Detection](../memory-leak-detection/) - Deep dive into leak detection
+- [Draw Call Batching](../draw-call-batching/) - Optimizing draw calls
+- [Large Scene Optimization](../large-scene-optimization/) - Handling big scenes

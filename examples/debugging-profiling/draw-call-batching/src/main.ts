@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { createProbe } from '@3lens/core';
-import { bootstrapOverlay } from '@3lens/overlay';
+import { createOverlay } from '@3lens/overlay';
 import '@3lens/themes/styles.css';
 
 /**
@@ -13,6 +13,11 @@ import '@3lens/themes/styles.css';
  * 2. InstancedMesh - GPU instancing for repeated geometry (best for same geometry)
  * 3. Merged Geometry - Combine geometries into one mesh (good for static scenes)
  * 4. BatchedMesh - Three.js r159+ feature for dynamic batching
+ *
+ * Use the 3Lens overlay to:
+ * - Monitor draw calls in the Performance panel
+ * - Compare frame times between rendering modes
+ * - Inspect the scene graph structure differences
  */
 
 // Types
@@ -22,7 +27,6 @@ interface SceneState {
   mode: RenderMode;
   objectCount: number;
   objects: THREE.Object3D[];
-  baselineDrawCalls: number;
 }
 
 // Scene setup
@@ -59,7 +63,6 @@ const state: SceneState = {
   mode: 'individual',
   objectCount: 1000,
   objects: [],
-  baselineDrawCalls: 0,
 };
 
 // Colors for each mode
@@ -247,8 +250,7 @@ function createMergedGeometry(count: number) {
 function createBatchedMesh(count: number) {
   // Check if BatchedMesh is available
   if (!('BatchedMesh' in THREE)) {
-    console.warn('BatchedMesh not available in this Three.js version');
-    // Fallback to instanced mesh
+    console.warn('BatchedMesh not available in this Three.js version, using instanced mesh');
     createInstancedMesh(count);
     return;
   }
@@ -260,7 +262,6 @@ function createBatchedMesh(count: number) {
     metalness: 0.3,
   });
 
-  // BatchedMesh parameters: maxGeometryCount, maxVertexCount, maxIndexCount
   const maxVertexCount = count * geometry.attributes.position.count;
   const maxIndexCount = count * (geometry.index?.count || 0);
 
@@ -271,7 +272,6 @@ function createBatchedMesh(count: number) {
   } }).BatchedMesh(count, maxVertexCount, maxIndexCount, material);
   (batchedMesh as THREE.Object3D).name = 'BatchedMesh_Cubes';
 
-  // Add the geometry template
   const geometryId = batchedMesh.addGeometry(geometry);
 
   const positions = generatePositions(count);
@@ -301,181 +301,135 @@ function createBatchedMesh(count: number) {
   state.objects = [batchedMesh];
 }
 
-// Switch rendering mode
-function setMode(mode: RenderMode) {
-  state.mode = mode;
-  clearObjects();
-
-  switch (mode) {
-    case 'individual':
-      createIndividualMeshes(state.objectCount);
-      break;
-    case 'instanced':
-      createInstancedMesh(state.objectCount);
-      break;
-    case 'merged':
-      createMergedGeometry(state.objectCount);
-      break;
-    case 'batched':
-      createBatchedMesh(state.objectCount);
-      break;
-  }
-
-  // Update UI
-  document.querySelectorAll('.mode-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
-  });
-
-  // Record baseline on first render
-  renderer.render(scene, camera);
-  if (mode === 'individual') {
-    state.baselineDrawCalls = renderer.info.render.calls;
-  }
-}
-
-// Update object count
-function setObjectCount(count: number) {
-  state.objectCount = count;
-  document.getElementById('object-count-value')!.textContent = count.toString();
-  setMode(state.mode);
-}
-
 // =============================================================================
-// UI SETUP
+// CREATE ALL RENDERING MODES FOR COMPARISON
 // =============================================================================
 
-// Mode buttons
-document.querySelectorAll('.mode-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const mode = btn.getAttribute('data-mode') as RenderMode;
-    if (mode) {
-      setMode(mode);
-    }
+function createAllModes() {
+  const count = 500; // Use smaller count for side-by-side comparison
+  const spacing = 100;
+  
+  // Individual meshes (red)
+  const individualGroup = new THREE.Group();
+  individualGroup.name = 'Individual_Mode';
+  individualGroup.position.x = -spacing * 1.5;
+  
+  const indGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const indPositions = generatePositions(count);
+  for (let i = 0; i < count; i++) {
+    const material = new THREE.MeshStandardMaterial({
+      color: modeColors.individual,
+      roughness: 0.5,
+      metalness: 0.3,
+    });
+    const mesh = new THREE.Mesh(indGeometry.clone(), material);
+    mesh.position.copy(indPositions[i]);
+    mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    mesh.scale.setScalar(0.5 + Math.random() * 0.5);
+    individualGroup.add(mesh);
+  }
+  scene.add(individualGroup);
+  
+  // Instanced mesh (green)
+  const instGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const instMaterial = new THREE.MeshStandardMaterial({
+    color: modeColors.instanced,
+    roughness: 0.5,
+    metalness: 0.3,
   });
-});
+  const instancedMesh = new THREE.InstancedMesh(instGeometry, instMaterial, count);
+  instancedMesh.name = 'Instanced_Mode';
+  instancedMesh.position.x = -spacing * 0.5;
+  
+  const instPositions = generatePositions(count);
+  const matrix = new THREE.Matrix4();
+  for (let i = 0; i < count; i++) {
+    const pos = instPositions[i];
+    const quat = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
+    );
+    const scl = new THREE.Vector3().setScalar(0.5 + Math.random() * 0.5);
+    matrix.compose(pos, quat, scl);
+    instancedMesh.setMatrixAt(i, matrix);
+  }
+  instancedMesh.instanceMatrix.needsUpdate = true;
+  scene.add(instancedMesh);
+  
+  // Merged geometry (purple)
+  const mergeGeometries_arr: THREE.BufferGeometry[] = [];
+  const mergePositions = generatePositions(count);
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const mat = new THREE.Matrix4();
+    mat.compose(
+      mergePositions[i],
+      new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
+      ),
+      new THREE.Vector3().setScalar(0.5 + Math.random() * 0.5)
+    );
+    geo.applyMatrix4(mat);
+    mergeGeometries_arr.push(geo);
+  }
+  const mergedGeo = mergeGeometries(mergeGeometries_arr, false);
+  mergeGeometries_arr.forEach(g => g.dispose());
+  
+  const mergedMesh = new THREE.Mesh(
+    mergedGeo,
+    new THREE.MeshStandardMaterial({ color: modeColors.merged, roughness: 0.5, metalness: 0.3 })
+  );
+  mergedMesh.name = 'Merged_Mode';
+  mergedMesh.position.x = spacing * 0.5;
+  scene.add(mergedMesh);
+  
+  state.objects = [individualGroup, instancedMesh, mergedMesh];
+}
 
-// Object count slider
-const objectCountSlider = document.getElementById('object-count') as HTMLInputElement;
-objectCountSlider.addEventListener('input', () => {
-  setObjectCount(parseInt(objectCountSlider.value, 10));
-});
+// Create the demo scene with all modes visible
+createAllModes();
 
 // =============================================================================
 // 3LENS PROBE SETUP
 // =============================================================================
 
 const probe = createProbe({
-  renderer,
-  scene,
-  camera,
+  name: 'DrawCallBatchingProbe',
+  sampling: {
+    frameStatsInterval: 1,
+    sceneSnapshotInterval: 30,
+  },
 });
 
-probe.setAppName('Draw Call Batching Example');
-bootstrapOverlay(probe);
+probe.observeRenderer(renderer);
+probe.observeScene(scene);
+probe.setAppName('Draw Call Batching');
+
+// Register batching system as logical entity
+probe.registerLogicalEntity('batching-comparison', 'Batching Comparison', {
+  category: 'Rendering',
+  objectsPerMode: 500,
+  modes: ['Individual', 'Instanced', 'Merged'],
+  description: 'Compare draw calls: Individual (red), Instanced (green), Merged (purple)',
+});
+
+createOverlay({ probe, theme: 'dark' });
 
 // =============================================================================
-// ANIMATION LOOP & STATS
+// ANIMATION LOOP
 // =============================================================================
-
-let frameCount = 0;
-let lastTime = performance.now();
-let currentFps = 0;
-let frameTimeMs = 0;
-
-function updateStats() {
-  const info = renderer.info;
-
-  // FPS
-  const fpsEl = document.getElementById('stat-fps');
-  if (fpsEl) {
-    fpsEl.textContent = currentFps.toString();
-    fpsEl.className =
-      'stat-value' +
-      (currentFps < 30 ? ' bad' : currentFps < 55 ? ' warn' : ' good');
-  }
-
-  // Draw calls
-  const drawCallsEl = document.getElementById('stat-drawcalls');
-  if (drawCallsEl) {
-    const calls = info.render.calls;
-    drawCallsEl.textContent = calls.toString();
-    drawCallsEl.className =
-      'stat-value' +
-      (calls > 100 ? ' bad' : calls > 10 ? ' warn' : ' good');
-  }
-
-  // Triangles
-  const trianglesEl = document.getElementById('stat-triangles');
-  if (trianglesEl) {
-    const triCount = info.render.triangles;
-    trianglesEl.textContent =
-      triCount > 1000000
-        ? (triCount / 1000000).toFixed(1) + 'M'
-        : triCount > 1000
-          ? (triCount / 1000).toFixed(1) + 'K'
-          : triCount.toString();
-  }
-
-  // Frame time
-  const frameTimeEl = document.getElementById('stat-frametime');
-  if (frameTimeEl) {
-    frameTimeEl.textContent = frameTimeMs.toFixed(1) + 'ms';
-    frameTimeEl.className =
-      'stat-value' +
-      (frameTimeMs > 33 ? ' bad' : frameTimeMs > 16 ? ' warn' : ' good');
-  }
-
-  // Efficiency bar
-  const efficiencyBar = document.getElementById('efficiency-bar');
-  if (efficiencyBar && state.baselineDrawCalls > 0) {
-    const currentCalls = info.render.calls;
-    const efficiency = (1 - currentCalls / state.baselineDrawCalls) * 100;
-    const reduction = Math.max(0, Math.min(100, efficiency));
-
-    efficiencyBar.style.width = `${100 - reduction}%`;
-    efficiencyBar.className =
-      'bar-fill' +
-      (reduction > 90 ? '' : reduction > 50 ? ' medium' : ' high');
-
-    const percentageEl = efficiencyBar.querySelector('.bar-percentage');
-    if (percentageEl) {
-      if (state.mode === 'individual') {
-        percentageEl.textContent = 'Baseline';
-      } else {
-        percentageEl.textContent = `-${reduction.toFixed(0)}%`;
-      }
-    }
-  }
-}
 
 function animate() {
   requestAnimationFrame(animate);
 
-  const frameStart = performance.now();
-
-  // FPS calculation
-  frameCount++;
-  const now = performance.now();
-  if (now - lastTime >= 1000) {
-    currentFps = Math.round((frameCount * 1000) / (now - lastTime));
-    frameCount = 0;
-    lastTime = now;
-    updateStats();
-  }
-
-  // Animate objects
   const elapsed = clock.getElapsedTime();
 
-  // Subtle rotation animation for the entire scene content
+  // Subtle rotation animation
   state.objects.forEach((obj) => {
     obj.rotation.y = elapsed * 0.1;
   });
 
   controls.update();
   renderer.render(scene, camera);
-  probe.onFrame();
-
-  frameTimeMs = performance.now() - frameStart;
 }
 
 // Handle resize
@@ -485,7 +439,20 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Initialize with individual mode
-setMode('individual');
 animate();
 
+console.log(`
+⚡ Draw Call Batching Example
+==============================
+This example shows three rendering approaches side by side:
+
+RED (left): Individual meshes - 500 draw calls
+GREEN (center): Instanced mesh - 1 draw call  
+PURPLE (right): Merged geometry - 1 draw call
+
+Open the 3Lens overlay to:
+- View draw call count in Performance panel
+- Compare frame times
+- Inspect scene graph structure differences
+- See how instancing reduces GPU overhead
+`);

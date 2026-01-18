@@ -474,6 +474,25 @@ export function attachRenderTargetsEvents(
   updateState: (updates: Partial<UIState>) => void,
   rerender: () => void
 ): void {
+  // Helper to preserve scroll position during rerender
+  // We query for the list panel fresh each time since innerHTML replacement creates new elements
+  const rerenderWithScrollPreservation = () => {
+    const listPanel = container.querySelector('.render-targets-list-panel');
+    const scrollTop = listPanel?.scrollTop ?? 0;
+    rerender();
+    // Restore scroll position after rerender - use multiple frames to ensure DOM is ready
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const newListPanel = container.querySelector(
+          '.render-targets-list-panel'
+        );
+        if (newListPanel) {
+          newListPanel.scrollTop = scrollTop;
+        }
+      });
+    });
+  };
+
   // Render target grid item selection
   container
     .querySelectorAll('[data-action="select-render-target"]')
@@ -488,7 +507,7 @@ export function attachRenderTargetsEvents(
         const newSelection =
           state.selectedRenderTargetId === uuid ? null : uuid;
         updateState({ selectedRenderTargetId: newSelection });
-        rerender();
+        rerenderWithScrollPreservation();
       });
     });
 
@@ -502,7 +521,7 @@ export function attachRenderTargetsEvents(
       btnEl.addEventListener('click', () => {
         if (!mode) return;
         updateState({ renderTargetPreviewMode: mode });
-        rerender();
+        rerenderWithScrollPreservation();
       });
     });
 
@@ -528,7 +547,7 @@ export function attachRenderTargetsEvents(
       }
 
       updateState({ renderTargetZoom: newZoom });
-      rerender();
+      rerenderWithScrollPreservation();
     });
   });
 

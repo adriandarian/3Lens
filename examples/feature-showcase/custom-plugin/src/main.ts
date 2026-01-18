@@ -15,11 +15,19 @@ import '@3lens/themes/styles.css';
  * - Inter-plugin messaging
  * - Plugin state storage
  * - Toast notifications
+ * 
+ * Open the 3Lens overlay (Ctrl+Shift+D) to see the plugins in action!
  */
 
 // =============================================================================
 // CUSTOM PLUGIN DEFINITION
 // =============================================================================
+
+function formatNumber(num: number): string {
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return String(num);
+}
 
 /**
  * Example: Stats Monitor Plugin
@@ -105,7 +113,7 @@ const StatsMonitorPlugin: DevtoolPlugin = {
     context.showToast('Stats Monitor activated!', 'success');
     
     // Subscribe to messages from other plugins
-    const unsubscribe = context.onMessage((message) => {
+    context.onMessage((message) => {
       if (message.type === 'REQUEST_STATS') {
         const stats = context.getFrameStats();
         context.sendMessage(message.source, 'STATS_RESPONSE', {
@@ -115,30 +123,11 @@ const StatsMonitorPlugin: DevtoolPlugin = {
         });
       }
     });
-    
-    // Store unsubscribe for cleanup
-    context.setState('messageUnsubscribe', unsubscribe);
-    
-    // Notify external UI
-    updateExternalUI(context);
   },
 
   // Lifecycle: called when plugin is deactivated
   deactivate(context: DevtoolContext) {
     context.log('Stats Monitor plugin deactivated');
-    
-    // Cleanup message subscription
-    const unsubscribe = context.getState<() => void>('messageUnsubscribe');
-    if (unsubscribe) {
-      unsubscribe();
-    }
-    
-    // Clear stats in external UI
-    document.getElementById('stat-objects')!.textContent = '-';
-    document.getElementById('stat-triangles')!.textContent = '-';
-    document.getElementById('stat-fps')!.textContent = '-';
-    document.getElementById('stat-calls')!.textContent = '-';
-    
     context.showToast('Stats Monitor deactivated', 'info');
   },
 
@@ -329,7 +318,6 @@ const StatsMonitorPlugin: DevtoolPlugin = {
             const isPaused = context.getState<boolean>('isPaused') ?? false;
             context.setState('isPaused', !isPaused);
             context.requestRender();
-            addLogEntry(!isPaused ? 'info' : 'success', !isPaused ? 'Stats paused' : 'Stats resumed');
           } else if (action === 'export') {
             const stats = context.getFrameStats();
             if (stats) {
@@ -342,7 +330,6 @@ const StatsMonitorPlugin: DevtoolPlugin = {
               a.click();
               URL.revokeObjectURL(url);
               context.showToast('Stats exported!', 'success');
-              addLogEntry('success', 'Stats exported to file');
             }
           }
         });
@@ -350,18 +337,8 @@ const StatsMonitorPlugin: DevtoolPlugin = {
         context.log('Stats panel mounted');
       },
       
-      // Called when frame stats update
-      onFrameStats(stats, container) {
-        // Update external UI as well
-        document.getElementById('stat-objects')!.textContent = 
-          formatNumber(stats.geometryCount + stats.textureCount + stats.materialCount);
-        document.getElementById('stat-triangles')!.textContent = formatNumber(stats.triangleCount);
-        document.getElementById('stat-fps')!.textContent = stats.fps.toFixed(0);
-        document.getElementById('stat-calls')!.textContent = String(stats.drawCallCount);
-      },
-      
       // Called when panel is about to be unmounted
-      onUnmount(container: HTMLElement) {
+      onUnmount(_container: HTMLElement) {
         // Cleanup if needed
       },
     },
@@ -392,7 +369,6 @@ const StatsMonitorPlugin: DevtoolPlugin = {
         context.setState('updateCount', 0);
         context.showToast('Stats reset', 'info');
         context.requestRender();
-        addLogEntry('info', 'Stats counter reset');
       },
     },
   ],
@@ -414,7 +390,6 @@ const StatsMonitorPlugin: DevtoolPlugin = {
             visible: node.visible,
           });
           context.showToast(`Logged stats for ${node.name}`, 'info');
-          addLogEntry('info', `Logged stats: ${node.name}`);
         }
       },
       isVisible(context) {
@@ -431,7 +406,6 @@ const StatsMonitorPlugin: DevtoolPlugin = {
         const node = context.targetNode;
         if (node) {
           context.showToast(`Finding objects similar to ${node.name}...`, 'info');
-          addLogEntry('info', `Search initiated for: ${node.name}`);
         }
       },
     },
@@ -464,7 +438,6 @@ const MessageReceiverPlugin: DevtoolPlugin = {
         from: message.source,
         payload: message.payload 
       });
-      addLogEntry('info', `Message received: ${message.type}`);
     });
   },
 
@@ -473,13 +446,13 @@ const MessageReceiverPlugin: DevtoolPlugin = {
       id: 'messages',
       name: 'Messages',
       icon: '📬',
-      render(ctx) {
+      render(_ctx) {
         return `
           <div style="padding: 12px;">
             <h3 style="margin: 0 0 8px;">📬 Message Log</h3>
             <p style="color: #888; font-size: 12px;">
               This plugin listens for inter-plugin messages.
-              Click "Send Message" in the control panel to test.
+              Open the 3Lens console to see received messages.
             </p>
           </div>
         `;
@@ -600,147 +573,12 @@ const overlay = bootstrapOverlay({
   probe,
   position: 'right',
   defaultWidth: 380,
-  defaultOpen: false,
+  defaultOpen: true,
 });
 
-// =============================================================================
-// UI HELPERS
-// =============================================================================
-
-function formatNumber(num: number): string {
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return String(num);
-}
-
-function addLogEntry(type: 'info' | 'success' | 'warning' | 'error', message: string) {
-  const log = document.getElementById('event-log')!;
-  const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-  
-  const entry = document.createElement('div');
-  entry.className = 'log-entry';
-  entry.innerHTML = `
-    <span class="log-time">${time}</span>
-    <span class="log-type ${type}">${type.toUpperCase()}</span>
-    <span class="log-message">${message}</span>
-  `;
-  
-  log.appendChild(entry);
-  log.scrollTop = log.scrollHeight;
-  
-  // Keep only last 20 entries
-  while (log.children.length > 20) {
-    log.removeChild(log.firstChild!);
-  }
-}
-
-function updateExternalUI(context: DevtoolContext) {
-  const stats = context.getFrameStats();
-  if (stats) {
-    document.getElementById('stat-objects')!.textContent = 
-      formatNumber(stats.geometryCount + stats.textureCount + stats.materialCount);
-    document.getElementById('stat-triangles')!.textContent = formatNumber(stats.triangleCount);
-    document.getElementById('stat-fps')!.textContent = stats.fps.toFixed(0);
-    document.getElementById('stat-calls')!.textContent = String(stats.drawCallCount);
-  }
-}
-
-function updatePluginStatusUI() {
-  const plugins = probe.getPlugins();
-  const container = document.getElementById('plugin-status')!;
-  
-  if (plugins.length === 0) {
-    container.innerHTML = `
-      <div style="color: #666; font-size: 12px; text-align: center; padding: 10px;">
-        No plugins registered yet
-      </div>
-    `;
-    return;
-  }
-  
-  container.innerHTML = plugins.map(p => `
-    <div class="plugin-item">
-      <div class="plugin-name">
-        <span class="icon">${p.metadata.icon ?? '🔌'}</span>
-        <span>${p.metadata.name}</span>
-      </div>
-      <span class="plugin-state ${p.state === 'activated' ? 'active' : 'inactive'}">
-        ${p.state}
-      </span>
-    </div>
-  `).join('');
-}
-
-// =============================================================================
-// UI SETUP
-// =============================================================================
-
-let statsPluginRegistered = false;
-let messagePluginRegistered = false;
-
-document.getElementById('btn-register')!.addEventListener('click', async () => {
-  if (!statsPluginRegistered) {
-    await overlay.registerAndActivatePlugin(StatsMonitorPlugin);
-    statsPluginRegistered = true;
-    addLogEntry('success', 'Stats Monitor plugin registered & activated');
-    
-    // Also register the message receiver
-    if (!messagePluginRegistered) {
-      await overlay.registerAndActivatePlugin(MessageReceiverPlugin);
-      messagePluginRegistered = true;
-      addLogEntry('success', 'Message Receiver plugin registered');
-    }
-    
-    updatePluginStatusUI();
-  } else {
-    addLogEntry('warning', 'Plugins already registered');
-  }
-});
-
-document.getElementById('btn-activate')!.addEventListener('click', async () => {
-  if (statsPluginRegistered) {
-    await probe.activatePlugin('custom.stats-monitor');
-    addLogEntry('success', 'Stats Monitor activated');
-    updatePluginStatusUI();
-  } else {
-    addLogEntry('error', 'Register plugin first');
-  }
-});
-
-document.getElementById('btn-deactivate')!.addEventListener('click', async () => {
-  if (statsPluginRegistered) {
-    await probe.deactivatePlugin('custom.stats-monitor');
-    addLogEntry('info', 'Stats Monitor deactivated');
-    updatePluginStatusUI();
-  } else {
-    addLogEntry('error', 'Register plugin first');
-  }
-});
-
-document.getElementById('btn-message')!.addEventListener('click', () => {
-  if (statsPluginRegistered) {
-    // Get the plugin manager to send a message
-    const manager = probe.getPluginManager();
-    manager.sendGlobalMessage({
-      source: 'external',
-      target: '*',
-      type: 'HELLO',
-      payload: { message: 'Hello from external UI!', timestamp: Date.now() },
-      timestamp: Date.now(),
-    });
-    addLogEntry('info', 'Broadcast message sent');
-  } else {
-    addLogEntry('error', 'Register plugin first');
-  }
-});
-
-document.getElementById('btn-toast')!.addEventListener('click', () => {
-  overlay.showToast('Hello from custom plugin example! 🎉', 'success');
-  addLogEntry('success', 'Toast notification shown');
-});
-
-// Initial UI update
-updatePluginStatusUI();
+// Register and activate the plugins
+overlay.registerAndActivatePlugin(StatsMonitorPlugin);
+overlay.registerAndActivatePlugin(MessageReceiverPlugin);
 
 // =============================================================================
 // ANIMATION LOOP
@@ -787,6 +625,6 @@ Plugin Features Demonstrated:
 - Plugin state storage
 - Toast notifications
 
-Click "Register Stats Plugin" to get started!
 Press Ctrl+Shift+D to open the 3Lens overlay.
+The Stats Monitor and Message Receiver plugins are already registered!
 `);

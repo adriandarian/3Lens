@@ -7,540 +7,341 @@
  * - Camera switching between multiple cameras
  * - Camera info display
  * - Home position management
+ * 
+ * Open the 3Lens overlay (Ctrl+Shift+D) to use the camera controls!
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { DevtoolProbe, type CameraInfo, type FlyToOptions } from '@3lens/core';
-import { createOverlay } from '@3lens/overlay';
+import { createProbe } from '@3lens/core';
+import { bootstrapOverlay } from '@3lens/overlay';
 import '@3lens/themes/styles.css';
 
-// State
-let probe: DevtoolProbe;
-let scene: THREE.Scene;
-let mainCamera: THREE.PerspectiveCamera;
-let renderer: THREE.WebGLRenderer;
-let controls: OrbitControls;
-let selectedObject: THREE.Object3D | null = null;
-let isAnimating = false;
+// ─────────────────────────────────────────────────────────────────
+// Scene Setup
+// ─────────────────────────────────────────────────────────────────
 
-// Scene objects with metadata
-interface SceneObject {
-  mesh: THREE.Mesh;
-  name: string;
-  icon: string;
-  color: number;
-}
+const container = document.getElementById('app')!;
 
-const sceneObjects: SceneObject[] = [];
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a2e);
+scene.name = 'CameraControlsDemo';
 
-// Additional cameras in the scene
-const sceneCameras: THREE.Camera[] = [];
+// Main camera
+const mainCamera = new THREE.PerspectiveCamera(
+  60,
+  container.clientWidth / container.clientHeight,
+  0.1,
+  1000
+);
+mainCamera.position.set(15, 12, 15);
+mainCamera.name = 'Main Camera';
 
-// DOM Elements
-const statusBar = document.getElementById('status-bar')!;
-const statusText = document.getElementById('status-text')!;
-const camName = document.getElementById('cam-name')!;
-const camType = document.getElementById('cam-type')!;
-const camFov = document.getElementById('cam-fov')!;
-const camAspect = document.getElementById('cam-aspect')!;
-const camNear = document.getElementById('cam-near')!;
-const camFar = document.getElementById('cam-far')!;
-const posX = document.getElementById('pos-x')!;
-const posY = document.getElementById('pos-y')!;
-const posZ = document.getElementById('pos-z')!;
-const cameraListEl = document.getElementById('camera-list')!;
-const objectListEl = document.getElementById('object-list')!;
+// Renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
 
-// Create the scene
-function createScene(): void {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1a1a2e);
-  
-  // Main camera
-  const container = document.getElementById('canvas-container')!;
-  mainCamera = new THREE.PerspectiveCamera(
-    60,
-    container.clientWidth / container.clientHeight,
-    0.1,
-    1000
-  );
-  mainCamera.position.set(15, 12, 15);
-  mainCamera.name = 'Main Camera';
-  
-  // Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  container.appendChild(renderer.domElement);
-  
-  // OrbitControls
-  controls = new OrbitControls(mainCamera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  controls.target.set(0, 0, 0);
-  
-  // Lights
-  const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-  scene.add(ambientLight);
-  
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-  directionalLight.position.set(20, 30, 20);
-  directionalLight.castShadow = true;
-  directionalLight.shadow.mapSize.width = 2048;
-  directionalLight.shadow.mapSize.height = 2048;
-  directionalLight.shadow.camera.near = 0.5;
-  directionalLight.shadow.camera.far = 100;
-  directionalLight.shadow.camera.left = -30;
-  directionalLight.shadow.camera.right = 30;
-  directionalLight.shadow.camera.top = 30;
-  directionalLight.shadow.camera.bottom = -30;
-  scene.add(directionalLight);
-  
-  // Ground
-  const groundGeometry = new THREE.PlaneGeometry(50, 50);
-  const groundMaterial = new THREE.MeshStandardMaterial({
-    color: 0x16213e,
-    roughness: 0.9,
-    metalness: 0.1
-  });
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  ground.name = 'Ground';
-  scene.add(ground);
-  
-  // Grid helper
-  const gridHelper = new THREE.GridHelper(50, 50, 0x0f3460, 0x0f3460);
-  gridHelper.position.y = 0.01;
-  scene.add(gridHelper);
-  
-  // Create scene objects
-  createSceneObjects();
-  
-  // Create additional cameras
-  createAdditionalCameras();
-}
+// OrbitControls
+const controls = new OrbitControls(mainCamera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.target.set(0, 0, 0);
 
-// Create demo objects
-function createSceneObjects(): void {
-  const objects = [
-    { name: 'Red Cube', icon: '🟥', geo: new THREE.BoxGeometry(2, 2, 2), color: 0xe94560, pos: [-8, 1, -8] },
-    { name: 'Blue Sphere', icon: '🔵', geo: new THREE.SphereGeometry(1.2, 32, 32), color: 0x3b82f6, pos: [8, 1.2, -8] },
-    { name: 'Green Torus', icon: '💚', geo: new THREE.TorusGeometry(1, 0.4, 16, 48), color: 0x10b981, pos: [-8, 1, 8] },
-    { name: 'Yellow Cone', icon: '🔶', geo: new THREE.ConeGeometry(1, 2.5, 32), color: 0xf59e0b, pos: [8, 1.25, 8] },
-    { name: 'Purple Knot', icon: '💜', geo: new THREE.TorusKnotGeometry(0.8, 0.25, 100, 16), color: 0x8b5cf6, pos: [0, 1.5, 0] },
-    { name: 'Cyan Cylinder', icon: '🩵', geo: new THREE.CylinderGeometry(0.8, 0.8, 3, 32), color: 0x00d4ff, pos: [0, 1.5, -10] },
-  ];
-  
-  objects.forEach((obj) => {
-    const material = new THREE.MeshStandardMaterial({
-      color: obj.color,
-      roughness: 0.3,
-      metalness: 0.7
-    });
-    
-    const mesh = new THREE.Mesh(obj.geo, material);
-    mesh.name = obj.name;
-    mesh.position.set(obj.pos[0], obj.pos[1], obj.pos[2]);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    
-    scene.add(mesh);
-    sceneObjects.push({ mesh, name: obj.name, icon: obj.icon, color: obj.color });
+// ─────────────────────────────────────────────────────────────────
+// Lighting
+// ─────────────────────────────────────────────────────────────────
+
+const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(20, 30, 20);
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 2048;
+directionalLight.shadow.mapSize.height = 2048;
+scene.add(directionalLight);
+
+// ─────────────────────────────────────────────────────────────────
+// Scene Objects
+// ─────────────────────────────────────────────────────────────────
+
+// Ground
+const groundGeometry = new THREE.PlaneGeometry(50, 50);
+const groundMaterial = new THREE.MeshStandardMaterial({
+  color: 0x16213e,
+  roughness: 0.9,
+  metalness: 0.1
+});
+const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+ground.name = 'Ground';
+scene.add(ground);
+
+// Grid helper
+const gridHelper = new THREE.GridHelper(50, 50, 0x0f3460, 0x0f3460);
+gridHelper.position.y = 0.01;
+scene.add(gridHelper);
+
+// Demo objects
+const objectConfigs = [
+  { name: 'Red Cube', geo: new THREE.BoxGeometry(2, 2, 2), color: 0xe94560, pos: [-8, 1, -8] },
+  { name: 'Blue Sphere', geo: new THREE.SphereGeometry(1.2, 32, 32), color: 0x3b82f6, pos: [8, 1.2, -8] },
+  { name: 'Green Torus', geo: new THREE.TorusGeometry(1, 0.4, 16, 48), color: 0x10b981, pos: [-8, 1, 8] },
+  { name: 'Yellow Cone', geo: new THREE.ConeGeometry(1, 2.5, 32), color: 0xf59e0b, pos: [8, 1.25, 8] },
+  { name: 'Purple Knot', geo: new THREE.TorusKnotGeometry(0.8, 0.25, 100, 16), color: 0x8b5cf6, pos: [0, 1.5, 0] },
+  { name: 'Cyan Cylinder', geo: new THREE.CylinderGeometry(0.8, 0.8, 3, 32), color: 0x00d4ff, pos: [0, 1.5, -10] },
+];
+
+const sceneObjects: THREE.Mesh[] = [];
+
+objectConfigs.forEach((config) => {
+  const material = new THREE.MeshStandardMaterial({
+    color: config.color,
+    roughness: 0.3,
+    metalness: 0.7
   });
   
-  // Update UI
-  updateObjectListUI();
-}
+  const mesh = new THREE.Mesh(config.geo, material);
+  mesh.name = config.name;
+  mesh.position.set(config.pos[0], config.pos[1], config.pos[2]);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  
+  scene.add(mesh);
+  sceneObjects.push(mesh);
+});
 
-// Create additional cameras in the scene
-function createAdditionalCameras(): void {
-  // Top-down camera
-  const topCamera = new THREE.PerspectiveCamera(60, 16/9, 0.1, 1000);
-  topCamera.position.set(0, 30, 0);
-  topCamera.lookAt(0, 0, 0);
-  topCamera.name = 'Top View Camera';
-  scene.add(topCamera);
-  sceneCameras.push(topCamera);
-  
-  // Side camera
-  const sideCamera = new THREE.PerspectiveCamera(50, 16/9, 0.1, 1000);
-  sideCamera.position.set(25, 5, 0);
-  sideCamera.lookAt(0, 0, 0);
-  sideCamera.name = 'Side View Camera';
-  scene.add(sideCamera);
-  sceneCameras.push(sideCamera);
-  
-  // Close-up camera
-  const closeCamera = new THREE.PerspectiveCamera(35, 16/9, 0.1, 500);
-  closeCamera.position.set(5, 3, 5);
-  closeCamera.lookAt(0, 1, 0);
-  closeCamera.name = 'Close-up Camera';
-  scene.add(closeCamera);
-  sceneCameras.push(closeCamera);
-  
-  // Orthographic camera
-  const aspect = 16/9;
-  const frustumSize = 20;
-  const orthoCamera = new THREE.OrthographicCamera(
-    -frustumSize * aspect / 2,
-    frustumSize * aspect / 2,
-    frustumSize / 2,
-    -frustumSize / 2,
-    0.1,
-    1000
-  );
-  orthoCamera.position.set(20, 20, 20);
-  orthoCamera.lookAt(0, 0, 0);
-  orthoCamera.name = 'Orthographic Camera';
-  scene.add(orthoCamera);
-  sceneCameras.push(orthoCamera);
-}
+// ─────────────────────────────────────────────────────────────────
+// Additional Cameras
+// ─────────────────────────────────────────────────────────────────
 
-// Initialize 3Lens DevtoolProbe
-function initDevtools(): void {
-  probe = new DevtoolProbe({ debug: true });
-  
-  // Observe renderer and scene
-  probe.observeRenderer(renderer);
-  probe.observeScene(scene);
-  
-  // Initialize camera controller with orbit controls target
-  probe.initializeCameraController(mainCamera, THREE, {
-    x: controls.target.x,
-    y: controls.target.y,
-    z: controls.target.z
-  });
-  
-  // Create overlay
-  const overlay = createOverlay(probe, {
-    defaultWidth: 350
-  });
-  overlay.showPanel('scene');
-  
-  // Subscribe to camera changes
-  probe.onCameraChanged((camera, info) => {
-    updateCameraInfoUI(info);
-    console.log('Camera changed to:', info.name);
-  });
-  
-  // Subscribe to animation complete
-  probe.onAnimationComplete(() => {
-    isAnimating = false;
-    updateStatusUI('Animation complete', false);
-  });
-  
-  // Initial UI update
-  updateCameraListUI();
-  updateCameraInfoUI(probe.getCameraInfo());
-}
+// Top-down camera
+const topCamera = new THREE.PerspectiveCamera(60, 16/9, 0.1, 1000);
+topCamera.position.set(0, 30, 0);
+topCamera.lookAt(0, 0, 0);
+topCamera.name = 'Top View Camera';
+scene.add(topCamera);
 
-// Update object list UI
-function updateObjectListUI(): void {
-  objectListEl.innerHTML = sceneObjects.map((obj, index) => `
-    <div class="object-btn" data-index="${index}">
-      <span class="icon">${obj.icon}</span>
-      <span class="label">${obj.name}</span>
-    </div>
-  `).join('');
-  
-  // Add click handlers
-  objectListEl.querySelectorAll('.object-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const index = parseInt(btn.getAttribute('data-index')!);
-      selectObject(index);
-    });
-  });
-}
+// Side camera
+const sideCamera = new THREE.PerspectiveCamera(50, 16/9, 0.1, 1000);
+sideCamera.position.set(25, 5, 0);
+sideCamera.lookAt(0, 0, 0);
+sideCamera.name = 'Side View Camera';
+scene.add(sideCamera);
 
-// Update camera list UI
-function updateCameraListUI(): void {
-  const cameras = probe.getAvailableCameras();
-  const activeIndex = probe.getActiveCameraIndex();
-  
-  cameraListEl.innerHTML = cameras.map((cam, index) => `
-    <div class="camera-item ${index === activeIndex ? 'active' : ''}" data-index="${index}">
-      <div>
-        <span class="name">${cam.name}</span>
-        <span class="type">${cam.type}</span>
-      </div>
-    </div>
-  `).join('');
-  
-  // Add click handlers
-  cameraListEl.querySelectorAll('.camera-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const index = parseInt(item.getAttribute('data-index')!);
-      switchToCamera(index);
-    });
-  });
-}
+// Close-up camera
+const closeCamera = new THREE.PerspectiveCamera(35, 16/9, 0.1, 500);
+closeCamera.position.set(5, 3, 5);
+closeCamera.lookAt(0, 1, 0);
+closeCamera.name = 'Close-up Camera';
+scene.add(closeCamera);
 
-// Update camera info UI
-function updateCameraInfoUI(info: CameraInfo | null): void {
-  if (!info) return;
-  
-  camName.textContent = info.name;
-  camType.textContent = info.type;
-  
-  if (info.fov !== undefined) {
-    camFov.textContent = `${info.fov.toFixed(0)}°`;
-  } else {
-    camFov.textContent = 'N/A';
-  }
-  
-  if (info.aspect !== undefined) {
-    camAspect.textContent = info.aspect.toFixed(2);
-  } else {
-    camAspect.textContent = 'N/A';
-  }
-  
-  camNear.textContent = info.near.toFixed(2);
-  camFar.textContent = info.far.toFixed(0);
-  
-  // Update position
-  posX.textContent = info.position.x.toFixed(2);
-  posY.textContent = info.position.y.toFixed(2);
-  posZ.textContent = info.position.z.toFixed(2);
-}
+// Orthographic camera
+const aspect = 16/9;
+const frustumSize = 20;
+const orthoCamera = new THREE.OrthographicCamera(
+  -frustumSize * aspect / 2,
+  frustumSize * aspect / 2,
+  frustumSize / 2,
+  -frustumSize / 2,
+  0.1,
+  1000
+);
+orthoCamera.position.set(20, 20, 20);
+orthoCamera.lookAt(0, 0, 0);
+orthoCamera.name = 'Orthographic Camera';
+scene.add(orthoCamera);
 
-// Update status UI
-function updateStatusUI(message: string, animating: boolean): void {
-  statusText.textContent = message;
-  statusBar.classList.toggle('animating', animating);
-}
+// ─────────────────────────────────────────────────────────────────
+// 3Lens DevTools Setup
+// ─────────────────────────────────────────────────────────────────
 
-// Select an object
-function selectObject(index: number): void {
-  // Clear previous selection
-  objectListEl.querySelectorAll('.object-btn').forEach(btn => {
-    btn.classList.remove('selected');
-  });
-  
-  if (index >= 0 && index < sceneObjects.length) {
-    selectedObject = sceneObjects[index].mesh;
-    probe.selectObject(selectedObject);
-    
-    // Update UI
-    objectListEl.querySelector(`[data-index="${index}"]`)?.classList.add('selected');
-    updateStatusUI(`Selected: ${sceneObjects[index].name}`, false);
-  }
-}
+const probe = createProbe({
+  name: 'CameraControlsDemo',
+  sampling: {
+    frameStatsInterval: 1,
+    sceneSnapshotInterval: 30,
+  },
+});
 
-// Switch to a different camera
-function switchToCamera(index: number): void {
-  if (probe.switchToCamera(index)) {
-    updateCameraListUI();
-    updateStatusUI(`Switched to camera ${index + 1}`, false);
-  }
-}
+probe.observeRenderer(renderer);
+probe.observeScene(scene);
 
-// Get fly-to options from UI
-function getFlyToOptions(): FlyToOptions {
-  const duration = parseInt((document.getElementById('fly-duration') as HTMLInputElement).value) || 800;
-  const easing = (document.getElementById('fly-easing') as HTMLSelectElement).value as FlyToOptions['easing'];
-  const padding = parseFloat((document.getElementById('fly-padding') as HTMLInputElement).value) || 1.5;
-  
-  return {
-    duration,
-    easing,
-    padding,
-    onComplete: () => {
-      isAnimating = false;
-      updateStatusUI('Animation complete', false);
+// Register cameras as logical entities
+probe.registerLogicalEntity('cameras', {
+  name: 'Scene Cameras',
+  type: 'camera-system',
+  metadata: {
+    mainCamera: mainCamera.name,
+    additionalCameras: [topCamera.name, sideCamera.name, closeCamera.name, orthoCamera.name],
+  },
+});
+
+bootstrapOverlay({
+  probe,
+  position: 'right',
+  defaultWidth: 380,
+  defaultOpen: true,
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Console Controls
+// ─────────────────────────────────────────────────────────────────
+
+// Expose camera control functions for console testing
+(window as any).cameraDemo = {
+  // Focus on an object by name
+  focusOn: (objectName: string) => {
+    const obj = scene.getObjectByName(objectName);
+    if (obj) {
+      // Calculate bounding box
+      const box = new THREE.Box3().setFromObject(obj);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const distance = maxDim * 2;
+      
+      // Move camera
+      mainCamera.position.set(
+        center.x + distance,
+        center.y + distance * 0.5,
+        center.z + distance
+      );
+      controls.target.copy(center);
+      
+      console.log(`Focused on ${objectName}`);
+    } else {
+      console.log(`Object "${objectName}" not found`);
     }
-  };
-}
-
-// Focus on selected object (instant)
-function focusOnSelected(): void {
-  if (!selectedObject) {
-    updateStatusUI('No object selected', false);
-    return;
-  }
+  },
   
-  const padding = parseFloat((document.getElementById('fly-padding') as HTMLInputElement).value) || 1.5;
-  
-  if (probe.focusOnSelected(padding)) {
-    // Update orbit controls target
-    const target = probe.getOrbitTarget();
-    if (target) {
-      controls.target.set(target.x, target.y, target.z);
-    }
-    updateStatusUI(`Focused on ${selectedObject.name}`, false);
-  }
-}
-
-// Fly to selected object (animated)
-function flyToSelected(): void {
-  if (!selectedObject) {
-    updateStatusUI('No object selected', false);
-    return;
-  }
-  
-  if (isAnimating) {
-    updateStatusUI('Animation already in progress', true);
-    return;
-  }
-  
-  const options = getFlyToOptions();
-  isAnimating = true;
-  updateStatusUI(`Flying to ${selectedObject.name}...`, true);
-  
-  probe.flyToSelected(options);
-}
-
-// Go home instantly
-function goHome(): void {
-  probe.goHome();
-  
-  // Reset orbit controls target
-  const target = probe.getOrbitTarget();
-  if (target) {
-    controls.target.set(target.x, target.y, target.z);
-  }
-  
-  updateStatusUI('Returned home', false);
-}
-
-// Fly home with animation
-function flyHome(): void {
-  if (isAnimating) {
-    updateStatusUI('Animation already in progress', true);
-    return;
-  }
-  
-  const options = getFlyToOptions();
-  isAnimating = true;
-  updateStatusUI('Flying home...', true);
-  
-  probe.flyHome(options);
-}
-
-// Stop any running animation
-function stopAnimation(): void {
-  probe.stopCameraAnimation();
-  isAnimating = false;
-  updateStatusUI('Animation stopped', false);
-}
-
-// Setup event handlers
-function setupEventHandlers(): void {
-  // Button handlers
-  document.getElementById('btn-focus')!.addEventListener('click', focusOnSelected);
-  document.getElementById('btn-fly-to')!.addEventListener('click', flyToSelected);
-  document.getElementById('btn-go-home')!.addEventListener('click', goHome);
-  document.getElementById('btn-fly-home')!.addEventListener('click', flyHome);
-  document.getElementById('btn-stop')!.addEventListener('click', stopAnimation);
-  
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
-    // Don't handle if typing in an input
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+  // Fly to an object with animation
+  flyTo: (objectName: string, duration = 1000) => {
+    const obj = scene.getObjectByName(objectName);
+    if (!obj) {
+      console.log(`Object "${objectName}" not found`);
       return;
     }
     
-    switch (e.key.toLowerCase()) {
-      case 'f':
-        if (e.shiftKey) {
-          flyToSelected();
-        } else {
-          focusOnSelected();
-        }
-        e.preventDefault();
-        break;
-      case 'h':
-        if (e.shiftKey) {
-          flyHome();
-        } else {
-          goHome();
-        }
-        e.preventDefault();
-        break;
-      case 'escape':
-        stopAnimation();
-        e.preventDefault();
-        break;
-      case 'c':
-        // Cycle to next camera
-        const cameras = probe.getAvailableCameras();
-        const currentIndex = probe.getActiveCameraIndex();
-        const nextIndex = (currentIndex + 1) % cameras.length;
-        switchToCamera(nextIndex);
-        e.preventDefault();
-        break;
+    const box = new THREE.Box3().setFromObject(obj);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const distance = maxDim * 2;
+    
+    const targetPos = new THREE.Vector3(
+      center.x + distance,
+      center.y + distance * 0.5,
+      center.z + distance
+    );
+    
+    const startPos = mainCamera.position.clone();
+    const startTarget = controls.target.clone();
+    const startTime = performance.now();
+    
+    function animate() {
+      const elapsed = performance.now() - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // Ease out cubic
+      
+      mainCamera.position.lerpVectors(startPos, targetPos, eased);
+      controls.target.lerpVectors(startTarget, center, eased);
+      
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        console.log(`Flew to ${objectName}`);
+      }
     }
-  });
+    
+    animate();
+  },
   
-  // Window resize
-  window.addEventListener('resize', () => {
-    const container = document.getElementById('canvas-container')!;
-    mainCamera.aspect = container.clientWidth / container.clientHeight;
-    mainCamera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-  });
-}
+  // Go to home position
+  goHome: () => {
+    mainCamera.position.set(15, 12, 15);
+    controls.target.set(0, 0, 0);
+    console.log('Returned to home position');
+  },
+  
+  // List available objects
+  listObjects: () => {
+    console.log('Available objects:');
+    sceneObjects.forEach(obj => console.log(`  - ${obj.name}`));
+  },
+  
+  // List available cameras
+  listCameras: () => {
+    console.log('Available cameras:');
+    console.log(`  - ${mainCamera.name} (active)`);
+    console.log(`  - ${topCamera.name}`);
+    console.log(`  - ${sideCamera.name}`);
+    console.log(`  - ${closeCamera.name}`);
+    console.log(`  - ${orthoCamera.name}`);
+  },
+};
 
-// Animation loop
+// ─────────────────────────────────────────────────────────────────
+// Animation Loop
+// ─────────────────────────────────────────────────────────────────
+
 function animate(): void {
   requestAnimationFrame(animate);
   
   // Update orbit controls
   controls.update();
   
-  // Sync orbit controls target with camera controller
-  if (!isAnimating) {
-    probe.setOrbitTarget({
-      x: controls.target.x,
-      y: controls.target.y,
-      z: controls.target.z
-    });
-  } else {
-    // During animation, sync controls target from camera controller
-    const target = probe.getOrbitTarget();
-    if (target) {
-      controls.target.set(target.x, target.y, target.z);
-    }
-  }
-  
-  // Update position display
-  const info = probe.getCameraInfo();
-  if (info) {
-    posX.textContent = info.position.x.toFixed(2);
-    posY.textContent = info.position.y.toFixed(2);
-    posZ.textContent = info.position.z.toFixed(2);
-  }
-  
   // Animate objects
   const time = performance.now() * 0.001;
   sceneObjects.forEach((obj, i) => {
-    obj.mesh.rotation.y = time * 0.5 * (1 + i * 0.1);
-    obj.mesh.position.y = obj.mesh.position.y + Math.sin(time * 2 + i) * 0.002;
+    obj.rotation.y = time * 0.5 * (1 + i * 0.1);
   });
   
   renderer.render(scene, mainCamera);
 }
 
-// Initialize
-function init(): void {
-  createScene();
-  initDevtools();
-  setupEventHandlers();
-  animate();
-  
-  // Select first object by default
-  selectObject(0);
-  
-  console.log('📷 Camera Controls Showcase initialized');
-  console.log('   F = Focus on selected (instant)');
-  console.log('   Shift+F = Fly to selected (animated)');
-  console.log('   H = Go home (instant)');
-  console.log('   Shift+H = Fly home (animated)');
-  console.log('   Esc = Stop animation');
-  console.log('   C = Cycle cameras');
-}
+// ─────────────────────────────────────────────────────────────────
+// Window Resize
+// ─────────────────────────────────────────────────────────────────
 
-init();
+window.addEventListener('resize', () => {
+  mainCamera.aspect = container.clientWidth / container.clientHeight;
+  mainCamera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Initialize
+// ─────────────────────────────────────────────────────────────────
+
+animate();
+
+console.log(`
+📷 Camera Controls Showcase
+═══════════════════════════════════════
+
+Open 3Lens DevTools (Ctrl+Shift+D) to use camera features:
+
+Scene Panel:
+  • Select objects to focus on them
+  • Use the camera toolbar for fly-to animations
+
+Camera Panel (if available):
+  • Switch between different cameras
+  • Adjust camera properties
+  • Set home position
+
+Console commands:
+  cameraDemo.focusOn('Red Cube')     - Focus on object
+  cameraDemo.flyTo('Blue Sphere')    - Fly to object
+  cameraDemo.goHome()                - Return to home
+  cameraDemo.listObjects()           - List all objects
+  cameraDemo.listCameras()           - List all cameras
+
+═══════════════════════════════════════
+`);

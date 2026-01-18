@@ -7,33 +7,15 @@
  * - Cost heatmap overlay (color-coded tree nodes)
  * - Cost ranking (objects sorted by total cost)
  * - Detailed cost breakdown per object
+ * 
+ * Open the 3Lens overlay (Ctrl+Shift+D) to see cost analysis in action!
  */
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { DevtoolProbe } from '@3lens/core';
-import { ThreeLensOverlay } from '@3lens/overlay';
+import { createProbe } from '@3lens/core';
+import { bootstrapOverlay } from '@3lens/overlay';
 import '@3lens/themes/styles.css';
-
-// ─────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────
-
-interface SceneObject {
-  mesh: THREE.Mesh;
-  name: string;
-  category: 'low' | 'medium' | 'high' | 'critical';
-  description: string;
-}
-
-interface CostData {
-  triangleCost: number;
-  materialComplexity: number;
-  textureCost: number;
-  shadowCost: number;
-  totalCost: number;
-  costLevel: 'low' | 'medium' | 'high' | 'critical';
-}
 
 // ─────────────────────────────────────────────────────────────────
 // Scene Setup
@@ -43,7 +25,7 @@ const app = document.getElementById('app')!;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
-scene.name = 'Cost Analysis Demo';
+scene.name = 'CostAnalysisDemo';
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -77,12 +59,6 @@ directionalLight.position.set(10, 20, 10);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.width = 2048;
 directionalLight.shadow.mapSize.height = 2048;
-directionalLight.shadow.camera.near = 0.5;
-directionalLight.shadow.camera.far = 50;
-directionalLight.shadow.camera.left = -20;
-directionalLight.shadow.camera.right = 20;
-directionalLight.shadow.camera.top = 20;
-directionalLight.shadow.camera.bottom = -20;
 scene.add(directionalLight);
 
 const pointLight = new THREE.PointLight(0x22d3ee, 1, 20);
@@ -90,11 +66,8 @@ pointLight.position.set(-5, 5, 5);
 scene.add(pointLight);
 
 // ─────────────────────────────────────────────────────────────────
-// Texture Loader
+// Texture Creation
 // ─────────────────────────────────────────────────────────────────
-
-const textureLoader = new THREE.TextureLoader();
-const textureCache = new Map<string, THREE.Texture>();
 
 function createCheckerTexture(size = 256, checks = 8): THREE.Texture {
   const canvas = document.createElement('canvas');
@@ -122,22 +95,20 @@ function createNormalMapTexture(size = 256): THREE.Texture {
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
   
-  // Create a simple bump pattern (encoded as normal map)
   const imageData = ctx.createImageData(size, size);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const i = (y * size + x) * 4;
       const noise = Math.sin(x * 0.1) * Math.cos(y * 0.1);
-      imageData.data[i] = 128 + noise * 20;     // R (X direction)
-      imageData.data[i + 1] = 128 + noise * 20; // G (Y direction)
-      imageData.data[i + 2] = 255;              // B (Z direction)
-      imageData.data[i + 3] = 255;              // A
+      imageData.data[i] = 128 + noise * 20;
+      imageData.data[i + 1] = 128 + noise * 20;
+      imageData.data[i + 2] = 255;
+      imageData.data[i + 3] = 255;
     }
   }
   ctx.putImageData(imageData, 0, 0);
   
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
+  return new THREE.CanvasTexture(canvas);
 }
 
 function createRoughnessTexture(size = 256): THREE.Texture {
@@ -146,7 +117,6 @@ function createRoughnessTexture(size = 256): THREE.Texture {
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
   
-  // Create varied roughness pattern
   for (let y = 0; y < size; y += 4) {
     for (let x = 0; x < size; x += 4) {
       const roughness = Math.random() * 0.5 + 0.3;
@@ -156,20 +126,16 @@ function createRoughnessTexture(size = 256): THREE.Texture {
     }
   }
   
-  const texture = new THREE.CanvasTexture(canvas);
-  return texture;
+  return new THREE.CanvasTexture(canvas);
 }
 
-// Pre-create textures
 const checkerTexture = createCheckerTexture();
 const normalMapTexture = createNormalMapTexture();
 const roughnessTexture = createRoughnessTexture();
 
 // ─────────────────────────────────────────────────────────────────
-// Scene Objects
+// Scene Objects with Varying Costs
 // ─────────────────────────────────────────────────────────────────
-
-const sceneObjects: SceneObject[] = [];
 
 // Ground plane (low cost)
 const groundGeometry = new THREE.PlaneGeometry(30, 30);
@@ -184,12 +150,6 @@ ground.position.y = -0.01;
 ground.receiveShadow = true;
 ground.name = 'Ground Plane';
 scene.add(ground);
-sceneObjects.push({
-  mesh: ground,
-  name: 'Ground Plane',
-  category: 'low',
-  description: 'Simple plane with basic material'
-});
 
 // ─── LOW COST OBJECTS ────────────────────────────────────────────
 
@@ -198,28 +158,16 @@ const simpleCubeGeo = new THREE.BoxGeometry(1, 1, 1);
 const simpleCubeMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
 const simpleCube = new THREE.Mesh(simpleCubeGeo, simpleCubeMat);
 simpleCube.position.set(-8, 0.5, -6);
-simpleCube.name = 'Simple Cube';
+simpleCube.name = 'Simple Cube (Low Cost)';
 scene.add(simpleCube);
-sceneObjects.push({
-  mesh: simpleCube,
-  name: 'Simple Cube',
-  category: 'low',
-  description: 'MeshBasicMaterial, no lighting, 12 triangles'
-});
 
 // Low-poly sphere (MeshLambertMaterial)
 const lowPolySphereGeo = new THREE.SphereGeometry(0.8, 8, 6);
 const lowPolySphereMat = new THREE.MeshLambertMaterial({ color: 0x4ade80 });
 const lowPolySphere = new THREE.Mesh(lowPolySphereGeo, lowPolySphereMat);
 lowPolySphere.position.set(-5, 0.8, -6);
-lowPolySphere.name = 'Low-Poly Sphere';
+lowPolySphere.name = 'Low-Poly Sphere (Low Cost)';
 scene.add(lowPolySphere);
-sceneObjects.push({
-  mesh: lowPolySphere,
-  name: 'Low-Poly Sphere',
-  category: 'low',
-  description: 'MeshLambertMaterial, ~48 triangles'
-});
 
 // ─── MEDIUM COST OBJECTS ─────────────────────────────────────────
 
@@ -234,14 +182,8 @@ const standardSphere = new THREE.Mesh(standardSphereGeo, standardSphereMat);
 standardSphere.position.set(-2, 1, -6);
 standardSphere.castShadow = true;
 standardSphere.receiveShadow = true;
-standardSphere.name = 'Standard Sphere';
+standardSphere.name = 'Standard Sphere (Medium Cost)';
 scene.add(standardSphere);
-sceneObjects.push({
-  mesh: standardSphere,
-  name: 'Standard Sphere',
-  category: 'medium',
-  description: 'MeshStandardMaterial, shadows, ~2000 triangles'
-});
 
 // Textured torus
 const texturedTorusGeo = new THREE.TorusGeometry(0.8, 0.3, 32, 64);
@@ -254,14 +196,8 @@ const texturedTorusMat = new THREE.MeshStandardMaterial({
 const texturedTorus = new THREE.Mesh(texturedTorusGeo, texturedTorusMat);
 texturedTorus.position.set(1, 1.1, -6);
 texturedTorus.castShadow = true;
-texturedTorus.name = 'Textured Torus';
+texturedTorus.name = 'Textured Torus (Medium Cost)';
 scene.add(texturedTorus);
-sceneObjects.push({
-  mesh: texturedTorus,
-  name: 'Textured Torus',
-  category: 'medium',
-  description: 'MeshStandardMaterial + diffuse texture'
-});
 
 // ─── HIGH COST OBJECTS ───────────────────────────────────────────
 
@@ -279,14 +215,8 @@ const complexSphere = new THREE.Mesh(complexSphereGeo, complexSphereMat);
 complexSphere.position.set(4, 1.2, -6);
 complexSphere.castShadow = true;
 complexSphere.receiveShadow = true;
-complexSphere.name = 'Complex Sphere';
+complexSphere.name = 'Complex Sphere (High Cost)';
 scene.add(complexSphere);
-sceneObjects.push({
-  mesh: complexSphere,
-  name: 'Complex Sphere',
-  category: 'high',
-  description: 'MeshStandardMaterial + multiple textures (diffuse, normal, roughness)'
-});
 
 // High-poly torus knot
 const torusKnotGeo = new THREE.TorusKnotGeometry(0.8, 0.25, 128, 32);
@@ -299,14 +229,8 @@ const torusKnot = new THREE.Mesh(torusKnotGeo, torusKnotMat);
 torusKnot.position.set(7, 1, -6);
 torusKnot.castShadow = true;
 torusKnot.receiveShadow = true;
-torusKnot.name = 'Torus Knot';
+torusKnot.name = 'Torus Knot (High Cost)';
 scene.add(torusKnot);
-sceneObjects.push({
-  mesh: torusKnot,
-  name: 'Torus Knot',
-  category: 'high',
-  description: 'High polygon count (~8000 triangles), shadows'
-});
 
 // ─── CRITICAL COST OBJECTS ───────────────────────────────────────
 
@@ -326,16 +250,10 @@ const ultraSphere = new THREE.Mesh(ultraSphereGeo, ultraSphereMat);
 ultraSphere.position.set(-4, 1.5, 0);
 ultraSphere.castShadow = true;
 ultraSphere.receiveShadow = true;
-ultraSphere.name = 'Ultra Sphere';
+ultraSphere.name = 'Ultra Sphere (Critical Cost)';
 scene.add(ultraSphere);
-sceneObjects.push({
-  mesh: ultraSphere,
-  name: 'Ultra Sphere',
-  category: 'critical',
-  description: 'MeshPhysicalMaterial + clearcoat + 3 textures, ~32K triangles'
-});
 
-// Dense icosahedron
+// Dense icosahedron with transmission
 const denseIcosaGeo = new THREE.IcosahedronGeometry(1.2, 5);
 const denseIcosaMat = new THREE.MeshPhysicalMaterial({
   color: 0xf87171,
@@ -350,18 +268,12 @@ const denseIcosa = new THREE.Mesh(denseIcosaGeo, denseIcosaMat);
 denseIcosa.position.set(0, 1.2, 0);
 denseIcosa.castShadow = true;
 denseIcosa.receiveShadow = true;
-denseIcosa.name = 'Dense Icosahedron';
+denseIcosa.name = 'Dense Icosahedron (Critical Cost)';
 scene.add(denseIcosa);
-sceneObjects.push({
-  mesh: denseIcosa,
-  name: 'Dense Icosahedron',
-  category: 'critical',
-  description: 'MeshPhysicalMaterial + transmission, ~20K triangles'
-});
 
-// Complex mesh array (many objects)
+// Complex mesh array (many objects with unique materials)
 const complexArrayGroup = new THREE.Group();
-complexArrayGroup.name = 'Complex Array Group';
+complexArrayGroup.name = 'Cube Array (Critical Cost)';
 const smallCubeGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
 for (let x = 0; x < 5; x++) {
   for (let z = 0; z < 5; z++) {
@@ -381,460 +293,113 @@ for (let x = 0; x < 5; x++) {
 }
 complexArrayGroup.position.set(5, 0, 2);
 scene.add(complexArrayGroup);
-sceneObjects.push({
-  mesh: complexArrayGroup as unknown as THREE.Mesh, // Group reference
-  name: 'Cube Array (25 items)',
-  category: 'critical',
-  description: '25 individual meshes with unique PhysicalMaterials'
-});
 
 // ─────────────────────────────────────────────────────────────────
 // 3Lens DevTools Setup
 // ─────────────────────────────────────────────────────────────────
 
-const probe = new DevtoolProbe();
-probe.init({
-  scenes: [scene],
-  enableKeyboardShortcuts: true
+const probe = createProbe({
+  name: 'CostAnalysisDemo',
+  sampling: {
+    frameStatsInterval: 1,
+    sceneSnapshotInterval: 30,
+  },
 });
+
 probe.observeRenderer(renderer);
+probe.observeScene(scene);
 
-const overlay = new ThreeLensOverlay(probe);
-overlay.init();
+// Register logical entity for cost categories
+probe.registerLogicalEntity('cost-overview', {
+  name: 'Cost Overview',
+  type: 'analysis',
+  metadata: {
+    categories: {
+      low: ['Simple Cube', 'Low-Poly Sphere', 'Ground Plane'],
+      medium: ['Standard Sphere', 'Textured Torus'],
+      high: ['Complex Sphere', 'Torus Knot'],
+      critical: ['Ultra Sphere', 'Dense Icosahedron', 'Cube Array'],
+    },
+    description: 'Objects categorized by rendering cost',
+  },
+});
 
-// ─────────────────────────────────────────────────────────────────
-// Cost Calculation Helpers
-// ─────────────────────────────────────────────────────────────────
-
-function calculateMeshCost(mesh: THREE.Mesh): CostData {
-  const geometry = mesh.geometry;
-  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-  
-  // Triangle count
-  let faceCount = 0;
-  if (geometry.index) {
-    faceCount = geometry.index.count / 3;
-  } else if (geometry.attributes.position) {
-    faceCount = geometry.attributes.position.count / 3;
-  }
-  
-  const triangleCost = faceCount / 1000;
-  
-  // Material complexity
-  let totalComplexity = 0;
-  let textureCount = 0;
-  
-  for (const mat of materials) {
-    let complexity = 1;
-    
-    // Material type complexity
-    if (mat.type === 'MeshBasicMaterial') complexity += 0;
-    else if (mat.type === 'MeshLambertMaterial') complexity += 1;
-    else if (mat.type === 'MeshPhongMaterial') complexity += 2;
-    else if (mat.type === 'MeshStandardMaterial') complexity += 3;
-    else if (mat.type === 'MeshPhysicalMaterial') complexity += 4;
-    
-    // Check textures
-    const stdMat = mat as THREE.MeshStandardMaterial;
-    if ('map' in stdMat && stdMat.map) { textureCount++; complexity += 0.5; }
-    if ('normalMap' in stdMat && stdMat.normalMap) { textureCount++; complexity += 0.5; }
-    if ('roughnessMap' in stdMat && stdMat.roughnessMap) { textureCount++; complexity += 0.5; }
-    if ('metalnessMap' in stdMat && stdMat.metalnessMap) { textureCount++; complexity += 0.5; }
-    if ('envMap' in stdMat && stdMat.envMap) { textureCount++; complexity += 0.5; }
-    if ('aoMap' in stdMat && stdMat.aoMap) { textureCount++; complexity += 0.5; }
-    
-    totalComplexity += Math.min(complexity, 10);
-  }
-  
-  const materialComplexity = totalComplexity / materials.length;
-  const textureCost = textureCount * 2;
-  
-  // Shadow cost
-  let shadowCost = 0;
-  if (mesh.castShadow) shadowCost += 2;
-  if (mesh.receiveShadow) shadowCost += 1;
-  
-  // Total cost
-  const totalCost = (triangleCost * 1) + (materialComplexity * 0.5) + (textureCost * 0.3) + (shadowCost * 0.2);
-  
-  // Cost level
-  let costLevel: 'low' | 'medium' | 'high' | 'critical';
-  if (totalCost < 2) costLevel = 'low';
-  else if (totalCost < 10) costLevel = 'medium';
-  else if (totalCost < 50) costLevel = 'high';
-  else costLevel = 'critical';
-  
-  return {
-    triangleCost,
-    materialComplexity,
-    textureCost,
-    shadowCost,
-    totalCost,
-    costLevel
-  };
-}
-
-function formatNumber(num: number): string {
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-}
-
-function getTriangleCount(mesh: THREE.Mesh | THREE.Group): number {
-  if (mesh instanceof THREE.Group) {
-    let total = 0;
-    mesh.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.geometry) {
-        const geo = child.geometry;
-        if (geo.index) {
-          total += geo.index.count / 3;
-        } else if (geo.attributes.position) {
-          total += geo.attributes.position.count / 3;
-        }
-      }
-    });
-    return total;
-  }
-  
-  const geometry = mesh.geometry;
-  if (!geometry) return 0;
-  
-  if (geometry.index) {
-    return geometry.index.count / 3;
-  } else if (geometry.attributes.position) {
-    return geometry.attributes.position.count / 3;
-  }
-  return 0;
-}
+bootstrapOverlay({
+  probe,
+  position: 'right',
+  defaultWidth: 400,
+  defaultOpen: true,
+});
 
 // ─────────────────────────────────────────────────────────────────
-// UI Updates
-// ─────────────────────────────────────────────────────────────────
-
-const objectList = document.getElementById('object-list')!;
-const breakdownSection = document.getElementById('breakdown-section')!;
-const costBreakdown = document.getElementById('cost-breakdown')!;
-const totalCostEl = document.getElementById('total-cost')!;
-const totalTrianglesEl = document.getElementById('total-triangles')!;
-const meshCountEl = document.getElementById('mesh-count')!;
-const materialCountEl = document.getElementById('material-count')!;
-
-let selectedObjectIndex = -1;
-
-function updateUI() {
-  // Calculate costs for all objects
-  const objectData = sceneObjects.map((obj, index) => {
-    let cost: CostData;
-    let triangles: number;
-    
-    if (obj.mesh instanceof THREE.Group) {
-      // For groups, sum up child costs
-      triangles = getTriangleCount(obj.mesh);
-      const triangleCost = triangles / 1000;
-      
-      // Count unique materials in group
-      const materials = new Set<THREE.Material>();
-      obj.mesh.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          const mats = Array.isArray(child.material) ? child.material : [child.material];
-          mats.forEach(m => materials.add(m));
-        }
-      });
-      
-      // Estimate complexity
-      let complexity = 0;
-      materials.forEach((mat) => {
-        if (mat.type === 'MeshPhysicalMaterial') complexity += 4;
-        else if (mat.type === 'MeshStandardMaterial') complexity += 3;
-        else complexity += 1;
-      });
-      complexity = complexity / materials.size;
-      
-      const textureCost = materials.size * 2;
-      const shadowCost = 3;
-      const totalCost = triangleCost + complexity * 0.5 + textureCost * 0.3 + shadowCost * 0.2;
-      
-      cost = {
-        triangleCost,
-        materialComplexity: complexity,
-        textureCost,
-        shadowCost,
-        totalCost,
-        costLevel: totalCost < 2 ? 'low' : totalCost < 10 ? 'medium' : totalCost < 50 ? 'high' : 'critical'
-      };
-    } else {
-      cost = calculateMeshCost(obj.mesh);
-      triangles = getTriangleCount(obj.mesh);
-    }
-    
-    return { ...obj, cost, triangles, index };
-  });
-  
-  // Sort by cost (descending)
-  objectData.sort((a, b) => b.cost.totalCost - a.cost.totalCost);
-  
-  // Calculate totals
-  const totalCost = objectData.reduce((sum, obj) => sum + obj.cost.totalCost, 0);
-  const totalTriangles = objectData.reduce((sum, obj) => sum + obj.triangles, 0);
-  const meshCount = objectData.length;
-  
-  // Count unique materials
-  const allMaterials = new Set<THREE.Material>();
-  sceneObjects.forEach(obj => {
-    if (obj.mesh instanceof THREE.Group) {
-      obj.mesh.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          const mats = Array.isArray(child.material) ? child.material : [child.material];
-          mats.forEach(m => allMaterials.add(m));
-        }
-      });
-    } else {
-      const mats = Array.isArray(obj.mesh.material) ? obj.mesh.material : [obj.mesh.material];
-      mats.forEach(m => allMaterials.add(m));
-    }
-  });
-  
-  // Update stats
-  totalCostEl.textContent = totalCost.toFixed(1);
-  totalTrianglesEl.textContent = formatNumber(totalTriangles);
-  meshCountEl.textContent = meshCount.toString();
-  materialCountEl.textContent = allMaterials.size.toString();
-  
-  // Get max cost for bar scaling
-  const maxCost = Math.max(...objectData.map(o => o.cost.totalCost), 1);
-  
-  // Render object list
-  objectList.innerHTML = objectData.map((obj, rank) => {
-    const isSelected = obj.index === selectedObjectIndex;
-    const costPercent = (obj.cost.totalCost / maxCost) * 100;
-    const barColor = getCostColor(obj.cost.costLevel);
-    
-    return `
-      <div class="object-item ${isSelected ? 'selected' : ''}" data-index="${obj.index}">
-        <span class="object-rank">#${rank + 1}</span>
-        <div class="object-info">
-          <div class="object-name">${obj.name}</div>
-          <div class="object-stats">${formatNumber(obj.triangles)} tris</div>
-        </div>
-        <div class="cost-bar-container">
-          <div class="cost-bar" style="width: ${costPercent}%; background: ${barColor}"></div>
-        </div>
-        <span class="cost-badge cost-${obj.cost.costLevel}">${obj.cost.totalCost.toFixed(1)}</span>
-      </div>
-    `;
-  }).join('');
-  
-  // Add click handlers
-  objectList.querySelectorAll('.object-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const index = parseInt(item.getAttribute('data-index')!, 10);
-      selectObject(index);
-    });
-  });
-  
-  // Update breakdown if object selected
-  if (selectedObjectIndex >= 0) {
-    const selectedData = objectData.find(o => o.index === selectedObjectIndex);
-    if (selectedData) {
-      updateBreakdown(selectedData);
-    }
-  }
-}
-
-function getCostColor(level: string): string {
-  switch (level) {
-    case 'low': return '#22c55e';
-    case 'medium': return '#eab308';
-    case 'high': return '#f97316';
-    case 'critical': return '#ef4444';
-    default: return '#737373';
-  }
-}
-
-function selectObject(index: number) {
-  selectedObjectIndex = index;
-  
-  // Select in 3Lens
-  const obj = sceneObjects[index];
-  if (obj && obj.mesh) {
-    probe.selectObject(obj.mesh);
-  }
-  
-  updateUI();
-}
-
-function updateBreakdown(obj: { name: string; description: string; cost: CostData; triangles: number }) {
-  breakdownSection.style.display = 'block';
-  
-  const { cost } = obj;
-  const total = cost.triangleCost + cost.materialComplexity + cost.textureCost + cost.shadowCost;
-  const maxComponent = Math.max(cost.triangleCost, cost.materialComplexity, cost.textureCost, cost.shadowCost, 1);
-  
-  costBreakdown.innerHTML = `
-    <div class="breakdown-header">
-      <span class="breakdown-title">${obj.name}</span>
-      <span class="breakdown-total cost-${cost.costLevel}">${cost.totalCost.toFixed(2)}</span>
-    </div>
-    <div style="font-size: 11px; color: #737373; margin-bottom: 12px;">
-      ${obj.description}
-    </div>
-    <div class="breakdown-row">
-      <span class="breakdown-label">Triangles (${formatNumber(Math.round(cost.triangleCost * 1000))})</span>
-      <span class="breakdown-value">${cost.triangleCost.toFixed(2)}</span>
-      <div class="breakdown-bar">
-        <div class="breakdown-bar-fill" style="width: ${(cost.triangleCost / maxComponent) * 100}%; background: #22d3ee"></div>
-      </div>
-    </div>
-    <div class="breakdown-row">
-      <span class="breakdown-label">Material Complexity</span>
-      <span class="breakdown-value">${cost.materialComplexity.toFixed(2)}</span>
-      <div class="breakdown-bar">
-        <div class="breakdown-bar-fill" style="width: ${(cost.materialComplexity / maxComponent) * 100}%; background: #a855f7"></div>
-      </div>
-    </div>
-    <div class="breakdown-row">
-      <span class="breakdown-label">Texture Cost</span>
-      <span class="breakdown-value">${cost.textureCost.toFixed(2)}</span>
-      <div class="breakdown-bar">
-        <div class="breakdown-bar-fill" style="width: ${(cost.textureCost / maxComponent) * 100}%; background: #f59e0b"></div>
-      </div>
-    </div>
-    <div class="breakdown-row">
-      <span class="breakdown-label">Shadow Cost</span>
-      <span class="breakdown-value">${cost.shadowCost.toFixed(2)}</span>
-      <div class="breakdown-bar">
-        <div class="breakdown-bar-fill" style="width: ${(cost.shadowCost / maxComponent) * 100}%; background: #10b981"></div>
-      </div>
-    </div>
-  `;
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Scene Actions
+// Console Controls
 // ─────────────────────────────────────────────────────────────────
 
 let addedObjectCount = 0;
 
-document.getElementById('add-expensive')!.addEventListener('click', () => {
+(window as any).costDemo = {
   // Add a high-cost object
-  const geo = new THREE.SphereGeometry(1, 128, 128);
-  const mat = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color().setHSL(Math.random(), 0.8, 0.5),
-    roughness: 0.1,
-    metalness: 0.9,
-    clearcoat: 1.0,
-    map: checkerTexture,
-    normalMap: normalMapTexture,
-    roughnessMap: roughnessTexture
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(
-    (Math.random() - 0.5) * 10,
-    1,
-    (Math.random() - 0.5) * 10 + 6
-  );
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.name = `Expensive Object ${++addedObjectCount}`;
-  scene.add(mesh);
+  addExpensive: () => {
+    const geo = new THREE.SphereGeometry(1, 128, 128);
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color().setHSL(Math.random(), 0.8, 0.5),
+      roughness: 0.1,
+      metalness: 0.9,
+      clearcoat: 1.0,
+      map: checkerTexture,
+      normalMap: normalMapTexture,
+      roughnessMap: roughnessTexture
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(
+      (Math.random() - 0.5) * 10,
+      1,
+      (Math.random() - 0.5) * 10 + 6
+    );
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = `Expensive Object ${++addedObjectCount}`;
+    scene.add(mesh);
+    
+    console.log(`Added expensive object: ${mesh.name}`);
+  },
   
-  sceneObjects.push({
-    mesh,
-    name: mesh.name,
-    category: 'critical',
-    description: 'Dynamically added high-cost object'
-  });
-  
-  updateUI();
-});
-
-document.getElementById('add-cheap')!.addEventListener('click', () => {
   // Add a low-cost object
-  const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-  const mat = new THREE.MeshBasicMaterial({
-    color: new THREE.Color().setHSL(Math.random(), 0.6, 0.6)
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(
-    (Math.random() - 0.5) * 10,
-    0.25,
-    (Math.random() - 0.5) * 10 + 6
-  );
-  mesh.name = `Simple Object ${++addedObjectCount}`;
-  scene.add(mesh);
+  addCheap: () => {
+    const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(Math.random(), 0.6, 0.6)
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(
+      (Math.random() - 0.5) * 10,
+      0.25,
+      (Math.random() - 0.5) * 10 + 6
+    );
+    mesh.name = `Simple Object ${++addedObjectCount}`;
+    scene.add(mesh);
+    
+    console.log(`Added cheap object: ${mesh.name}`);
+  },
   
-  sceneObjects.push({
-    mesh,
-    name: mesh.name,
-    category: 'low',
-    description: 'Dynamically added low-cost object'
-  });
-  
-  updateUI();
-});
-
-document.getElementById('optimize-scene')!.addEventListener('click', () => {
-  // "Optimize" critical objects by reducing their complexity
-  sceneObjects.forEach(obj => {
-    if (obj.category === 'critical' && obj.mesh instanceof THREE.Mesh) {
-      // Reduce shadow casting
-      obj.mesh.castShadow = false;
-      
-      // Simplify material if MeshPhysicalMaterial
-      if (obj.mesh.material instanceof THREE.MeshPhysicalMaterial) {
-        const newMat = new THREE.MeshStandardMaterial({
-          color: (obj.mesh.material as THREE.MeshPhysicalMaterial).color,
-          roughness: 0.5,
-          metalness: 0.5
-        });
-        obj.mesh.material.dispose();
-        obj.mesh.material = newMat;
-        obj.category = 'high';
-        obj.description = 'Optimized: downgraded to MeshStandardMaterial, shadows disabled';
-      }
-    }
-  });
-  
-  updateUI();
-});
-
-const initialObjects = [...sceneObjects];
-const initialMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
-initialObjects.forEach(obj => {
-  if (obj.mesh instanceof THREE.Mesh) {
-    initialMaterials.set(obj.mesh, obj.mesh.material);
-  }
-});
-
-document.getElementById('reset-scene')!.addEventListener('click', () => {
-  // Remove dynamically added objects
-  const toRemove: SceneObject[] = [];
-  sceneObjects.forEach((obj, index) => {
-    if (index >= initialObjects.length) {
-      if (obj.mesh instanceof THREE.Mesh) {
-        obj.mesh.geometry.dispose();
-        if (Array.isArray(obj.mesh.material)) {
-          obj.mesh.material.forEach(m => m.dispose());
-        } else {
-          obj.mesh.material.dispose();
-        }
-      }
-      scene.remove(obj.mesh);
-      toRemove.push(obj);
-    }
-  });
-  
-  toRemove.forEach(obj => {
-    const idx = sceneObjects.indexOf(obj);
-    if (idx >= 0) sceneObjects.splice(idx, 1);
-  });
-  
-  addedObjectCount = 0;
-  selectedObjectIndex = -1;
-  breakdownSection.style.display = 'none';
-  
-  updateUI();
-});
+  // List objects by cost category
+  listByCost: () => {
+    console.log('\n📊 Objects by Cost Category:\n');
+    console.log('🟢 LOW COST:');
+    console.log('  - Simple Cube (MeshBasicMaterial, 12 tris)');
+    console.log('  - Low-Poly Sphere (MeshLambertMaterial, ~48 tris)');
+    console.log('\n🟡 MEDIUM COST:');
+    console.log('  - Standard Sphere (MeshStandardMaterial, ~2K tris, shadows)');
+    console.log('  - Textured Torus (MeshStandardMaterial + texture)');
+    console.log('\n🟠 HIGH COST:');
+    console.log('  - Complex Sphere (MeshStandardMaterial + 3 textures)');
+    console.log('  - Torus Knot (~8K tris, shadows)');
+    console.log('\n🔴 CRITICAL COST:');
+    console.log('  - Ultra Sphere (MeshPhysicalMaterial + clearcoat + 3 textures, ~32K tris)');
+    console.log('  - Dense Icosahedron (MeshPhysicalMaterial + transmission, ~20K tris)');
+    console.log('  - Cube Array (25 meshes with unique PhysicalMaterials)');
+  },
+};
 
 // ─────────────────────────────────────────────────────────────────
 // Animation Loop
@@ -848,21 +413,12 @@ function animate() {
   time += 0.01;
   
   // Subtle rotation for some objects
-  sceneObjects.forEach((obj) => {
-    if (obj.name === 'Torus Knot' && obj.mesh instanceof THREE.Mesh) {
-      obj.mesh.rotation.y = time * 0.3;
-    }
-    if (obj.name === 'Dense Icosahedron' && obj.mesh instanceof THREE.Mesh) {
-      obj.mesh.rotation.x = time * 0.2;
-      obj.mesh.rotation.y = time * 0.3;
-    }
-    if (obj.name === 'Textured Torus' && obj.mesh instanceof THREE.Mesh) {
-      obj.mesh.rotation.x = time * 0.5;
-    }
-  });
+  torusKnot.rotation.y = time * 0.3;
+  denseIcosa.rotation.x = time * 0.2;
+  denseIcosa.rotation.y = time * 0.3;
+  texturedTorus.rotation.x = time * 0.5;
   
   controls.update();
-  probe.capture();
   renderer.render(scene, camera);
 }
 
@@ -880,7 +436,6 @@ window.addEventListener('resize', () => {
 // Initialize
 // ─────────────────────────────────────────────────────────────────
 
-updateUI();
 animate();
 
 console.log(`
@@ -888,21 +443,27 @@ console.log(`
 ║                 Cost Analysis Visualization                    ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  This demo showcases 3Lens cost analysis features:           ║
+║  Open 3Lens DevTools (Ctrl+Shift+D) to explore:              ║
 ║                                                               ║
-║  • Triangle Cost: 1 point per 1000 triangles                 ║
-║  • Material Complexity: 1-10 based on shader type            ║
-║  • Texture Cost: 2 points per texture map                    ║
-║  • Shadow Cost: +2 for cast, +1 for receive                  ║
+║  Scene Panel:                                                 ║
+║    • View objects in the scene tree                          ║
+║    • Select objects to see their properties                  ║
+║    • Cost indicators show relative rendering cost            ║
+║                                                               ║
+║  Performance Panel:                                           ║
+║    • See total triangle count and draw calls                 ║
+║    • Monitor frame time and FPS                              ║
 ║                                                               ║
 ║  Cost Levels:                                                 ║
-║  • Low (green): < 2 total cost                               ║
-║  • Medium (yellow): 2-10 total cost                          ║
-║  • High (orange): 10-50 total cost                           ║
-║  • Critical (red): > 50 total cost                           ║
+║    🟢 Low: Basic materials, few triangles                    ║
+║    🟡 Medium: Standard materials, textures, shadows          ║
+║    🟠 High: Multiple textures, high poly count               ║
+║    🔴 Critical: Physical materials, many unique materials    ║
 ║                                                               ║
-║  Press F9 to open the 3Lens DevTools overlay                 ║
-║  and see the cost heatmap in the scene tree!                 ║
+║  Console commands:                                            ║
+║    costDemo.addExpensive()  - Add high-cost object           ║
+║    costDemo.addCheap()      - Add low-cost object            ║
+║    costDemo.listByCost()    - List objects by category       ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 `);

@@ -21,125 +21,32 @@
     #app {
       width: 100vw;
       height: 100vh;
-      position: relative;
     }
 
     canvas {
       display: block;
     }
 
-    /* Header */
-    .header {
+    /* Minimal scenario controls - NOT debugging UI */
+    .scenario-controls {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 48px;
-      background: linear-gradient(180deg, rgba(20, 20, 35, 0.98) 0%, rgba(15, 15, 25, 0.95) 100%);
-      border-bottom: 1px solid rgba(138, 43, 226, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
+      top: 16px;
+      left: 16px;
       z-index: 100;
-      backdrop-filter: blur(10px);
-    }
-
-    .header-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .header-title h1 {
-      font-size: 16px;
-      font-weight: 600;
-      color: #a855f7;
-    }
-
-    .pipeline-badge {
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      background: rgba(138, 43, 226, 0.2);
-      color: #a855f7;
-      border: 1px solid rgba(138, 43, 226, 0.4);
-    }
-
-    .header-stats {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-    }
-
-    .stat-item {
       display: flex;
       flex-direction: column;
-      align-items: flex-end;
-    }
-
-    .stat-label {
-      font-size: 10px;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .stat-value {
-      font-size: 14px;
-      font-weight: 600;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-    }
-
-    .stat-value.purple { color: #a855f7; }
-    .stat-value.blue { color: #4a9eff; }
-    .stat-value.green { color: #50c878; }
-    .stat-value.orange { color: #ff9f43; }
-
-    /* Control Panel */
-    .control-panel {
-      position: fixed;
-      top: 60px;
-      left: 12px;
-      width: 300px;
-      background: rgba(20, 20, 35, 0.95);
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      z-index: 90;
-      backdrop-filter: blur(10px);
-      max-height: calc(100vh - 130px);
-      overflow-y: auto;
-    }
-
-    .panel-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      font-weight: 600;
-      font-size: 13px;
-      display: flex;
-      align-items: center;
       gap: 8px;
-      position: sticky;
-      top: 0;
-      background: rgba(20, 20, 35, 0.98);
     }
 
-    .panel-content {
-      padding: 16px;
+    .control-group {
+      background: rgba(20, 20, 35, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      backdrop-filter: blur(10px);
     }
 
-    .section {
-      margin-bottom: 16px;
-    }
-
-    .section:last-child {
-      margin-bottom: 0;
-    }
-
-    .section-title {
+    .control-group h3 {
       font-size: 11px;
       color: #888;
       text-transform: uppercase;
@@ -147,592 +54,138 @@
       margin-bottom: 10px;
     }
 
-    /* Pipeline Pass List */
-    .pass-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .pass-item {
-      padding: 10px 12px;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .pass-item:hover {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .pass-item.active {
-      background: rgba(138, 43, 226, 0.15);
-      border-color: rgba(138, 43, 226, 0.4);
-    }
-
-    .pass-item.disabled {
-      opacity: 0.5;
-    }
-
-    .pass-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-
-    .pass-name {
-      font-size: 12px;
-      font-weight: 600;
+    .slider-row {
       display: flex;
       align-items: center;
-      gap: 6px;
-    }
-
-    .pass-toggle {
-      width: 32px;
-      height: 18px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 9px;
-      position: relative;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .pass-toggle.active {
-      background: rgba(138, 43, 226, 0.6);
-    }
-
-    .pass-toggle::after {
-      content: '';
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      background: white;
-      border-radius: 50%;
-      top: 2px;
-      left: 2px;
-      transition: transform 0.2s;
-    }
-
-    .pass-toggle.active::after {
-      transform: translateX(14px);
-    }
-
-    .pass-time {
-      font-size: 10px;
-      color: #888;
-      font-family: 'SF Mono', monospace;
-    }
-
-    /* Output Preview Grid */
-    .preview-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
       gap: 8px;
+      margin-bottom: 8px;
     }
 
-    .preview-item {
-      aspect-ratio: 16/9;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      overflow: hidden;
-      cursor: pointer;
-      position: relative;
-      transition: all 0.2s;
+    .slider-row:last-child {
+      margin-bottom: 0;
     }
 
-    .preview-item:hover {
-      border-color: rgba(138, 43, 226, 0.5);
-    }
-
-    .preview-item.active {
-      border-color: #a855f7;
-      box-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
-    }
-
-    .preview-item canvas {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .preview-label {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 4px 6px;
-      background: rgba(0, 0, 0, 0.7);
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    /* Sliders */
-    .slider-group {
-      margin-bottom: 12px;
-    }
-
-    .slider-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-    }
-
-    .slider-label {
-      font-size: 12px;
+    .slider-row label {
+      font-size: 11px;
       color: #aaa;
+      width: 70px;
     }
 
-    .slider-value {
-      font-size: 12px;
-      color: #a855f7;
-      font-family: 'SF Mono', monospace;
-    }
-
-    input[type="range"] {
-      width: 100%;
+    .slider-row input[type="range"] {
+      flex: 1;
       height: 4px;
       -webkit-appearance: none;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 2px;
-      outline: none;
     }
 
-    input[type="range"]::-webkit-slider-thumb {
+    .slider-row input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
       background: #a855f7;
       border-radius: 50%;
       cursor: pointer;
     }
 
-    /* Pipeline Info Panel */
-    .info-panel {
-      position: fixed;
-      top: 60px;
-      right: 12px;
-      width: 320px;
-      background: rgba(20, 20, 35, 0.95);
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      z-index: 90;
-      backdrop-filter: blur(10px);
-    }
-
-    /* Pass Details */
-    .pass-details {
-      padding: 12px;
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 8px;
-    }
-
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .detail-row:last-child {
-      border-bottom: none;
-    }
-
-    .detail-label {
-      font-size: 11px;
-      color: #888;
-    }
-
-    .detail-value {
-      font-size: 11px;
-      color: #ccc;
-      font-family: 'SF Mono', monospace;
-    }
-
-    /* Shader Code Preview */
-    .shader-preview {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 6px;
-      padding: 10px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
+    .slider-row span {
       font-size: 10px;
-      line-height: 1.5;
-      max-height: 150px;
-      overflow-y: auto;
-      color: #888;
+      color: #a855f7;
+      font-family: monospace;
+      width: 32px;
+      text-align: right;
     }
 
-    .shader-preview .keyword {
-      color: #c678dd;
-    }
-
-    .shader-preview .type {
-      color: #e5c07b;
-    }
-
-    .shader-preview .function {
-      color: #61afef;
-    }
-
-    .shader-preview .number {
-      color: #d19a66;
-    }
-
-    /* Pipeline Flow Diagram */
-    .pipeline-flow {
+    .view-buttons {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px;
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 8px;
-      overflow-x: auto;
+      gap: 4px;
+      flex-wrap: wrap;
     }
 
-    .flow-node {
-      padding: 8px 12px;
-      background: rgba(138, 43, 226, 0.2);
-      border: 1px solid rgba(138, 43, 226, 0.4);
-      border-radius: 6px;
+    .view-btn {
+      padding: 6px 10px;
       font-size: 10px;
-      text-align: center;
-      min-width: 60px;
-    }
-
-    .flow-node.active {
-      background: rgba(138, 43, 226, 0.4);
-      border-color: #a855f7;
-    }
-
-    .flow-node.disabled {
-      opacity: 0.4;
-    }
-
-    .flow-arrow {
-      color: #666;
-      font-size: 14px;
-      padding: 0 4px;
-    }
-
-    /* Control Buttons */
-    .control-buttons {
-      display: flex;
-      gap: 8px;
-    }
-
-    .ctrl-btn {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
       background: rgba(255, 255, 255, 0.05);
-      color: #ccc;
-      font-size: 12px;
+      color: #aaa;
       cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+      transition: all 0.15s;
     }
 
-    .ctrl-btn:hover {
+    .view-btn:hover {
       background: rgba(255, 255, 255, 0.1);
     }
 
-    .ctrl-btn.active {
-      background: rgba(138, 43, 226, 0.2);
-      border-color: rgba(138, 43, 226, 0.4);
+    .view-btn.active {
+      background: rgba(168, 85, 247, 0.25);
+      border-color: rgba(168, 85, 247, 0.5);
       color: #a855f7;
     }
 
-    /* Bottom Bar */
-    .bottom-bar {
+    .hint {
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 36px;
-      background: rgba(20, 20, 35, 0.95);
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
+      bottom: 16px;
+      left: 16px;
       font-size: 11px;
-      z-index: 100;
-    }
-
-    .bottom-stats {
-      display: flex;
-      gap: 24px;
-    }
-
-    .bottom-stat {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .bottom-stat-label {
       color: #666;
-    }
-
-    .bottom-stat-value {
-      color: #a855f7;
-      font-family: 'SF Mono', monospace;
-    }
-
-    /* Tooltip */
-    .tooltip {
-      position: fixed;
+      background: rgba(20, 20, 35, 0.8);
       padding: 8px 12px;
-      background: rgba(0, 0, 0, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 6px;
-      font-size: 12px;
-      pointer-events: none;
-      z-index: 200;
-      opacity: 0;
-      transition: opacity 0.2s;
-      max-width: 250px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .tooltip.visible {
-      opacity: 1;
-    }
-
-    .tooltip-title {
-      font-weight: 600;
-      margin-bottom: 4px;
-      color: #a855f7;
-    }
-
-    .tooltip-content {
-      color: #ccc;
-      line-height: 1.4;
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
+    .hint kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
       border-radius: 3px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.3);
+      margin: 0 2px;
     }
   </style>
 </head>
 <body>
   <div id="app"></div>
 
-  <!-- Header -->
-  <header class="header">
-    <div class="header-title">
-      <h1>🎨 Custom Render Pipeline</h1>
-      <span class="pipeline-badge">Multi-Pass</span>
+  <!-- Minimal scenario controls - adjust post-processing, NOT debug info -->
+  <div class="scenario-controls">
+    <div class="control-group">
+      <h3>Post-Processing</h3>
+      <div class="slider-row">
+        <label>Bloom</label>
+        <input type="range" id="bloom-slider" min="0" max="100" value="50">
+        <span id="bloom-value">0.50</span>
+      </div>
+      <div class="slider-row">
+        <label>Threshold</label>
+        <input type="range" id="threshold-slider" min="0" max="100" value="80">
+        <span id="threshold-value">0.80</span>
+      </div>
+      <div class="slider-row">
+        <label>SSAO</label>
+        <input type="range" id="ssao-slider" min="0" max="100" value="50">
+        <span id="ssao-value">0.50</span>
+      </div>
+      <div class="slider-row">
+        <label>Vignette</label>
+        <input type="range" id="vignette-slider" min="0" max="100" value="30">
+        <span id="vignette-value">0.30</span>
+      </div>
     </div>
-    <div class="header-stats">
-      <div class="stat-item">
-        <span class="stat-label">Passes</span>
-        <span id="pass-count" class="stat-value purple">0</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Render Targets</span>
-        <span id="rt-count" class="stat-value blue">0</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">GPU Time</span>
-        <span id="gpu-time" class="stat-value green">0 ms</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">FPS</span>
-        <span id="fps" class="stat-value orange">60</span>
-      </div>
-    </div>
-  </header>
 
-  <!-- Control Panel -->
-  <div class="control-panel">
-    <div class="panel-header">
-      ⚙️ Pipeline Configuration
-    </div>
-    <div class="panel-content">
-      <div class="section">
-        <div class="section-title">Render Passes</div>
-        <div id="pass-list" class="pass-list">
-          <!-- Passes populated dynamically -->
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Pipeline Flow</div>
-        <div id="pipeline-flow" class="pipeline-flow">
-          <!-- Flow diagram populated dynamically -->
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Post-Processing</div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span class="slider-label">Bloom Intensity</span>
-            <span id="bloom-value" class="slider-value">0.5</span>
-          </div>
-          <input type="range" id="bloom-slider" min="0" max="100" value="50">
-        </div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span class="slider-label">Bloom Threshold</span>
-            <span id="threshold-value" class="slider-value">0.8</span>
-          </div>
-          <input type="range" id="threshold-slider" min="0" max="100" value="80">
-        </div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span class="slider-label">SSAO Radius</span>
-            <span id="ssao-value" class="slider-value">0.5</span>
-          </div>
-          <input type="range" id="ssao-slider" min="0" max="100" value="50">
-        </div>
-        <div class="slider-group">
-          <div class="slider-header">
-            <span class="slider-label">Vignette</span>
-            <span id="vignette-value" class="slider-value">0.3</span>
-          </div>
-          <input type="range" id="vignette-slider" min="0" max="100" value="30">
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Debug View</div>
-        <div class="control-buttons">
-          <button id="view-final" class="ctrl-btn active">Final</button>
-          <button id="view-gbuffer" class="ctrl-btn">G-Buffer</button>
-          <button id="view-depth" class="ctrl-btn">Depth</button>
-          <button id="view-normals" class="ctrl-btn">Normals</button>
-        </div>
+    <div class="control-group">
+      <h3>Debug View</h3>
+      <div class="view-buttons">
+        <button class="view-btn active" data-view="final">Final</button>
+        <button class="view-btn" data-view="gbuffer">G-Buffer</button>
+        <button class="view-btn" data-view="normals">Normals</button>
+        <button class="view-btn" data-view="position">Position</button>
+        <button class="view-btn" data-view="depth">Depth</button>
       </div>
     </div>
   </div>
 
-  <!-- Info Panel -->
-  <div class="info-panel">
-    <div class="panel-header">
-      📊 Pass Inspector
-    </div>
-    <div class="panel-content">
-      <div class="section">
-        <div class="section-title">Selected Pass</div>
-        <div id="selected-pass-name" style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #a855f7;">
-          Geometry Pass
-        </div>
-        <div class="pass-details">
-          <div class="detail-row">
-            <span class="detail-label">Type</span>
-            <span id="pass-type" class="detail-value">G-Buffer</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Render Target</span>
-            <span id="pass-rt" class="detail-value">MRT (4 attachments)</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Resolution</span>
-            <span id="pass-resolution" class="detail-value">1920×1080</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Format</span>
-            <span id="pass-format" class="detail-value">RGBA16F</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">GPU Time</span>
-            <span id="pass-gpu-time" class="detail-value">1.2 ms</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Draw Calls</span>
-            <span id="pass-draws" class="detail-value">45</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Output Preview</div>
-        <div class="preview-grid">
-          <div class="preview-item active" data-output="color">
-            <div class="preview-label">Color</div>
-          </div>
-          <div class="preview-item" data-output="normal">
-            <div class="preview-label">Normal</div>
-          </div>
-          <div class="preview-item" data-output="position">
-            <div class="preview-label">Position</div>
-          </div>
-          <div class="preview-item" data-output="depth">
-            <div class="preview-label">Depth</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Fragment Shader</div>
-        <div class="shader-preview">
-          <span class="keyword">void</span> <span class="function">main</span>() {<br>
-          &nbsp;&nbsp;<span class="type">vec3</span> albedo = <span class="function">texture</span>(uAlbedo, vUv).<span class="type">rgb</span>;<br>
-          &nbsp;&nbsp;<span class="type">vec3</span> normal = <span class="function">normalize</span>(vNormal);<br>
-          &nbsp;&nbsp;<span class="type">float</span> roughness = <span class="number">0.5</span>;<br>
-          &nbsp;&nbsp;gColor = <span class="type">vec4</span>(albedo, <span class="number">1.0</span>);<br>
-          &nbsp;&nbsp;gNormal = <span class="type">vec4</span>(normal * <span class="number">0.5</span> + <span class="number">0.5</span>, roughness);<br>
-          &nbsp;&nbsp;gPosition = <span class="type">vec4</span>(vWorldPos, <span class="number">1.0</span>);<br>
-          }
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bottom Bar -->
-  <div class="bottom-bar">
-    <div class="bottom-stats">
-      <div class="bottom-stat">
-        <span class="bottom-stat-label">Total GPU:</span>
-        <span id="total-gpu" class="bottom-stat-value">0.0 ms</span>
-      </div>
-      <div class="bottom-stat">
-        <span class="bottom-stat-label">Draw Calls:</span>
-        <span id="draw-calls" class="bottom-stat-value">0</span>
-      </div>
-      <div class="bottom-stat">
-        <span class="bottom-stat-label">Triangles:</span>
-        <span id="triangles" class="bottom-stat-value">0</span>
-      </div>
-      <div class="bottom-stat">
-        <span class="bottom-stat-label">RT Memory:</span>
-        <span id="rt-memory" class="bottom-stat-value">0 MB</span>
-      </div>
-    </div>
-    <div style="color: #666;">
-      Press <kbd style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">Tab</kbd> to cycle debug views
-    </div>
-  </div>
-
-  <!-- Tooltip -->
-  <div id="tooltip" class="tooltip">
-    <div id="tooltip-title" class="tooltip-title"></div>
-    <div id="tooltip-content" class="tooltip-content"></div>
+  <div class="hint">
+    Open <kbd>3Lens</kbd> overlay to inspect render passes and scene objects
   </div>
 
   <script type="module" src="/src/main.ts"></script>

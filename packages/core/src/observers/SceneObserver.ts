@@ -661,11 +661,15 @@ export class SceneObserver {
   private createRenderTargetData(
     rt: THREE.WebGLRenderTarget
   ): RenderTargetData {
-    const texture = rt.texture;
     const isCube = 'isWebGLCubeRenderTarget' in rt;
     const isMultiple = 'isWebGLMultipleRenderTargets' in rt;
+
+    // For WebGLMultipleRenderTargets, texture is an array - use first texture for properties
+    const texture = Array.isArray(rt.texture) ? rt.texture[0] : rt.texture;
     const colorAttachmentCount = isMultiple
-      ? (rt as unknown as { count: number }).count || 1
+      ? Array.isArray(rt.texture)
+        ? rt.texture.length
+        : 1
       : 1;
 
     // Get usage from our marker or try to detect
@@ -706,11 +710,20 @@ export class SceneObserver {
     // generated during the render pass when the RT is active.
 
     // WebGLRenderTarget doesn't have a uuid property - use the texture's uuid
-    const rtUuid = (rt as unknown as { uuid?: string }).uuid || texture.uuid;
+    const rtUuid = (rt as unknown as { uuid?: string }).uuid || texture?.uuid;
+
+    // Build name for MRT - combine all texture names or use first one
+    let rtName = '';
+    if (isMultiple && Array.isArray(rt.texture)) {
+      const names = rt.texture.map((t) => t.name).filter(Boolean);
+      rtName = names.length > 0 ? names.join(', ') : '';
+    } else {
+      rtName = texture?.name || '';
+    }
 
     const data: RenderTargetData = {
       uuid: rtUuid,
-      name: texture.name || '',
+      name: rtName,
       type: rt.constructor.name || 'WebGLRenderTarget',
       dimensions: {
         width: rt.width,
@@ -722,26 +735,30 @@ export class SceneObserver {
       isCubeTarget: isCube,
       samples: rt.samples || 0,
       colorAttachmentCount,
-      textureFormat: texture.format,
-      textureFormatName: this.getFormatName(texture.format),
-      textureType: texture.type as number,
-      textureTypeName: this.getDataTypeName(texture.type as number),
+      textureFormat: texture?.format ?? 0,
+      textureFormatName: texture
+        ? this.getFormatName(texture.format)
+        : 'Unknown',
+      textureType: (texture?.type as number) ?? 0,
+      textureTypeName: texture
+        ? this.getDataTypeName(texture.type as number)
+        : 'Unknown',
       hasDepthTexture:
         rt.depthTexture !== null && rt.depthTexture !== undefined,
-      colorSpace: texture.colorSpace || 'srgb',
+      colorSpace: texture?.colorSpace || 'srgb',
       filtering: {
-        mag: texture.magFilter,
-        min: texture.minFilter,
-        magName: this.getFilterName(texture.magFilter),
-        minName: this.getFilterName(texture.minFilter),
+        mag: texture?.magFilter ?? 0,
+        min: texture?.minFilter ?? 0,
+        magName: texture ? this.getFilterName(texture.magFilter) : 'Unknown',
+        minName: texture ? this.getFilterName(texture.minFilter) : 'Unknown',
       },
       wrap: {
-        s: texture.wrapS,
-        t: texture.wrapT,
-        sName: this.getWrapName(texture.wrapS),
-        tName: this.getWrapName(texture.wrapT),
+        s: texture?.wrapS ?? 0,
+        t: texture?.wrapT ?? 0,
+        sName: texture ? this.getWrapName(texture.wrapS) : 'Unknown',
+        tName: texture ? this.getWrapName(texture.wrapT) : 'Unknown',
       },
-      generateMipmaps: texture.generateMipmaps,
+      generateMipmaps: texture?.generateMipmaps ?? false,
       memoryBytes,
       thumbnail,
       usage,

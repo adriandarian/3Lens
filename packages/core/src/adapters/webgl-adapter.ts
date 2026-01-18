@@ -48,6 +48,12 @@ export interface WebGLAdapterOptions {
    * @default 2000
    */
   resourceScanInterval?: number;
+
+  /**
+   * Enable WebGL error checking (may impact performance)
+   * @default false
+   */
+  checkWebGLErrors?: boolean;
 }
 
 /**
@@ -61,10 +67,12 @@ export function createWebGLAdapter(
   const frameCallbacks: Array<(stats: FrameStats) => void> = [];
   let frameCount = 0;
   let disposed = false;
+  let mrtErrorWarned = false; // Track if we've already warned about MRT errors
 
   // Options with defaults
   const gpuTimingEnabled = options.gpuTiming ?? true;
   const resourceScanInterval = options.resourceScanInterval ?? 2000;
+  const checkWebGLErrors = options.checkWebGLErrors ?? false;
 
   // Minimal performance tracking
   let lastFrameTime = performance.now();
@@ -149,8 +157,63 @@ export function createWebGLAdapter(
       }
     }
 
+    // Check render target state before rendering to detect potential MRT issues
+    const renderTargetBefore = renderer.getRenderTarget();
+    const hasMRT =
+      renderTargetBefore &&
+      'isWebGLMultipleRenderTargets' in renderTargetBefore;
+
     // Call original render
     originalRender(scene, camera);
+
+    // Check for WebGL errors after render
+    const error = gl.getError();
+    if (
+      error !== gl.NO_ERROR &&
+      error === gl.INVALID_OPERATION &&
+      hasMRT &&
+      !mrtErrorWarned
+    ) {
+      // This is the MRT error - warn once to help user debug
+      mrtErrorWarned = true; // Only warn once to avoid spam
+      const mrt = renderTargetBefore as THREE.WebGLMultipleRenderTargets;
+      const attachmentCount =
+        (mrt as unknown as { count?: number }).count ?? mrt.texture.length;
+
+      console.warn(
+        `[3Lens] ⚠️ WebGL Error: "Active draw buffers with missing fragment shader outputs"\n` +
+          `\n` +
+          `This error is coming from YOUR APPLICATION CODE, not from 3Lens.\n` +
+          `\n` +
+          `Problem: You have a WebGLMultipleRenderTargets (${attachmentCount} attachments) active,\n` +
+          `but you're rendering with materials that don't output to all attachments.\n` +
+          `\n` +
+          `Fix: When rendering to MRT, you MUST use ShaderMaterial with gl_FragData[]:\n` +
+          `\n` +
+          `  // ❌ WRONG - Standard materials don't work with MRT\n` +
+          `  renderer.setRenderTarget(mrt);\n` +
+          `  renderer.render(scene, camera); // Uses MeshStandardMaterial - ERROR!\n` +
+          `\n` +
+          `  // ✅ CORRECT - Use ShaderMaterial\n` +
+          `  const mrtMaterial = new THREE.ShaderMaterial({\n` +
+          `    fragmentShader: \`\n` +
+          `      void main() {\n` +
+          `        gl_FragData[0] = vec4(color, 1.0);     // Attachment 0\n` +
+          `        gl_FragData[1] = vec4(normal, 1.0);    // Attachment 1\n` +
+          `        gl_FragData[2] = vec4(position, 1.0); // Attachment 2\n` +
+          `      }\n` +
+          `    \`\n` +
+          `  });\n` +
+          `  renderer.setRenderTarget(mrt);\n` +
+          `  renderer.render(sceneWithMRTMaterials, camera);\n` +
+          `\n` +
+          `Or set render target to null before rendering with standard materials:\n` +
+          `  renderer.setRenderTarget(null);\n` +
+          `  renderer.render(scene, camera); // Standard materials OK\n` +
+          `\n` +
+          `To see detailed error messages, enable: createProbe({ adapterOptions: { checkWebGLErrors: true } })`
+      );
+    }
 
     // End GPU timer query
     if (query && timerQueryExt && gl instanceof WebGL2RenderingContext) {

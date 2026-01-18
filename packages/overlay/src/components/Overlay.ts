@@ -58,6 +58,32 @@ export interface OverlayOptions {
    * Performance panels in the overlay menu.
    */
   panels?: OverlayPanelDefinition[];
+  /**
+   * Optional list of built-in panel IDs to enable.
+   *
+   * When specified, only these panels will appear in the menu.
+   * This is useful for examples or focused debugging sessions where
+   * you want to show only relevant panels.
+   *
+   * Available built-in panel IDs:
+   * - 'scene' - Scene Explorer
+   * - 'stats' - Performance Stats
+   * - 'materials' - Materials Inspector
+   * - 'geometry' - Geometry Inspector
+   * - 'textures' - Texture Viewer
+   * - 'render-targets' - Render Targets Inspector
+   * - 'webgpu' - WebGPU Inspector
+   * - 'plugins' - Plugin Manager
+   *
+   * @example
+   * ```typescript
+   * createOverlay({
+   *   probe,
+   *   enabledPanels: ['scene', 'stats', 'render-targets']
+   * });
+   * ```
+   */
+  enabledPanels?: string[];
 }
 
 export interface OverlayPanelState {
@@ -315,8 +341,8 @@ export class ThreeLensOverlay {
     this.root.className = 'three-lens-root';
     document.body.appendChild(this.root);
 
-    // Register panel definitions (built-in + custom)
-    this.initializePanelDefinitions(options.panels);
+    // Register panel definitions (built-in + custom, filtered by enabledPanels)
+    this.initializePanelDefinitions(options.panels, options.enabledPanels);
 
     // Subscribe to probe events (throttled updates)
     this.probe.onFrameStats((stats) => {
@@ -744,9 +770,15 @@ export class ThreeLensOverlay {
   }
 
   private initializePanelDefinitions(
-    customPanels?: OverlayPanelDefinition[]
+    customPanels?: OverlayPanelDefinition[],
+    enabledPanels?: string[]
   ): void {
-    [...DEFAULT_PANELS, ...(customPanels ?? [])].forEach((panel) =>
+    // Filter built-in panels if enabledPanels is specified
+    const builtInPanels = enabledPanels
+      ? DEFAULT_PANELS.filter((panel) => enabledPanels.includes(panel.id))
+      : DEFAULT_PANELS;
+
+    [...builtInPanels, ...(customPanels ?? [])].forEach((panel) =>
       this.registerPanelDefinition(panel)
     );
   }

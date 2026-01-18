@@ -1,11 +1,12 @@
 /**
  * Compute Shader Debugging Example
  * 
- * Demonstrates WebGPU compute shaders with 3Lens integration:
- * - GPU particle simulation
- * - Buffer inspection
- * - Dispatch timing
- * - WGSL shader debugging
+ * Demonstrates WebGPU compute shaders with 3Lens integration.
+ * Use 3Lens to inspect:
+ * - Compute pipeline configuration
+ * - GPU buffer contents and sizes
+ * - Dispatch timing and workgroup counts
+ * - Particle system state
  */
 
 import * as THREE from 'three';
@@ -34,18 +35,13 @@ interface ComputePass {
   time: number;
 }
 
-type ShaderType = 'particles' | 'boids' | 'cloth' | 'nbody';
+type ShaderType = 'particles' | 'boids';
 
 // ============================================================================
 // SHADER CODE (WGSL)
 // ============================================================================
 
 const PARTICLE_SHADER = `
-struct Particle {
-  position: vec4<f32>,
-  velocity: vec4<f32>,
-}
-
 struct SimParams {
   deltaTime: f32,
   gravity: f32,
@@ -64,9 +60,7 @@ struct SimParams {
 @compute @workgroup_size(256)
 fn computeForces(@builtin(global_invocation_id) id: vec3<u32>) {
   let index = id.x;
-  if (index >= params.particleCount) {
-    return;
-  }
+  if (index >= params.particleCount) { return; }
   
   var pos = positions[index].xyz;
   var vel = velocities[index].xyz;
@@ -89,17 +83,12 @@ fn computeForces(@builtin(global_invocation_id) id: vec3<u32>) {
 @compute @workgroup_size(256)
 fn integrate(@builtin(global_invocation_id) id: vec3<u32>) {
   let index = id.x;
-  if (index >= params.particleCount) {
-    return;
-  }
+  if (index >= params.particleCount) { return; }
   
   var pos = positions[index].xyz;
   var vel = velocities[index].xyz;
   
-  // Apply damping
   vel *= (1.0 - params.damping * params.deltaTime);
-  
-  // Integrate position
   pos += vel * params.deltaTime;
   
   positions[index] = vec4<f32>(pos, 1.0);
@@ -109,14 +98,11 @@ fn integrate(@builtin(global_invocation_id) id: vec3<u32>) {
 @compute @workgroup_size(256)
 fn collisions(@builtin(global_invocation_id) id: vec3<u32>) {
   let index = id.x;
-  if (index >= params.particleCount) {
-    return;
-  }
+  if (index >= params.particleCount) { return; }
   
   var pos = positions[index].xyz;
   var vel = velocities[index].xyz;
   
-  // Box boundaries
   let bounds = 10.0;
   let bounce = 0.7;
   
@@ -151,9 +137,7 @@ struct SimParams {
 @compute @workgroup_size(256)
 fn computeForces(@builtin(global_invocation_id) id: vec3<u32>) {
   let index = id.x;
-  if (index >= params.particleCount) {
-    return;
-  }
+  if (index >= params.particleCount) { return; }
   
   var pos = positions[index].xyz;
   var vel = velocities[index].xyz;
@@ -171,15 +155,9 @@ fn computeForces(@builtin(global_invocation_id) id: vec3<u32>) {
     let dist = length(diff);
     
     if (dist < params.visualRange && dist > 0.01) {
-      // Separation
       separation += normalize(diff) / dist;
-      
-      // Alignment
       alignment += velocities[i].xyz;
-      
-      // Cohesion
       cohesion += otherPos;
-      
       neighborCount++;
     }
   }
@@ -194,7 +172,6 @@ fn computeForces(@builtin(global_invocation_id) id: vec3<u32>) {
     vel += normalize(cohesion) * params.cohesionWeight;
   }
   
-  // Speed limits
   let speed = length(vel);
   if (speed > params.maxSpeed) {
     vel = normalize(vel) * params.maxSpeed;
@@ -208,16 +185,13 @@ fn computeForces(@builtin(global_invocation_id) id: vec3<u32>) {
 @compute @workgroup_size(256)
 fn integrate(@builtin(global_invocation_id) id: vec3<u32>) {
   let index = id.x;
-  if (index >= params.particleCount) {
-    return;
-  }
+  if (index >= params.particleCount) { return; }
   
   var pos = positions[index].xyz;
   let vel = velocities[index].xyz;
   
   pos += vel * params.deltaTime;
   
-  // Wrap around boundaries
   let bounds = 15.0;
   if (pos.x < -bounds) { pos.x += bounds * 2.0; }
   if (pos.x > bounds) { pos.x -= bounds * 2.0; }
@@ -247,7 +221,6 @@ let probe: ReturnType<typeof createProbe>;
 
 // WebGPU state
 let device: GPUDevice | null = null;
-let adapter: GPUAdapter | null = null;
 let positionBuffer: GPUBuffer | null = null;
 let velocityBuffer: GPUBuffer | null = null;
 let uniformBuffer: GPUBuffer | null = null;
@@ -271,7 +244,6 @@ let params: SimulationParams = {
 
 // Three.js particle system
 let particleGeometry: THREE.BufferGeometry;
-let particleMaterial: THREE.PointsMaterial;
 let particleSystem: THREE.Points;
 
 // CPU fallback data
@@ -279,9 +251,6 @@ let cpuPositions: Float32Array;
 let cpuVelocities: Float32Array;
 
 // Stats
-let frameCount = 0;
-let lastFpsTime = performance.now();
-let currentFps = 60;
 let computeTimeMs = 0;
 let gpuMemoryKB = 0;
 
@@ -296,7 +265,7 @@ async function initWebGPU(): Promise<boolean> {
   }
 
   try {
-    adapter = await navigator.gpu.requestAdapter();
+    const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) {
       showWebGPUNotSupported();
       return false;
@@ -310,11 +279,8 @@ async function initWebGPU(): Promise<boolean> {
       },
     });
 
-    // Update debug info
-    const adapterInfo = await adapter.requestAdapterInfo();
-    document.getElementById('gpu-device')!.textContent = adapterInfo.description || 'WebGPU Device';
-    document.getElementById('max-workgroup')!.textContent = device.limits.maxComputeWorkgroupSizeX.toString();
-    document.getElementById('max-storage')!.textContent = device.limits.maxStorageBuffersPerShaderStage.toString();
+    document.getElementById('webgpu-status')!.textContent = 'Active';
+    document.getElementById('webgpu-status')!.style.color = '#22c55e';
 
     return true;
   } catch (e) {
@@ -336,8 +302,7 @@ function showWebGPUNotSupported(): void {
   document.body.appendChild(div);
   
   document.getElementById('webgpu-status')!.textContent = 'CPU Fallback';
-  document.querySelector('.bottom-bar .bar-icon')!.classList.remove('active');
-  document.querySelector('.bottom-bar .bar-icon')!.classList.add('warning');
+  document.getElementById('webgpu-status')!.style.color = '#f59e0b';
 }
 
 // ============================================================================
@@ -348,7 +313,7 @@ function createBuffers(): void {
   const positionData = new Float32Array(particleCount * 4);
   const velocityData = new Float32Array(particleCount * 4);
 
-  // Initialize particles
+  // Initialize particles in a sphere
   for (let i = 0; i < particleCount; i++) {
     const phi = Math.random() * Math.PI * 2;
     const theta = Math.acos(2 * Math.random() - 1);
@@ -395,9 +360,9 @@ function createBuffers(): void {
     uniformView.setFloat32(8, params.damping, true);
     uniformView.setUint32(12, params.particleCount, true);
     uniformView.setFloat32(16, params.forceStrength, true);
-    uniformView.setFloat32(20, 0, true); // attractor X
-    uniformView.setFloat32(24, 0, true); // attractor Y
-    uniformView.setFloat32(28, 0, true); // attractor Z
+    uniformView.setFloat32(20, 0, true);
+    uniformView.setFloat32(24, 0, true);
+    uniformView.setFloat32(28, 0, true);
 
     uniformBuffer = device.createBuffer({
       size: 32,
@@ -407,9 +372,9 @@ function createBuffers(): void {
     new Uint8Array(uniformBuffer.getMappedRange()).set(new Uint8Array(uniformData));
     uniformBuffer.unmap();
 
-    // Readback buffer for inspection
+    // Readback buffer
     readbackBuffer = device.createBuffer({
-      size: Math.min(positionData.byteLength, 32 * 16), // First 32 elements
+      size: Math.min(positionData.byteLength, 32 * 16),
       usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
     });
 
@@ -477,6 +442,19 @@ function createComputePipelines(): void {
       time: 0,
     },
   ];
+
+  // Update 3Lens
+  if (probe) {
+    computePasses.forEach((pass, i) => {
+      probe.updateLogicalEntity(`compute-pass-${i}`, {
+        metadata: {
+          index: i,
+          entryPoint: pass.name,
+          workgroupSize: 256,
+        }
+      });
+    });
+  }
 }
 
 // ============================================================================
@@ -519,10 +497,8 @@ function runCPUFallback(): void {
   for (let i = 0; i < particleCount; i++) {
     const ix = i * 4;
     
-    // Apply gravity
     cpuVelocities[ix + 1] -= gravity * dt;
 
-    // Attractor
     const dx = params.attractorPos[0] - cpuPositions[ix];
     const dy = params.attractorPos[1] - cpuPositions[ix + 1];
     const dz = params.attractorPos[2] - cpuPositions[ix + 2];
@@ -535,17 +511,14 @@ function runCPUFallback(): void {
       cpuVelocities[ix + 2] += (dz / dist) * f * dt;
     }
 
-    // Damping
     cpuVelocities[ix] *= (1 - damping * dt);
     cpuVelocities[ix + 1] *= (1 - damping * dt);
     cpuVelocities[ix + 2] *= (1 - damping * dt);
 
-    // Integrate
     cpuPositions[ix] += cpuVelocities[ix] * dt;
     cpuPositions[ix + 1] += cpuVelocities[ix + 1] * dt;
     cpuPositions[ix + 2] += cpuVelocities[ix + 2] * dt;
 
-    // Boundaries
     const bounds = 10;
     const bounce = 0.7;
     for (let j = 0; j < 3; j++) {
@@ -597,7 +570,7 @@ function initThreeJS(): void {
   particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  particleMaterial = new THREE.PointsMaterial({
+  const particleMaterial = new THREE.PointsMaterial({
     size: 0.15,
     vertexColors: true,
     transparent: true,
@@ -607,6 +580,7 @@ function initThreeJS(): void {
   });
 
   particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+  particleSystem.name = 'ParticleSystem';
   scene.add(particleSystem);
 
   // Add boundary box
@@ -618,6 +592,7 @@ function initThreeJS(): void {
     opacity: 0.1 
   });
   const boundaryBox = new THREE.Mesh(boxGeom, boxMat);
+  boundaryBox.name = 'BoundaryBox';
   scene.add(boundaryBox);
 
   // Add grid
@@ -629,7 +604,7 @@ function initThreeJS(): void {
   const attractorGeom = new THREE.SphereGeometry(0.3, 16, 16);
   const attractorMat = new THREE.MeshBasicMaterial({ color: 0xff6b9d });
   const attractor = new THREE.Mesh(attractorGeom, attractorMat);
-  attractor.name = 'attractor';
+  attractor.name = 'Attractor';
   scene.add(attractor);
 }
 
@@ -641,6 +616,7 @@ function initProbe(): void {
   probe = createProbe({ appName: 'Compute-Shaders' });
   createOverlay({ probe, theme: 'dark' });
 
+  // Register compute simulation system
   probe.registerLogicalEntity({
     id: 'compute-simulation',
     name: 'GPU Compute Simulation',
@@ -650,10 +626,12 @@ function initProbe(): void {
       particleCount,
       shaderType: currentShader,
       workgroupSize: 256,
-      bufferCount: 3,
+      gpuMemoryKB: gpuMemoryKB.toFixed(1),
+      computeTimeMs: computeTimeMs.toFixed(2),
     }
   });
 
+  // Register each compute pass
   computePasses.forEach((pass, i) => {
     probe.registerLogicalEntity({
       id: `compute-pass-${i}`,
@@ -662,6 +640,7 @@ function initProbe(): void {
       metadata: {
         index: i,
         entryPoint: pass.name.toLowerCase().replace(' ', ''),
+        workgroupSize: 256,
       }
     });
   });
@@ -673,16 +652,13 @@ function initProbe(): void {
 
 async function updateParticlePositions(): Promise<void> {
   if (device && positionBuffer && readbackBuffer) {
-    // Copy positions from GPU
     const commandEncoder = device.createCommandEncoder();
     commandEncoder.copyBufferToBuffer(positionBuffer, 0, readbackBuffer, 0, readbackBuffer.size);
     device.queue.submit([commandEncoder.finish()]);
 
-    // Map and read
     await readbackBuffer.mapAsync(GPUMapMode.READ);
     const data = new Float32Array(readbackBuffer.getMappedRange());
     
-    // Update Three.js geometry
     const positions = particleGeometry.attributes.position.array as Float32Array;
     for (let i = 0; i < Math.min(particleCount, data.length / 4); i++) {
       positions[i * 3] = data[i * 4];
@@ -691,12 +667,8 @@ async function updateParticlePositions(): Promise<void> {
     }
     particleGeometry.attributes.position.needsUpdate = true;
 
-    // Update buffer data display
-    updateBufferDataDisplay(data);
-
     readbackBuffer.unmap();
   } else {
-    // CPU fallback
     const positions = particleGeometry.attributes.position.array as Float32Array;
     for (let i = 0; i < particleCount; i++) {
       positions[i * 3] = cpuPositions[i * 4];
@@ -704,25 +676,6 @@ async function updateParticlePositions(): Promise<void> {
       positions[i * 3 + 2] = cpuPositions[i * 4 + 2];
     }
     particleGeometry.attributes.position.needsUpdate = true;
-    updateBufferDataDisplay(cpuPositions);
-  }
-}
-
-function updateBufferDataDisplay(data: Float32Array): void {
-  const grid = document.getElementById('buffer-data')!;
-  const cells = grid.querySelectorAll('.data-cell:not(.header)');
-  
-  // Remove existing non-header cells
-  cells.forEach(cell => cell.remove());
-
-  // Add data cells (first 8 rows = 32 values)
-  for (let i = 0; i < 8 && i < data.length / 4; i++) {
-    for (let j = 0; j < 4; j++) {
-      const cell = document.createElement('div');
-      cell.className = 'data-cell' + (i === 0 ? ' highlight' : '');
-      cell.textContent = data[i * 4 + j].toFixed(2);
-      grid.appendChild(cell);
-    }
   }
 }
 
@@ -740,77 +693,28 @@ function setupUI(): void {
       if (device) {
         createComputePipelines();
       }
-      updateShaderCode();
+      
+      // Update 3Lens metadata
+      probe.updateLogicalEntity('compute-simulation', {
+        metadata: {
+          particleCount,
+          shaderType: currentShader,
+          workgroupSize: 256,
+          gpuMemoryKB: gpuMemoryKB.toFixed(1),
+        }
+      });
     });
   });
 
-  // Buffer selection
-  document.querySelectorAll('.buffer-item').forEach(item => {
-    item.addEventListener('click', () => {
-      document.querySelectorAll('.buffer-item').forEach(i => i.classList.remove('selected'));
-      item.classList.add('selected');
-      const bufferName = item.getAttribute('data-buffer');
-      document.getElementById('selected-buffer-name')!.textContent = 
-        bufferName!.charAt(0).toUpperCase() + bufferName!.slice(1);
-    });
-  });
-
-  // Data tabs
-  document.querySelectorAll('.data-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.data-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const tabName = tab.getAttribute('data-tab');
-      document.getElementById('data-view')!.style.display = tabName === 'data' ? 'block' : 'none';
-      document.getElementById('shader-view')!.style.display = tabName === 'shader' ? 'block' : 'none';
-      document.getElementById('debug-view')!.style.display = tabName === 'debug' ? 'block' : 'none';
-    });
-  });
-
-  // Sliders
-  const particleSlider = document.getElementById('particle-slider') as HTMLInputElement;
-  particleSlider.addEventListener('input', () => {
-    const power = parseInt(particleSlider.value);
-    particleCount = Math.pow(2, power);
-    params.particleCount = particleCount;
-    document.getElementById('particle-value')!.textContent = particleCount.toLocaleString();
-    document.getElementById('total-threads')!.textContent = particleCount.toLocaleString();
-    document.getElementById('invocations')!.textContent = particleCount.toLocaleString();
-    
-    const workgroups = Math.ceil(particleCount / 256);
-    document.getElementById('workgroup-count')!.textContent = workgroups.toString();
-    document.getElementById('dispatch-size')!.textContent = `${workgroups} × 1 × 1`;
-  });
-
-  const timestepSlider = document.getElementById('timestep-slider') as HTMLInputElement;
-  timestepSlider.addEventListener('input', () => {
-    params.deltaTime = parseInt(timestepSlider.value) / 1000;
-    document.getElementById('timestep-value')!.textContent = params.deltaTime.toFixed(3);
-  });
-
-  const forceSlider = document.getElementById('force-slider') as HTMLInputElement;
-  forceSlider.addEventListener('input', () => {
-    params.forceStrength = parseInt(forceSlider.value);
-    document.getElementById('force-value')!.textContent = `${params.forceStrength}%`;
-  });
-
-  // Action buttons
+  // Run/pause button
   document.getElementById('run-btn')!.addEventListener('click', () => {
     isRunning = !isRunning;
     const btn = document.getElementById('run-btn')!;
     btn.textContent = isRunning ? '⏸ Pause' : '▶ Run';
+    btn.classList.toggle('running', isRunning);
   });
 
-  document.getElementById('step-btn')!.addEventListener('click', () => {
-    if (!isRunning) {
-      if (device) {
-        runComputePass();
-      } else {
-        runCPUFallback();
-      }
-    }
-  });
-
+  // Reset button
   document.getElementById('reset-btn')!.addEventListener('click', () => {
     createBuffers();
     if (device) {
@@ -827,7 +731,7 @@ function setupUI(): void {
 
   // Mouse attractor
   renderer.domElement.addEventListener('mousemove', (e) => {
-    if (e.buttons === 2) { // Right mouse button
+    if (e.buttons === 2) {
       const x = (e.clientX / window.innerWidth) * 2 - 1;
       const y = -(e.clientY / window.innerHeight) * 2 + 1;
       
@@ -841,23 +745,15 @@ function setupUI(): void {
       params.attractorPos[1] = pos.y;
       params.attractorPos[2] = pos.z;
 
-      // Update uniform buffer
       if (device && uniformBuffer) {
         const data = new Float32Array([
-          params.deltaTime,
-          params.gravity,
-          params.damping,
-          params.particleCount,
-          params.forceStrength,
-          params.attractorPos[0],
-          params.attractorPos[1],
-          params.attractorPos[2],
+          params.deltaTime, params.gravity, params.damping, params.particleCount,
+          params.forceStrength, params.attractorPos[0], params.attractorPos[1], params.attractorPos[2],
         ]);
         device.queue.writeBuffer(uniformBuffer, 0, data);
       }
 
-      // Update attractor indicator
-      const attractor = scene.getObjectByName('attractor');
+      const attractor = scene.getObjectByName('Attractor');
       if (attractor) {
         attractor.position.set(pos.x, pos.y, pos.z);
       }
@@ -867,51 +763,6 @@ function setupUI(): void {
   renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
-function updateShaderCode(): void {
-  // Update the WGSL code display based on selected shader
-  // This is already set in HTML, but could be dynamic
-}
-
-function updateStats(): void {
-  // FPS
-  frameCount++;
-  const now = performance.now();
-  if (now - lastFpsTime >= 1000) {
-    currentFps = frameCount;
-    frameCount = 0;
-    lastFpsTime = now;
-  }
-
-  document.getElementById('fps')!.textContent = currentFps.toString();
-  document.getElementById('frame-count')!.textContent = Math.floor(now / 16.67).toString();
-  document.getElementById('compute-time')!.textContent = computeTimeMs.toFixed(2);
-  document.getElementById('gpu-memory')!.textContent = `${Math.round(gpuMemoryKB)} KB`;
-
-  // Throughput
-  const throughput = (particleCount / computeTimeMs) * 1000;
-  let throughputStr: string;
-  if (throughput > 1e9) {
-    throughputStr = `${(throughput / 1e9).toFixed(1)}B`;
-  } else if (throughput > 1e6) {
-    throughputStr = `${(throughput / 1e6).toFixed(1)}M`;
-  } else {
-    throughputStr = `${(throughput / 1e3).toFixed(1)}K`;
-  }
-  document.getElementById('throughput')!.textContent = throughputStr;
-
-  // Pass timing
-  if (computePasses.length >= 3) {
-    document.getElementById('force-time')!.textContent = `${computePasses[0].time.toFixed(2)} ms`;
-    document.getElementById('integration-time')!.textContent = `${computePasses[1].time.toFixed(2)} ms`;
-    document.getElementById('collision-time')!.textContent = `${computePasses[2].time.toFixed(2)} ms`;
-
-    const maxTime = Math.max(...computePasses.map(p => p.time), 0.01);
-    document.getElementById('force-bar')!.style.width = `${(computePasses[0].time / maxTime) * 100}%`;
-    document.getElementById('integration-bar')!.style.width = `${(computePasses[1].time / maxTime) * 100}%`;
-    document.getElementById('collision-bar')!.style.width = `${(computePasses[2].time / maxTime) * 100}%`;
-  }
-}
-
 // ============================================================================
 // ANIMATION LOOP
 // ============================================================================
@@ -919,7 +770,6 @@ function updateStats(): void {
 async function animate(): Promise<void> {
   requestAnimationFrame(animate);
 
-  // Run compute
   if (device) {
     runComputePass();
   } else {
@@ -928,13 +778,23 @@ async function animate(): Promise<void> {
     computeTimeMs = performance.now() - start;
   }
 
-  // Update Three.js
   await updateParticlePositions();
+
+  // Update 3Lens metadata periodically
+  if (probe && Math.random() < 0.1) {
+    probe.updateLogicalEntity('compute-simulation', {
+      metadata: {
+        particleCount,
+        shaderType: currentShader,
+        workgroupSize: 256,
+        gpuMemoryKB: gpuMemoryKB.toFixed(1),
+        computeTimeMs: computeTimeMs.toFixed(2),
+      }
+    });
+  }
 
   controls.update();
   renderer.render(scene, camera);
-
-  updateStats();
 }
 
 // ============================================================================
@@ -942,27 +802,19 @@ async function animate(): Promise<void> {
 // ============================================================================
 
 async function main(): Promise<void> {
-  // Initialize Three.js first (always works)
   initThreeJS();
 
-  // Try to initialize WebGPU
   const hasWebGPU = await initWebGPU();
 
-  // Create buffers (GPU or CPU)
   createBuffers();
 
-  // Create compute pipelines if WebGPU available
   if (hasWebGPU) {
     createComputePipelines();
   }
 
-  // Initialize 3Lens
   initProbe();
-
-  // Setup UI
   setupUI();
 
-  // Start animation
   animate();
 }
 

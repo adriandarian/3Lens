@@ -2,22 +2,18 @@
  * WebGPU Features Example
  * 
  * Demonstrates 3Lens WebGPU-specific features:
- * - WebGPU renderer detection and adapter creation
+ * - WebGPU renderer detection and adapter info
  * - GPU timing with timestamp queries
  * - Pipeline tracking (render and compute)
  * - Device capabilities inspection
  * - WebGPU-specific frame stats
+ * 
+ * Open the 3Lens overlay (Ctrl+Shift+D) and check the WebGPU panel!
  */
 
 import * as THREE from 'three';
-import { 
-  DevtoolProbe,
-  isWebGPURenderer,
-  getWebGPUCapabilities,
-  type WebGPUCapabilities,
-  type FrameStats
-} from '@3lens/core';
-import { createOverlay } from '@3lens/overlay';
+import { createProbe } from '@3lens/core';
+import { bootstrapOverlay } from '@3lens/overlay';
 import '@3lens/themes/styles.css';
 
 // Type declarations for WebGPU renderer
@@ -25,54 +21,18 @@ interface WebGPURenderer extends THREE.Renderer {
   readonly isWebGPURenderer: true;
   init(): Promise<void>;
   renderAsync(scene: THREE.Scene, camera: THREE.Camera): Promise<void>;
-  backend?: {
-    device?: GPUDevice;
-    adapter?: GPUAdapter;
-  };
-  info: {
-    render: {
-      frame: number;
-      calls: number;
-      triangles: number;
-      points: number;
-      lines: number;
-    };
-    memory: {
-      textures: number;
-      geometries: number;
-    };
-  };
+  setSize(width: number, height: number): void;
+  setPixelRatio(ratio: number): void;
+  domElement: HTMLCanvasElement;
 }
 
 // State
-let probe: DevtoolProbe | null = null;
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
-let renderer: WebGPURenderer;
+let renderer: WebGPURenderer | THREE.WebGLRenderer;
 let animationPaused = false;
 let objects: THREE.Mesh[] = [];
-let frameStats: FrameStats | null = null;
-let capabilities: WebGPUCapabilities | null = null;
-
-// DOM elements
-const statusBadge = document.getElementById('status-badge')!;
-const fpsEl = document.getElementById('fps')!;
-const drawCallsEl = document.getElementById('draw-calls')!;
-const trianglesEl = document.getElementById('triangles')!;
-const pipelinesUsedEl = document.getElementById('pipelines-used')!;
-const memoryEl = document.getElementById('memory')!;
-const gpuTimeEl = document.getElementById('gpu-time')!;
-const gpuBarEl = document.getElementById('gpu-bar')!;
-const passBreakdownEl = document.getElementById('pass-breakdown')!;
-const pipelineListEl = document.getElementById('pipeline-list')!;
-const deviceLabelEl = document.getElementById('device-label')!;
-const maxTexture2dEl = document.getElementById('max-texture-2d')!;
-const maxBindGroupsEl = document.getElementById('max-bind-groups')!;
-const timestampQueryEl = document.getElementById('timestamp-query')!;
-const maxComputeWgEl = document.getElementById('max-compute-wg')!;
-const featuresListEl = document.getElementById('features-list')!;
-const limitsTableEl = document.getElementById('limits-table')!;
-const fallbackMessage = document.getElementById('fallback-message')!;
+let useWebGPU = false;
 
 // Check WebGPU support
 async function checkWebGPUSupport(): Promise<boolean> {
@@ -88,55 +48,45 @@ async function checkWebGPUSupport(): Promise<boolean> {
   }
 }
 
-// Initialize WebGPU renderer
-async function initWebGPU(): Promise<boolean> {
+// Initialize renderer (WebGPU or fallback to WebGL)
+async function initRenderer(): Promise<void> {
+  const container = document.getElementById('app')!;
   const isSupported = await checkWebGPUSupport();
   
-  if (!isSupported) {
-    statusBadge.textContent = 'WebGPU Not Supported';
-    statusBadge.classList.add('error');
-    fallbackMessage.classList.add('visible');
-    return false;
+  if (isSupported) {
+    try {
+      // Dynamically import WebGPURenderer from Three.js
+      const { WebGPURenderer } = await import('three/webgpu');
+      
+      renderer = new WebGPURenderer({ antialias: true }) as WebGPURenderer;
+      await (renderer as WebGPURenderer).init();
+      useWebGPU = true;
+      
+      console.log('✅ WebGPU renderer initialized');
+    } catch (error) {
+      console.warn('WebGPU init failed, falling back to WebGL:', error);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+    }
+  } else {
+    console.log('WebGPU not supported, using WebGL');
+    renderer = new THREE.WebGLRenderer({ antialias: true });
   }
   
-  try {
-    // Dynamically import WebGPURenderer from Three.js
-    // Note: In Three.js r160+, WebGPURenderer is available as an add-on
-    const { WebGPURenderer } = await import('three/webgpu');
-    
-    renderer = new WebGPURenderer({ antialias: true }) as WebGPURenderer;
-    await renderer.init();
-    
-    const container = document.getElementById('canvas-container')!;
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-    
-    statusBadge.textContent = 'WebGPU Active';
-    statusBadge.classList.add('supported');
-    
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize WebGPU:', error);
-    statusBadge.textContent = 'WebGPU Init Failed';
-    statusBadge.classList.add('error');
-    fallbackMessage.classList.add('visible');
-    fallbackMessage.querySelector('p')!.textContent = 
-      'Failed to initialize WebGPU renderer. Error: ' + (error as Error).message;
-    return false;
-  }
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
 }
 
 // Create scene
 function createScene(): void {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1a2e);
+  scene.name = 'WebGPUFeaturesDemo';
   
   // Camera
   camera = new THREE.PerspectiveCamera(
     60,
-    document.getElementById('canvas-container')!.clientWidth / 
-    document.getElementById('canvas-container')!.clientHeight,
+    window.innerWidth / window.innerHeight,
     0.1,
     1000
   );
@@ -228,202 +178,35 @@ function createObjects(count: number): void {
 
 // Initialize 3Lens DevtoolProbe
 function initDevtools(): void {
-  probe = new DevtoolProbe({ debug: true });
+  const probe = createProbe({
+    name: 'WebGPUFeaturesDemo',
+    sampling: {
+      frameStatsInterval: 1,
+      sceneSnapshotInterval: 30,
+      enableGPUTiming: true,
+    },
+  });
   
-  // Observe the WebGPU renderer
-  probe.observeRenderer(renderer as unknown as THREE.WebGLRenderer);
+  // Observe the renderer
+  probe.observeRenderer(renderer as THREE.WebGLRenderer);
   probe.observeScene(scene);
   
-  // Get WebGPU capabilities
-  if (isWebGPURenderer(renderer)) {
-    capabilities = getWebGPUCapabilities(renderer as any);
-    updateCapabilitiesUI();
-  }
-  
-  // Create overlay
-  const overlay = createOverlay(probe, {
-    defaultWidth: 400
+  // Register logical entity for renderer info
+  probe.registerLogicalEntity('renderer-info', {
+    name: 'Renderer Info',
+    type: 'system',
+    metadata: {
+      type: useWebGPU ? 'WebGPU' : 'WebGL',
+      webgpuSupported: useWebGPU,
+    },
   });
-  overlay.showPanel('stats');
   
-  // Subscribe to frame stats
-  const adapter = (probe as any).rendererAdapter;
-  if (adapter) {
-    adapter.observeFrame((stats: FrameStats) => {
-      frameStats = stats;
-      updateMetricsUI(stats);
-    });
-  }
-}
-
-// Update capabilities UI
-function updateCapabilitiesUI(): void {
-  if (!capabilities) return;
-  
-  // Device label
-  deviceLabelEl.textContent = capabilities.deviceLabel || 'Unknown Device';
-  
-  // Key limits
-  maxTexture2dEl.textContent = capabilities.maxTextureDimension2D.toLocaleString();
-  maxBindGroupsEl.textContent = capabilities.maxBindGroups.toString();
-  timestampQueryEl.textContent = capabilities.hasTimestampQuery ? '✓ Yes' : '✗ No';
-  maxComputeWgEl.textContent = capabilities.maxComputeWorkgroupsPerDimension.toLocaleString();
-  
-  // Features list
-  featuresListEl.innerHTML = capabilities.features
-    .slice(0, 15)
-    .map(f => `<span class="capability-tag">${f}</span>`)
-    .join('');
-  
-  if (capabilities.features.length > 15) {
-    featuresListEl.innerHTML += `<span class="capability-tag">+${capabilities.features.length - 15} more</span>`;
-  }
-  
-  // Limits table
-  const limitsData = [
-    ['Max Texture 2D', capabilities.maxTextureDimension2D],
-    ['Max Texture Array Layers', capabilities.maxTextureArrayLayers],
-    ['Max Bind Groups', capabilities.maxBindGroups],
-    ['Max Bindings/Group', capabilities.maxBindingsPerBindGroup],
-    ['Max Uniform Buffers', capabilities.maxUniformBuffersPerShaderStage],
-    ['Max Storage Buffers', capabilities.maxStorageBuffersPerShaderStage],
-    ['Max Samplers', capabilities.maxSamplersPerShaderStage],
-    ['Max Sampled Textures', capabilities.maxSampledTexturesPerShaderStage],
-    ['Max Vertex Buffers', capabilities.maxVertexBuffers],
-    ['Max Vertex Attributes', capabilities.maxVertexAttributes],
-    ['Max Compute WG Size X', capabilities.maxComputeWorkgroupSizeX],
-    ['Max Compute WG Size Y', capabilities.maxComputeWorkgroupSizeY],
-    ['Max Compute WG Size Z', capabilities.maxComputeWorkgroupSizeZ],
-    ['Max Compute Invocations', capabilities.maxComputeInvocationsPerWorkgroup],
-  ];
-  
-  const tbody = limitsTableEl.querySelector('tbody')!;
-  tbody.innerHTML = limitsData
-    .map(([name, value]) => `
-      <tr>
-        <td>${name}</td>
-        <td>${typeof value === 'number' ? value.toLocaleString() : value}</td>
-      </tr>
-    `)
-    .join('');
-}
-
-// Update metrics UI
-function updateMetricsUI(stats: FrameStats): void {
-  // Basic metrics
-  fpsEl.textContent = Math.round(stats.summary.fps).toString();
-  drawCallsEl.textContent = stats.summary.drawCalls.toString();
-  trianglesEl.textContent = formatNumber(stats.summary.triangles);
-  memoryEl.textContent = formatBytes(stats.memory.totalGpuMemory);
-  
-  // WebGPU-specific metrics
-  if (stats.webgpuExtras) {
-    pipelinesUsedEl.textContent = stats.webgpuExtras.pipelinesUsed.toString();
-    
-    // GPU timing
-    if (stats.webgpuExtras.gpuTiming) {
-      const gpuTime = stats.webgpuExtras.gpuTiming.totalMs;
-      gpuTimeEl.textContent = `${gpuTime.toFixed(2)} ms`;
-      
-      // Update bar (16.67ms = 60fps target)
-      const percentage = Math.min(100, (gpuTime / 16.67) * 100);
-      gpuBarEl.style.width = `${percentage}%`;
-      
-      // Update pass breakdown
-      if (stats.webgpuExtras.gpuTiming.passes && stats.webgpuExtras.gpuTiming.passes.length > 0) {
-        updatePassBreakdown(stats.webgpuExtras.gpuTiming.passes, gpuTime);
-      }
-    }
-  } else {
-    pipelinesUsedEl.textContent = '--';
-    gpuTimeEl.textContent = 'N/A';
-  }
-  
-  // Update pipeline list
-  updatePipelineList();
-}
-
-// Update pass breakdown UI
-interface PassInfo {
-  name: string;
-  durationMs: number;
-  type?: string;
-}
-
-function updatePassBreakdown(passes: PassInfo[], totalTime: number): void {
-  if (!passes || passes.length === 0) {
-    passBreakdownEl.innerHTML = '<p style="color: #888; font-size: 0.75rem;">No pass data available</p>';
-    return;
-  }
-  
-  passBreakdownEl.innerHTML = passes.map(pass => {
-    const percentage = (pass.durationMs / totalTime) * 100;
-    const passType = pass.type || categorizePass(pass.name);
-    
-    return `
-      <div class="pass-item">
-        <span class="pass-name">${pass.name}</span>
-        <div class="pass-bar">
-          <div class="pass-fill ${passType}" style="width: ${percentage}%"></div>
-        </div>
-        <span class="pass-time">${pass.durationMs.toFixed(2)}</span>
-      </div>
-    `;
-  }).join('');
-}
-
-// Categorize pass by name
-function categorizePass(name: string): string {
-  const lowerName = name.toLowerCase();
-  if (lowerName.includes('shadow')) return 'shadow';
-  if (lowerName.includes('post') || lowerName.includes('bloom') || lowerName.includes('blur')) return 'post';
-  if (lowerName.includes('compute')) return 'compute';
-  return 'render';
-}
-
-// Update pipeline list
-function updatePipelineList(): void {
-  const adapter = (probe as any)?.rendererAdapter;
-  if (!adapter || typeof adapter.getPipelines !== 'function') {
-    pipelineListEl.innerHTML = '<div class="pipeline-item"><span class="pipeline-name">No pipeline data</span></div>';
-    return;
-  }
-  
-  const pipelines = adapter.getPipelines() || [];
-  
-  if (pipelines.length === 0) {
-    pipelineListEl.innerHTML = '<div class="pipeline-item"><span class="pipeline-name">No pipelines tracked</span></div>';
-    return;
-  }
-  
-  pipelineListEl.innerHTML = pipelines.slice(0, 10).map((p: any) => `
-    <div class="pipeline-item">
-      <span class="pipeline-name">${p.label || p.id}</span>
-      <span class="pipeline-type ${p.type}">${p.type}</span>
-    </div>
-  `).join('');
-  
-  if (pipelines.length > 10) {
-    pipelineListEl.innerHTML += `
-      <div class="pipeline-item">
-        <span class="pipeline-name" style="color: #888">+${pipelines.length - 10} more pipelines</span>
-      </div>
-    `;
-  }
-}
-
-// Format helpers
-function formatNumber(num: number): string {
-  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
-  if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return bytes + ' B';
+  bootstrapOverlay({
+    probe,
+    position: 'right',
+    defaultWidth: 400,
+    defaultOpen: true,
+  });
 }
 
 // Animation loop
@@ -448,88 +231,92 @@ function animate(): void {
     camera.lookAt(0, 0, 0);
   }
   
-  // Use async rendering for WebGPU
-  if (renderer.renderAsync) {
-    renderer.renderAsync(scene, camera);
+  // Use async rendering for WebGPU if available
+  if (useWebGPU && (renderer as WebGPURenderer).renderAsync) {
+    (renderer as WebGPURenderer).renderAsync(scene, camera);
   } else {
     renderer.render(scene, camera);
   }
 }
 
-// Stress test
-async function runStressTest(): Promise<void> {
-  const btn = document.getElementById('btn-stress-test') as HTMLButtonElement;
-  btn.disabled = true;
-  btn.textContent = 'Running...';
-  
-  const initialCount = objects.length;
-  
-  // Add many objects
-  for (let i = 0; i < 5; i++) {
-    createObjects(50);
-    await new Promise(r => setTimeout(r, 100));
-  }
-  
-  // Wait for metrics to stabilize
-  await new Promise(r => setTimeout(r, 2000));
-  
-  // Remove extra objects
-  while (objects.length > initialCount) {
-    const obj = objects.pop()!;
-    scene.remove(obj);
-    obj.geometry.dispose();
-    (obj.material as THREE.Material).dispose();
-  }
-  
-  btn.disabled = false;
-  btn.textContent = 'Run Stress Test';
-}
-
 // Setup event handlers
 function setupEventHandlers(): void {
-  // Add objects button
-  document.getElementById('btn-add-objects')!.addEventListener('click', () => {
-    createObjects(10);
-  });
-  
-  // Toggle animation button
-  const toggleBtn = document.getElementById('btn-toggle-animation')!;
-  toggleBtn.addEventListener('click', () => {
-    animationPaused = !animationPaused;
-    toggleBtn.textContent = animationPaused ? 'Resume Animation' : 'Pause Animation';
-  });
-  
-  // Stress test button
-  document.getElementById('btn-stress-test')!.addEventListener('click', runStressTest);
-  
   // Handle resize
   window.addEventListener('resize', () => {
-    const container = document.getElementById('canvas-container')!;
+    const container = document.getElementById('app')!;
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(container.clientWidth, container.clientHeight);
   });
 }
 
+// Expose controls for console testing
+(window as any).webgpuDemo = {
+  addObjects: (count = 10) => {
+    createObjects(count);
+    console.log(`Added ${count} objects (total: ${objects.length})`);
+  },
+  
+  toggleAnimation: () => {
+    animationPaused = !animationPaused;
+    console.log(`Animation ${animationPaused ? 'paused' : 'resumed'}`);
+  },
+  
+  runStressTest: async () => {
+    console.log('Running stress test...');
+    const initialCount = objects.length;
+    
+    // Add many objects
+    for (let i = 0; i < 5; i++) {
+      createObjects(50);
+      await new Promise(r => setTimeout(r, 100));
+    }
+    
+    console.log(`Added 250 objects for stress test`);
+    
+    // Wait then cleanup
+    await new Promise(r => setTimeout(r, 2000));
+    
+    while (objects.length > initialCount) {
+      const obj = objects.pop()!;
+      scene.remove(obj);
+      obj.geometry.dispose();
+      (obj.material as THREE.Material).dispose();
+    }
+    
+    console.log('Stress test complete, cleaned up extra objects');
+  },
+  
+  getRendererType: () => useWebGPU ? 'WebGPU' : 'WebGL',
+};
+
 // Initialize
 async function init(): Promise<void> {
-  const success = await initWebGPU();
-  
-  if (!success) {
-    return;
-  }
-  
+  await initRenderer();
   createScene();
   initDevtools();
   setupEventHandlers();
   animate();
   
-  console.log('🔮 WebGPU Features Example initialized');
-  console.log('   Press F12 to open 3Lens DevTools overlay');
-  
-  if (capabilities) {
-    console.log('📊 WebGPU Capabilities:', capabilities);
-  }
+  console.log(`
+🔮 WebGPU Features Example
+═══════════════════════════════════════
+
+Renderer: ${useWebGPU ? 'WebGPU ✅' : 'WebGL (fallback)'}
+
+Open 3Lens DevTools (Ctrl+Shift+D) to explore:
+• Performance panel - Frame stats and GPU timing
+• WebGPU panel - Device capabilities and pipelines
+• Resources panel - Textures, geometries, materials
+
+Console commands:
+  webgpuDemo.addObjects(10)    - Add more objects
+  webgpuDemo.toggleAnimation() - Pause/resume animation
+  webgpuDemo.runStressTest()   - Run performance test
+  webgpuDemo.getRendererType() - Check renderer type
+
+═══════════════════════════════════════
+`);
 }
 
 init();

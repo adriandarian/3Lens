@@ -1,33 +1,82 @@
 # Custom Render Pipeline Example
 
-A comprehensive demonstration of building a deferred rendering pipeline with multiple render passes and full 3Lens integration.
+A multi-pass deferred rendering pipeline demonstrating how 3Lens can inspect complex rendering setups.
 
-## Features
+## What This Example Shows
 
-### Deferred Rendering Pipeline
-- **G-Buffer Pass**: Multiple Render Targets (MRT) capturing albedo, normals, positions, and depth
-- **SSAO Pass**: Screen-space ambient occlusion for realistic soft shadows
-- **Lighting Pass**: Deferred PBR lighting with multiple dynamic lights
+This example implements a complete deferred rendering pipeline:
+
+- **G-Buffer Pass**: Multiple Render Targets capturing albedo, normals, positions
+- **SSAO Pass**: Screen-space ambient occlusion for soft shadows  
+- **Lighting Pass**: Deferred PBR lighting with 4 dynamic point lights
 - **Bloom Pass**: HDR bright extraction and Gaussian blur
-- **Composite Pass**: Tone mapping (ACES), vignette, and gamma correction
+- **Composite Pass**: ACES tone mapping, vignette, and gamma correction
 
-### Post-Processing Effects
-- **Bloom**: Configurable intensity and brightness threshold
-- **SSAO**: Adjustable radius for ambient occlusion
-- **Vignette**: Screen-edge darkening effect
-- **ACES Tone Mapping**: Film-like color response
+The scene contains various PBR materials (metallic, rough, dielectric) to showcase the lighting model.
 
-### Debug Visualization
-- **Final Output**: Fully composited render
-- **G-Buffer View**: Raw albedo and material properties
-- **Depth View**: Linearized depth buffer
-- **Normal View**: World-space normals
+## Using 3Lens to Debug This
 
-### 3Lens Integration
-- Individual render pass entities
-- Real-time GPU timing per pass
-- Draw call tracking
-- Pipeline configuration inspection
+### Opening 3Lens
+
+The 3Lens overlay is automatically initialized. Click the floating button or use the keyboard shortcut to open it.
+
+### Recommended Panels
+
+**Scene Explorer**
+- Navigate to `GBufferScene` to see all renderable objects
+- Each object shows its G-Buffer material properties
+- Inspect the custom `RawShaderMaterial` uniforms (uColor, uRoughness, uMetalness)
+
+**Performance Stats**
+- Monitor draw calls per frame (should be ~10 for geometry + 5 fullscreen passes)
+- Watch GPU memory usage from render targets
+- Track frame time breakdown
+
+**Entities Panel**
+- `deferred-pipeline`: The overall pipeline entity with technique info
+- `pass-geometry`: G-Buffer pass details (MRT resolution, format)
+- `pass-ssao`: SSAO pass at half resolution
+- `pass-lighting`: Deferred lighting pass
+- `pass-bloom-extract`: Bloom threshold extraction
+- `pass-bloom-blur`: Two-pass Gaussian blur
+- `pass-composite`: Final composition to screen
+
+### What to Explore
+
+1. **Render Pass Entities**: Each pass is registered as a logical entity. In the Entities panel, you can see:
+   - Pass order in the pipeline
+   - Render target resolution and format
+   - Pass descriptions
+
+2. **Material Inspection**: Select objects in Scene Explorer to see their G-Buffer material properties:
+   - Color, roughness, metalness uniforms
+   - The GLSL3 shader code
+
+3. **Performance Impact**: Use the Performance panel while adjusting post-processing sliders to see how bloom/SSAO affect frame time.
+
+> **Note**: 3Lens doesn't yet have a dedicated render pass inspector panel or render target preview. These are tracked in `MISSING_FEATURES.md` for future development.
+
+## Controls
+
+### Scenario Controls (left panel)
+
+- **Bloom**: Intensity of the bloom effect (0-1)
+- **Threshold**: Brightness threshold for bloom extraction (0-1)  
+- **SSAO**: Radius of ambient occlusion sampling (0-1)
+- **Vignette**: Screen-edge darkening amount (0-1)
+
+### Debug Views
+
+- **Final**: Complete rendered output
+- **G-Buffer**: Raw albedo/material colors
+- **Normals**: World-space normal buffer
+- **Position**: Distance-based heatmap (blue=near, red=far)
+- **Depth**: Linearized depth buffer
+
+### Keyboard
+
+- **Tab**: Cycle through debug views
+- **Mouse**: Orbit (left), Pan (right), Zoom (scroll)
 
 ## Running the Example
 
@@ -39,70 +88,7 @@ pnpm dev
 
 Open http://localhost:3028 in your browser.
 
-## Controls
-
-### Mouse
-- **Left Click + Drag**: Orbit camera
-- **Right Click + Drag**: Pan camera
-- **Scroll**: Zoom in/out
-
-### Keyboard
-- **Tab**: Cycle through debug views
-
-### UI Controls
-
-#### Render Passes Panel
-- Toggle individual passes on/off
-- View per-pass timing and draw calls
-- Click pass to inspect details
-
-#### Pipeline Flow Diagram
-- Visual representation of render pipeline
-- Shows data flow between passes
-- Highlights disabled passes
-
-#### Post-Processing Sliders
-- **Bloom Intensity**: 0.0 - 1.0
-- **Bloom Threshold**: 0.0 - 1.0
-- **SSAO Radius**: 0.0 - 1.0
-- **Vignette Amount**: 0.0 - 1.0
-
-#### Debug Views
-- **Final**: Complete rendered output
-- **G-Buffer**: Albedo/material view
-- **Depth**: Depth buffer visualization
-- **Normals**: Normal buffer visualization
-
-## Architecture
-
-### Render Pipeline Stages
-
-```
-┌─────────────┐   ┌──────────┐   ┌──────────────┐
-│  Geometry   │──▶│   SSAO   │──▶│   Lighting   │
-│   Pass      │   │   Pass   │   │    Pass      │
-└─────────────┘   └──────────┘   └──────────────┘
-      │                               │
-      │ G-Buffer (MRT)                │ HDR Scene
-      │ - Albedo                      │
-      │ - Normals                     ▼
-      │ - Position            ┌──────────────┐
-      │ - Depth               │    Bloom     │
-      │                       │   Extract    │
-      ▼                       └──────────────┘
-┌─────────────┐                      │
-│   Debug     │                      ▼
-│   Views     │               ┌──────────────┐
-└─────────────┘               │    Bloom     │
-                              │    Blur      │
-                              └──────────────┘
-                                     │
-                                     ▼
-                              ┌──────────────┐
-                              │  Composite   │──▶ Screen
-                              │    Pass      │
-                              └──────────────┘
-```
+## Technical Notes
 
 ### G-Buffer Layout
 
@@ -115,104 +101,14 @@ Open http://localhost:3028 in your browser.
 
 ### Lighting Model
 
-The lighting pass implements physically-based rendering (PBR):
-- **GGX Distribution** for specular highlights
-- **Smith Geometry** function for shadowing
-- **Schlick Fresnel** approximation
-- **Multiple point lights** with attenuation
-
-## Technical Details
-
-### Shaders
-
-All shaders are embedded in the TypeScript source:
-
-1. **G-Buffer Shaders**: Output material properties to MRT
-2. **SSAO Shader**: 16-sample kernel with randomized rotation
-3. **Lighting Shader**: Full PBR with 4 lights
-4. **Bloom Shaders**: Threshold extraction + separable Gaussian blur
-5. **Composite Shader**: ACES tone mapping + vignette
-6. **Debug Shader**: Multi-mode visualization
-
-### Performance Considerations
-
-- Half-precision (16-bit float) render targets where applicable
-- Downsampled SSAO (half resolution)
-- Downsampled bloom (quarter resolution)
-- Separable blur passes for efficiency
-
-### 3Lens Entity Registration
-
-```typescript
-// Pipeline entity
-probe.registerLogicalEntity({
-  id: 'render-pipeline',
-  name: 'Deferred Render Pipeline',
-  type: 'pipeline',
-  metadata: {
-    passes: 6,
-    renderTargets: 6
-  }
-});
-
-// Per-pass entities
-passes.forEach(pass => {
-  probe.registerLogicalEntity({
-    id: `pass-${pass.id}`,
-    name: pass.name,
-    type: 'render-pass',
-    metadata: { ... }
-  });
-});
-```
-
-## Customization
-
-### Adding New Passes
-
-1. Create render target in `initRenderTargets()`
-2. Create material with shaders in `createMaterials()`
-3. Add pass entry to `passes` array in `initPasses()`
-4. Add rendering logic in `renderPipeline()`
-5. Register with 3Lens
-
-### Modifying Materials
-
-G-Buffer materials support:
-- `uColor`: Base color (RGB)
-- `uRoughness`: Surface roughness (0-1)
-- `uMetalness`: Metallic property (0-1)
-
-### Adding Lights
-
-```typescript
-lights.push({
-  position: new THREE.Vector3(x, y, z),
-  color: new THREE.Color(r, g, b)
-});
-```
-
-## Files
-
-```
-custom-render-pipeline/
-├── src/
-│   └── main.ts        # Complete pipeline implementation
-├── index.html         # UI with pass inspector
-├── package.json       # Dependencies
-├── tsconfig.json      # TypeScript config
-├── vite.config.ts     # Vite configuration
-└── README.md          # This file
-```
-
-## Dependencies
-
-- **three**: ^0.160.0 - 3D rendering
-- **@3lens/core**: workspace:* - Devtool probe
-- **@3lens/overlay**: workspace:* - Debug overlay
+The deferred lighting pass implements PBR with:
+- GGX distribution for specular highlights
+- Smith geometry function for shadowing
+- Schlick Fresnel approximation
+- Point lights with inverse-square attenuation
 
 ## Related Examples
 
 - [Shadow Comparison](../shadow-comparison/) - Shadow mapping techniques
-- [Post-Processing](../../real-world-scenarios/post-processing/) - Additional effects
+- [Post-Processing](../../real-world-scenarios/post-processing/) - Additional post effects
 - [Shader Debugging](../../debugging-profiling/shader-debugging/) - Shader inspection

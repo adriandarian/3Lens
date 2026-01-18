@@ -1,123 +1,134 @@
 # Transform Gizmo Demo
 
-Interactive transform controls demonstration for 3Lens DevTools.
+Demonstrates 3Lens's built-in `TransformGizmo` helper for manipulating scene objects.
 
-## Overview
+## What This Example Shows
 
-This example showcases transform gizmo integration with Three.js TransformControls:
+This example showcases the 3Lens `TransformGizmo` helper:
 
-- **Translate Mode (W)**: Move objects along axes
-- **Rotate Mode (E)**: Rotate objects around axes  
-- **Scale Mode (R)**: Scale objects uniformly or per-axis
-- **Space Toggle (Q)**: Switch between world and local coordinate space
-- **Snap to Grid**: Configurable snapping for precise positioning
-- **Undo/Redo**: Full history system with keyboard shortcuts
+- Click-to-select objects in the scene
+- Transform gizmo with translate/rotate/scale modes
+- World vs local coordinate space
+- Snap to grid functionality
+- Full undo/redo history
 
-## Features
+**Key Point**: All transform controls come from 3Lens - no custom UI is built in this example.
 
-### Transform Modes
-- Click an object to select it
-- Use gizmo handles to transform
-- Switch modes with keyboard or buttons
+## Using 3Lens
 
-### Coordinate Spaces
-- **World**: Transform aligned to global axes
-- **Local**: Transform aligned to object's local axes
+### Selection
 
-### Snap Settings
-- Enable/disable snapping
-- Configure position snap increment (default: 0.5 units)
-- Configure rotation snap (default: 15°)
-- Configure scale snap (default: 0.1)
+Click any colored object to select it. The 3Lens SelectionHelper handles click detection and calls `probe.selectObject()`.
 
-### History System
-- Records all transform operations
-- Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z)
-- Visual history display
-- Delete key resets selected object
+### Transform Gizmo
+
+When an object is selected, the `TransformGizmo` automatically attaches to it. The gizmo provides:
+
+- **Translate**: Move the object along axes
+- **Rotate**: Rotate around axes
+- **Scale**: Scale along axes
+
+### Transform History
+
+3Lens automatically tracks all transform changes. Use undo/redo to step through history:
+
+- `Ctrl+Z`: Undo last transform
+- `Ctrl+Shift+Z`: Redo undone transform
+
+### 3Lens Overlay
+
+Open the 3Lens overlay to see:
+
+- **Scene Explorer**: View all objects, click to select
+- **Properties Panel**: See selected object's transform values
+- **Performance Stats**: Monitor frame rate during transforms
 
 ## Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
-| W | Translate mode |
-| E | Rotate mode |
-| R | Scale mode |
-| Q | Toggle world/local |
-| Ctrl+Z | Undo |
-| Ctrl+Shift+Z | Redo |
-| Escape | Deselect |
-| Delete | Reset transform |
+| `W` | Translate mode |
+| `E` | Rotate mode |
+| `R` | Scale mode |
+| `Q` | Toggle world/local space |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Shift+Z` | Redo |
+| `Esc` | Deselect |
 
-## Running the Demo
+## Code Highlights
+
+### Initializing TransformGizmo
+
+```typescript
+import { createProbe, TransformGizmo, SelectionHelper } from '@3lens/core';
+
+const probe = createProbe({ appName: 'My App' });
+probe.setThreeReference(THREE);
+probe.observeRenderer(renderer);
+probe.observeScene(scene);
+
+// Create and initialize the transform gizmo
+const transformGizmo = new TransformGizmo(probe);
+transformGizmo.initialize(scene, camera, renderer.domElement, THREE);
+transformGizmo.enable();
+
+// Create selection helper for click-to-select
+const selectionHelper = new SelectionHelper(probe, camera, renderer.domElement);
+```
+
+### Responding to Transform Changes
+
+```typescript
+// Disable orbit controls while transforming
+transformGizmo.onDraggingChanged((isDragging) => {
+  orbitControls.enabled = !isDragging;
+});
+
+// React to transform changes
+transformGizmo.onTransformChanged((entry) => {
+  console.log(`Transformed: ${entry.objectName}`);
+  console.log(`  Before: ${JSON.stringify(entry.before.position)}`);
+  console.log(`  After: ${JSON.stringify(entry.after.position)}`);
+});
+```
+
+### Changing Transform Mode
+
+```typescript
+transformGizmo.setMode('translate'); // or 'rotate' or 'scale'
+transformGizmo.setSpace('world');    // or 'local'
+transformGizmo.toggleSpace();        // toggle between world/local
+
+// Enable snapping
+transformGizmo.setSnapEnabled(true);
+transformGizmo.setSnapValues(1, Math.PI / 12, 0.1); // translation, rotation, scale
+```
+
+### Undo/Redo
+
+```typescript
+if (transformGizmo.canUndo()) {
+  transformGizmo.undo();
+}
+
+if (transformGizmo.canRedo()) {
+  transformGizmo.redo();
+}
+
+// Get transform history
+const history = transformGizmo.getHistory();
+```
+
+## Running the Example
 
 ```bash
-# From repository root
+cd examples/feature-showcase/transform-gizmo
 pnpm install
-pnpm --filter transform-gizmo dev
+pnpm dev
 ```
-
-## Implementation Notes
-
-### TransformControls Integration
-The demo uses Three.js TransformControls with:
-- Automatic OrbitControls disabling during transforms
-- Change tracking for undo/redo
-- Real-time transform display updates
-
-### History Architecture
-```typescript
-interface HistoryEntry {
-  objectName: string;
-  objectUuid: string;
-  action: 'translate' | 'rotate' | 'scale';
-  before: TransformState;
-  after: TransformState;
-  timestamp: number;
-}
-```
-
-### Object Selection
-- Raycaster-based click selection
-- Visual feedback in object list
-- Gizmo attaches to selected object
-
-## Code Structure
-
-```
-transform-gizmo/
-├── src/
-│   └── main.ts          # Main application with:
-│                        # - Scene setup
-│                        # - TransformControls config
-│                        # - History system
-│                        # - UI bindings
-│                        # - 3Lens integration
-├── index.html           # UI with controls panel
-├── package.json
-└── README.md
-```
-
-## 3Lens Integration
-
-The demo integrates with 3Lens DevTools:
-- Scene hierarchy inspection
-- Object property viewing
-- Performance monitoring
-- Transform value tracking
-
-Open the overlay with **Ctrl+Shift+D** for additional debugging tools.
-
-## Use Cases
-
-- Learning TransformControls patterns
-- Testing transform precision
-- Debugging coordinate space issues
-- Understanding undo/redo implementation
-- 3D editor prototyping
 
 ## Related Examples
 
-- [Camera Controls](../camera-controls/) - Different camera interaction modes
-- [Custom Plugin](../custom-plugin/) - Extend 3Lens functionality
-- [Visual Overlays](../visual-overlays/) - Scene visualization helpers
+- [Camera Controls](../camera-controls/) - 3Lens CameraController helper
+- [Visual Overlays](../visual-overlays/) - Bounding boxes and debug visualization
+- [Custom Plugin](../custom-plugin/) - Extend 3Lens with custom functionality

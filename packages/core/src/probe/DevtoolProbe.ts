@@ -416,7 +416,9 @@ export class DevtoolProbe {
    */
   private getRenderTargetId(rt: THREE.WebGLRenderTarget): string {
     // WebGLRenderTarget doesn't have a uuid property, but the texture does
-    return (rt as unknown as { uuid?: string }).uuid || rt.texture?.uuid || '';
+    // For WebGLMultipleRenderTargets, texture is an array, so use the first texture's uuid
+    const texture = Array.isArray(rt.texture) ? rt.texture[0] : rt.texture;
+    return (rt as unknown as { uuid?: string }).uuid || texture?.uuid || '';
   }
 
   /**
@@ -440,11 +442,17 @@ export class DevtoolProbe {
     }
 
     this._registeredRenderTargets.set(rtId, { rt: renderTarget, usage });
+    const texture = Array.isArray(renderTarget.texture)
+      ? renderTarget.texture[0]
+      : renderTarget.texture;
+    const isMRT = Array.isArray(renderTarget.texture);
     this.log('Observing render target', {
       uuid: rtId,
-      name: renderTarget.texture?.name || '<unnamed>',
+      name: texture?.name || '<unnamed>',
       size: `${renderTarget.width}x${renderTarget.height}`,
       usage,
+      isMRT,
+      attachments: isMRT ? renderTarget.texture.length : 1,
     });
   }
 

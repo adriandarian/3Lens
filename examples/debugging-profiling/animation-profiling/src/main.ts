@@ -1,19 +1,25 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createProbe } from '@3lens/core';
-import { bootstrapOverlay } from '@3lens/overlay';
+import { createOverlay } from '@3lens/overlay';
 import '@3lens/themes/styles.css';
 
 /**
  * Animation Profiling Example
  * 
- * This example demonstrates common Three.js animation performance issues
+ * This example demonstrates common Three.js animation performance scenarios
  * that can be identified and diagnosed using 3Lens:
  * 
  * - Skeletal animation with varying bone complexity
  * - Morph target animations
  * - Animation mixer overhead
  * - Keyframe interpolation density
+ * 
+ * Use the 3Lens overlay to:
+ * - Monitor frame time and identify animation-related spikes
+ * - Inspect animated objects in the Scene panel
+ * - View bone hierarchies and morph target influences
+ * - Track animation mixer performance
  */
 
 // =============================================================================
@@ -104,30 +110,10 @@ function createBaseScene() {
 createBaseScene();
 
 // =============================================================================
-// ANIMATION STATE TRACKING
+// ANIMATION MIXERS
 // =============================================================================
 
-interface AnimationStats {
-  activeMixers: number;
-  activeActions: number;
-  totalBones: number;
-  morphInfluences: number;
-  animationUpdateTime: number;
-}
-
-const animationStats: AnimationStats = {
-  activeMixers: 0,
-  activeActions: 0,
-  totalBones: 0,
-  morphInfluences: 0,
-  animationUpdateTime: 0,
-};
-
 const mixers: THREE.AnimationMixer[] = [];
-const animatedObjects: THREE.Object3D[] = [];
-
-let isPaused = false;
-let timeScale = 1.0;
 
 // =============================================================================
 // SKELETON CREATION UTILITIES
@@ -148,7 +134,7 @@ function createSkeleton(boneCount: number): { skeleton: THREE.Skeleton; rootBone
     if (i === 0) {
       bone.position.set(0, 0, 0);
     } else {
-      bone.position.set(0, 0.5, 0); // Each bone 0.5 units above parent
+      bone.position.set(0, 0.5, 0);
     }
     
     if (prevBone) {
@@ -171,7 +157,6 @@ function createSkinnedCharacter(
   position: THREE.Vector3,
   name: string
 ): { mesh: THREE.SkinnedMesh; mixer: THREE.AnimationMixer } {
-  // Create geometry - a simple cylinder-like shape
   const height = boneCount * 0.5;
   const geometry = new THREE.CylinderGeometry(0.3, 0.4, height, 16, boneCount * 2);
   geometry.translate(0, height / 2, 0);
@@ -194,17 +179,14 @@ function createSkinnedCharacter(
   geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4));
   geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
   
-  // Create material
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color().setHSL(Math.random(), 0.7, 0.5),
     roughness: 0.5,
     metalness: 0.3,
   });
   
-  // Create skeleton
   const { skeleton, rootBone } = createSkeleton(boneCount);
   
-  // Create skinned mesh
   const mesh = new THREE.SkinnedMesh(geometry, material);
   mesh.name = name;
   mesh.add(rootBone);
@@ -213,11 +195,10 @@ function createSkinnedCharacter(
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   
-  // Create animation
+  // Create wave animation
   const times = [0, 1, 2, 3, 4];
   const tracks: THREE.KeyframeTrack[] = [];
   
-  // Animate each bone with a wave motion
   for (let i = 1; i < boneCount; i++) {
     const boneName = `Bone_${i}`;
     const amplitude = 0.1 + (i / boneCount) * 0.3;
@@ -256,10 +237,8 @@ function createMorphTargetMesh(
   position: THREE.Vector3,
   name: string
 ): { mesh: THREE.Mesh; mixer: THREE.AnimationMixer } {
-  // Base geometry - sphere
   const geometry = new THREE.SphereGeometry(1, 32, 32);
   
-  // Create morph targets
   const morphPositions: Float32Array[] = [];
   const positionAttribute = geometry.attributes.position;
   
@@ -271,7 +250,6 @@ function createMorphTargetMesh(
       const y = positionAttribute.getY(i);
       const z = positionAttribute.getZ(i);
       
-      // Create unique deformation for each target
       const noise = Math.sin(x * 5 + t) * Math.cos(y * 5 + t * 0.7) * Math.sin(z * 5 + t * 1.3);
       const scale = 1 + noise * 0.3;
       
@@ -287,7 +265,6 @@ function createMorphTargetMesh(
     arr => new THREE.Float32BufferAttribute(arr, 3)
   );
   
-  // Material with morphTargets enabled
   const material = new THREE.MeshStandardMaterial({
     color: 0x9b59b6,
     roughness: 0.4,
@@ -301,7 +278,7 @@ function createMorphTargetMesh(
   mesh.castShadow = true;
   mesh.morphTargetInfluences = new Array(targetCount).fill(0);
   
-  // Create animation for morph targets
+  // Create morph animation
   const times: number[] = [];
   const tracks: THREE.KeyframeTrack[] = [];
   
@@ -333,11 +310,11 @@ function createMorphTargetMesh(
 }
 
 // =============================================================================
-// ANIMATION CLIP UTILITIES
+// ANIMATED OBJECTS
 // =============================================================================
 
 /**
- * Creates an object with animation clips for testing mixer performance
+ * Creates an object with animation clips
  */
 function createAnimatedObject(
   position: THREE.Vector3,
@@ -371,7 +348,6 @@ function createAnimatedObject(
       const t = (i / (keyframeCount - 1)) * duration;
       times.push(t);
       
-      // Position animation
       const angle = (i / keyframeCount) * Math.PI * 2 + c;
       posValues.push(
         Math.sin(angle) * (0.5 + c * 0.2),
@@ -379,13 +355,11 @@ function createAnimatedObject(
         Math.cos(angle) * (0.5 + c * 0.2)
       );
       
-      // Rotation animation
       const quat = new THREE.Quaternion().setFromEuler(
         new THREE.Euler(angle * 0.5, angle, angle * 0.3)
       );
       rotValues.push(quat.x, quat.y, quat.z, quat.w);
       
-      // Scale animation
       const scale = 1 + Math.sin(angle * 3) * 0.2;
       scaleValues.push(scale, scale, scale);
     }
@@ -405,567 +379,107 @@ function createAnimatedObject(
 }
 
 // =============================================================================
-// ISSUE SCENARIOS
+// CREATE DEMO ANIMATIONS
 // =============================================================================
 
-interface IssueState {
-  active: boolean;
-  cleanup: () => void;
-}
-
-const issues: Record<string, IssueState> = {
-  'simple-skeleton': { active: false, cleanup: () => {} },
-  'complex-skeleton': { active: false, cleanup: () => {} },
-  'morph-simple': { active: false, cleanup: () => {} },
-  'morph-complex': { active: false, cleanup: () => {} },
-  'single-clip': { active: false, cleanup: () => {} },
-  'blended': { active: false, cleanup: () => {} },
-  'many-mixers': { active: false, cleanup: () => {} },
-  'sparse-keys': { active: false, cleanup: () => {} },
-  'dense-keys': { active: false, cleanup: () => {} },
-};
-
-let skeletonCount = 1;
-
-// Simple Skeleton (20 bones)
-function enableSimpleSkeleton() {
-  const group = new THREE.Group();
-  group.name = 'SimpleSkeleton_Group';
+function createDemoScene() {
+  // Create skeletal characters with varying complexity
+  const skeletonGroup = new THREE.Group();
+  skeletonGroup.name = 'SkeletalAnimations';
   
-  for (let i = 0; i < skeletonCount; i++) {
-    const x = (i % 10) * 2 - (Math.min(skeletonCount, 10) - 1);
-    const z = Math.floor(i / 10) * 2 - 5;
+  // Simple skeleton characters (20 bones each)
+  for (let i = 0; i < 3; i++) {
     const { mesh, mixer } = createSkinnedCharacter(
       20,
-      new THREE.Vector3(x, 0, z),
+      new THREE.Vector3(i * 2 - 2, 0, -5),
       `SimpleChar_${i}`
     );
-    group.add(mesh);
+    skeletonGroup.add(mesh);
     mixers.push(mixer);
   }
   
-  scene.add(group);
-  animatedObjects.push(group);
-  updateAnimationStats();
+  // Complex skeleton character (100 bones)
+  const { mesh: complexChar, mixer: complexMixer } = createSkinnedCharacter(
+    100,
+    new THREE.Vector3(6, 0, -5),
+    'ComplexChar'
+  );
+  skeletonGroup.add(complexChar);
+  mixers.push(complexMixer);
   
-  issues['simple-skeleton'].cleanup = () => {
-    scene.remove(group);
-    group.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
-    const index = animatedObjects.indexOf(group);
-    if (index > -1) animatedObjects.splice(index, 1);
-    // Remove associated mixers
-    mixers.length = 0;
-    updateAnimationStats();
-  };
-}
-
-// Complex Skeleton (100 bones)
-function enableComplexSkeleton() {
-  const group = new THREE.Group();
-  group.name = 'ComplexSkeleton_Group';
+  scene.add(skeletonGroup);
   
-  for (let i = 0; i < skeletonCount; i++) {
-    const x = (i % 10) * 3 - (Math.min(skeletonCount, 10) - 1) * 1.5;
-    const z = Math.floor(i / 10) * 3 - 5;
-    const { mesh, mixer } = createSkinnedCharacter(
-      100,
-      new THREE.Vector3(x, 0, z),
-      `ComplexChar_${i}`
-    );
-    group.add(mesh);
-    mixers.push(mixer);
-  }
+  // Create morph target meshes
+  const morphGroup = new THREE.Group();
+  morphGroup.name = 'MorphTargetAnimations';
   
-  scene.add(group);
-  animatedObjects.push(group);
-  updateAnimationStats();
-  
-  issues['complex-skeleton'].cleanup = () => {
-    scene.remove(group);
-    group.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
-    const index = animatedObjects.indexOf(group);
-    if (index > -1) animatedObjects.splice(index, 1);
-    mixers.length = 0;
-    updateAnimationStats();
-  };
-}
-
-// Simple Morph (4 targets)
-function enableMorphSimple() {
-  const group = new THREE.Group();
-  group.name = 'SimpleMorph_Group';
-  
-  for (let i = 0; i < 5; i++) {
+  // Simple morph (4 targets)
+  for (let i = 0; i < 3; i++) {
     const { mesh, mixer } = createMorphTargetMesh(
       4,
-      new THREE.Vector3(i * 3 - 6, 1.5, -5),
+      new THREE.Vector3(i * 3 - 3, 1.5, 0),
       `SimpleMorph_${i}`
     );
-    group.add(mesh);
+    morphGroup.add(mesh);
     mixers.push(mixer);
   }
   
-  scene.add(group);
-  animatedObjects.push(group);
-  updateAnimationStats();
-  
-  issues['morph-simple'].cleanup = () => {
-    scene.remove(group);
-    group.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
-    const index = animatedObjects.indexOf(group);
-    if (index > -1) animatedObjects.splice(index, 1);
-    mixers.length = 0;
-    updateAnimationStats();
-  };
-}
-
-// Complex Morph (32 targets)
-function enableMorphComplex() {
-  const group = new THREE.Group();
-  group.name = 'ComplexMorph_Group';
-  
-  for (let i = 0; i < 5; i++) {
-    const { mesh, mixer } = createMorphTargetMesh(
-      32,
-      new THREE.Vector3(i * 3 - 6, 1.5, 5),
-      `ComplexMorph_${i}`
-    );
-    group.add(mesh);
-    mixers.push(mixer);
-  }
-  
-  scene.add(group);
-  animatedObjects.push(group);
-  updateAnimationStats();
-  
-  issues['morph-complex'].cleanup = () => {
-    scene.remove(group);
-    group.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
-    const index = animatedObjects.indexOf(group);
-    if (index > -1) animatedObjects.splice(index, 1);
-    mixers.length = 0;
-    updateAnimationStats();
-  };
-}
-
-// Single Animation Clip
-function enableSingleClip() {
-  const { mesh, mixer, actions } = createAnimatedObject(
-    new THREE.Vector3(-5, 0.5, 0),
-    'SingleClipObject',
-    1,
-    30
+  // Complex morph (32 targets)
+  const { mesh: complexMorph, mixer: morphMixer } = createMorphTargetMesh(
+    32,
+    new THREE.Vector3(6, 1.5, 0),
+    'ComplexMorph'
   );
+  morphGroup.add(complexMorph);
+  mixers.push(morphMixer);
   
-  actions[0].play();
+  scene.add(morphGroup);
   
-  scene.add(mesh);
-  mixers.push(mixer);
-  animatedObjects.push(mesh);
-  updateAnimationStats();
+  // Create animated objects with varying keyframe density
+  const animGroup = new THREE.Group();
+  animGroup.name = 'KeyframeAnimations';
   
-  issues['single-clip'].cleanup = () => {
-    scene.remove(mesh);
-    mesh.geometry.dispose();
-    (mesh.material as THREE.Material).dispose();
-    const objIndex = animatedObjects.indexOf(mesh);
-    if (objIndex > -1) animatedObjects.splice(objIndex, 1);
-    const mixerIndex = mixers.indexOf(mixer);
-    if (mixerIndex > -1) mixers.splice(mixerIndex, 1);
-    updateAnimationStats();
-  };
-}
-
-// Blended Animation Clips
-function enableBlended() {
-  const { mesh, mixer, actions } = createAnimatedObject(
-    new THREE.Vector3(0, 0.5, 0),
-    'BlendedObject',
+  // Sparse keyframes
+  const { mesh: sparse, mixer: sparseMixer, actions: sparseActions } = createAnimatedObject(
+    new THREE.Vector3(-4, 0.5, 5),
+    'SparseKeyframes',
+    1,
+    10
+  );
+  sparseActions[0].play();
+  animGroup.add(sparse);
+  mixers.push(sparseMixer);
+  
+  // Dense keyframes
+  const { mesh: dense, mixer: denseMixer, actions: denseActions } = createAnimatedObject(
+    new THREE.Vector3(0, 0.5, 5),
+    'DenseKeyframes',
+    1,
+    500
+  );
+  denseActions[0].play();
+  animGroup.add(dense);
+  mixers.push(denseMixer);
+  
+  // Blended animations
+  const { mesh: blended, mixer: blendMixer, actions: blendActions } = createAnimatedObject(
+    new THREE.Vector3(4, 0.5, 5),
+    'BlendedAnimations',
     3,
     30
   );
-  
-  // Play all clips with crossfade
-  actions.forEach((action, i) => {
+  blendActions.forEach((action, i) => {
     action.play();
-    action.setEffectiveWeight(1 / actions.length);
+    action.setEffectiveWeight(1 / blendActions.length);
     action.setEffectiveTimeScale(1 + i * 0.2);
   });
+  animGroup.add(blended);
+  mixers.push(blendMixer);
   
-  scene.add(mesh);
-  mixers.push(mixer);
-  animatedObjects.push(mesh);
-  updateAnimationStats();
-  
-  issues['blended'].cleanup = () => {
-    scene.remove(mesh);
-    mesh.geometry.dispose();
-    (mesh.material as THREE.Material).dispose();
-    const objIndex = animatedObjects.indexOf(mesh);
-    if (objIndex > -1) animatedObjects.splice(objIndex, 1);
-    const mixerIndex = mixers.indexOf(mixer);
-    if (mixerIndex > -1) mixers.splice(mixerIndex, 1);
-    updateAnimationStats();
-  };
+  scene.add(animGroup);
 }
 
-// Many Animation Mixers
-function enableManyMixers() {
-  const group = new THREE.Group();
-  group.name = 'ManyMixers_Group';
-  const localMixers: THREE.AnimationMixer[] = [];
-  
-  for (let i = 0; i < 20; i++) {
-    const x = (i % 5) * 2 - 4;
-    const z = Math.floor(i / 5) * 2 + 3;
-    const { mesh, mixer, actions } = createAnimatedObject(
-      new THREE.Vector3(x, 0.5, z),
-      `ManyMixer_${i}`,
-      2,
-      20
-    );
-    actions.forEach(a => a.play());
-    group.add(mesh);
-    mixers.push(mixer);
-    localMixers.push(mixer);
-  }
-  
-  scene.add(group);
-  animatedObjects.push(group);
-  updateAnimationStats();
-  
-  issues['many-mixers'].cleanup = () => {
-    scene.remove(group);
-    group.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
-    const index = animatedObjects.indexOf(group);
-    if (index > -1) animatedObjects.splice(index, 1);
-    localMixers.forEach(m => {
-      const idx = mixers.indexOf(m);
-      if (idx > -1) mixers.splice(idx, 1);
-    });
-    updateAnimationStats();
-  };
-}
-
-// Sparse Keyframes
-function enableSparseKeys() {
-  const { mesh, mixer, actions } = createAnimatedObject(
-    new THREE.Vector3(5, 0.5, -3),
-    'SparseKeysObject',
-    1,
-    10 // Only 10 keyframes
-  );
-  
-  actions[0].play();
-  
-  scene.add(mesh);
-  mixers.push(mixer);
-  animatedObjects.push(mesh);
-  updateAnimationStats();
-  
-  issues['sparse-keys'].cleanup = () => {
-    scene.remove(mesh);
-    mesh.geometry.dispose();
-    (mesh.material as THREE.Material).dispose();
-    const objIndex = animatedObjects.indexOf(mesh);
-    if (objIndex > -1) animatedObjects.splice(objIndex, 1);
-    const mixerIndex = mixers.indexOf(mixer);
-    if (mixerIndex > -1) mixers.splice(mixerIndex, 1);
-    updateAnimationStats();
-  };
-}
-
-// Dense Keyframes
-function enableDenseKeys() {
-  const { mesh, mixer, actions } = createAnimatedObject(
-    new THREE.Vector3(5, 0.5, 3),
-    'DenseKeysObject',
-    1,
-    1000 // 1000 keyframes!
-  );
-  
-  actions[0].play();
-  
-  scene.add(mesh);
-  mixers.push(mixer);
-  animatedObjects.push(mesh);
-  updateAnimationStats();
-  
-  issues['dense-keys'].cleanup = () => {
-    scene.remove(mesh);
-    mesh.geometry.dispose();
-    (mesh.material as THREE.Material).dispose();
-    const objIndex = animatedObjects.indexOf(mesh);
-    if (objIndex > -1) animatedObjects.splice(objIndex, 1);
-    const mixerIndex = mixers.indexOf(mixer);
-    if (mixerIndex > -1) mixers.splice(mixerIndex, 1);
-    updateAnimationStats();
-  };
-}
-
-// =============================================================================
-// UI SETUP
-// =============================================================================
-
-function setupUI() {
-  // Toggle buttons
-  const toggleButtons: Record<string, { enable: () => void; disable: () => void }> = {
-    'btn-simple-skeleton': { enable: enableSimpleSkeleton, disable: () => issues['simple-skeleton'].cleanup() },
-    'btn-complex-skeleton': { enable: enableComplexSkeleton, disable: () => issues['complex-skeleton'].cleanup() },
-    'btn-morph-simple': { enable: enableMorphSimple, disable: () => issues['morph-simple'].cleanup() },
-    'btn-morph-complex': { enable: enableMorphComplex, disable: () => issues['morph-complex'].cleanup() },
-    'btn-single-clip': { enable: enableSingleClip, disable: () => issues['single-clip'].cleanup() },
-    'btn-blended': { enable: enableBlended, disable: () => issues['blended'].cleanup() },
-    'btn-many-mixers': { enable: enableManyMixers, disable: () => issues['many-mixers'].cleanup() },
-    'btn-sparse-keys': { enable: enableSparseKeys, disable: () => issues['sparse-keys'].cleanup() },
-    'btn-dense-keys': { enable: enableDenseKeys, disable: () => issues['dense-keys'].cleanup() },
-  };
-  
-  const issueKeyMap: Record<string, string> = {
-    'btn-simple-skeleton': 'simple-skeleton',
-    'btn-complex-skeleton': 'complex-skeleton',
-    'btn-morph-simple': 'morph-simple',
-    'btn-morph-complex': 'morph-complex',
-    'btn-single-clip': 'single-clip',
-    'btn-blended': 'blended',
-    'btn-many-mixers': 'many-mixers',
-    'btn-sparse-keys': 'sparse-keys',
-    'btn-dense-keys': 'dense-keys',
-  };
-  
-  Object.entries(toggleButtons).forEach(([id, { enable, disable }]) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    
-    btn.addEventListener('click', () => {
-      const issueKey = issueKeyMap[id];
-      const issue = issues[issueKey];
-      
-      if (issue.active) {
-        disable();
-        issue.active = false;
-        btn.classList.remove('active');
-      } else {
-        enable();
-        issue.active = true;
-        btn.classList.add('active');
-      }
-    });
-  });
-  
-  // Skeleton count slider
-  const skeletonCountSlider = document.getElementById('skeleton-count') as HTMLInputElement;
-  const skeletonCountDisplay = document.getElementById('skeleton-count-display');
-  
-  skeletonCountSlider?.addEventListener('input', () => {
-    skeletonCount = parseInt(skeletonCountSlider.value);
-    if (skeletonCountDisplay) {
-      skeletonCountDisplay.textContent = skeletonCount.toString();
-    }
-    
-    // Re-enable active skeleton scenarios with new count
-    if (issues['simple-skeleton'].active) {
-      issues['simple-skeleton'].cleanup();
-      enableSimpleSkeleton();
-    }
-    if (issues['complex-skeleton'].active) {
-      issues['complex-skeleton'].cleanup();
-      enableComplexSkeleton();
-    }
-  });
-  
-  // Time scale slider
-  const timescaleSlider = document.getElementById('timescale') as HTMLInputElement;
-  const timescaleDisplay = document.getElementById('timescale-display');
-  
-  timescaleSlider?.addEventListener('input', () => {
-    timeScale = parseFloat(timescaleSlider.value);
-    if (timescaleDisplay) {
-      timescaleDisplay.textContent = `${timeScale.toFixed(1)}x`;
-    }
-  });
-  
-  // Pause button
-  const pauseBtn = document.getElementById('btn-pause');
-  pauseBtn?.addEventListener('click', () => {
-    isPaused = !isPaused;
-    pauseBtn.textContent = isPaused ? '▶ Play' : '⏸ Pause';
-  });
-  
-  // Step frame button
-  const stepBtn = document.getElementById('btn-step');
-  stepBtn?.addEventListener('click', () => {
-    if (isPaused) {
-      const delta = 1 / 60; // Step one frame at 60fps
-      mixers.forEach(mixer => mixer.update(delta));
-    }
-  });
-  
-  // Reset button
-  const resetBtn = document.getElementById('btn-reset');
-  resetBtn?.addEventListener('click', () => {
-    // Disable all active issues
-    Object.entries(issues).forEach(([key, issue]) => {
-      if (issue.active) {
-        issue.cleanup();
-        issue.active = false;
-      }
-    });
-    
-    // Reset UI
-    document.querySelectorAll('.toggle').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    
-    // Reset sliders
-    if (skeletonCountSlider) {
-      skeletonCountSlider.value = '1';
-      skeletonCount = 1;
-      if (skeletonCountDisplay) skeletonCountDisplay.textContent = '1';
-    }
-    if (timescaleSlider) {
-      timescaleSlider.value = '1';
-      timeScale = 1;
-      if (timescaleDisplay) timescaleDisplay.textContent = '1.0x';
-    }
-    
-    isPaused = false;
-    if (pauseBtn) pauseBtn.textContent = '⏸ Pause';
-    
-    updateAnimationStats();
-  });
-}
-
-// =============================================================================
-// STATS UPDATE
-// =============================================================================
-
-function updateAnimationStats() {
-  let totalBones = 0;
-  let totalMorphs = 0;
-  let totalActions = 0;
-  
-  animatedObjects.forEach(obj => {
-    obj.traverse(child => {
-      if (child instanceof THREE.SkinnedMesh && child.skeleton) {
-        totalBones += child.skeleton.bones.length;
-      }
-      if (child instanceof THREE.Mesh && child.morphTargetInfluences) {
-        totalMorphs += child.morphTargetInfluences.length;
-      }
-    });
-  });
-  
-  mixers.forEach(mixer => {
-    // Count active actions (accessing internal _actions)
-    const mixerAny = mixer as any;
-    if (mixerAny._actions) {
-      totalActions += mixerAny._actions.length;
-    }
-  });
-  
-  animationStats.activeMixers = mixers.length;
-  animationStats.activeActions = totalActions;
-  animationStats.totalBones = totalBones;
-  animationStats.morphInfluences = totalMorphs;
-  
-  // Update UI
-  const updateStat = (id: string, value: number | string, warn?: number, danger?: number) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    
-    el.textContent = typeof value === 'number' ? value.toString() : value;
-    el.classList.remove('warning', 'danger', 'good');
-    
-    if (typeof value === 'number' && warn !== undefined && danger !== undefined) {
-      if (value >= danger) {
-        el.classList.add('danger');
-      } else if (value >= warn) {
-        el.classList.add('warning');
-      } else if (value > 0) {
-        el.classList.add('good');
-      }
-    }
-  };
-  
-  updateStat('stat-mixers', animationStats.activeMixers, 10, 20);
-  updateStat('stat-actions', animationStats.activeActions, 20, 50);
-  updateStat('stat-bones', animationStats.totalBones, 500, 2000);
-  updateStat('stat-morphs', animationStats.morphInfluences, 50, 150);
-}
-
-function updateTimelineBar() {
-  // Simplified timeline visualization based on active features
-  const skelTime = issues['simple-skeleton'].active || issues['complex-skeleton'].active ? 30 : 0;
-  const morphTime = issues['morph-simple'].active || issues['morph-complex'].active ? 25 : 0;
-  const mixerTime = (issues['single-clip'].active ? 10 : 0) + 
-                    (issues['blended'].active ? 15 : 0) + 
-                    (issues['many-mixers'].active ? 20 : 0);
-  
-  const total = Math.max(skelTime + morphTime + mixerTime, 1);
-  
-  const skelSeg = document.getElementById('seg-skeleton');
-  const morphSeg = document.getElementById('seg-morph');
-  const mixerSeg = document.getElementById('seg-mixer');
-  
-  if (skelSeg) {
-    skelSeg.style.width = `${(skelTime / total) * 100}%`;
-    skelSeg.style.left = '0%';
-  }
-  if (morphSeg) {
-    morphSeg.style.width = `${(morphTime / total) * 100}%`;
-    morphSeg.style.left = `${(skelTime / total) * 100}%`;
-  }
-  if (mixerSeg) {
-    mixerSeg.style.width = `${(mixerTime / total) * 100}%`;
-    mixerSeg.style.left = `${((skelTime + morphTime) / total) * 100}%`;
-  }
-}
+createDemoScene();
 
 // =============================================================================
 // 3LENS INTEGRATION
@@ -982,13 +496,33 @@ const probe = createProbe({
 
 probe.observeRenderer(renderer);
 probe.observeScene(scene);
+probe.setAppName('Animation Profiling');
 
-bootstrapOverlay({
-  probe,
-  position: 'right',
-  defaultWidth: 380,
-  defaultOpen: false,
+// Register animation system as logical entity
+probe.registerLogicalEntity('animation-system', 'Animation System', {
+  category: 'Animation',
+  mixerCount: () => mixers.length,
+  totalBones: () => {
+    let count = 0;
+    scene.traverse(child => {
+      if (child instanceof THREE.SkinnedMesh && child.skeleton) {
+        count += child.skeleton.bones.length;
+      }
+    });
+    return count;
+  },
+  totalMorphTargets: () => {
+    let count = 0;
+    scene.traverse(child => {
+      if (child instanceof THREE.Mesh && child.morphTargetInfluences) {
+        count += child.morphTargetInfluences.length;
+      }
+    });
+    return count;
+  },
 });
+
+createOverlay({ probe, theme: 'dark' });
 
 // =============================================================================
 // ANIMATION LOOP
@@ -999,73 +533,55 @@ function animate() {
   
   const delta = clock.getDelta();
   
-  // Update controls
   controls.update();
   
-  // Update animations
-  if (!isPaused) {
-    const animStart = performance.now();
-    
-    mixers.forEach(mixer => {
-      mixer.update(delta * timeScale);
-    });
-    
-    animationStats.animationUpdateTime = performance.now() - animStart;
-    
-    // Update animation time stat
-    const animTimeEl = document.getElementById('stat-anim-time');
-    if (animTimeEl) {
-      const time = animationStats.animationUpdateTime;
-      animTimeEl.textContent = `${time.toFixed(2)} ms`;
-      animTimeEl.classList.remove('warning', 'danger', 'good');
-      if (time > 5) {
-        animTimeEl.classList.add('danger');
-      } else if (time > 2) {
-        animTimeEl.classList.add('warning');
-      } else {
-        animTimeEl.classList.add('good');
-      }
+  // Update all animation mixers
+  mixers.forEach(mixer => {
+    mixer.update(delta);
+  });
+  
+  // Update logical entity with current stats
+  let totalActions = 0;
+  mixers.forEach(mixer => {
+    const mixerAny = mixer as any;
+    if (mixerAny._actions) {
+      totalActions += mixerAny._actions.length;
     }
-  }
+  });
   
-  // Update timeline visualization
-  updateTimelineBar();
+  probe.updateLogicalEntity('animation-system', {
+    activeActions: totalActions,
+    lastUpdateTime: performance.now(),
+  });
   
-  // Render
   renderer.render(scene, camera);
 }
 
-// =============================================================================
-// INITIALIZATION
-// =============================================================================
-
-setupUI();
 animate();
 
-// Handle window resize
+// =============================================================================
+// EVENT HANDLERS
+// =============================================================================
+
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Keyboard shortcut for 3Lens overlay
-window.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-    e.preventDefault();
-    // Overlay toggle is handled by 3Lens
-  }
-});
-
 console.log(`
 🎬 Animation Profiling Example
 ==============================
-Toggle animation scenarios using the control panel on the left.
-Open 3Lens overlay (Ctrl+Shift+D) to inspect performance metrics.
+This example demonstrates various animation performance scenarios.
 
-Scenarios:
-- Simple/Complex Skeleton: Compare bone count impact
-- Morph Targets: See morph influence overhead
-- Animation Mixers: Test blending and multiple clips
-- Keyframe Density: Sparse vs dense keyframe tracks
+Open the 3Lens overlay to inspect:
+- Scene panel: View animated objects, bone hierarchies, morph targets
+- Performance panel: Monitor frame time and animation overhead
+- Animation system entity: Track mixer count, bones, and morph targets
+
+Animation Scenarios:
+- Skeletal animations (20 bones vs 100 bones)
+- Morph target animations (4 targets vs 32 targets)  
+- Keyframe density (sparse vs dense)
+- Animation blending (multiple clips)
 `);

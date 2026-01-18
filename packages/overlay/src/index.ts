@@ -75,10 +75,7 @@ export type {
  * Theme management with dark/light/high-contrast modes.
  * @category Overlay
  */
-export {
-  ThemeManager,
-  PRESET_THEMES,
-} from './utils/theme';
+export { ThemeManager, PRESET_THEMES } from './utils/theme';
 
 /**
  * Theme types for customization.
@@ -99,10 +96,7 @@ export type {
  * Keyboard shortcut management.
  * @category Overlay
  */
-export {
-  KeyboardManager,
-  getDefaultShortcuts,
-} from './utils/keyboard';
+export { KeyboardManager, getDefaultShortcuts } from './utils/keyboard';
 
 /**
  * Keyboard shortcut types.
@@ -122,19 +116,13 @@ export type {
  * Command palette for quick actions.
  * @category Overlay
  */
-export {
-  CommandPalette,
-  getDefaultCommands,
-} from './utils/command-palette';
+export { CommandPalette, getDefaultCommands } from './utils/command-palette';
 
 /**
  * Command palette types.
  * @category Overlay
  */
-export type {
-  Command,
-  CommandGroup,
-} from './utils/command-palette';
+export type { Command, CommandGroup } from './utils/command-palette';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONVENIENCE FUNCTIONS
@@ -153,8 +141,8 @@ import { ThreeLensOverlay } from './components/Overlay';
  * This function creates a floating overlay UI that provides visual devtools
  * for inspecting and debugging your three.js scene.
  *
- * @param probe - An initialized DevtoolProbe instance
- * @param options - Optional overlay configuration
+ * @param probe - An initialized DevtoolProbe instance, or an options object containing probe
+ * @param options - Optional overlay configuration (ignored if first arg is an object)
  * @returns A ThreeLensOverlay instance
  *
  * @example
@@ -168,6 +156,12 @@ import { ThreeLensOverlay } from './components/Overlay';
  * probe.observeScene(scene);
  *
  * const overlay = createOverlay(probe);
+ * ```
+ *
+ * @example
+ * With options object:
+ * ```typescript
+ * const overlay = createOverlay({ probe, theme: 'dark' });
  * ```
  *
  * @example
@@ -191,10 +185,29 @@ import { ThreeLensOverlay } from './components/Overlay';
  * @category Overlay
  */
 export function createOverlay(
-  probe: DevtoolProbe,
-  options: Partial<Omit<OverlayOptions, 'probe'>> = {}
+  probeOrOptions: DevtoolProbe | OverlayOptions,
+  options?: Partial<Omit<OverlayOptions, 'probe'>>
 ): ThreeLensOverlay {
-  return new ThreeLensOverlay({ probe, ...options });
+  // Handle object-based calling convention: createOverlay({ probe, ...options })
+  // Check if first arg is an options object (has 'probe' property)
+  // A DevtoolProbe instance would have onFrameStats directly, not nested in a 'probe' property
+  if (
+    probeOrOptions &&
+    typeof probeOrOptions === 'object' &&
+    'probe' in probeOrOptions &&
+    probeOrOptions.probe &&
+    typeof (probeOrOptions.probe as any).onFrameStats === 'function'
+  ) {
+    // This is an options object: { probe: DevtoolProbe, ...otherOptions }
+    return new ThreeLensOverlay(probeOrOptions as OverlayOptions);
+  }
+
+  // Handle function-based calling convention: createOverlay(probe, options)
+  // First arg is the probe itself
+  return new ThreeLensOverlay({
+    probe: probeOrOptions as DevtoolProbe,
+    ...(options ?? {}),
+  });
 }
 
 /**

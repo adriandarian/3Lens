@@ -23,461 +23,6 @@
       height: 100vh;
     }
 
-    .panel {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      width: 320px;
-      background: rgba(20, 20, 30, 0.95);
-      border: 1px solid rgba(139, 92, 246, 0.3);
-      border-radius: 12px;
-      padding: 16px;
-      backdrop-filter: blur(10px);
-      max-height: calc(100vh - 40px);
-      overflow-y: auto;
-      z-index: 1000;
-    }
-
-    .panel::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .panel::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 3px;
-    }
-
-    .panel::-webkit-scrollbar-thumb {
-      background: rgba(139, 92, 246, 0.4);
-      border-radius: 3px;
-    }
-
-    .panel-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #8b5cf6;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .panel-title::before {
-      content: '🌍';
-    }
-
-    .section {
-      margin-bottom: 20px;
-    }
-
-    .section-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
-    }
-
-    /* Environment Type Selector */
-    .env-type-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .env-type-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 12px 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .env-type-btn:hover {
-      background: rgba(139, 92, 246, 0.1);
-      border-color: rgba(139, 92, 246, 0.3);
-    }
-
-    .env-type-btn.active {
-      background: rgba(139, 92, 246, 0.2);
-      border-color: #8b5cf6;
-    }
-
-    .env-type-icon {
-      font-size: 24px;
-      margin-bottom: 4px;
-    }
-
-    .env-type-label {
-      font-size: 11px;
-      color: #aaa;
-    }
-
-    /* Preview Grid */
-    .preview-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      margin-bottom: 16px;
-    }
-
-    .preview-face {
-      aspect-ratio: 1;
-      background: #111;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .preview-face canvas {
-      width: 100%;
-      height: 100%;
-    }
-
-    .preview-face-label {
-      position: absolute;
-      bottom: 2px;
-      left: 2px;
-      font-size: 8px;
-      color: rgba(255, 255, 255, 0.6);
-      background: rgba(0, 0, 0, 0.6);
-      padding: 1px 4px;
-      border-radius: 2px;
-    }
-
-    /* Stats */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .stat-item {
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 6px;
-      padding: 10px;
-      text-align: center;
-    }
-
-    .stat-value {
-      font-size: 18px;
-      font-weight: 600;
-      color: #8b5cf6;
-    }
-
-    .stat-label {
-      font-size: 10px;
-      color: #666;
-      margin-top: 2px;
-    }
-
-    /* Controls */
-    .control-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .control-row:last-child {
-      border-bottom: none;
-    }
-
-    .control-label {
-      font-size: 12px;
-      color: #aaa;
-    }
-
-    .control-value {
-      font-size: 12px;
-      color: #8b5cf6;
-      font-family: monospace;
-    }
-
-    input[type="range"] {
-      width: 100px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 2px;
-      outline: none;
-      -webkit-appearance: none;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
-      background: #8b5cf6;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-
-    /* Toggle Switch */
-    .toggle {
-      width: 40px;
-      height: 20px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      cursor: pointer;
-      position: relative;
-      transition: background 0.2s;
-    }
-
-    .toggle::after {
-      content: '';
-      position: absolute;
-      width: 16px;
-      height: 16px;
-      background: #666;
-      border-radius: 50%;
-      top: 2px;
-      left: 2px;
-      transition: all 0.2s;
-    }
-
-    .toggle.active {
-      background: rgba(139, 92, 246, 0.4);
-    }
-
-    .toggle.active::after {
-      background: #8b5cf6;
-      left: 22px;
-    }
-
-    /* Material Preview */
-    .material-preview {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .material-sphere {
-      aspect-ratio: 1;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-    }
-
-    .material-sphere:hover {
-      transform: scale(1.1);
-    }
-
-    .material-sphere.active {
-      border-color: #8b5cf6;
-    }
-
-    .material-sphere canvas {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-    }
-
-    .material-label {
-      position: absolute;
-      bottom: -16px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 9px;
-      color: #666;
-      white-space: nowrap;
-    }
-
-    /* Reflection Details */
-    .reflection-info {
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
-    }
-
-    .reflection-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      font-size: 11px;
-    }
-
-    .reflection-row-label {
-      color: #666;
-    }
-
-    .reflection-row-value {
-      color: #aaa;
-      font-family: monospace;
-    }
-
-    /* IBL Info */
-    .ibl-section {
-      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
-    }
-
-    .ibl-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #8b5cf6;
-      margin-bottom: 8px;
-    }
-
-    .ibl-desc {
-      font-size: 11px;
-      color: #888;
-      line-height: 1.5;
-    }
-
-    /* Debug Modes */
-    .debug-mode-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-    }
-
-    .debug-mode-btn {
-      padding: 8px 4px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      font-size: 10px;
-      color: #aaa;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s;
-    }
-
-    .debug-mode-btn:hover {
-      background: rgba(139, 92, 246, 0.1);
-    }
-
-    .debug-mode-btn.active {
-      background: rgba(139, 92, 246, 0.2);
-      border-color: #8b5cf6;
-      color: #8b5cf6;
-    }
-
-    /* Mip Level Slider */
-    .mip-slider-container {
-      margin-top: 12px;
-    }
-
-    .mip-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    /* Second Panel */
-    .panel-right {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      width: 280px;
-      background: rgba(20, 20, 30, 0.95);
-      border: 1px solid rgba(139, 92, 246, 0.3);
-      border-radius: 12px;
-      padding: 16px;
-      backdrop-filter: blur(10px);
-      z-index: 1000;
-    }
-
-    .panel-right .panel-title::before {
-      content: '📊';
-    }
-
-    /* Fresnel Visualization */
-    .fresnel-viz {
-      height: 60px;
-      background: linear-gradient(to right, 
-        rgba(59, 130, 246, 0.8) 0%,
-        rgba(139, 92, 246, 0.6) 50%,
-        rgba(236, 72, 153, 0.4) 100%
-      );
-      border-radius: 8px;
-      margin-bottom: 8px;
-      position: relative;
-    }
-
-    .fresnel-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      color: #666;
-    }
-
-    /* Memory Bar */
-    .memory-bar {
-      height: 24px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 4px;
-      overflow: hidden;
-      display: flex;
-      margin-bottom: 8px;
-    }
-
-    .memory-segment {
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 9px;
-      color: white;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    }
-
-    .memory-cubemap {
-      background: linear-gradient(135deg, #8b5cf6, #6366f1);
-    }
-
-    .memory-irradiance {
-      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
-    }
-
-    .memory-prefilter {
-      background: linear-gradient(135deg, #22c55e, #10b981);
-    }
-
-    /* Comparison Mode */
-    .comparison-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .comparison-item {
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 6px;
-      padding: 8px;
-      text-align: center;
-    }
-
-    .comparison-preview {
-      width: 100%;
-      aspect-ratio: 1;
-      background: #111;
-      border-radius: 4px;
-      margin-bottom: 4px;
-    }
-
-    .comparison-label {
-      font-size: 10px;
-      color: #888;
-    }
-
     /* Loading state */
     .loading-overlay {
       position: fixed;
@@ -515,6 +60,61 @@
     .hidden {
       display: none !important;
     }
+
+    /* Minimal controls */
+    .scenario-controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(20, 20, 30, 0.9);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+
+    .env-btn {
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: #e0e0e0;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .env-btn:hover {
+      border-color: rgba(139, 92, 246, 0.5);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .env-btn.active {
+      border-color: #8b5cf6;
+      background: rgba(139, 92, 246, 0.2);
+      color: #8b5cf6;
+    }
+
+    .hint {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 8px;
+      font-size: 13px;
+      color: #a78bfa;
+      z-index: 100;
+    }
   </style>
 </head>
 <body>
@@ -526,230 +126,15 @@
     <div class="loading-text">Loading environment maps...</div>
   </div>
 
-  <!-- Main Control Panel -->
-  <div class="panel">
-    <div class="panel-title">Environment Mapping Debug</div>
-
-    <!-- Environment Type -->
-    <div class="section">
-      <div class="section-title">Environment Type</div>
-      <div class="env-type-grid">
-        <div class="env-type-btn active" data-type="hdr">
-          <div class="env-type-icon">☀️</div>
-          <div class="env-type-label">HDR/EXR</div>
-        </div>
-        <div class="env-type-btn" data-type="cubemap">
-          <div class="env-type-icon">🎲</div>
-          <div class="env-type-label">Cubemap</div>
-        </div>
-        <div class="env-type-btn" data-type="equirect">
-          <div class="env-type-icon">🌐</div>
-          <div class="env-type-label">Equirect</div>
-        </div>
-        <div class="env-type-btn" data-type="procedural">
-          <div class="env-type-icon">⚡</div>
-          <div class="env-type-label">Procedural</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Cubemap Face Preview -->
-    <div class="section">
-      <div class="section-title">Cubemap Faces</div>
-      <div class="preview-grid">
-        <div class="preview-face">
-          <canvas id="face-px"></canvas>
-          <div class="preview-face-label">+X</div>
-        </div>
-        <div class="preview-face">
-          <canvas id="face-py"></canvas>
-          <div class="preview-face-label">+Y</div>
-        </div>
-        <div class="preview-face">
-          <canvas id="face-pz"></canvas>
-          <div class="preview-face-label">+Z</div>
-        </div>
-        <div class="preview-face">
-          <canvas id="face-nx"></canvas>
-          <div class="preview-face-label">-X</div>
-        </div>
-        <div class="preview-face">
-          <canvas id="face-ny"></canvas>
-          <div class="preview-face-label">-Y</div>
-        </div>
-        <div class="preview-face">
-          <canvas id="face-nz"></canvas>
-          <div class="preview-face-label">-Z</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="section">
-      <div class="section-title">Environment Stats</div>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-value" id="resolution">1024</div>
-          <div class="stat-label">Resolution</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="mip-levels">10</div>
-          <div class="stat-label">Mip Levels</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="memory">48</div>
-          <div class="stat-label">MB Memory</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="format">RGBA16F</div>
-          <div class="stat-label">Format</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Controls -->
-    <div class="section">
-      <div class="section-title">Settings</div>
-      <div class="control-row">
-        <span class="control-label">Intensity</span>
-        <input type="range" id="intensity-slider" min="0" max="200" value="100">
-        <span class="control-value" id="intensity-value">1.0</span>
-      </div>
-      <div class="control-row">
-        <span class="control-label">Rotation</span>
-        <input type="range" id="rotation-slider" min="0" max="360" value="0">
-        <span class="control-value" id="rotation-value">0°</span>
-      </div>
-      <div class="control-row">
-        <span class="control-label">Blur</span>
-        <input type="range" id="blur-slider" min="0" max="100" value="0">
-        <span class="control-value" id="blur-value">0%</span>
-      </div>
-      <div class="control-row">
-        <span class="control-label">Show Background</span>
-        <div class="toggle active" id="bg-toggle"></div>
-      </div>
-      <div class="control-row">
-        <span class="control-label">Auto Rotate</span>
-        <div class="toggle active" id="rotate-toggle"></div>
-      </div>
-    </div>
-
-    <!-- Debug Modes -->
-    <div class="section">
-      <div class="section-title">Debug View</div>
-      <div class="debug-mode-grid">
-        <div class="debug-mode-btn active" data-mode="normal">Normal</div>
-        <div class="debug-mode-btn" data-mode="diffuse">Diffuse</div>
-        <div class="debug-mode-btn" data-mode="specular">Specular</div>
-        <div class="debug-mode-btn" data-mode="fresnel">Fresnel</div>
-        <div class="debug-mode-btn" data-mode="mip">Mip Level</div>
-        <div class="debug-mode-btn" data-mode="uv">UV Debug</div>
-      </div>
-      <div class="mip-slider-container" id="mip-container" style="display: none;">
-        <input type="range" id="mip-slider" min="0" max="10" value="0" style="width: 100%;">
-        <div class="mip-labels">
-          <span>Sharp (0)</span>
-          <span>Blurry (10)</span>
-        </div>
-      </div>
-    </div>
+  <div class="hint">
+    Open 3Lens to inspect environment maps, IBL settings, and material properties
   </div>
 
-  <!-- Right Panel -->
-  <div class="panel-right">
-    <div class="panel-title">IBL Analysis</div>
-
-    <!-- Material Preview -->
-    <div class="section">
-      <div class="section-title">Material Presets</div>
-      <div class="material-preview">
-        <div class="material-sphere active" data-material="chrome" style="background: linear-gradient(135deg, #ccc 0%, #666 50%, #999 100%);">
-          <div class="material-label">Chrome</div>
-        </div>
-        <div class="material-sphere" data-material="gold" style="background: linear-gradient(135deg, #ffd700 0%, #b8860b 50%, #daa520 100%);">
-          <div class="material-label">Gold</div>
-        </div>
-        <div class="material-sphere" data-material="plastic" style="background: linear-gradient(135deg, #ff6b6b 0%, #c44 50%, #e55 100%);">
-          <div class="material-label">Plastic</div>
-        </div>
-        <div class="material-sphere" data-material="glass" style="background: linear-gradient(135deg, rgba(200,220,255,0.5) 0%, rgba(100,150,200,0.3) 100%);">
-          <div class="material-label">Glass</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- IBL Info -->
-    <div class="section">
-      <div class="ibl-section">
-        <div class="ibl-title">Image-Based Lighting</div>
-        <div class="ibl-desc">
-          Environment maps provide both diffuse irradiance (indirect lighting) and specular reflections. 
-          The PMREM generator creates prefiltered mip levels for varying roughness values.
-        </div>
-      </div>
-    </div>
-
-    <!-- Reflection Properties -->
-    <div class="section">
-      <div class="section-title">Reflection Properties</div>
-      <div class="reflection-info">
-        <div class="reflection-row">
-          <span class="reflection-row-label">Roughness</span>
-          <span class="reflection-row-value" id="roughness-val">0.00</span>
-        </div>
-        <div class="reflection-row">
-          <span class="reflection-row-label">Metalness</span>
-          <span class="reflection-row-value" id="metalness-val">1.00</span>
-        </div>
-        <div class="reflection-row">
-          <span class="reflection-row-label">IOR</span>
-          <span class="reflection-row-value" id="ior-val">1.50</span>
-        </div>
-        <div class="reflection-row">
-          <span class="reflection-row-label">Env Map Intensity</span>
-          <span class="reflection-row-value" id="env-intensity-val">1.00</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Fresnel Visualization -->
-    <div class="section">
-      <div class="section-title">Fresnel Effect</div>
-      <div class="fresnel-viz"></div>
-      <div class="fresnel-labels">
-        <span>Edge (grazing)</span>
-        <span>Center (direct)</span>
-      </div>
-    </div>
-
-    <!-- Memory Breakdown -->
-    <div class="section">
-      <div class="section-title">Memory Breakdown</div>
-      <div class="memory-bar">
-        <div class="memory-segment memory-cubemap" style="width: 50%;">Cubemap</div>
-        <div class="memory-segment memory-irradiance" style="width: 20%;">Irrad</div>
-        <div class="memory-segment memory-prefilter" style="width: 30%;">Prefilter</div>
-      </div>
-      <div class="reflection-info">
-        <div class="reflection-row">
-          <span class="reflection-row-label">Cubemap</span>
-          <span class="reflection-row-value" id="mem-cubemap">24 MB</span>
-        </div>
-        <div class="reflection-row">
-          <span class="reflection-row-label">Irradiance</span>
-          <span class="reflection-row-value" id="mem-irradiance">0.1 MB</span>
-        </div>
-        <div class="reflection-row">
-          <span class="reflection-row-label">Prefiltered</span>
-          <span class="reflection-row-value" id="mem-prefilter">8 MB</span>
-        </div>
-        <div class="reflection-row">
-          <span class="reflection-row-label">Total</span>
-          <span class="reflection-row-value" id="mem-total">32.1 MB</span>
-        </div>
-      </div>
-    </div>
+  <!-- Environment type selector -->
+  <div class="scenario-controls">
+    <button class="env-btn active" data-type="hdr">☀️ HDR</button>
+    <button class="env-btn" data-type="cubemap">🎲 Cubemap</button>
+    <button class="env-btn" data-type="procedural">⚡ Procedural</button>
   </div>
 
   <script type="module" src="/src/main.ts"></script>

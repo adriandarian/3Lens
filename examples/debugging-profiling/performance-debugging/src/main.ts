@@ -1,32 +1,36 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { createProbe } from '@3lens/core';
-import { bootstrapOverlay } from '@3lens/overlay';
-import '@3lens/themes/styles.css';
-
 /**
  * Performance Debugging Example
  * 
- * This example demonstrates common Three.js performance issues
- * that can be identified and diagnosed using 3Lens.
+ * This example creates intentional performance issues that can be 
+ * toggled on/off. Use 3Lens to identify and diagnose each issue.
+ * 
+ * Issues demonstrated:
+ * - Too Many Draw Calls (500 individual meshes vs instancing)
+ * - High Poly Meshes (512-segment spheres)
+ * - Large Textures (4K textures on small objects)
+ * - Excessive Shadows (8 shadow-casting point lights)
+ * - Disabled Frustum Culling (objects always rendered)
+ * - Memory Leak (geometries created but never disposed)
  */
 
-// Scene setup
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { createProbe } from '@3lens/core';
+import { createOverlay } from '@3lens/overlay';
+import '@3lens/themes/styles.css';
+
+// ============================================================================
+// SCENE SETUP
+// ============================================================================
+
 const scene = new THREE.Scene();
 scene.name = 'PerformanceTestScene';
 scene.background = new THREE.Color(0x0a0a0f);
 
-// Camera
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-camera.position.set(10, 10, 15);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.name = 'MainCamera';
+camera.position.set(10, 10, 15);
 
-// Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -34,14 +38,15 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.getElementById('app')!.appendChild(renderer.domElement);
 
-// Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-// Clock
 const clock = new THREE.Clock();
 
-// Base scene (always present)
+// ============================================================================
+// BASE SCENE
+// ============================================================================
+
 function createBaseScene() {
   // Ground
   const ground = new THREE.Mesh(
@@ -66,7 +71,7 @@ function createBaseScene() {
   directional.shadow.mapSize.height = 1024;
   scene.add(directional);
 
-  // Simple reference objects
+  // Reference object
   const sphere = new THREE.Mesh(
     new THREE.SphereGeometry(1, 32, 32),
     new THREE.MeshStandardMaterial({ color: 0x4ecdc4, roughness: 0.3 })
@@ -79,31 +84,27 @@ function createBaseScene() {
 
 createBaseScene();
 
-// =============================================================================
-// PERFORMANCE ISSUES - These can be toggled on/off
-// =============================================================================
+// ============================================================================
+// PERFORMANCE ISSUES
+// ============================================================================
 
 interface IssueState {
   active: boolean;
   objects: THREE.Object3D[];
-  cleanup: () => void;
 }
 
 const issues: Record<string, IssueState> = {
-  'too-many-objects': { active: false, objects: [], cleanup: () => {} },
-  'high-poly': { active: false, objects: [], cleanup: () => {} },
-  'large-textures': { active: false, objects: [], cleanup: () => {} },
-  'shadow-quality': { active: false, objects: [], cleanup: () => {} },
-  'no-frustum-culling': { active: false, objects: [], cleanup: () => {} },
-  'memory-leak': { active: false, objects: [], cleanup: () => {} },
+  'too-many-objects': { active: false, objects: [] },
+  'high-poly': { active: false, objects: [] },
+  'large-textures': { active: false, objects: [] },
+  'shadow-quality': { active: false, objects: [] },
+  'no-frustum-culling': { active: false, objects: [] },
+  'memory-leak': { active: false, objects: [] },
 };
 
 let memoryLeakInterval: number | null = null;
 
-/**
- * Issue 1: Too Many Draw Calls
- * Creates hundreds of individual mesh objects instead of using instancing.
- */
+// Issue 1: Too Many Draw Calls - 500 individual meshes
 function enableTooManyObjects() {
   const material = new THREE.MeshStandardMaterial({ color: 0xe74c3c });
   const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
@@ -111,7 +112,6 @@ function enableTooManyObjects() {
   const group = new THREE.Group();
   group.name = 'TooManyObjects_Group';
   
-  // Create 500 individual cubes (bad practice - should use InstancedMesh)
   for (let i = 0; i < 500; i++) {
     const cube = new THREE.Mesh(geometry, material);
     cube.name = `Cube_${i}`;
@@ -143,17 +143,13 @@ function disableTooManyObjects() {
   issues['too-many-objects'].objects = [];
 }
 
-/**
- * Issue 2: High Poly Meshes
- * Creates spheres with unnecessarily high polygon count.
- */
+// Issue 2: High Poly Meshes - 512-segment spheres (~500k triangles each)
 function enableHighPoly() {
   const group = new THREE.Group();
   group.name = 'HighPoly_Group';
   
-  // Create 10 spheres with 512 segments each (way too high!)
   for (let i = 0; i < 10; i++) {
-    const geometry = new THREE.SphereGeometry(1, 512, 512); // ~500k triangles each!
+    const geometry = new THREE.SphereGeometry(1, 512, 512);
     const material = new THREE.MeshStandardMaterial({ 
       color: new THREE.Color().setHSL(i / 10, 0.8, 0.5),
       roughness: 0.3
@@ -188,23 +184,17 @@ function disableHighPoly() {
   issues['high-poly'].objects = [];
 }
 
-/**
- * Issue 3: Large Textures
- * Creates textures that are larger than necessary.
- */
+// Issue 3: Large Textures - 4096x4096 textures on small cubes
 function enableLargeTextures() {
   const group = new THREE.Group();
   group.name = 'LargeTextures_Group';
   
-  // Create 5 cubes with procedurally generated large textures
   for (let i = 0; i < 5; i++) {
-    // Create a large canvas texture (4096x4096 - overkill for a small cube!)
     const canvas = document.createElement('canvas');
     canvas.width = 4096;
     canvas.height = 4096;
     const ctx = canvas.getContext('2d')!;
     
-    // Draw a simple pattern
     ctx.fillStyle = `hsl(${i * 60}, 70%, 50%)`;
     ctx.fillRect(0, 0, 4096, 4096);
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -217,11 +207,7 @@ function enableLargeTextures() {
     const texture = new THREE.CanvasTexture(canvas);
     texture.name = `LargeTexture_${i}`;
     
-    const material = new THREE.MeshStandardMaterial({ 
-      map: texture,
-      roughness: 0.5
-    });
-    
+    const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.5 });
     const cube = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material);
     cube.name = `LargeTextureCube_${i}`;
     cube.position.set(-15 + i * 4, 1, -10);
@@ -249,15 +235,11 @@ function disableLargeTextures() {
   issues['large-textures'].objects = [];
 }
 
-/**
- * Issue 4: Excessive Shadows
- * Adds many shadow-casting lights with high resolution shadow maps.
- */
+// Issue 4: Excessive Shadows - 8 shadow-casting point lights with 2K shadow maps
 function enableShadowQuality() {
   const group = new THREE.Group();
   group.name = 'ExcessiveShadows_Group';
   
-  // Create 8 point lights all casting high-res shadows
   for (let i = 0; i < 8; i++) {
     const light = new THREE.PointLight(
       new THREE.Color().setHSL(i / 8, 1, 0.5),
@@ -271,13 +253,12 @@ function enableShadowQuality() {
       Math.sin((i / 8) * Math.PI * 2) * 12
     );
     light.castShadow = true;
-    light.shadow.mapSize.width = 2048;  // Very high resolution!
+    light.shadow.mapSize.width = 2048;
     light.shadow.mapSize.height = 2048;
     light.shadow.camera.near = 0.1;
     light.shadow.camera.far = 25;
     group.add(light);
     
-    // Add helper sphere for visualization
     const helper = new THREE.Mesh(
       new THREE.SphereGeometry(0.2, 16, 16),
       new THREE.MeshBasicMaterial({ color: light.color })
@@ -308,24 +289,17 @@ function disableShadowQuality() {
   issues['shadow-quality'].objects = [];
 }
 
-/**
- * Issue 5: Disabled Frustum Culling
- * Creates objects with frustum culling disabled.
- */
+// Issue 5: Disabled Frustum Culling - objects always rendered
 function enableNoFrustumCulling() {
   const group = new THREE.Group();
   group.name = 'NoFrustumCulling_Group';
   
-  // Create objects far outside the view that won't be culled
   for (let i = 0; i < 100; i++) {
     const geometry = new THREE.SphereGeometry(2, 64, 64);
-    const material = new THREE.MeshStandardMaterial({ 
-      color: 0x9b59b6,
-      roughness: 0.5
-    });
+    const material = new THREE.MeshStandardMaterial({ color: 0x9b59b6, roughness: 0.5 });
     const sphere = new THREE.Mesh(geometry, material);
     sphere.name = `NoCullSphere_${i}`;
-    sphere.frustumCulled = false; // This is the issue!
+    sphere.frustumCulled = false;
     sphere.position.set(
       (Math.random() - 0.5) * 200,
       Math.random() * 50,
@@ -353,27 +327,16 @@ function disableNoFrustumCulling() {
   issues['no-frustum-culling'].objects = [];
 }
 
-/**
- * Issue 6: Memory Leak
- * Continuously creates geometries without disposing them.
- */
+// Issue 6: Memory Leak - creates geometries without disposing them
 function enableMemoryLeak() {
   const leakGroup = new THREE.Group();
   leakGroup.name = 'MemoryLeak_Group';
   scene.add(leakGroup);
   issues['memory-leak'].objects = [leakGroup];
   
-  // Create new geometries every 100ms without disposing
   memoryLeakInterval = window.setInterval(() => {
-    // Create geometry but never dispose it
-    const geometry = new THREE.SphereGeometry(
-      Math.random() * 0.5 + 0.1,
-      32,
-      32
-    );
-    const material = new THREE.MeshStandardMaterial({
-      color: Math.random() * 0xffffff
-    });
+    const geometry = new THREE.SphereGeometry(Math.random() * 0.5 + 0.1, 32, 32);
+    const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = `LeakedMesh_${Date.now()}`;
     mesh.position.set(
@@ -382,11 +345,9 @@ function enableMemoryLeak() {
       (Math.random() - 0.5) * 10
     );
     
-    // Add to scene (simulating a leak where we forget to clean up)
     leakGroup.add(mesh);
     
-    // Remove from scene after a delay, but DON'T dispose geometry/material
-    // This simulates a common memory leak pattern
+    // Remove from scene but DON'T dispose - simulates memory leak
     setTimeout(() => {
       leakGroup.remove(mesh);
       // Missing: geometry.dispose() and material.dispose()
@@ -414,9 +375,42 @@ function disableMemoryLeak() {
   issues['memory-leak'].objects = [];
 }
 
-// =============================================================================
+// ============================================================================
+// 3LENS INTEGRATION
+// ============================================================================
+
+const probe = createProbe({ appName: 'Performance-Debugging' });
+probe.observeRenderer(renderer);
+probe.observeScene(scene);
+
+createOverlay({ probe, theme: 'dark' });
+
+// Register each issue type as a logical entity for easier tracking
+const issueConfigs = [
+  { id: 'too-many-objects', name: 'Draw Call Issue', impact: 'High', description: '500 individual meshes causing excessive draw calls' },
+  { id: 'high-poly', name: 'High Poly Issue', impact: 'High', description: '10 spheres with 512 segments each (~5M triangles total)' },
+  { id: 'large-textures', name: 'Large Texture Issue', impact: 'Medium', description: '5 cubes with 4096x4096 textures (~80MB VRAM)' },
+  { id: 'shadow-quality', name: 'Shadow Issue', impact: 'Medium', description: '8 point lights with 2K shadow maps' },
+  { id: 'no-frustum-culling', name: 'Culling Issue', impact: 'Low', description: '100 spheres with frustumCulled=false' },
+  { id: 'memory-leak', name: 'Memory Leak Issue', impact: 'High', description: 'Geometries created without disposal' },
+];
+
+issueConfigs.forEach(config => {
+  probe.registerLogicalEntity({
+    id: `issue-${config.id}`,
+    name: config.name,
+    type: 'performance-issue',
+    metadata: {
+      impact: config.impact,
+      description: config.description,
+      active: false,
+    }
+  });
+});
+
+// ============================================================================
 // UI SETUP
-// =============================================================================
+// ============================================================================
 
 const issueHandlers: Record<string, { enable: () => void; disable: () => void }> = {
   'too-many-objects': { enable: enableTooManyObjects, disable: disableTooManyObjects },
@@ -427,102 +421,35 @@ const issueHandlers: Record<string, { enable: () => void; disable: () => void }>
   'memory-leak': { enable: enableMemoryLeak, disable: disableMemoryLeak },
 };
 
-// Setup checkbox listeners
 Object.keys(issueHandlers).forEach(issueKey => {
   const checkbox = document.getElementById(`issue-${issueKey}`) as HTMLInputElement;
-  if (checkbox) {
+  const toggle = checkbox?.closest('.issue-toggle');
+  
+  if (checkbox && toggle) {
     checkbox.addEventListener('change', () => {
       if (checkbox.checked) {
         issueHandlers[issueKey].enable();
         issues[issueKey].active = true;
+        toggle.classList.add('active');
       } else {
         issueHandlers[issueKey].disable();
         issues[issueKey].active = false;
+        toggle.classList.remove('active');
       }
     });
   }
 });
 
-// =============================================================================
-// 3LENS PROBE SETUP
-// =============================================================================
-
-const probe = createProbe({
-  renderer,
-  scene,
-  camera,
-});
-
-probe.setAppName('Performance Debugging Example');
-bootstrapOverlay(probe);
-
-// =============================================================================
-// ANIMATION LOOP & STATS
-// =============================================================================
-
-let frameCount = 0;
-let lastTime = performance.now();
-let currentFps = 0;
-
-function updateStats() {
-  const info = renderer.info;
-  
-  // FPS
-  const fpsEl = document.getElementById('stat-fps');
-  if (fpsEl) {
-    fpsEl.textContent = currentFps.toString();
-    fpsEl.className = 'stat-value' + (currentFps < 30 ? ' bad' : currentFps < 55 ? ' warn' : '');
-  }
-  
-  // Draw calls
-  const drawCallsEl = document.getElementById('stat-drawcalls');
-  if (drawCallsEl) {
-    drawCallsEl.textContent = info.render.calls.toString();
-    drawCallsEl.className = 'stat-value' + (info.render.calls > 100 ? ' bad' : info.render.calls > 50 ? ' warn' : '');
-  }
-  
-  // Triangles
-  const trianglesEl = document.getElementById('stat-triangles');
-  if (trianglesEl) {
-    const triCount = info.render.triangles;
-    trianglesEl.textContent = triCount > 1000000 
-      ? (triCount / 1000000).toFixed(1) + 'M'
-      : triCount > 1000 
-        ? (triCount / 1000).toFixed(1) + 'K'
-        : triCount.toString();
-    trianglesEl.className = 'stat-value' + (triCount > 1000000 ? ' bad' : triCount > 100000 ? ' warn' : '');
-  }
-  
-  // Textures
-  const texturesEl = document.getElementById('stat-textures');
-  if (texturesEl) {
-    texturesEl.textContent = info.memory.textures.toString();
-    texturesEl.className = 'stat-value' + (info.memory.textures > 20 ? ' bad' : info.memory.textures > 10 ? ' warn' : '');
-  }
-  
-  // Geometries
-  const geometriesEl = document.getElementById('stat-geometries');
-  if (geometriesEl) {
-    geometriesEl.textContent = info.memory.geometries.toString();
-    geometriesEl.className = 'stat-value' + (info.memory.geometries > 100 ? ' bad' : info.memory.geometries > 50 ? ' warn' : '');
-  }
-}
+// ============================================================================
+// ANIMATION LOOP
+// ============================================================================
 
 function animate() {
   requestAnimationFrame(animate);
   
-  // FPS calculation
-  frameCount++;
-  const now = performance.now();
-  if (now - lastTime >= 1000) {
-    currentFps = Math.round((frameCount * 1000) / (now - lastTime));
-    frameCount = 0;
-    lastTime = now;
-    updateStats();
-  }
-  
-  // Animate base scene
   const elapsed = clock.getElapsedTime();
+  
+  // Animate reference sphere
   const sphere = scene.getObjectByName('ReferenceSphere');
   if (sphere) {
     sphere.position.y = 1 + Math.sin(elapsed * 2) * 0.3;
@@ -531,7 +458,6 @@ function animate() {
   
   controls.update();
   renderer.render(scene, camera);
-  probe.onFrame();
 }
 
 // Handle resize
@@ -542,4 +468,3 @@ window.addEventListener('resize', () => {
 });
 
 animate();
-

@@ -4,10 +4,8 @@
  * Demonstrates 3Lens devtool integration for debugging:
  * - Vehicle physics (velocity, acceleration, steering, grip)
  * - Lap timing and checkpoint systems
- * - AI opponent behavior and pathfinding
- * - Performance profiling for racing games
- * - Collision detection visualization
- * - Track surface types and their effects
+ * - AI opponent behavior
+ * - Track surface effects
  */
 
 import * as THREE from 'three';
@@ -41,7 +39,6 @@ interface VehicleState {
   bestLapTime: number;
   currentLapTime: number;
   finished: boolean;
-  damage: number;
 }
 
 interface AIVehicle {
@@ -62,20 +59,13 @@ interface Checkpoint {
 
 type SurfaceType = 'asphalt' | 'grass' | 'sand' | 'gravel';
 
-interface TrackSegment {
-  start: THREE.Vector3;
-  end: THREE.Vector3;
-  width: number;
-  surface: SurfaceType;
-}
-
 // ============================================================================
 // Constants
 // ============================================================================
 
 const TOTAL_LAPS = 3;
 const TOTAL_CHECKPOINTS = 8;
-const AI_COUNT = 7;
+const AI_COUNT = 3;
 
 const VEHICLE_CONFIG = {
   maxSpeed: 120,
@@ -135,7 +125,35 @@ const probe = new DevtoolProbe({
 probe.observeScene(scene);
 probe.observeRenderer(renderer);
 
-createOverlay(probe);
+const overlay = createOverlay(probe);
+
+// Register player vehicle entity
+probe.registerLogicalEntity({
+  name: 'Player Vehicle',
+  module: 'game/vehicles',
+  componentType: 'Vehicle',
+  componentId: 'player-vehicle',
+  tags: ['player', 'vehicle', 'physics'],
+  metadata: {
+    speed: 0,
+    gear: 'N',
+    rpm: 0,
+    lap: 0,
+  },
+});
+
+// Register race system
+probe.registerLogicalEntity({
+  name: 'Race System',
+  module: 'game/race',
+  componentType: 'RaceManager',
+  tags: ['race', 'system'],
+  metadata: {
+    totalLaps: TOTAL_LAPS,
+    checkpoints: TOTAL_CHECKPOINTS,
+    aiCount: AI_COUNT,
+  },
+});
 
 // ============================================================================
 // Lighting
@@ -173,7 +191,6 @@ const trackWaypoints: THREE.Vector3[] = [
   new THREE.Vector3(-60, 0, -60),
 ];
 
-const trackSegments: TrackSegment[] = [];
 const trackGroup = new THREE.Group();
 trackGroup.name = 'Track';
 
@@ -186,13 +203,6 @@ function createTrack(): void {
     const start = trackWaypoints[i];
     const end = trackWaypoints[(i + 1) % trackWaypoints.length];
 
-    trackSegments.push({
-      start: start.clone(),
-      end: end.clone(),
-      width: trackWidth,
-      surface: 'asphalt',
-    });
-
     // Create track segment mesh
     const direction = new THREE.Vector3().subVectors(end, start);
     const length = direction.length();
@@ -203,89 +213,34 @@ function createTrack(): void {
       color: SURFACE_COLORS.asphalt,
       roughness: 0.8,
     });
-
     const segment = new THREE.Mesh(geometry, material);
-    segment.rotation.x = -Math.PI / 2;
-
-    // Position at midpoint
+    
     const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
     segment.position.copy(midpoint);
-
-    // Rotate to align with direction
-    const angle = Math.atan2(direction.x, direction.z);
-    segment.rotation.z = angle;
-
+    segment.position.y = 0.01;
+    segment.rotation.x = -Math.PI / 2;
+    segment.rotation.z = Math.atan2(direction.x, direction.z);
     segment.receiveShadow = true;
     segment.name = `TrackSegment_${i}`;
+    
     trackGroup.add(segment);
-
-    // Add track borders (curbs)
-    const curbGeometry = new THREE.BoxGeometry(1, 0.2, length);
-    const curbMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff0000,
-    });
-
-    const leftCurb = new THREE.Mesh(curbGeometry, curbMaterial);
-    leftCurb.position.copy(midpoint);
-    leftCurb.position.y = 0.1;
-    leftCurb.position.x += Math.cos(angle) * (trackWidth / 2 + 0.5);
-    leftCurb.position.z -= Math.sin(angle) * (trackWidth / 2 + 0.5);
-    leftCurb.rotation.y = angle;
-    leftCurb.castShadow = true;
-    leftCurb.name = `Curb_L_${i}`;
-    trackGroup.add(leftCurb);
-
-    const rightCurb = new THREE.Mesh(curbGeometry, curbMaterial.clone());
-    (rightCurb.material as THREE.MeshStandardMaterial).color.setHex(0xffffff);
-    rightCurb.position.copy(midpoint);
-    rightCurb.position.y = 0.1;
-    rightCurb.position.x -= Math.cos(angle) * (trackWidth / 2 + 0.5);
-    rightCurb.position.z += Math.sin(angle) * (trackWidth / 2 + 0.5);
-    rightCurb.rotation.y = angle;
-    rightCurb.castShadow = true;
-    rightCurb.name = `Curb_R_${i}`;
-    trackGroup.add(rightCurb);
   }
 
   scene.add(trackGroup);
 }
 
-// Create ground (grass)
+// Create ground
 function createGround(): void {
-  const groundGeometry = new THREE.PlaneGeometry(400, 400);
+  const groundGeometry = new THREE.PlaneGeometry(500, 500);
   const groundMaterial = new THREE.MeshStandardMaterial({
     color: SURFACE_COLORS.grass,
-    roughness: 1,
+    roughness: 0.9,
   });
-
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.01;
   ground.receiveShadow = true;
   ground.name = 'Ground';
   scene.add(ground);
-
-  // Add sand traps
-  const sandPositions = [
-    { x: 85, z: 0, r: 15 },
-    { x: -85, z: 0, r: 15 },
-    { x: 0, z: 85, r: 12 },
-    { x: 0, z: -85, r: 12 },
-  ];
-
-  sandPositions.forEach((pos, i) => {
-    const sandGeometry = new THREE.CircleGeometry(pos.r, 32);
-    const sandMaterial = new THREE.MeshStandardMaterial({
-      color: SURFACE_COLORS.sand,
-      roughness: 1,
-    });
-    const sand = new THREE.Mesh(sandGeometry, sandMaterial);
-    sand.rotation.x = -Math.PI / 2;
-    sand.position.set(pos.x, 0.01, pos.z);
-    sand.receiveShadow = true;
-    sand.name = `SandTrap_${i}`;
-    scene.add(sand);
-  });
 }
 
 // ============================================================================
@@ -295,119 +250,81 @@ function createGround(): void {
 const checkpoints: Checkpoint[] = [];
 
 function createCheckpoints(): void {
-  trackWaypoints.forEach((waypoint, index) => {
-    const checkpointGeometry = new THREE.BoxGeometry(25, 5, 1);
-    const checkpointMaterial = new THREE.MeshBasicMaterial({
-      color: index === 0 ? 0xffff00 : 0x00ff00,
+  for (let i = 0; i < trackWaypoints.length; i++) {
+    const position = trackWaypoints[i].clone();
+    const geometry = new THREE.BoxGeometry(25, 5, 2);
+    const material = new THREE.MeshBasicMaterial({
+      color: i === 0 ? 0xffffff : 0x00ff00,
       transparent: true,
       opacity: 0.3,
-      side: THREE.DoubleSide,
     });
-
-    const checkpoint = new THREE.Mesh(checkpointGeometry, checkpointMaterial);
-    checkpoint.position.copy(waypoint);
-    checkpoint.position.y = 2.5;
-
-    // Orient checkpoint perpendicular to track direction
-    const nextWaypoint = trackWaypoints[(index + 1) % trackWaypoints.length];
-    const direction = new THREE.Vector3().subVectors(nextWaypoint, waypoint);
-    const angle = Math.atan2(direction.x, direction.z);
-    checkpoint.rotation.y = angle;
-
-    checkpoint.name = `Checkpoint_${index}`;
-    checkpoint.visible = false; // Hidden by default, shown in debug mode
-    scene.add(checkpoint);
-
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(position);
+    mesh.position.y = 2.5;
+    
+    // Rotate to face track direction
+    const next = trackWaypoints[(i + 1) % trackWaypoints.length];
+    const dir = new THREE.Vector3().subVectors(next, position);
+    mesh.rotation.y = Math.atan2(dir.x, dir.z);
+    mesh.name = `Checkpoint_${i}`;
+    mesh.visible = false; // Hidden by default
+    
+    scene.add(mesh);
+    
     checkpoints.push({
-      position: waypoint.clone(),
+      position,
       width: 25,
-      mesh: checkpoint,
-      index,
+      mesh,
+      index: i,
     });
-  });
+  }
 }
 
 // ============================================================================
-// Vehicle Creation
+// Vehicles
 // ============================================================================
 
-function createVehicle(color: number = 0xff0000): THREE.Group {
-  const vehicle = new THREE.Group();
-
+function createVehicle(color: number): THREE.Group {
+  const group = new THREE.Group();
+  
   // Body
-  const bodyGeometry = new THREE.BoxGeometry(2, 0.8, 4);
-  const bodyMaterial = new THREE.MeshStandardMaterial({
-    color,
-    metalness: 0.6,
-    roughness: 0.4,
-  });
+  const bodyGeometry = new THREE.BoxGeometry(2, 1, 4);
+  const bodyMaterial = new THREE.MeshStandardMaterial({ color });
   const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-  body.position.y = 0.6;
+  body.position.y = 0.5;
   body.castShadow = true;
-  body.name = 'Body';
-  vehicle.add(body);
-
-  // Cabin
-  const cabinGeometry = new THREE.BoxGeometry(1.6, 0.6, 2);
-  const cabinMaterial = new THREE.MeshStandardMaterial({
-    color: 0x333333,
-    metalness: 0.8,
-    roughness: 0.2,
-  });
-  const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
-  cabin.position.y = 1.2;
-  cabin.position.z = -0.3;
-  cabin.castShadow = true;
-  cabin.name = 'Cabin';
-  vehicle.add(cabin);
-
+  group.add(body);
+  
+  // Roof
+  const roofGeometry = new THREE.BoxGeometry(1.5, 0.5, 2);
+  const roof = new THREE.Mesh(roofGeometry, bodyMaterial);
+  roof.position.set(0, 1.25, -0.3);
+  roof.castShadow = true;
+  group.add(roof);
+  
   // Wheels
   const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
-  const wheelMaterial = new THREE.MeshStandardMaterial({
-    color: 0x222222,
-    roughness: 0.9,
-  });
-
+  const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+  
   const wheelPositions = [
-    { x: -1, y: 0.4, z: 1.2 },
-    { x: 1, y: 0.4, z: 1.2 },
-    { x: -1, y: 0.4, z: -1.2 },
-    { x: 1, y: 0.4, z: -1.2 },
+    { x: -1, z: 1.2 },
+    { x: 1, z: 1.2 },
+    { x: -1, z: -1.2 },
+    { x: 1, z: -1.2 },
   ];
-
-  wheelPositions.forEach((pos, i) => {
+  
+  wheelPositions.forEach((pos) => {
     const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
     wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(pos.x, pos.y, pos.z);
+    wheel.position.set(pos.x, 0.4, pos.z);
     wheel.castShadow = true;
-    wheel.name = `Wheel_${i}`;
-    vehicle.add(wheel);
+    group.add(wheel);
   });
-
-  // Headlights
-  const headlightGeometry = new THREE.SphereGeometry(0.15, 8, 8);
-  const headlightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffcc });
-
-  [-0.6, 0.6].forEach((x, i) => {
-    const headlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-    headlight.position.set(x, 0.6, 2);
-    headlight.name = `Headlight_${i}`;
-    vehicle.add(headlight);
-  });
-
-  // Tail lights
-  const taillightMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-  [-0.6, 0.6].forEach((x, i) => {
-    const taillight = new THREE.Mesh(headlightGeometry, taillightMaterial);
-    taillight.position.set(x, 0.6, -2);
-    taillight.name = `Taillight_${i}`;
-    vehicle.add(taillight);
-  });
-
-  return vehicle;
+  
+  return group;
 }
 
-function createInitialVehicleState(): VehicleState {
+function createVehicleState(): VehicleState {
   return {
     position: new THREE.Vector3(0, 0, -80),
     rotation: 0,
@@ -415,8 +332,8 @@ function createInitialVehicleState(): VehicleState {
     speed: 0,
     acceleration: 0,
     steering: 0,
-    rpm: 0,
-    gear: 0, // Neutral
+    rpm: 800,
+    gear: 1,
     driftAngle: 0,
     grip: 1,
     nitro: 100,
@@ -430,140 +347,63 @@ function createInitialVehicleState(): VehicleState {
     bestLapTime: Infinity,
     currentLapTime: 0,
     finished: false,
-    damage: 0,
   };
 }
 
-// ============================================================================
-// Player Vehicle
-// ============================================================================
-
-const playerVehicle = createVehicle(0xff0000);
+// Player vehicle
+const playerVehicle = createVehicle(0x3b82f6);
 playerVehicle.name = 'PlayerVehicle';
 playerVehicle.position.set(0, 0, -80);
 scene.add(playerVehicle);
 
-const playerState = createInitialVehicleState();
+const playerState = createVehicleState();
 
-// Register player vehicle with 3Lens
-probe.registerLogicalEntity({
-  id: 'player-vehicle',
-  name: 'Player Vehicle',
-  module: 'game/vehicles',
-  componentType: 'Vehicle',
-  tags: ['player', 'vehicle', 'controllable'],
-  metadata: {
-    speed: 0,
-    gear: 'N',
-    rpm: 0,
-    nitro: 100,
-    lap: 0,
-    position: 1,
-    grip: 100,
-    surface: 'asphalt',
-  },
-});
-probe.addObjectToEntity('player-vehicle', playerVehicle);
-
-// ============================================================================
-// AI Vehicles
-// ============================================================================
-
+// AI vehicles
 const aiVehicles: AIVehicle[] = [];
 
 function createAIVehicles(): void {
-  const colors = [0x0066ff, 0x00ff00, 0xffff00, 0xff00ff, 0x00ffff, 0xff8800, 0x8800ff];
-
+  const colors = [0xef4444, 0x22c55e, 0xf59e0b];
+  
   for (let i = 0; i < AI_COUNT; i++) {
-    const mesh = createVehicle(colors[i % colors.length]);
-    mesh.name = `AIVehicle_${i}`;
-
-    // Stagger starting positions
-    const row = Math.floor((i + 1) / 2);
+    const vehicle = createVehicle(colors[i % colors.length]);
+    vehicle.name = `AIVehicle_${i}`;
+    
+    const row = Math.floor((i + 1) / 2) + 1;
     const side = (i + 1) % 2 === 0 ? 1 : -1;
-    mesh.position.set(side * 4, 0, -80 + row * 8);
-    mesh.rotation.y = 0;
-
-    scene.add(mesh);
-
-    const state = createInitialVehicleState();
-    state.position.copy(mesh.position);
-
+    vehicle.position.set(side * 4, 0, -80 + row * 8);
+    
+    scene.add(vehicle);
+    
     const ai: AIVehicle = {
-      mesh,
-      state,
+      mesh: vehicle,
+      state: createVehicleState(),
       targetWaypoint: 1,
-      aggression: 0.3 + Math.random() * 0.5,
-      skill: 0.6 + Math.random() * 0.3,
+      aggression: 0.5 + Math.random() * 0.5,
+      skill: 0.6 + Math.random() * 0.4,
       color: colors[i % colors.length],
     };
-
+    
+    ai.state.position.copy(vehicle.position);
     aiVehicles.push(ai);
-
-    // Register AI vehicle with 3Lens
+    
+    // Register AI vehicle entity
     probe.registerLogicalEntity({
-      id: `ai-vehicle-${i}`,
       name: `AI Vehicle ${i + 1}`,
-      module: 'game/ai',
+      module: 'game/vehicles',
       componentType: 'AIVehicle',
-      tags: ['ai', 'vehicle', 'opponent'],
+      componentId: `ai-vehicle-${i}`,
+      tags: ['ai', 'vehicle', 'physics'],
       metadata: {
         aggression: ai.aggression.toFixed(2),
         skill: ai.skill.toFixed(2),
-        targetWaypoint: ai.targetWaypoint,
         speed: 0,
       },
     });
-    probe.addObjectToEntity(`ai-vehicle-${i}`, mesh);
   }
 }
 
 // ============================================================================
-// Track Entity Registration
-// ============================================================================
-
-probe.registerLogicalEntity({
-  id: 'track',
-  name: 'Race Track',
-  module: 'game/track',
-  componentType: 'Track',
-  tags: ['environment', 'track'],
-  metadata: {
-    laps: TOTAL_LAPS,
-    checkpoints: TOTAL_CHECKPOINTS,
-    length: '~500m',
-    surfaces: 'asphalt, grass, sand',
-  },
-});
-probe.addObjectToEntity('track', trackGroup);
-
-// ============================================================================
-// Input Handling
-// ============================================================================
-
-const keys: Record<string, boolean> = {};
-
-window.addEventListener('keydown', (e) => {
-  keys[e.key.toLowerCase()] = true;
-  keys[e.code] = true;
-});
-
-window.addEventListener('keyup', (e) => {
-  keys[e.key.toLowerCase()] = false;
-  keys[e.code] = false;
-});
-
-// ============================================================================
-// Game State
-// ============================================================================
-
-let raceStarted = false;
-let raceTime = 0;
-let countdownValue = 3;
-let countdownTimer = 0;
-
-// ============================================================================
-// Physics Update
+// Vehicle Physics
 // ============================================================================
 
 function updateVehiclePhysics(
@@ -572,129 +412,58 @@ function updateVehiclePhysics(
   input: { accelerate: boolean; brake: boolean; left: boolean; right: boolean; nitro: boolean },
   deltaTime: number
 ): void {
-  // Determine current surface
-  state.currentSurface = getSurfaceAtPosition(state.position);
-  state.grip = SURFACE_GRIP[state.currentSurface];
+  // Steering
+  if (input.left) state.steering = Math.min(state.steering + 3 * deltaTime, 1);
+  else if (input.right) state.steering = Math.max(state.steering - 3 * deltaTime, -1);
+  else state.steering *= 0.9;
 
-  // Calculate acceleration
-  let accel = 0;
+  // Acceleration/Braking
   if (input.accelerate) {
-    accel = VEHICLE_CONFIG.acceleration * state.grip;
-  }
-  if (input.brake) {
-    accel = -VEHICLE_CONFIG.braking;
+    const boost = state.nitroActive ? VEHICLE_CONFIG.nitroBoost : 1;
+    state.acceleration = VEHICLE_CONFIG.acceleration * boost;
+  } else if (input.brake) {
+    state.acceleration = -VEHICLE_CONFIG.braking;
+  } else {
+    state.acceleration = 0;
   }
 
-  // Nitro boost
-  if (input.nitro && state.nitro > 0 && input.accelerate) {
-    accel *= VEHICLE_CONFIG.nitroBoost;
-    state.nitro -= VEHICLE_CONFIG.nitroConsumption * deltaTime;
+  // Nitro
+  if (input.nitro && state.nitro > 0) {
     state.nitroActive = true;
+    state.nitro -= VEHICLE_CONFIG.nitroConsumption * deltaTime;
   } else {
     state.nitroActive = false;
-    // Recharge nitro
-    state.nitro = Math.min(state.maxNitro, state.nitro + VEHICLE_CONFIG.nitroRecharge * deltaTime);
+    state.nitro = Math.min(state.nitro + VEHICLE_CONFIG.nitroRecharge * deltaTime, state.maxNitro);
   }
-
-  state.acceleration = accel;
 
   // Apply acceleration
-  const forward = new THREE.Vector3(
-    Math.sin(state.rotation),
-    0,
-    Math.cos(state.rotation)
-  );
+  state.speed += state.acceleration * deltaTime;
+  state.speed *= VEHICLE_CONFIG.friction;
+  state.speed = Math.max(0, Math.min(state.speed, VEHICLE_CONFIG.maxSpeed));
 
-  state.velocity.add(forward.multiplyScalar(accel * deltaTime));
+  // Turn rate based on speed
+  const turnRate = VEHICLE_CONFIG.turnSpeed * (state.speed / VEHICLE_CONFIG.maxSpeed) * state.grip;
+  state.rotation += state.steering * turnRate * deltaTime;
 
-  // Apply friction
-  state.velocity.multiplyScalar(VEHICLE_CONFIG.friction);
-
-  // Limit speed
-  const maxSpeed = state.nitroActive
-    ? VEHICLE_CONFIG.maxSpeed * VEHICLE_CONFIG.nitroBoost
-    : VEHICLE_CONFIG.maxSpeed;
-
-  state.speed = state.velocity.length();
-  if (state.speed > maxSpeed) {
-    state.velocity.normalize().multiplyScalar(maxSpeed);
-    state.speed = maxSpeed;
-  }
-
-  // Steering
-  if (state.speed > 0.5) {
-    const turnAmount = VEHICLE_CONFIG.turnSpeed * state.grip * deltaTime;
-    if (input.left) {
-      state.steering = Math.min(1, state.steering + deltaTime * 3);
-      state.rotation += turnAmount * state.steering;
-    } else if (input.right) {
-      state.steering = Math.max(-1, state.steering - deltaTime * 3);
-      state.rotation -= turnAmount * Math.abs(state.steering);
-    } else {
-      state.steering *= 0.9; // Return to center
-    }
-
-    // Calculate drift angle
-    const velocityAngle = Math.atan2(state.velocity.x, state.velocity.z);
-    state.driftAngle = ((state.rotation - velocityAngle) * 180) / Math.PI;
-    while (state.driftAngle > 180) state.driftAngle -= 360;
-    while (state.driftAngle < -180) state.driftAngle += 360;
-  } else {
-    state.steering = 0;
-    state.driftAngle = 0;
-  }
+  // Update velocity
+  state.velocity.x = Math.sin(state.rotation) * state.speed;
+  state.velocity.z = Math.cos(state.rotation) * state.speed;
 
   // Update position
   state.position.add(state.velocity.clone().multiplyScalar(deltaTime));
-
-  // Keep on ground
-  state.position.y = 0;
 
   // Update mesh
   mesh.position.copy(state.position);
   mesh.rotation.y = state.rotation;
 
-  // Calculate RPM and gear
+  // Update RPM and gear
   const speedRatio = state.speed / VEHICLE_CONFIG.maxSpeed;
+  state.rpm = 800 + speedRatio * 7200;
   state.gear = Math.min(6, Math.floor(speedRatio * 6) + 1);
-  state.rpm = ((speedRatio * 6) % 1) * 8000 + 1000;
-  if (state.speed < 1) {
-    state.gear = 0;
-    state.rpm = 800;
-  }
-}
-
-function getSurfaceAtPosition(position: THREE.Vector3): SurfaceType {
-  // Check if on track
-  const distFromCenter = Math.sqrt(position.x * position.x + position.z * position.z);
-
-  // Simplified track bounds check
-  if (distFromCenter > 70 && distFromCenter < 90) {
-    return 'asphalt';
-  }
-
-  // Check sand traps
-  const sandPositions = [
-    { x: 85, z: 0, r: 15 },
-    { x: -85, z: 0, r: 15 },
-    { x: 0, z: 85, r: 12 },
-    { x: 0, z: -85, r: 12 },
-  ];
-
-  for (const sand of sandPositions) {
-    const dist = Math.sqrt(
-      Math.pow(position.x - sand.x, 2) + Math.pow(position.z - sand.z, 2)
-    );
-    if (dist < sand.r) {
-      return 'sand';
-    }
-  }
-
-  return 'grass';
 }
 
 // ============================================================================
-// AI Update
+// AI Logic
 // ============================================================================
 
 function updateAI(ai: AIVehicle, deltaTime: number): void {
@@ -705,8 +474,6 @@ function updateAI(ai: AIVehicle, deltaTime: number): void {
   // Check if reached waypoint
   if (distToTarget < 15) {
     ai.targetWaypoint = (ai.targetWaypoint + 1) % trackWaypoints.length;
-
-    // Update checkpoint
     ai.state.lastCheckpoint = ai.targetWaypoint;
     if (ai.targetWaypoint === 0) {
       ai.state.currentLap++;
@@ -730,8 +497,6 @@ function updateAI(ai: AIVehicle, deltaTime: number): void {
 
   // Skill affects speed
   const skillMultiplier = 0.7 + ai.skill * 0.3;
-
-  // Temporarily modify max speed based on skill
   const originalMaxSpeed = VEHICLE_CONFIG.maxSpeed;
   VEHICLE_CONFIG.maxSpeed = originalMaxSpeed * skillMultiplier;
 
@@ -748,7 +513,6 @@ function updateAI(ai: AIVehicle, deltaTime: number): void {
       targetWaypoint: ai.targetWaypoint,
       speed: Math.round(ai.state.speed),
       lap: ai.state.currentLap,
-      surface: ai.state.currentSurface,
     },
   });
 }
@@ -760,7 +524,6 @@ function updateAI(ai: AIVehicle, deltaTime: number): void {
 function checkCheckpoints(state: VehicleState): boolean {
   const expectedCheckpoint = (state.lastCheckpoint + 1) % TOTAL_CHECKPOINTS;
   const checkpoint = checkpoints[expectedCheckpoint];
-
   const distToCheckpoint = state.position.distanceTo(checkpoint.position);
 
   if (distToCheckpoint < checkpoint.width) {
@@ -768,7 +531,6 @@ function checkCheckpoints(state: VehicleState): boolean {
 
     // Crossed start/finish line
     if (expectedCheckpoint === 0 && state.currentLap > 0) {
-      // Completed a lap
       const lapTime = state.currentLapTime;
       if (lapTime < state.bestLapTime) {
         state.bestLapTime = lapTime;
@@ -793,46 +555,6 @@ function checkCheckpoints(state: VehicleState): boolean {
 }
 
 // ============================================================================
-// Position Calculation
-// ============================================================================
-
-function calculatePositions(): number[] {
-  const allVehicles = [
-    { state: playerState, index: -1 },
-    ...aiVehicles.map((ai, i) => ({ state: ai.state, index: i })),
-  ];
-
-  // Sort by lap, then checkpoint, then distance to next checkpoint
-  allVehicles.sort((a, b) => {
-    if (a.state.currentLap !== b.state.currentLap) {
-      return b.state.currentLap - a.state.currentLap;
-    }
-    if (a.state.lastCheckpoint !== b.state.lastCheckpoint) {
-      return b.state.lastCheckpoint - a.state.lastCheckpoint;
-    }
-
-    const nextCheckpointA = (a.state.lastCheckpoint + 1) % TOTAL_CHECKPOINTS;
-    const nextCheckpointB = (b.state.lastCheckpoint + 1) % TOTAL_CHECKPOINTS;
-
-    const distA = a.state.position.distanceTo(checkpoints[nextCheckpointA].position);
-    const distB = b.state.position.distanceTo(checkpoints[nextCheckpointB].position);
-
-    return distA - distB;
-  });
-
-  const positions: number[] = [];
-  allVehicles.forEach((v, i) => {
-    if (v.index === -1) {
-      positions[-1] = i + 1;
-    } else {
-      positions[v.index] = i + 1;
-    }
-  });
-
-  return positions;
-}
-
-// ============================================================================
 // Camera Update
 // ============================================================================
 
@@ -849,46 +571,12 @@ function updateCamera(): void {
 }
 
 // ============================================================================
-// UI Update
+// Race State
 // ============================================================================
 
-function updateUI(): void {
-  // Speed
-  const speedKmh = Math.round(playerState.speed * 3.6);
-  document.getElementById('speed-value')!.textContent = String(speedKmh);
-
-  // Gear
-  const gearNames = ['N', '1', '2', '3', '4', '5', '6'];
-  document.getElementById('gear')!.textContent = gearNames[playerState.gear];
-
-  // RPM
-  const rpmPercent = ((playerState.rpm - 800) / 7200) * 100;
-  document.getElementById('rpm-fill')!.style.width = `${rpmPercent}%`;
-
-  // Nitro
-  document.getElementById('nitro-fill')!.style.width = `${playerState.nitro}%`;
-
-  // Lap times
-  document.getElementById('current-lap')!.textContent = formatTime(playerState.currentLapTime);
-  document.getElementById('best-lap')!.textContent =
-    playerState.bestLapTime === Infinity ? '--:--.---' : formatTime(playerState.bestLapTime);
-  document.getElementById('lap-count')!.textContent = `${Math.min(playerState.currentLap, TOTAL_LAPS)} / ${TOTAL_LAPS}`;
-
-  // Position
-  const positions = calculatePositions();
-  const playerPosition = positions[-1] || 1;
-  document.getElementById('position-number')!.textContent = String(playerPosition);
-  document.getElementById('position-suffix')!.textContent = getOrdinalSuffix(playerPosition);
-
-  // Debug panel
-  document.getElementById('debug-velocity')!.textContent = playerState.speed.toFixed(2);
-  document.getElementById('debug-acceleration')!.textContent = playerState.acceleration.toFixed(2);
-  document.getElementById('debug-steering')!.textContent = playerState.steering.toFixed(2);
-  document.getElementById('debug-drift')!.textContent = `${playerState.driftAngle.toFixed(1)}°`;
-  document.getElementById('debug-grip')!.textContent = `${Math.round(playerState.grip * 100)}%`;
-  document.getElementById('debug-surface')!.textContent = capitalize(playerState.currentSurface);
-  document.getElementById('debug-checkpoint')!.textContent = `${playerState.lastCheckpoint} / ${TOTAL_CHECKPOINTS}`;
-}
+let raceStarted = false;
+let raceTime = 0;
+let countdownTimer = 3;
 
 function formatTime(ms: number): string {
   const minutes = Math.floor(ms / 60000);
@@ -896,138 +584,6 @@ function formatTime(ms: number): string {
   const millis = Math.floor(ms % 1000);
   return `${minutes}:${String(seconds).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
 }
-
-function getOrdinalSuffix(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return s[(v - 20) % 10] || s[v] || s[0];
-}
-
-function capitalize(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-// ============================================================================
-// Minimap
-// ============================================================================
-
-function initMinimap(): void {
-  const svg = document.getElementById('minimap-track')!;
-
-  // Draw track outline
-  let pathData = 'M ';
-  trackWaypoints.forEach((wp, i) => {
-    const x = (wp.x / 100) * 80 + 80;
-    const y = (wp.z / 100) * 80 + 80;
-    pathData += `${x},${y} `;
-    if (i === 0) pathData += 'L ';
-  });
-  pathData += 'Z';
-
-  const trackPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  trackPath.setAttribute('d', pathData);
-  trackPath.setAttribute('stroke', '#666');
-  trackPath.setAttribute('stroke-width', '8');
-  trackPath.setAttribute('fill', 'none');
-  svg.appendChild(trackPath);
-
-  // Player marker (will be updated)
-  const playerMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  playerMarker.setAttribute('id', 'minimap-player');
-  playerMarker.setAttribute('r', '5');
-  playerMarker.setAttribute('fill', '#ff0000');
-  svg.appendChild(playerMarker);
-
-  // AI markers
-  aiVehicles.forEach((ai, i) => {
-    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    marker.setAttribute('id', `minimap-ai-${i}`);
-    marker.setAttribute('r', '4');
-    marker.setAttribute('fill', `#${ai.color.toString(16).padStart(6, '0')}`);
-    svg.appendChild(marker);
-  });
-}
-
-function updateMinimap(): void {
-  // Player
-  const playerX = (playerState.position.x / 100) * 80 + 80;
-  const playerY = (playerState.position.z / 100) * 80 + 80;
-  const playerMarker = document.getElementById('minimap-player');
-  if (playerMarker) {
-    playerMarker.setAttribute('cx', String(playerX));
-    playerMarker.setAttribute('cy', String(playerY));
-  }
-
-  // AI
-  aiVehicles.forEach((ai, i) => {
-    const x = (ai.state.position.x / 100) * 80 + 80;
-    const y = (ai.state.position.z / 100) * 80 + 80;
-    const marker = document.getElementById(`minimap-ai-${i}`);
-    if (marker) {
-      marker.setAttribute('cx', String(x));
-      marker.setAttribute('cy', String(y));
-    }
-  });
-}
-
-// ============================================================================
-// Countdown
-// ============================================================================
-
-function updateCountdown(deltaTime: number): boolean {
-  if (raceStarted) return true;
-
-  countdownTimer += deltaTime * 1000;
-
-  const countdownEl = document.getElementById('countdown')!;
-
-  if (countdownTimer < 1000) {
-    countdownEl.style.display = 'block';
-    countdownEl.textContent = '3';
-    countdownEl.className = '';
-  } else if (countdownTimer < 2000) {
-    countdownEl.textContent = '2';
-  } else if (countdownTimer < 3000) {
-    countdownEl.textContent = '1';
-  } else if (countdownTimer < 4000) {
-    countdownEl.textContent = 'GO!';
-    countdownEl.className = 'go';
-    raceStarted = true;
-  } else {
-    countdownEl.style.display = 'none';
-  }
-
-  return raceStarted;
-}
-
-// ============================================================================
-// Race Finish
-// ============================================================================
-
-function showRaceFinished(): void {
-  const statusEl = document.getElementById('race-status')!;
-  const positions = calculatePositions();
-  const playerPosition = positions[-1] || 1;
-
-  statusEl.style.display = 'block';
-  statusEl.className = 'finished';
-  statusEl.innerHTML = `
-    🏁 RACE FINISHED! 🏁<br>
-    <span style="font-size: 48px; color: ${playerPosition === 1 ? '#ffd700' : '#fff'}">
-      ${playerPosition}${getOrdinalSuffix(playerPosition)} Place
-    </span><br>
-    <span style="font-size: 18px; color: #888">
-      Best Lap: ${formatTime(playerState.bestLapTime)}
-    </span><br>
-    <span style="font-size: 14px; color: #666">
-      Press R to restart
-    </span>
-  `;
-}
-
-// ============================================================================
-// Reset Race
-// ============================================================================
 
 function resetRace(): void {
   // Reset player
@@ -1037,16 +593,14 @@ function resetRace(): void {
   playerState.speed = 0;
   playerState.currentLap = 0;
   playerState.lastCheckpoint = 0;
-  playerState.bestLapTime = Infinity;
-  playerState.currentLapTime = 0;
   playerState.finished = false;
-  playerState.nitro = 100;
+  playerState.bestLapTime = Infinity;
   playerVehicle.position.copy(playerState.position);
   playerVehicle.rotation.y = 0;
 
   // Reset AI
   aiVehicles.forEach((ai, i) => {
-    const row = Math.floor((i + 1) / 2);
+    const row = Math.floor((i + 1) / 2) + 1;
     const side = (i + 1) % 2 === 0 ? 1 : -1;
     ai.state.position.set(side * 4, 0, -80 + row * 8);
     ai.state.rotation = 0;
@@ -1063,12 +617,26 @@ function resetRace(): void {
   // Reset race state
   raceStarted = false;
   raceTime = 0;
-  countdownTimer = 0;
-
-  // Hide status
-  document.getElementById('race-status')!.style.display = 'none';
-  document.getElementById('countdown')!.style.display = 'none';
+  countdownTimer = 3;
 }
+
+// ============================================================================
+// Input
+// ============================================================================
+
+const keys: Record<string, boolean> = {};
+
+document.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+  
+  if (e.code === 'Backquote') {
+    overlay.toggle();
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
 
 // ============================================================================
 // Main Game Loop
@@ -1082,9 +650,14 @@ function animate(): void {
   const deltaTime = Math.min(clock.getDelta(), 0.1);
 
   // Countdown
-  const canRace = updateCountdown(deltaTime);
+  if (!raceStarted) {
+    countdownTimer -= deltaTime;
+    if (countdownTimer <= 0) {
+      raceStarted = true;
+    }
+  }
 
-  if (canRace && !playerState.finished) {
+  if (raceStarted && !playerState.finished) {
     raceTime += deltaTime * 1000;
     playerState.currentLapTime = raceTime - playerState.lapStartTime;
 
@@ -1094,29 +667,17 @@ function animate(): void {
       brake: keys['s'] || keys['arrowdown'],
       left: keys['a'] || keys['arrowleft'],
       right: keys['d'] || keys['arrowright'],
-      nitro: keys[' '] || keys['Space'],
+      nitro: keys[' '],
     };
 
     // Update player
     updateVehiclePhysics(playerState, playerVehicle, input, deltaTime);
 
     // Check checkpoints
-    const crossedCheckpoint = checkCheckpoints(playerState);
-    if (crossedCheckpoint) {
-      const checkpointEl = document.getElementById('checkpoint')!;
-      checkpointEl.style.opacity = '1';
-      setTimeout(() => {
-        checkpointEl.style.opacity = '0';
-      }, 500);
-    }
+    checkCheckpoints(playerState);
 
     // Update AI
     aiVehicles.forEach((ai) => updateAI(ai, deltaTime));
-
-    // Check race finish
-    if (playerState.finished) {
-      showRaceFinished();
-    }
 
     // Update 3Lens metadata
     probe.updateLogicalEntity('player-vehicle', {
@@ -1125,16 +686,17 @@ function animate(): void {
         gear: ['N', '1', '2', '3', '4', '5', '6'][playerState.gear],
         rpm: Math.round(playerState.rpm),
         nitro: Math.round(playerState.nitro),
-        lap: playerState.currentLap,
-        position: calculatePositions()[-1] || 1,
-        grip: Math.round(playerState.grip * 100),
-        surface: playerState.currentSurface,
-        driftAngle: playerState.driftAngle.toFixed(1),
-        lastCheckpoint: playerState.lastCheckpoint,
+        lap: `${Math.min(playerState.currentLap, TOTAL_LAPS)}/${TOTAL_LAPS}`,
+        checkpoint: `${playerState.lastCheckpoint}/${TOTAL_CHECKPOINTS}`,
         lapTime: formatTime(playerState.currentLapTime),
         bestLap: playerState.bestLapTime === Infinity ? 'N/A' : formatTime(playerState.bestLapTime),
       },
     });
+
+    // Check race finish
+    if (playerState.finished) {
+      console.log(`Race finished! Best lap: ${formatTime(playerState.bestLapTime)}`);
+    }
   }
 
   // Reset
@@ -1142,10 +704,8 @@ function animate(): void {
     resetRace();
   }
 
-  // Update camera and UI
+  // Update camera
   updateCamera();
-  updateUI();
-  updateMinimap();
 
   renderer.render(scene, camera);
 }
@@ -1168,10 +728,22 @@ createTrack();
 createGround();
 createCheckpoints();
 createAIVehicles();
-initMinimap();
 
-console.log('🏎️ Racing Game Profiler - 3Lens Example');
-console.log('Press ~ to toggle 3Lens devtool overlay');
-console.log('Controls: WASD/Arrow Keys to drive, Space for nitro, R to reset');
+console.log(`
+🏎️ Racing Game Profiler - 3Lens Example
+
+Controls:
+  WASD/Arrow Keys - Drive
+  Space - Nitro boost
+  R - Reset race
+  ~ - Toggle 3Lens Overlay
+
+Use 3Lens to inspect:
+  - Vehicle physics (speed, gear, RPM, nitro)
+  - Race progress (lap, checkpoint, lap times)
+  - AI vehicle behavior and stats
+  - Track and scene hierarchy
+  - Performance metrics
+`);
 
 animate();
