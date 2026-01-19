@@ -67,6 +67,7 @@ export function createWebGLAdapter(
   const frameCallbacks: Array<(stats: FrameStats) => void> = [];
   let frameCount = 0;
   let disposed = false;
+  let activeQuery: WebGLQuery | null = null; // Track active query to prevent nested queries
   let mrtErrorWarned = false; // Track if we've already warned about MRT errors
 
   // Options with defaults
@@ -127,6 +128,19 @@ export function createWebGLAdapter(
     // Start GPU timer query if available
     let query: WebGLQuery | null = null;
     if (timerQueryExt && gl instanceof WebGL2RenderingContext) {
+      const timeElapsedExt = (timerQueryExt as { TIME_ELAPSED_EXT: number })
+        .TIME_ELAPSED_EXT;
+
+      // If there's an active query from a nested render call, end it first
+      if (activeQuery) {
+        try {
+          gl.endQuery(timeElapsedExt);
+        } catch (e) {
+          // Query might already be ended, ignore error
+        }
+        activeQuery = null;
+      }
+
       // Check if previous query is ready
       if (pendingQuery) {
         const available = gl.getQueryParameter(
@@ -147,13 +161,19 @@ export function createWebGLAdapter(
         pendingQuery = null;
       }
 
-      // Start new query
-      query = gl.createQuery();
-      if (query) {
-        gl.beginQuery(
-          (timerQueryExt as { TIME_ELAPSED_EXT: number }).TIME_ELAPSED_EXT,
-          query
-        );
+      // Start new query only if we don't have an active one
+      if (!activeQuery) {
+        query = gl.createQuery();
+        if (query) {
+          try {
+            gl.beginQuery(timeElapsedExt, query);
+            activeQuery = query;
+          } catch (e) {
+            // If beginQuery fails, clean up and continue without GPU timing
+            gl.deleteQuery(query);
+            query = null;
+          }
+        }
       }
     }
 
@@ -218,11 +238,26 @@ export function createWebGLAdapter(
     }
 
     // End GPU timer query
-    if (query && timerQueryExt && gl instanceof WebGL2RenderingContext) {
-      gl.endQuery(
-        (timerQueryExt as { TIME_ELAPSED_EXT: number }).TIME_ELAPSED_EXT
-      );
-      pendingQuery = query;
+    if (
+      query &&
+      timerQueryExt &&
+      gl instanceof WebGL2RenderingContext &&
+      activeQuery === query
+    ) {
+      try {
+        gl.endQuery(
+          (timerQueryExt as { TIME_ELAPSED_EXT: number }).TIME_ELAPSED_EXT
+        );
+        pendingQuery = query;
+        activeQuery = null;
+      } catch (e) {
+        // Query might already be ended or invalid, clean up
+        gl.deleteQuery(query);
+        activeQuery = null;
+      }
+    } else if (activeQuery && activeQuery !== query) {
+      // If we have an active query that's not the current one, it means we're in a nested render
+      // Don't end it here, let the outer render handle it
     }
 
     const endTime = performance.now();

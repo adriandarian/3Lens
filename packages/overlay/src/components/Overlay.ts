@@ -50,14 +50,20 @@ import {
   type PanelCommand,
 } from '@3lens/ui';
 
-export type OverlayLayoutMode = 'fab' | 'sidebar';
+export type OverlayLayoutMode =
+  | 'fab'
+  | 'sidebar-left'
+  | 'sidebar-right'
+  | 'bottom-bar';
 
 export interface OverlayOptions {
   probe: DevtoolProbe;
   /**
    * Layout mode for the overlay UI.
    * - 'fab': Floating Action Button with menu (default, bottom-right)
-   * - 'sidebar': Sidebar layout with collapsible panel dock
+   * - 'sidebar-left': Sidebar layout on the left side with collapsible panel dock
+   * - 'sidebar-right': Sidebar layout on the right side with collapsible panel dock
+   * - 'bottom-bar': Bottom bar layout (mobile-friendly)
    *
    * @default 'fab'
    */
@@ -205,15 +211,64 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
 ];
 
 /**
+ * Get unique color for each panel icon
+ */
+function getPanelIconColor(panelId: string): string {
+  const colorMap: Record<string, string> = {
+    scene: '#3b82f6', // Blue - Layers icon
+    stats: '#10b981', // Green - Activity icon
+    materials: '#a855f7', // Purple - Palette icon
+    geometry: '#f59e0b', // Orange - Box icon
+    textures: '#ec4899', // Pink - Image icon
+    'render-targets': '#06b6d4', // Cyan - Monitor icon
+    webgpu: '#eab308', // Yellow - Cpu icon
+    plugins: '#6366f1', // Indigo - Puzzle icon
+  };
+  return colorMap[panelId] || 'currentColor';
+}
+
+/**
  * 3Lens Floating Panel Overlay
  */
 export class ThreeLensOverlay {
   private root: HTMLDivElement;
   private probe: DevtoolProbe;
   private layoutMode: OverlayLayoutMode;
+
+  // Helper methods for layout mode checks
+  private isFabMode(): boolean {
+    return this.layoutMode === 'fab';
+  }
+
+  private isSidebarMode(): boolean {
+    return (
+      this.layoutMode === 'sidebar-left' || this.layoutMode === 'sidebar-right'
+    );
+  }
+
+  private isBottomBarMode(): boolean {
+    return this.layoutMode === 'bottom-bar';
+  }
+
+  private getSidebarPosition(): 'left' | 'right' {
+    return this.layoutMode === 'sidebar-left' ? 'left' : 'right';
+  }
+
   private menuVisible = false;
   private sidebarCollapsed = false;
+  private sidebarWidth = 200; // Default expanded width
+  private sidebarMinWidth = 150; // Minimum width when expanded
+  private sidebarMaxWidth = 600; // Maximum width when expanded
   private sidebarEventsAttached = false;
+  private sidebarMenuEventsAttached = false;
+  private sidebarResizeState: {
+    isResizing: boolean;
+    startX: number;
+    startWidth: number;
+  } | null = null;
+  private sidebarResizeRAF: number | null = null;
+  private topbarResizeObserver: ResizeObserver | null = null;
+  private topbarResizeTimeout: ReturnType<typeof setTimeout> | null = null;
   private openPanels: Map<string, PanelState> = new Map();
   private dockedPanels: Set<string> = new Set(); // Panels currently docked in sidebar
   private selectedNodeId: string | null = null;
@@ -689,12 +744,18 @@ export class ThreeLensOverlay {
   }
 
   private render(): void {
-    if (this.layoutMode === 'sidebar') {
+    if (this.isSidebarMode()) {
       this.root.innerHTML = `
         ${this.renderSidebar()}
       `;
       this.attachSidebarEvents();
+    } else if (this.isBottomBarMode()) {
+      this.root.innerHTML = `
+        ${this.renderBottomBar()}
+      `;
+      this.attachBottomBarEvents();
     } else {
+      // FAB mode (default)
       this.root.innerHTML = `
         ${this.renderFAB()}
         ${this.renderMenu()}
@@ -722,8 +783,17 @@ export class ThreeLensOverlay {
   }
 
   private renderMenu(): string {
+    // In sidebar/bottom bar mode, only render menu if it should be visible
+    if ((this.isSidebarMode() || this.isBottomBarMode()) && !this.menuVisible) {
+      return '<div class="three-lens-menu sidebar-menu" id="three-lens-menu" style="display: none;"></div>';
+    }
+
+    const menuClass =
+      this.isSidebarMode() || this.isBottomBarMode()
+        ? 'three-lens-menu sidebar-menu'
+        : 'three-lens-menu';
     return `
-      <div class="three-lens-menu ${this.menuVisible ? 'visible' : ''}" id="three-lens-menu">
+      <div class="${menuClass} ${this.menuVisible ? 'visible' : ''}" id="three-lens-menu">
         <div class="three-lens-menu-header">Panels</div>
         ${this.renderMenuItems()}
       </div>
@@ -768,18 +838,24 @@ export class ThreeLensOverlay {
 
   private attachMenuItemEvents(container: ParentNode = document): void {
     container.querySelectorAll('.three-lens-menu-item').forEach((item) => {
+      // Remove existing listeners by checking if already attached
+      if ((item as HTMLElement).hasAttribute('data-menu-events-attached'))
+        return;
+      (item as HTMLElement).setAttribute('data-menu-events-attached', 'true');
+
       item.addEventListener('click', (e) => {
+        e.stopPropagation();
         const panelId = (e.currentTarget as HTMLElement).dataset.panel;
         if (panelId) {
           this.togglePanel(panelId);
           this.menuVisible = false;
-          this.updateMenu();
+          // Don't call updateMenu/updateSidebar here - togglePanel already handles it
         }
       });
     });
   }
 
-  private updateMenu(): void {
+  private updateMenu(skipSidebarUpdate = false): void {
     const fab = document.getElementById('three-lens-fab');
     const menu = document.getElementById('three-lens-menu');
     if (fab)
@@ -787,12 +863,63 @@ export class ThreeLensOverlay {
     if (menu)
       menu.className = `three-lens-menu ${this.menuVisible ? 'visible' : ''}`;
 
-    // Update active states
-    document.querySelectorAll('.three-lens-menu-item').forEach((item) => {
-      const panelId = (item as HTMLElement).dataset.panel;
-      if (panelId) {
-        item.classList.toggle('active', this.openPanels.has(panelId));
+    // Update active states in menu
+    if (menu) {
+      menu.querySelectorAll('.three-lens-menu-item').forEach((item) => {
+        const panelId = (item as HTMLElement).dataset.panel;
+        if (panelId) {
+          item.classList.toggle('active', this.openPanels.has(panelId));
+        }
+      });
+    }
+
+    // In sidebar/bottom bar mode, also update sidebar panel items to sync states (but avoid circular calls)
+    if (
+      (this.isSidebarMode() || this.isBottomBarMode()) &&
+      !skipSidebarUpdate
+    ) {
+      const panelsContainer = document.getElementById(
+        'three-lens-sidebar-panels'
+      );
+      if (panelsContainer) {
+        panelsContainer
+          .querySelectorAll('.three-lens-sidebar-panel-item')
+          .forEach((item) => {
+            const panelId = (item as HTMLElement).dataset.panel;
+            if (panelId) {
+              item.classList.toggle('active', this.openPanels.has(panelId));
+            }
+          });
       }
+    }
+
+    // Reposition sidebar menu if visible and in sidebar/bottom bar mode
+    if (
+      (this.isSidebarMode() || this.isBottomBarMode()) &&
+      this.menuVisible &&
+      menu
+    ) {
+      this.positionSidebarMenu();
+    }
+  }
+
+  private positionSidebarMenu(): void {
+    const sidebarFab = document.getElementById('three-lens-sidebar-fab');
+    const menu = document.getElementById('three-lens-menu');
+    if (!sidebarFab || !menu) return;
+
+    // Use requestAnimationFrame to ensure menu is rendered before calculating position
+    requestAnimationFrame(() => {
+      const fabRect = sidebarFab.getBoundingClientRect();
+      const spacing = 8; // Space between button and menu
+      const menuHeight = menu.offsetHeight || 370; // Fallback height
+
+      // Position menu above the button, aligned to the left
+      menu.style.position = 'fixed';
+      menu.style.top = `${Math.max(8, fabRect.top - menuHeight - spacing)}px`;
+      menu.style.left = `${fabRect.left}px`;
+      menu.style.right = 'auto';
+      menu.style.bottom = 'auto';
     });
   }
 
@@ -801,39 +928,156 @@ export class ThreeLensOverlay {
   // ═══════════════════════════════════════════════════════════════
 
   private renderSidebar(): string {
+    // Auto-collapse sidebar when no panels are open
+    if (this.openPanels.size === 0) {
+      this.sidebarCollapsed = true;
+    }
+    const sidebarPosition = this.getSidebarPosition();
+    const sidebarStyle = this.sidebarCollapsed
+      ? 'width: 50px;'
+      : `width: ${this.sidebarWidth}px;`;
+    const positionClass = `sidebar-${sidebarPosition}`;
     return `
-      <div class="three-lens-sidebar ${this.sidebarCollapsed ? 'collapsed' : ''}" id="three-lens-sidebar">
+      <div class="three-lens-sidebar ${positionClass} ${this.sidebarCollapsed ? 'collapsed' : ''}" id="three-lens-sidebar" style="${sidebarStyle}">
+        ${!this.sidebarCollapsed ? '<div class="three-lens-sidebar-resize-handle" id="three-lens-sidebar-resize-handle"></div>' : ''}
+        <button class="three-lens-sidebar-toggle" id="three-lens-sidebar-toggle" title="${this.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="${this.sidebarCollapsed ? (sidebarPosition === 'left' ? 'M10 4 L6 8 L10 12' : 'M6 4 L10 8 L6 12') : sidebarPosition === 'left' ? 'M6 4 L10 8 L6 12' : 'M10 4 L6 8 L10 12'}"/>
+          </svg>
+        </button>
         <div class="three-lens-sidebar-content">
+          ${!this.sidebarCollapsed ? this.renderSidebarTopBar() : ''}
+          ${!this.sidebarCollapsed ? '<div class="three-lens-sidebar-panel-content" id="three-lens-sidebar-panel-content"></div>' : ''}
           <div class="three-lens-sidebar-panels" id="three-lens-sidebar-panels">
             ${this.renderSidebarPanelItems()}
           </div>
         </div>
       </div>
-      <button class="three-lens-sidebar-fab" id="three-lens-sidebar-fab" title="3Lens DevTools">
-        <svg width="20" height="20" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 10L85 70H70L50 35L30 70H15L50 10Z" fill="#EF6B6B"/>
-          <path d="M15 70L50 10L35 10L10 55L25 55L15 70Z" fill="#60A5FA"/>
-          <path d="M85 70L50 10L65 10L90 55L75 55L85 70Z" fill="#34D399"/>
-        </svg>
-      </button>
+      ${this.renderMenu()}
+    `;
+  }
+
+  private renderBottomBar(): string {
+    const bottomBarStyle = this.sidebarCollapsed
+      ? 'height: 50px;'
+      : `height: ${Math.min(400, window.innerHeight * 0.5)}px;`;
+    return `
+      <div class="three-lens-bottom-bar ${this.sidebarCollapsed ? 'collapsed' : ''}" id="three-lens-bottom-bar" style="${bottomBarStyle}">
+        <button class="three-lens-bottom-bar-toggle" id="three-lens-bottom-bar-toggle" title="${this.sidebarCollapsed ? 'Expand bottom bar' : 'Collapse bottom bar'}">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="${this.sidebarCollapsed ? 'M4 12 L8 8 L12 12' : 'M4 4 L8 8 L12 4'}"/>
+          </svg>
+        </button>
+        <div class="three-lens-bottom-bar-content">
+          ${!this.sidebarCollapsed ? this.renderSidebarTopBar() : ''}
+          ${!this.sidebarCollapsed ? '<div class="three-lens-sidebar-panel-content" id="three-lens-sidebar-panel-content"></div>' : ''}
+          <div class="three-lens-sidebar-panels" id="three-lens-sidebar-panels">
+            ${this.renderSidebarPanelItems()}
+          </div>
+        </div>
+      </div>
+      ${this.renderMenu()}
+    `;
+  }
+
+  private renderSidebarTopBar(): string {
+    // Calculate how many icons can fit dynamically based on sidebar width
+    const allPanels = this.getPanelDefinitions();
+
+    // Try to get actual topbar width if it exists, otherwise use sidebar width
+    let topbarWidth = 0;
+    const topbar = document.getElementById('three-lens-sidebar-topbar');
+    if (topbar) {
+      const rect = topbar.getBoundingClientRect();
+      topbarWidth = rect.width;
+    } else {
+      // Fallback: calculate from sidebar width
+      topbarWidth = this.sidebarWidth;
+    }
+
+    // Calculate available space: topbar width - padding (16px) - dropdown button (36px)
+    // Each icon takes 32px + 4px gap = 36px
+    const padding = 16; // 8px on each side
+    const dropdownWidth = 36; // 32px button + 4px gap
+    const iconWidth = 36; // 32px icon + 4px gap
+    const maxVisibleIcons = Math.max(
+      0,
+      Math.floor((topbarWidth - padding - dropdownWidth) / iconWidth)
+    );
+
+    const visiblePanels = allPanels.slice(0, maxVisibleIcons);
+    const overflowPanels = allPanels.slice(maxVisibleIcons);
+
+    return `
+      <div class="three-lens-sidebar-topbar" id="three-lens-sidebar-topbar">
+        <div class="three-lens-sidebar-topbar-icons">
+          ${visiblePanels
+            .map((panel) => {
+              const isActive = this.openPanels.has(panel.id);
+              const iconColor = getPanelIconColor(panel.id);
+              return `
+              <button 
+                class="three-lens-topbar-icon ${isActive ? 'active' : ''}" 
+                data-panel="${panel.id}"
+                title="${panel.title}"
+              >
+                ${renderIcon(panel.icon, { size: 14, color: iconColor, strokeWidth: 2 })}
+              </button>
+            `;
+            })
+            .join('')}
+          <div class="three-lens-topbar-dropdown">
+            <button class="three-lens-topbar-dropdown-toggle" title="More panels">
+              ${renderIcon('chevron-down', { size: 14, color: 'currentColor', strokeWidth: 2 })}
+            </button>
+            <div class="three-lens-topbar-dropdown-menu">
+              ${
+                overflowPanels.length > 0
+                  ? overflowPanels
+                      .map((panel) => {
+                        const isActive = this.openPanels.has(panel.id);
+                        const iconColor = getPanelIconColor(panel.id);
+                        return `
+                  <button 
+                    class="three-lens-topbar-dropdown-item ${isActive ? 'active' : ''}" 
+                    data-panel="${panel.id}"
+                  >
+                    ${renderIcon(panel.icon, { size: 14, color: iconColor, strokeWidth: 2 })}
+                    <span>${panel.title}</span>
+                  </button>
+                `;
+                      })
+                      .join('')
+                  : ''
+              }
+            </div>
+          </div>
+        </div>
+      </div>
     `;
   }
 
   private renderSidebarPanelItems(): string {
+    // When collapsed, show all panels as icons
+    // When expanded, panels are shown in the top bar, so this area is hidden or shows something else
+    if (!this.sidebarCollapsed) {
+      return ''; // Top bar handles panel icons when expanded
+    }
+
+    // When collapsed, show all panels as icons only
     return this.getPanelDefinitions()
       .map((panel) => {
         const isOpen = this.openPanels.has(panel.id);
-        const isDocked = this.dockedPanels.has(panel.id);
+        const iconColor = getPanelIconColor(panel.id);
         return `
           <div 
-            class="three-lens-sidebar-panel-item ${isOpen ? 'active' : ''} ${isDocked ? 'docked' : ''}" 
+            class="three-lens-sidebar-panel-item ${isOpen ? 'active' : ''}" 
             data-panel="${panel.id}"
-            draggable="true"
+            title="${panel.title}"
           >
-            <div class="three-lens-sidebar-panel-icon ${panel.iconClass}" title="${panel.title}">
-              ${renderIcon(panel.icon, { size: 18, color: 'currentColor', strokeWidth: 2 })}
+            <div class="three-lens-sidebar-panel-icon ${panel.iconClass}">
+              ${renderIcon(panel.icon, { size: 18, color: iconColor, strokeWidth: 2 })}
             </div>
-            ${isDocked ? `<button class="three-lens-sidebar-panel-popout" data-action="popout" title="Pop out">${renderIcon('external-link', { size: 12, color: 'currentColor', strokeWidth: 2 })}</button>` : ''}
           </div>
         `;
       })
@@ -841,13 +1085,267 @@ export class ThreeLensOverlay {
   }
 
   private attachSidebarEvents(): void {
+    // Toggle button
+    const toggle = document.getElementById('three-lens-sidebar-toggle');
+    if (toggle && !toggle.hasAttribute('data-events-attached')) {
+      toggle.setAttribute('data-events-attached', 'true');
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.sidebarCollapsed = !this.sidebarCollapsed;
+        this.updateSidebar();
+        this.updateTopBar();
+      });
+    }
+
+    // Top bar icon clicks
+    const topbar = document.getElementById('three-lens-sidebar-topbar');
+    if (topbar) {
+      topbar
+        .querySelectorAll(
+          '.three-lens-topbar-icon, .three-lens-topbar-dropdown-item'
+        )
+        .forEach((btn) => {
+          if (btn.hasAttribute('data-events-attached')) return;
+          btn.setAttribute('data-events-attached', 'true');
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const panelId = (btn as HTMLElement).dataset.panel;
+            if (panelId) {
+              this.togglePanel(panelId);
+            }
+          });
+        });
+
+      // Dropdown toggle
+      const dropdownToggle = topbar.querySelector(
+        '.three-lens-topbar-dropdown-toggle'
+      );
+      if (
+        dropdownToggle &&
+        !dropdownToggle.hasAttribute('data-events-attached')
+      ) {
+        dropdownToggle.setAttribute('data-events-attached', 'true');
+        dropdownToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const menu = topbar.querySelector('.three-lens-topbar-dropdown-menu');
+          if (menu) {
+            // Don't show menu if it's empty
+            const hasItems =
+              menu.querySelectorAll('.three-lens-topbar-dropdown-item').length >
+              0;
+            if (!hasItems) return;
+
+            const isVisible = menu.classList.contains('visible');
+            // Close all dropdowns first
+            document
+              .querySelectorAll('.three-lens-topbar-dropdown-menu')
+              .forEach((m) => {
+                m.classList.remove('visible');
+                (m as HTMLElement).style.top = '';
+                (m as HTMLElement).style.right = '';
+              });
+            if (!isVisible) {
+              // Calculate position for fixed positioning
+              const toggleRect = (
+                dropdownToggle as HTMLElement
+              ).getBoundingClientRect();
+              const sidebarPosition = this.getSidebarPosition();
+              const menuHeight = 400; // max-height
+
+              // Position below the toggle button
+              const top = toggleRect.bottom + 4; // margin-top
+              // Align to the right edge of the toggle button
+              const right = window.innerWidth - toggleRect.right;
+
+              (menu as HTMLElement).style.top = `${top}px`;
+              (menu as HTMLElement).style.right = `${right}px`;
+              menu.classList.add('visible');
+            }
+          }
+        });
+      }
+
+      // Setup ResizeObserver to recalculate visible icons when topbar width changes
+      if (!this.topbarResizeObserver) {
+        this.topbarResizeObserver = new ResizeObserver(() => {
+          // Debounce the recalculation to avoid excessive updates
+          if (this.topbarResizeTimeout) {
+            clearTimeout(this.topbarResizeTimeout);
+          }
+          this.topbarResizeTimeout = setTimeout(() => {
+            const topBarHtml = this.renderSidebarTopBar();
+            const iconsMatch = topBarHtml.match(
+              /<div class="three-lens-sidebar-topbar-icons">([\s\S]*)<\/div>/
+            );
+            if (iconsMatch) {
+              const iconsContainer = topbar.querySelector(
+                '.three-lens-sidebar-topbar-icons'
+              );
+              if (iconsContainer) {
+                iconsContainer.innerHTML = iconsMatch[1];
+                // Re-attach events after re-rendering
+                this.attachSidebarEvents();
+              }
+            }
+          }, 50);
+        });
+        this.topbarResizeObserver.observe(topbar);
+      }
+    }
+
+    // Resize handle
+    const resizeHandle = document.getElementById(
+      'three-lens-sidebar-resize-handle'
+    );
+    if (resizeHandle && !resizeHandle.hasAttribute('data-events-attached')) {
+      resizeHandle.setAttribute('data-events-attached', 'true');
+
+      resizeHandle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Cancel any pending RAF from previous resize
+        if (this.sidebarResizeRAF !== null) {
+          cancelAnimationFrame(this.sidebarResizeRAF);
+          this.sidebarResizeRAF = null;
+        }
+
+        this.sidebarResizeState = {
+          isResizing: true,
+          startX: e.clientX,
+          startWidth: this.sidebarWidth,
+        };
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+      });
+    }
+
+    // Close dropdown on outside click
+    if (!this.sidebarEventsAttached) {
+      this.sidebarEventsAttached = true;
+      document.addEventListener('click', (e) => {
+        if (!(e.target as HTMLElement).closest('.three-lens-topbar-dropdown')) {
+          document
+            .querySelectorAll('.three-lens-topbar-dropdown-menu')
+            .forEach((m) => m.classList.remove('visible'));
+        }
+      });
+
+      // Global mouse move and up handlers for resizing
+      document.addEventListener('mousemove', (e) => {
+        if (this.sidebarResizeState?.isResizing) {
+          e.preventDefault();
+
+          // Cancel any pending RAF to avoid queuing multiple updates
+          if (this.sidebarResizeRAF !== null) {
+            cancelAnimationFrame(this.sidebarResizeRAF);
+          }
+
+          // Use requestAnimationFrame to throttle updates for smooth performance
+          this.sidebarResizeRAF = requestAnimationFrame(() => {
+            const sidebarPosition = this.getSidebarPosition();
+            // For right sidebar, resize from left (inverted). For left sidebar, resize from right (normal)
+            const deltaX =
+              sidebarPosition === 'right'
+                ? this.sidebarResizeState!.startX - e.clientX
+                : e.clientX - this.sidebarResizeState!.startX;
+            const newWidth = Math.max(
+              this.sidebarMinWidth,
+              Math.min(
+                this.sidebarMaxWidth,
+                this.sidebarResizeState!.startWidth + deltaX
+              )
+            );
+            this.sidebarWidth = newWidth;
+
+            // Only update the CSS width during dragging (fast operation)
+            // Defer expensive topbar re-rendering until drag ends
+            const sidebar = document.getElementById('three-lens-sidebar');
+            if (sidebar && !this.sidebarCollapsed) {
+              // Add class to disable CSS transitions during resize for smooth performance
+              sidebar.classList.add('resizing');
+              sidebar.style.width = `${this.sidebarWidth}px`;
+            }
+
+            this.sidebarResizeRAF = null;
+          });
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (this.sidebarResizeState?.isResizing) {
+          // Cancel any pending RAF
+          if (this.sidebarResizeRAF !== null) {
+            cancelAnimationFrame(this.sidebarResizeRAF);
+            this.sidebarResizeRAF = null;
+          }
+
+          // Remove resizing class to re-enable transitions
+          const sidebar = document.getElementById('three-lens-sidebar');
+          if (sidebar) {
+            sidebar.classList.remove('resizing');
+          }
+
+          // Now do the expensive operations (topbar re-rendering) after drag ends
+          this.updateSidebarWidth();
+
+          this.sidebarResizeState = null;
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        }
+      });
+    }
+
     // Sidebar FAB button (bottom left toggle)
     const sidebarFab = document.getElementById('three-lens-sidebar-fab');
     if (sidebarFab && !sidebarFab.hasAttribute('data-events-attached')) {
       sidebarFab.setAttribute('data-events-attached', 'true');
       sidebarFab.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.toggle();
+        this.menuVisible = !this.menuVisible;
+        // Re-render menu to show/hide it properly
+        const menu = document.getElementById('three-lens-menu');
+        if (menu) {
+          if (this.menuVisible) {
+            menu.innerHTML = `
+              <div class="three-lens-menu-header">Panels</div>
+              ${this.renderMenuItems()}
+            `;
+            menu.className = 'three-lens-menu sidebar-menu visible';
+            menu.style.display = '';
+            this.attachMenuItemEvents(menu);
+            // Position menu above the FAB button (will be called again in updateMenu, but this ensures immediate positioning)
+            this.positionSidebarMenu();
+          } else {
+            menu.style.display = 'none';
+            menu.className = 'three-lens-menu sidebar-menu';
+          }
+        }
+        this.updateMenu();
+      });
+    }
+
+    // Menu items in sidebar mode - only attach to menu container
+    const menu = document.getElementById('three-lens-menu');
+    if (menu) {
+      this.attachMenuItemEvents(menu);
+    }
+
+    // Close menu on outside click (sidebar mode) - attach once
+    if (!this.sidebarMenuEventsAttached) {
+      this.sidebarMenuEventsAttached = true;
+      document.addEventListener('click', (e) => {
+        if (
+          this.menuVisible &&
+          (this.isSidebarMode() || this.isBottomBarMode()) &&
+          !(e.target as HTMLElement).closest(
+            '.three-lens-menu, .three-lens-sidebar-fab'
+          )
+        ) {
+          this.menuVisible = false;
+          this.updateMenu();
+        }
       });
     }
 
@@ -954,10 +1452,52 @@ export class ThreeLensOverlay {
   }
 
   private updateSidebar(): void {
-    const sidebar = document.getElementById('three-lens-sidebar');
-    if (sidebar) {
-      sidebar.className = `three-lens-sidebar ${this.sidebarCollapsed ? 'collapsed' : ''}`;
+    // Auto-collapse sidebar when no panels are open
+    if (this.openPanels.size === 0) {
+      this.sidebarCollapsed = true;
     }
+
+    const sidebar = document.getElementById('three-lens-sidebar');
+    const toggle = document.getElementById('three-lens-sidebar-toggle');
+    const sidebarPosition = this.getSidebarPosition();
+    const positionClass = `sidebar-${sidebarPosition}`;
+
+    if (sidebar) {
+      sidebar.className = `three-lens-sidebar ${positionClass} ${this.sidebarCollapsed ? 'collapsed' : ''}`;
+      if (!this.sidebarCollapsed) {
+        sidebar.style.width = `${this.sidebarWidth}px`;
+      } else {
+        sidebar.style.width = '50px';
+      }
+    }
+
+    if (toggle) {
+      toggle.title = this.sidebarCollapsed
+        ? 'Expand sidebar'
+        : 'Collapse sidebar';
+      const svgPath = toggle.querySelector('svg path');
+      if (svgPath) {
+        svgPath.setAttribute(
+          'd',
+          this.sidebarCollapsed
+            ? sidebarPosition === 'left'
+              ? 'M10 4 L6 8 L10 12'
+              : 'M6 4 L10 8 L6 12'
+            : sidebarPosition === 'left'
+              ? 'M6 4 L10 8 L6 12'
+              : 'M10 4 L6 8 L10 12'
+        );
+      }
+    }
+
+    // Show/hide resize handle
+    const resizeHandle = document.getElementById(
+      'three-lens-sidebar-resize-handle'
+    );
+    if (resizeHandle) {
+      resizeHandle.style.display = this.sidebarCollapsed ? 'none' : 'block';
+    }
+
     // Re-render panel items to update collapsed state
     const panelsContainer = document.getElementById(
       'three-lens-sidebar-panels'
@@ -965,6 +1505,349 @@ export class ThreeLensOverlay {
     if (panelsContainer) {
       panelsContainer.innerHTML = this.renderSidebarPanelItems();
       this.attachSidebarEvents();
+    }
+
+    // Update top bar when sidebar state changes
+    if (!this.sidebarCollapsed) {
+      const topbar = document.getElementById('three-lens-sidebar-topbar');
+      if (topbar) {
+        // Extract just the inner content from renderSidebarTopBar
+        const topBarHtml = this.renderSidebarTopBar();
+        const match = topBarHtml.match(
+          /<div class="three-lens-sidebar-topbar-icons">[\s\S]*<\/div>\s*<\/div>/
+        );
+        if (match) {
+          // Extract the icons div content
+          const iconsMatch = topBarHtml.match(
+            /<div class="three-lens-sidebar-topbar-icons">([\s\S]*)<\/div>/
+          );
+          if (iconsMatch) {
+            const iconsContainer = topbar.querySelector(
+              '.three-lens-sidebar-topbar-icons'
+            );
+            if (iconsContainer) {
+              iconsContainer.innerHTML = iconsMatch[1];
+            } else {
+              topbar.innerHTML = topBarHtml;
+            }
+          }
+        }
+        // Re-attach events
+        this.attachSidebarEvents();
+      }
+      this.updateTopBar();
+      this.updateSidebarContent();
+    }
+
+    // Also update menu to sync states (skip sidebar update to avoid circular call)
+    this.updateMenu(true);
+
+    // Update top bar and content when sidebar state changes
+    if (!this.sidebarCollapsed) {
+      this.updateTopBar();
+      this.updateSidebarContent();
+    }
+  }
+
+  private updateTopBar(): void {
+    // Update top bar icons to reflect active state
+    const topbar = document.getElementById('three-lens-sidebar-topbar');
+    if (!topbar) return;
+
+    topbar
+      .querySelectorAll(
+        '.three-lens-topbar-icon, .three-lens-topbar-dropdown-item'
+      )
+      .forEach((btn) => {
+        const panelId = (btn as HTMLElement).dataset.panel;
+        if (panelId) {
+          const isActive = this.openPanels.has(panelId);
+          btn.classList.toggle('active', isActive);
+        }
+      });
+  }
+
+  private updateSidebarContent(): void {
+    // Show the active panel's content in the sidebar content area
+    const contentArea = document.getElementById(
+      'three-lens-sidebar-panel-content'
+    );
+    if (!contentArea) {
+      // Content area doesn't exist yet (sidebar might be collapsed or not rendered)
+      // Try once more after a short delay, but only if we're in sidebar mode
+      if (this.isSidebarMode() && !this.sidebarCollapsed) {
+        setTimeout(() => {
+          const retryArea = document.getElementById(
+            'three-lens-sidebar-panel-content'
+          );
+          if (retryArea) {
+            this.updateSidebarContent();
+          }
+        }, 50);
+      }
+      return;
+    }
+
+    // Use requestAnimationFrame to ensure DOM is ready and styles are applied
+    requestAnimationFrame(() => {
+      // Ensure content area is visible (in case it was hidden)
+      contentArea.style.display = '';
+      contentArea.style.visibility = 'visible';
+      contentArea.style.opacity = '1';
+
+      // Find the currently active panel (last opened or first open)
+      const openPanelIds = Array.from(this.openPanels.keys());
+      if (openPanelIds.length === 0) {
+        contentArea.innerHTML =
+          '<div class="three-lens-inspector-empty">Select a panel to view its content</div>';
+        return;
+      }
+
+      // Show the most recently opened panel
+      const activePanelId = openPanelIds[openPanelIds.length - 1];
+      const config = this.panelDefinitions.get(activePanelId);
+      if (!config) {
+        contentArea.innerHTML =
+          '<div class="three-lens-inspector-empty">Panel configuration not found</div>';
+        return;
+      }
+
+      // Get the panel element (even if hidden in sidebar mode)
+      const panelElement = document.getElementById(
+        `three-lens-panel-${activePanelId}`
+      );
+
+      // Build the proper context for the panel
+      const state = this.openPanels.get(activePanelId);
+      if (!state) {
+        contentArea.innerHTML =
+          '<div class="three-lens-inspector-empty">Panel state not found</div>';
+        return;
+      }
+
+      const panelContext = panelElement
+        ? this.buildPanelContext(
+            activePanelId,
+            contentArea,
+            panelElement,
+            state
+          )
+        : {
+            panelId: activePanelId,
+            container: contentArea,
+            panelElement: contentArea, // Fallback to contentArea if no panel element
+            probe: this.probe,
+            overlay: this,
+            state: state,
+          };
+
+      // Get the panel content
+      const content = this.renderPanelContent(activePanelId, panelContext);
+
+      // Handle different content types (matching applyPanelContent behavior)
+      if (typeof content === 'string') {
+        // Set initial content (might be empty for plugin panels that rely on onMount)
+        contentArea.innerHTML = content;
+      } else if (content instanceof HTMLElement) {
+        contentArea.innerHTML = '';
+        contentArea.appendChild(content);
+      } else {
+        // If content is void, clear the container so onMount handlers can render freely
+        contentArea.innerHTML = '';
+      }
+
+      // Mount the panel if it has an onMount function
+      // This is critical for plugin panels that rely on onMount to render content
+      if (config.onMount) {
+        try {
+          config.onMount(panelContext);
+          // After onMount, check if content is still empty and render returned content if needed
+          // Some plugins might render in onMount, others might use the render function
+          if (
+            !contentArea.innerHTML.trim() &&
+            typeof content === 'string' &&
+            content.trim()
+          ) {
+            contentArea.innerHTML = content;
+          }
+        } catch (error) {
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
+          contentArea.innerHTML = `<div class="three-lens-inspector-empty">Error mounting panel: ${errorMsg}</div>`;
+          console.error('Error mounting panel:', error);
+        }
+      } else if (!contentArea.innerHTML.trim()) {
+        // If no onMount and content is empty, show a message
+        contentArea.innerHTML =
+          '<div class="three-lens-inspector-empty">Panel content</div>';
+      }
+    });
+  }
+
+  private updateSidebarWidth(): void {
+    const sidebar = document.getElementById('three-lens-sidebar');
+    if (sidebar && !this.sidebarCollapsed) {
+      sidebar.style.width = `${this.sidebarWidth}px`;
+      // Re-render topbar to recalculate visible icons based on new width
+      const topbar = document.getElementById('three-lens-sidebar-topbar');
+      if (topbar) {
+        const topBarHtml = this.renderSidebarTopBar();
+        const iconsMatch = topBarHtml.match(
+          /<div class="three-lens-sidebar-topbar-icons">([\s\S]*)<\/div>/
+        );
+        if (iconsMatch) {
+          const iconsContainer = topbar.querySelector(
+            '.three-lens-sidebar-topbar-icons'
+          );
+          if (iconsContainer) {
+            iconsContainer.innerHTML = iconsMatch[1];
+            // Re-attach events after re-rendering
+            this.attachSidebarEvents();
+          }
+        }
+      }
+    }
+    this.updateTopBar();
+  }
+
+  private updateBottomBar(): void {
+    const bottomBar = document.getElementById('three-lens-bottom-bar');
+    const toggle = document.getElementById('three-lens-bottom-bar-toggle');
+
+    if (bottomBar) {
+      bottomBar.className = `three-lens-bottom-bar ${this.sidebarCollapsed ? 'collapsed' : ''}`;
+      if (!this.sidebarCollapsed) {
+        bottomBar.style.height = `${Math.min(400, window.innerHeight * 0.5)}px`;
+      } else {
+        bottomBar.style.height = '50px';
+      }
+    }
+
+    if (toggle) {
+      toggle.title = this.sidebarCollapsed
+        ? 'Expand bottom bar'
+        : 'Collapse bottom bar';
+      const svgPath = toggle.querySelector('svg path');
+      if (svgPath) {
+        svgPath.setAttribute(
+          'd',
+          this.sidebarCollapsed ? 'M4 12 L8 8 L12 12' : 'M4 4 L8 8 L12 4'
+        );
+      }
+    }
+
+    // Re-render panel items to update collapsed state
+    const panelsContainer = document.getElementById(
+      'three-lens-sidebar-panels'
+    );
+    if (panelsContainer) {
+      panelsContainer.innerHTML = this.renderSidebarPanelItems();
+      this.attachBottomBarEvents();
+    }
+
+    // Update top bar when bottom bar state changes
+    if (!this.sidebarCollapsed) {
+      const topbar = document.getElementById('three-lens-sidebar-topbar');
+      if (topbar) {
+        const topBarHtml = this.renderSidebarTopBar();
+        const match = topBarHtml.match(
+          /<div class="three-lens-sidebar-topbar-icons">([\s\S]*)<\/div>/
+        );
+        if (match) {
+          const iconsContainer = topbar.querySelector(
+            '.three-lens-sidebar-topbar-icons'
+          );
+          if (iconsContainer) {
+            iconsContainer.innerHTML = match[1];
+          } else {
+            topbar.innerHTML = topBarHtml;
+          }
+        }
+        this.attachBottomBarEvents();
+      }
+      this.updateTopBar();
+      this.updateSidebarContent();
+    }
+
+    // Also update menu to sync states
+    this.updateMenu(true);
+  }
+
+  private attachBottomBarEvents(): void {
+    // Toggle button
+    const toggle = document.getElementById('three-lens-bottom-bar-toggle');
+    if (toggle && !toggle.hasAttribute('data-events-attached')) {
+      toggle.setAttribute('data-events-attached', 'true');
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.sidebarCollapsed = !this.sidebarCollapsed;
+        this.updateBottomBar();
+      });
+    }
+
+    // Top bar icon clicks (same as sidebar)
+    const topbar = document.getElementById('three-lens-sidebar-topbar');
+    if (topbar) {
+      topbar
+        .querySelectorAll(
+          '.three-lens-topbar-icon, .three-lens-topbar-dropdown-item'
+        )
+        .forEach((btn) => {
+          if (btn.hasAttribute('data-events-attached')) return;
+          btn.setAttribute('data-events-attached', 'true');
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const panelId = (btn as HTMLElement).dataset.panel;
+            if (panelId) {
+              this.togglePanel(panelId);
+            }
+          });
+        });
+
+      // Dropdown toggle
+      const dropdownToggle = topbar.querySelector(
+        '.three-lens-topbar-dropdown-toggle'
+      );
+      if (
+        dropdownToggle &&
+        !dropdownToggle.hasAttribute('data-events-attached')
+      ) {
+        dropdownToggle.setAttribute('data-events-attached', 'true');
+        dropdownToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const menu = topbar.querySelector('.three-lens-topbar-dropdown-menu');
+          if (menu) {
+            const isVisible = menu.classList.contains('visible');
+            document
+              .querySelectorAll('.three-lens-topbar-dropdown-menu')
+              .forEach((m) => m.classList.remove('visible'));
+            if (!isVisible) {
+              menu.classList.add('visible');
+            }
+          }
+        });
+      }
+    }
+
+    // Panel items in bottom bar (when collapsed)
+    const panelsContainer = document.getElementById(
+      'three-lens-sidebar-panels'
+    );
+    if (panelsContainer) {
+      panelsContainer
+        .querySelectorAll('.three-lens-sidebar-panel-item')
+        .forEach((item) => {
+          if (item.hasAttribute('data-events-attached')) return;
+          item.setAttribute('data-events-attached', 'true');
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const panelId = (item as HTMLElement).dataset.panel;
+            if (panelId) {
+              this.togglePanel(panelId);
+            }
+          });
+        });
     }
   }
 
@@ -983,6 +1866,7 @@ export class ThreeLensOverlay {
       panelEl.style.display = 'none';
     }
     this.updateSidebar();
+    this.updateTopBar();
   }
 
   private undockPanel(panelId: string, x: number, y: number): void {
@@ -1001,6 +1885,7 @@ export class ThreeLensOverlay {
       panelEl.style.top = `${state?.y ?? 100}px`;
     }
     this.updateSidebar();
+    this.updateTopBar();
   }
 
   private popOutPanel(panelId: string): void {
@@ -1051,13 +1936,17 @@ export class ThreeLensOverlay {
   }
 
   private refreshMenuItems(): void {
-    if (this.layoutMode === 'sidebar') {
+    if (this.isSidebarMode() || this.isBottomBarMode()) {
       const panelsContainer = document.getElementById(
         'three-lens-sidebar-panels'
       );
       if (panelsContainer) {
         panelsContainer.innerHTML = this.renderSidebarPanelItems();
-        this.attachSidebarEvents();
+        if (this.isSidebarMode()) {
+          this.attachSidebarEvents();
+        } else {
+          this.attachBottomBarEvents();
+        }
       }
     } else {
       const menu = document.getElementById('three-lens-menu');
@@ -1076,17 +1965,30 @@ export class ThreeLensOverlay {
   // ═══════════════════════════════════════════════════════════════
 
   private togglePanel(panelId: string): void {
-    if (this.openPanels.has(panelId)) {
-      // If docked, pop it out to show as floating panel
-      if (this.dockedPanels.has(panelId)) {
-        this.popOutPanel(panelId);
-      } else {
-        // If floating, close it
+    if (this.isSidebarMode() || this.isBottomBarMode()) {
+      // In sidebar/bottom bar mode, toggle the active panel and show its content
+      if (this.openPanels.has(panelId)) {
+        // If already open, close it
         this.closePanel(panelId);
+        this.updateSidebarContent();
+      } else {
+        // Open the panel and show its content in sidebar/bottom bar
+        this.openPanel(panelId);
+        this.updateSidebarContent();
+      }
+      if (this.isSidebarMode()) {
+        this.updateSidebar();
+      } else {
+        this.updateBottomBar();
       }
     } else {
-      // Open panel (will be docked by default in sidebar mode)
-      this.openPanel(panelId);
+      // FAB mode - normal behavior
+      if (this.openPanels.has(panelId)) {
+        this.closePanel(panelId);
+      } else {
+        this.openPanel(panelId);
+      }
+      this.updateMenu();
     }
   }
 
@@ -1094,9 +1996,8 @@ export class ThreeLensOverlay {
     const config = this.panelDefinitions.get(panelId);
     if (!config) return;
 
-    // In sidebar mode, dock panels by default unless they're already floating
-    const shouldDock =
-      this.layoutMode === 'sidebar' && !this.openPanels.has(panelId);
+    // In sidebar mode, don't dock panels - show them in sidebar content area
+    const shouldDock = false; // Changed: panels are shown in sidebar content, not docked
 
     // Calculate position (cascade)
     const offset = this.openPanels.size * 30;
@@ -1117,19 +2018,20 @@ export class ThreeLensOverlay {
 
     this.openPanels.set(panelId, state);
 
-    if (shouldDock) {
-      this.dockedPanels.add(panelId);
-    }
-
     // Always create panel element (needed for both docked and floating)
     this.createPanelElement(config, state);
 
-    // Hide panel if docked
-    if (shouldDock) {
+    // In sidebar/bottom bar mode, hide the floating panel and show content in sidebar/bottom bar instead
+    if (this.isSidebarMode() || this.isBottomBarMode()) {
       const panelEl = document.getElementById(`three-lens-panel-${panelId}`);
       if (panelEl) {
         panelEl.style.display = 'none';
       }
+    }
+
+    // Auto-expand sidebar when opening a panel
+    if (this.isSidebarMode() && this.sidebarCollapsed) {
+      this.sidebarCollapsed = false;
     }
 
     // For scene panel, ensure size is correct after mounting (handles edge cases)
@@ -1139,8 +2041,10 @@ export class ThreeLensOverlay {
       });
     }
 
-    if (this.layoutMode === 'sidebar') {
+    if (this.isSidebarMode()) {
       this.updateSidebar();
+    } else if (this.isBottomBarMode()) {
+      this.updateBottomBar();
     } else {
       this.updateMenu();
     }
@@ -1149,8 +2053,16 @@ export class ThreeLensOverlay {
   private closePanel(panelId: string): void {
     this.destroyPanel(panelId);
     this.dockedPanels.delete(panelId);
-    if (this.layoutMode === 'sidebar') {
+    if (this.isSidebarMode()) {
+      // Auto-collapse sidebar when no panels are open
+      if (this.openPanels.size === 0) {
+        this.sidebarCollapsed = true;
+      }
       this.updateSidebar();
+      this.updateTopBar();
+    } else if (this.isBottomBarMode()) {
+      this.updateBottomBar();
+      this.updateTopBar();
     } else {
       this.updateMenu();
     }
@@ -2787,7 +3699,7 @@ export class ThreeLensOverlay {
       if (!state) return;
 
       // Check if dragging over sidebar (in sidebar mode)
-      if (this.layoutMode === 'sidebar') {
+      if (this.isSidebarMode()) {
         const sidebar = document.getElementById('three-lens-sidebar');
         if (sidebar) {
           const sidebarRect = sidebar.getBoundingClientRect();
@@ -7504,6 +8416,15 @@ ${report.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
   // ═══════════════════════════════════════════════════════════════
 
   destroy(): void {
+    // Cleanup ResizeObserver
+    if (this.topbarResizeObserver) {
+      this.topbarResizeObserver.disconnect();
+      this.topbarResizeObserver = null;
+    }
+    if (this.topbarResizeTimeout) {
+      clearTimeout(this.topbarResizeTimeout);
+      this.topbarResizeTimeout = null;
+    }
     // Clean up virtual scroller if it exists
     if (this.virtualScroller) {
       this.virtualScroller.dispose();

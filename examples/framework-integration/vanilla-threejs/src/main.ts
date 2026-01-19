@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createProbe } from '@3lens/core';
-import { createOverlay } from '@3lens/overlay';
+import { createOverlay, CommandPalette, getDefaultCommands } from '@3lens/overlay';
 import '@3lens/themes/styles.css';
 
 // ───────────────────────────────────────────────────────────────
@@ -342,9 +342,127 @@ probe.initializeCameraController(camera, THREE, { x: 0, y: 0, z: 0 });
 probe.observeRenderTarget(cubeRenderTarget, 'reflection');
 probe.observeRenderTarget(monitorRT, 'custom');
 
-const overlay = createOverlay(probe, {
-  layoutMode: 'sidebar', // Enable sidebar panel layout
+// Store overlay reference for mode switching
+let overlay = createOverlay(probe, {
+  layoutMode: 'sidebar-right', // Default to sidebar-right
 });
+
+// ───────────────────────────────────────────────────────────────
+// Command Palette
+// ───────────────────────────────────────────────────────────────
+
+let inspectModeEnabled = false;
+let currentLayoutMode: 'fab' | 'sidebar-left' | 'sidebar-right' | 'bottom-bar' = 'sidebar-right';
+
+const commandPalette = new CommandPalette();
+
+function switchLayoutMode(mode: 'fab' | 'sidebar-left' | 'sidebar-right' | 'bottom-bar') {
+  if (mode === currentLayoutMode) return;
+  
+  currentLayoutMode = mode;
+  
+  // Destroy old overlay before creating new one
+  if (overlay) {
+    overlay.destroy();
+  }
+  
+  // Create new overlay with new mode
+  overlay = createOverlay(probe, {
+    layoutMode: mode,
+  });
+}
+
+function updateInspectIndicator() {
+  const indicator = document.getElementById('inspect-indicator');
+  if (indicator) {
+    indicator.style.display = inspectModeEnabled ? 'block' : 'none';
+  } else if (inspectModeEnabled) {
+    // Create indicator if it doesn't exist
+    const div = document.createElement('div');
+    div.id = 'inspect-indicator';
+    div.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(34, 211, 238, 0.9);
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 1000000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+    `;
+    div.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> INSPECT MODE: Click objects to select them | Press I to disable';
+    document.body.appendChild(div);
+  }
+}
+
+// Register commands
+commandPalette.registerAll([
+  {
+    id: 'toggle-inspect',
+    title: 'Toggle Inspect Mode',
+    description: 'Enable or disable object inspection mode',
+    category: 'DevTools',
+    icon: '🔍',
+    shortcut: 'I',
+    keywords: ['inspect', 'selection', 'pick'],
+    handler: () => {
+      inspectModeEnabled = !inspectModeEnabled;
+      probe.setInspectModeEnabled(inspectModeEnabled);
+      updateInspectIndicator();
+    },
+  },
+  {
+    id: 'layout-fab',
+    title: 'Layout: FAB Mode',
+    description: 'Switch to floating action button layout',
+    category: 'Layout',
+    icon: '🔘',
+    keywords: ['fab', 'floating', 'button'],
+    handler: () => {
+      switchLayoutMode('fab');
+    },
+  },
+  {
+    id: 'layout-sidebar-left',
+    title: 'Layout: Sidebar Left',
+    description: 'Switch to left sidebar layout',
+    category: 'Layout',
+    icon: '⬅️',
+    keywords: ['sidebar', 'left'],
+    handler: () => {
+      switchLayoutMode('sidebar-left');
+    },
+  },
+  {
+    id: 'layout-sidebar-right',
+    title: 'Layout: Sidebar Right',
+    description: 'Switch to right sidebar layout',
+    category: 'Layout',
+    icon: '➡️',
+    keywords: ['sidebar', 'right'],
+    handler: () => {
+      switchLayoutMode('sidebar-right');
+    },
+  },
+  {
+    id: 'layout-bottom-bar',
+    title: 'Layout: Bottom Bar',
+    description: 'Switch to bottom bar layout',
+    category: 'Layout',
+    icon: '⬇️',
+    keywords: ['bottom', 'bar', 'mobile'],
+    handler: () => {
+      switchLayoutMode('bottom-bar');
+    },
+  },
+]);
+
 
 // ───────────────────────────────────────────────────────────────
 // Animation Loop
@@ -425,48 +543,33 @@ window.addEventListener('resize', () => {
 // Keyboard shortcuts
 // ───────────────────────────────────────────────────────────────
 
-let inspectModeEnabled = false;
-
 window.addEventListener('keydown', (e) => {
+  // Open command palette: Ctrl+K or Cmd+K
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    commandPalette.toggle(document.body);
+    return;
+  }
+  
   // Toggle overlay: Ctrl+Shift+D
   if (e.key === 'd' && e.ctrlKey && e.shiftKey) {
     overlay.toggle();
     e.preventDefault();
+    return;
   }
   
   // Toggle inspect mode: Press 'I' key
   if (e.key === 'i' || e.key === 'I') {
     inspectModeEnabled = !inspectModeEnabled;
     probe.setInspectModeEnabled(inspectModeEnabled);
-    
-    // Show visual feedback
-    const indicator = document.getElementById('inspect-indicator');
-    if (indicator) {
-      indicator.style.display = inspectModeEnabled ? 'block' : 'none';
-    } else if (inspectModeEnabled) {
-      // Create indicator if it doesn't exist
-      const div = document.createElement('div');
-      div.id = 'inspect-indicator';
-      div.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(34, 211, 238, 0.9);
-        color: #000;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 14px;
-        font-weight: bold;
-        z-index: 1000000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        pointer-events: none;
-      `;
-      div.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> INSPECT MODE: Click objects to select them | Press I to disable';
-      document.body.appendChild(div);
-    }
-    
+    updateInspectIndicator();
+    e.preventDefault();
+    return;
+  }
+  
+  // Close command palette with Escape
+  if (e.key === 'Escape' && commandPalette.isVisible()) {
+    commandPalette.close();
     e.preventDefault();
   }
 });

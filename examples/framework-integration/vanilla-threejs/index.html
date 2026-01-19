@@ -29,7 +29,8 @@
     .info {
       position: fixed;
       top: 20px;
-      left: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       color: var(--3lens-text-primary);
       font-family: var(--3lens-font-sans);
       font-size: 14px;
@@ -39,7 +40,9 @@
       border-radius: var(--3lens-radius-lg);
       border: 1px solid var(--3lens-border);
       backdrop-filter: blur(8px);
-      max-width: 300px;
+      width: auto;
+      min-width: 300px;
+      max-width: 500px;
       box-shadow: var(--3lens-shadow-md);
     }
 
@@ -91,6 +94,20 @@
       color: var(--3lens-text-secondary);
       flex: 1;
     }
+
+    .mode-switcher {
+      margin-top: var(--3lens-spacing-md);
+      padding-top: var(--3lens-spacing-md);
+      border-top: 1px solid var(--3lens-border);
+    }
+
+    .mode-switcher label {
+      display: block;
+      color: #22d3ee;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -102,17 +119,20 @@
       </svg>
       3Lens Demo
     </h1>
-    <div class="shortcuts">
-      <strong style="color: #22d3ee; display: block; margin-bottom: 8px;">Keyboard Shortcuts:</strong>
-      <div class="shortcuts-row">
-        <span class="shortcuts-key"><kbd>I</kbd></span>
-        <span class="shortcuts-text">Toggle inspect mode</span>
-      </div>
-      <div class="shortcuts-row">
-        <span class="shortcuts-key"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></span>
-        <span class="shortcuts-text">Toggle devtool</span>
-      </div>
+    <div class="mode-switcher">
+      <label id="mode-switcher-label">Tip: Use <kbd id="mod-key">Ctrl</kbd> + <kbd>K</kbd> to open command palette</label>
     </div>
+    <script>
+      // Detect OS and update modifier key text
+      (function() {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 || 
+                      navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+        const modKeyElement = document.getElementById('mod-key');
+        if (modKeyElement) {
+          modKeyElement.textContent = isMac ? 'Cmd' : 'Ctrl';
+        }
+      })();
+    </script>
   </div>
   <div id="canvas-container"></div>
   <script type="module" src="/src/main.ts"></script>

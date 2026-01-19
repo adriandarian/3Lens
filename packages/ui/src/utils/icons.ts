@@ -11,14 +11,14 @@ import * as LucideIcons from 'lucide';
  */
 const ICON_NAME_MAP: Record<string, string> = {
   // Panel icons
-  scene: 'Film',
-  stats: 'Zap',
-  materials: 'Palette',
-  geometry: 'Ruler',
-  textures: 'Image',
-  'render-targets': 'Target',
-  webgpu: 'Box',
-  plugins: 'Plug',
+  scene: 'Layers', // Scene hierarchy/tree structure
+  stats: 'Activity', // Performance metrics and stats
+  materials: 'Palette', // Material properties and colors
+  geometry: 'Box', // 3D geometry shapes
+  textures: 'Image', // Texture images
+  'render-targets': 'Monitor', // Render output targets
+  webgpu: 'Cpu', // GPU/compute processing
+  plugins: 'Puzzle', // Modular plugins/extensions
   search: 'Search',
   palette: 'Palette',
   zap: 'Zap',
@@ -44,6 +44,8 @@ const ICON_NAME_MAP: Record<string, string> = {
   'arrow-right': 'ArrowRight',
   plus: 'Plus',
   'help-circle': 'HelpCircle',
+  'more-horizontal': 'MoreHorizontal',
+  'chevron-down': 'ChevronDown',
 
   // Object type icons
   'object-scene': 'Film',
@@ -151,9 +153,20 @@ export function renderIcon(
       // For path elements, add stroke attributes if not present
       const mergedAttrs: Record<string, any> = { ...attrs };
 
-      // Only add stroke attributes to path elements (not rect, circle, etc.)
-      if (tag === 'path') {
-        if (!mergedAttrs.fill && mergedAttrs.fill !== 'none') {
+      // Add stroke attributes to path, line, polyline, polygon, and circle elements
+      // (elements that use stroke for rendering)
+      const strokeElements = [
+        'path',
+        'line',
+        'polyline',
+        'polygon',
+        'circle',
+        'ellipse',
+        'rect',
+      ];
+      if (strokeElements.includes(tag)) {
+        // For icon elements, typically use stroke not fill (unless explicitly set)
+        if (!mergedAttrs.fill || mergedAttrs.fill === 'currentColor') {
           mergedAttrs.fill = 'none';
         }
         if (!mergedAttrs.stroke) {
