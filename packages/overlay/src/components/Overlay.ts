@@ -43,6 +43,7 @@ import {
   attachTexturesEvents,
   renderRenderTargetsPanel,
   attachRenderTargetsEvents,
+  renderMaterialBuilderPanel,
   getSharedStyles,
   createDefaultUIState,
   type UIState,
@@ -167,6 +168,14 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
     iconClass: 'materials',
     defaultWidth: 700,
     defaultHeight: 500,
+  },
+  {
+    id: 'material-builder',
+    title: 'Material Builder',
+    icon: '🧱',
+    iconClass: 'material-builder',
+    defaultWidth: 920,
+    defaultHeight: 560,
   },
   {
     id: 'geometry',
@@ -2149,6 +2158,8 @@ export class ThreeLensOverlay {
         return this.renderStatsContent();
       case 'materials':
         return this.renderMaterialsContent();
+      case 'material-builder':
+        return this.renderMaterialBuilderContent();
       case 'geometry':
         return this.renderGeometryContent();
       case 'textures':
@@ -2212,6 +2223,14 @@ export class ThreeLensOverlay {
   private renderMaterialsContent(): string {
     this.refreshSnapshot();
     return renderMaterialsPanel(this.buildSharedPanelContext(), this.uiState);
+  }
+
+  private renderMaterialBuilderContent(): string {
+    this.refreshSnapshot();
+    return renderMaterialBuilderPanel(
+      this.buildSharedPanelContext(),
+      this.uiState
+    );
   }
 
   private renderGeometryContent(): string {
@@ -3814,6 +3833,8 @@ export class ThreeLensOverlay {
         return this.renderStatsContent();
       case 'materials':
         return this.renderMaterialsContent();
+      case 'material-builder':
+        return this.renderMaterialBuilderContent();
       case 'geometry':
         return this.renderGeometryContent();
       case 'textures':

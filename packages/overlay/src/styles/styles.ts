@@ -320,6 +320,7 @@ export const OVERLAY_STYLES = `
 .three-lens-menu-icon.inspector { background: var(--3lens-accent-blue); color: #000; }
 .three-lens-menu-icon.textures { background: var(--3lens-accent-amber); color: #000; }
 .three-lens-menu-icon.materials { background: var(--3lens-accent-violet); color: #000; }
+.three-lens-menu-icon.material-builder { background: var(--3lens-accent-emerald); color: #000; }
 
 /* ═══════════════════════════════════════════════════════════════
    FLOATING PANELS
