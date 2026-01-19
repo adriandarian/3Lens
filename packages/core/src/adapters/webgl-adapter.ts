@@ -176,9 +176,11 @@ export function createWebGLAdapter(
     ) {
       // This is the MRT error - warn once to help user debug
       mrtErrorWarned = true; // Only warn once to avoid spam
-      const mrt = renderTargetBefore as THREE.WebGLMultipleRenderTargets;
-      const attachmentCount =
-        (mrt as unknown as { count?: number }).count ?? mrt.texture.length;
+      const mrt = renderTargetBefore as unknown as {
+        texture: THREE.Texture[];
+        count?: number;
+      };
+      const attachmentCount = mrt.count ?? mrt.texture.length;
 
       console.warn(
         `[3Lens] ⚠️ WebGL Error: "Active draw buffers with missing fragment shader outputs"\n` +

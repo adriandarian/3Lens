@@ -105,7 +105,11 @@ export class TransformGizmo {
         this.domElement!
       );
 
-      this.transformControls.name = '__3lens_transform_controls__';
+      // Set name if the property exists
+      if ('name' in this.transformControls) {
+        (this.transformControls as { name: string }).name =
+          '__3lens_transform_controls__';
+      }
 
       // Set initial mode and space
       this.transformControls.setMode(this.mode);
@@ -129,8 +133,8 @@ export class TransformGizmo {
       );
       this.transformControls.addEventListener('mouseUp', this.handleMouseUp);
 
-      // Add to scene
-      this.scene!.add(this.transformControls);
+      // Add to scene (TransformControls extends Object3D but TypeScript types may not reflect this)
+      this.scene!.add(this.transformControls as unknown as THREE.Object3D);
 
       this.enabled = true;
       this.updateAttachment();
@@ -553,7 +557,7 @@ export class TransformGizmo {
       this.transformControls.detach();
 
       if (this.scene) {
-        this.scene.remove(this.transformControls);
+        this.scene.remove(this.transformControls as unknown as THREE.Object3D);
       }
 
       this.transformControls.dispose();

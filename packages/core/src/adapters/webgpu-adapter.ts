@@ -26,7 +26,7 @@ import { WebGpuTimingManager, type GpuFrameTiming } from './webgpu-timing';
  *
  * @see https://threejs.org/docs/?q=renderer#WebGPURenderer
  */
-interface WebGPURenderer extends THREE.Renderer {
+interface WebGPURenderer {
   readonly isWebGPURenderer: true;
 
   // Info object similar to WebGLRenderer
@@ -623,8 +623,17 @@ export function createWebGPUAdapter(renderer: WebGPURenderer): RendererAdapter {
     tex: THREE.Texture,
     materialUuid: string
   ): TextureInfo {
-    const width = tex.image?.width ?? 0;
-    const height = tex.image?.height ?? 0;
+    const image = tex.image as
+      | HTMLImageElement
+      | HTMLVideoElement
+      | HTMLCanvasElement
+      | ImageBitmap
+      | ImageData
+      | { width: number; height: number }
+      | null
+      | undefined;
+    const width = (image as { width?: number })?.width ?? 0;
+    const height = (image as { height?: number })?.height ?? 0;
 
     // Estimate memory (assume RGBA8 format)
     const bytesPerPixel = 4;
@@ -1046,13 +1055,14 @@ export interface WebGPUBindGroupEntryInfo {
 /**
  * Create an extended WebGPU adapter with detailed pipeline/bind group tracking
  */
-export function createExtendedWebGPUAdapter(
-  renderer: {
-    isWebGPURenderer: true;
-    backend?: WebGPUBackend;
-    info: WebGPURendererInfo;
-  } & THREE.Renderer
-): WebGPURendererAdapter {
+export function createExtendedWebGPUAdapter(renderer: {
+  isWebGPURenderer: true;
+  backend?: WebGPUBackend;
+  info: WebGPURendererInfo;
+  render(scene: THREE.Scene, camera: THREE.Camera): void;
+  setSize(width: number, height: number, updateStyle?: boolean): void;
+  dispose(): void;
+}): WebGPURendererAdapter {
   // Get the base adapter
   const baseAdapter = createWebGPUAdapter(
     renderer as unknown as Parameters<typeof createWebGPUAdapter>[0]

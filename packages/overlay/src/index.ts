@@ -61,6 +61,7 @@ export { ThreeLensOverlay } from './components/Overlay';
  * @category Overlay
  */
 export type {
+  OverlayLayoutMode,
   OverlayOptions,
   OverlayPanelContext,
   OverlayPanelDefinition,

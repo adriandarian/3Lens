@@ -875,11 +875,59 @@ export class SceneObserver {
     let height = 0;
     if (image) {
       if (isCubeTexture && Array.isArray(image) && image.length > 0) {
-        width = image[0]?.width || image[0]?.naturalWidth || 0;
-        height = image[0]?.height || image[0]?.naturalHeight || 0;
+        const firstImage = image[0] as
+          | HTMLImageElement
+          | HTMLVideoElement
+          | HTMLCanvasElement
+          | ImageBitmap
+          | {
+              width?: number;
+              naturalWidth?: number;
+              height?: number;
+              naturalHeight?: number;
+            };
+        // Use type-safe property access
+        width =
+          firstImage?.width ||
+          ('naturalWidth' in firstImage
+            ? firstImage.naturalWidth
+            : undefined) ||
+          0;
+        height =
+          firstImage?.height ||
+          ('naturalHeight' in firstImage
+            ? firstImage.naturalHeight
+            : undefined) ||
+          0;
       } else {
-        width = image.width || image.naturalWidth || image.videoWidth || 0;
-        height = image.height || image.naturalHeight || image.videoHeight || 0;
+        const img = image as
+          | HTMLImageElement
+          | HTMLVideoElement
+          | HTMLCanvasElement
+          | ImageBitmap
+          | {
+              width?: number;
+              naturalWidth?: number;
+              videoWidth?: number;
+              height?: number;
+              naturalHeight?: number;
+              videoHeight?: number;
+            };
+        // Use type-safe property access with 'in' operator
+        width =
+          img.width ||
+          ('naturalWidth' in img ? img.naturalWidth : undefined) ||
+          ('videoWidth' in img
+            ? (img as HTMLVideoElement).videoWidth
+            : undefined) ||
+          0;
+        height =
+          img.height ||
+          ('naturalHeight' in img ? img.naturalHeight : undefined) ||
+          ('videoHeight' in img
+            ? (img as HTMLVideoElement).videoHeight
+            : undefined) ||
+          0;
       }
     }
 
@@ -1157,7 +1205,10 @@ export class SceneObserver {
       }
 
       // For data textures, we'd need special handling
-      if (image.data && image.width && image.height) {
+      const dataImage = image as
+        | ImageData
+        | { data?: unknown; width?: number; height?: number };
+      if (dataImage.data && dataImage.width && dataImage.height) {
         // Skip complex data texture rendering for now
         return undefined;
       }
@@ -1900,11 +1951,29 @@ export class SceneObserver {
    * Estimate texture memory usage in bytes (simple version for lifecycle tracking)
    */
   private estimateTextureMemorySimple(texture: THREE.Texture): number {
-    const image = texture.image;
+    const image = texture.image as
+      | HTMLImageElement
+      | HTMLVideoElement
+      | HTMLCanvasElement
+      | ImageBitmap
+      | {
+          width?: number;
+          videoWidth?: number;
+          height?: number;
+          videoHeight?: number;
+        }
+      | null
+      | undefined;
     if (!image) return 0;
 
-    const width = image.width || image.videoWidth || 256;
-    const height = image.height || image.videoHeight || 256;
+    const img = image as {
+      width?: number;
+      videoWidth?: number;
+      height?: number;
+      videoHeight?: number;
+    };
+    const width = img.width || (img as HTMLVideoElement).videoWidth || 256;
+    const height = img.height || (img as HTMLVideoElement).videoHeight || 256;
     const bytesPerPixel = 4; // RGBA
 
     // Account for mipmaps (roughly 1.33x base size)

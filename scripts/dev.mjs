@@ -5,12 +5,15 @@
  *
  * Build order:
  * 1. @3lens/core (no internal dependencies)
- * 2. @3lens/ui, @3lens/angular-bridge, @3lens/react-bridge, @3lens/vue-bridge (depend on core)
+ * 2. @3lens/ui (depends on core)
  * 3. @3lens/overlay (depends on core and ui)
- * 4. Start watch mode for all packages in parallel
+ * 4. Start watch mode for core, ui, overlay, and the vanilla-threejs example
+ *
+ * Note: Framework bridges (angular, react, vue) are skipped as they're not needed
+ * for the vanilla Three.js dev example.
  */
 
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 
@@ -57,7 +60,6 @@ function runBackground(command, args) {
     cwd: rootDir,
     stdio: ['inherit', 'inherit', 'inherit'],
     shell: true,
-    detached: true,
   });
 
   proc.on('error', (err) => {
@@ -78,20 +80,50 @@ function shutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  // Print shutdown message and exit immediately to prevent pnpm error output
+  // Print shutdown message
   console.log(`\n\x1b[32m✓ Development server stopped\x1b[0m\n`);
   
-  if (watchProcess) {
-    // Kill the process group to ensure all child processes are terminated
+  const isWindows = process.platform === 'win32';
+  
+  if (watchProcess && watchProcess.pid) {
     try {
-      process.kill(-watchProcess.pid, 'SIGKILL');
+      if (isWindows) {
+        // On Windows, kill the process and its children aggressively
+        // First try to kill the process directly
+        try {
+          watchProcess.kill('SIGTERM');
+        } catch {
+          // Ignore
+        }
+        
+        // Then use taskkill to forcefully kill the process tree
+        // /F = force kill, /T = kill process tree, /PID = process ID
+        // Redirect all output to nul to suppress prompts
+        try {
+          execSync(`taskkill /F /T /PID ${watchProcess.pid}`, { 
+            stdio: 'ignore',
+            timeout: 1000
+          });
+        } catch {
+          // Process might already be dead, ignore
+        }
+      } else {
+        // On Unix-like systems, use SIGKILL for forceful termination
+        // Negative PID kills the process group
+        process.kill(-watchProcess.pid, 'SIGKILL');
+      }
     } catch {
-      // Process might already be dead
+      // Ignore all errors - we're shutting down anyway
     }
   }
   
-  // Exit immediately
-  process.exit(0);
+  // Exit immediately with exit code 0
+  // Set exitCode first, then exit to ensure clean shutdown
+  process.exitCode = 0;
+  // Use setImmediate to ensure kill commands execute, then exit
+  setImmediate(() => {
+    process.exit(0);
+  });
 }
 
 // Register signal handlers for graceful shutdown
@@ -110,17 +142,10 @@ async function main() {
     await runCommand('pnpm', ['--filter', '@3lens/core', 'build']);
     console.log('\x1b[32m✓ @3lens/core built successfully\x1b[0m\n');
 
-    // Phase 2: Build packages that depend only on core (in parallel)
-    console.log('\x1b[33m📦 Phase 2: Building UI and framework bridges...\x1b[0m');
-    await runCommand('pnpm', [
-      '--filter', '@3lens/ui',
-      '--filter', '@3lens/angular-bridge',
-      '--filter', '@3lens/react-bridge',
-      '--filter', '@3lens/vue-bridge',
-      '--parallel',
-      'build'
-    ]);
-    console.log('\x1b[32m✓ UI and framework bridges built successfully\x1b[0m\n');
+    // Phase 2: Build UI (depends on core)
+    console.log('\x1b[33m📦 Phase 2: Building @3lens/ui...\x1b[0m');
+    await runCommand('pnpm', ['--filter', '@3lens/ui', 'build']);
+    console.log('\x1b[32m✓ @3lens/ui built successfully\x1b[0m\n');
 
     // Phase 3: Build overlay (depends on core and ui)
     console.log('\x1b[33m📦 Phase 3: Building @3lens/overlay...\x1b[0m');
@@ -132,14 +157,12 @@ async function main() {
     console.log('\x1b[90m(All packages will now rebuild on file changes)\x1b[0m');
     console.log('\x1b[90m(Press Ctrl+C to stop)\x1b[0m\n');
 
-    // Start all packages in watch mode - use explicit package names to avoid glob issues
+    // Start watch mode for core packages and the dev example
+    // Framework bridges are skipped as they're not needed for vanilla Three.js dev
     watchProcess = runBackground('pnpm', [
       '--filter', '@3lens/core',
       '--filter', '@3lens/ui',
       '--filter', '@3lens/overlay',
-      '--filter', '@3lens/angular-bridge',
-      '--filter', '@3lens/react-bridge',
-      '--filter', '@3lens/vue-bridge',
       '--filter', '@3lens/example-vanilla-threejs',
       '--parallel',
       'dev'

@@ -252,7 +252,11 @@ export class DevtoolProbe {
    *
    * @see https://threejs.org/docs/?q=renderer#WebGPURenderer.isWebGPURenderer
    */
-  observeRenderer(renderer: THREE.WebGLRenderer | THREE.Renderer): void {
+  observeRenderer(
+    renderer:
+      | THREE.WebGLRenderer
+      | (THREE.WebGLRenderer & { isWebGPURenderer?: true })
+  ): void {
     // Detect three.js version
     this._threeVersion =
       (renderer as unknown as { version?: string }).version ?? null;
@@ -446,13 +450,16 @@ export class DevtoolProbe {
       ? renderTarget.texture[0]
       : renderTarget.texture;
     const isMRT = Array.isArray(renderTarget.texture);
+    const textureArray = renderTarget.texture as
+      | THREE.Texture
+      | THREE.Texture[];
     this.log('Observing render target', {
       uuid: rtId,
       name: texture?.name || '<unnamed>',
       size: `${renderTarget.width}x${renderTarget.height}`,
       usage,
       isMRT,
-      attachments: isMRT ? renderTarget.texture.length : 1,
+      attachments: isMRT ? (textureArray as THREE.Texture[]).length : 1,
     });
   }
 
