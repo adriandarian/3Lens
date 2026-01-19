@@ -2,6 +2,13 @@
  * Formatting utilities for 3Lens UI
  */
 
+import {
+  getObjectIconName,
+  getMaterialTypeIconName,
+  getGeometryIconName,
+  getTextureIconName,
+} from './icons';
+
 /**
  * Format large numbers with K/M suffix
  */
@@ -93,20 +100,11 @@ export function truncateUrl(url: string, maxLen = 40): string {
 
 /**
  * Get icon for object type
+ * @deprecated Use getObjectIconName from './icons' instead
  */
 export function getObjectIcon(type: string): string {
-  const lower = type.toLowerCase();
-  if (lower.includes('scene')) return 'S';
-  if (lower.includes('mesh')) return 'M';
-  if (lower.includes('group')) return 'G';
-  if (lower.includes('light')) return 'L';
-  if (lower.includes('camera')) return 'C';
-  if (lower.includes('bone')) return 'B';
-  if (lower.includes('skeleton')) return 'K';
-  if (lower.includes('sprite')) return 'P';
-  if (lower.includes('line')) return '—';
-  if (lower.includes('points')) return '•';
-  return 'O';
+  // For backward compatibility, return icon name that can be rendered
+  return getObjectIconName(type);
 }
 
 /**
@@ -124,44 +122,25 @@ export function getObjectClass(type: string): string {
 
 /**
  * Get icon for material type
+ * @deprecated Use getMaterialTypeIconName from './icons' instead
  */
 export function getMaterialTypeIcon(type: string): string {
-  if (type.includes('Physical')) return '◆';
-  if (type.includes('Standard')) return '◇';
-  if (type.includes('Basic')) return '○';
-  if (type.includes('Lambert')) return '◐';
-  if (type.includes('Phong')) return '◑';
-  if (type.includes('Toon')) return '◕';
-  if (type.includes('Shader') || type.includes('Raw')) return '⬡';
-  if (type.includes('Sprite')) return '◎';
-  if (type.includes('Points')) return '•';
-  if (type.includes('Line')) return '―';
-  return '●';
+  // For backward compatibility, return icon name that can be rendered
+  return getMaterialTypeIconName(type);
 }
 
 /**
  * Get icon for geometry type
+ * @deprecated Use getGeometryIconName from './icons' instead
  */
 export function getGeometryIcon(type: string): string {
-  const lower = type.toLowerCase();
-  if (lower.includes('box') || lower.includes('cube')) return '📦';
-  if (lower.includes('sphere')) return '🔮';
-  if (lower.includes('plane')) return '⬛';
-  if (lower.includes('cylinder')) return '🧴';
-  if (lower.includes('cone')) return '🔺';
-  if (lower.includes('torus')) return '🍩';
-  if (lower.includes('ring')) return '💍';
-  if (lower.includes('circle')) return '⭕';
-  if (lower.includes('tube')) return '🧪';
-  if (lower.includes('extrude')) return '📊';
-  if (lower.includes('lathe')) return '🏺';
-  if (lower.includes('text') || lower.includes('shape')) return '✒️';
-  if (lower.includes('instanced')) return '🔄';
-  return '📐';
+  // For backward compatibility, return icon name that can be rendered
+  return getGeometryIconName(type);
 }
 
 /**
  * Get icon for texture
+ * @deprecated Use getTextureIconName from './icons' instead
  */
 export function getTextureIcon(tex: {
   isCubeTexture?: boolean;
@@ -171,13 +150,8 @@ export function getTextureIcon(tex: {
   isRenderTarget?: boolean;
   isCompressed?: boolean;
 }): string {
-  if (tex.isCubeTexture) return '🎲';
-  if (tex.isVideoTexture) return '🎬';
-  if (tex.isCanvasTexture) return '🎨';
-  if (tex.isDataTexture) return '📊';
-  if (tex.isRenderTarget) return '🎯';
-  if (tex.isCompressed) return '📦';
-  return '🖼️';
+  // For backward compatibility, return icon name that can be rendered
+  return getTextureIconName(tex);
 }
 
 /**

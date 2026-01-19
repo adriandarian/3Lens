@@ -26,6 +26,7 @@ import {
   getObjectIcon,
   getObjectClass,
 } from '../utils/format';
+import { renderIcon } from '@3lens/ui';
 import { OVERLAY_STYLES } from '../styles/styles';
 import {
   VirtualScroller,
@@ -140,7 +141,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   {
     id: 'scene',
     title: 'Scene',
-    icon: 'S',
+    icon: 'scene',
     iconClass: 'scene',
     defaultWidth: SCENE_PANEL_WIDTH,
     defaultHeight: 0,
@@ -148,7 +149,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   {
     id: 'stats',
     title: 'Performance',
-    icon: '⚡',
+    icon: 'stats',
     iconClass: 'stats',
     defaultWidth: 320,
     defaultHeight: 400,
@@ -156,7 +157,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   {
     id: 'materials',
     title: 'Materials',
-    icon: '🎨',
+    icon: 'materials',
     iconClass: 'materials',
     defaultWidth: 700,
     defaultHeight: 500,
@@ -164,7 +165,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   {
     id: 'geometry',
     title: 'Geometry',
-    icon: '📐',
+    icon: 'geometry',
     iconClass: 'inspector',
     defaultWidth: 750,
     defaultHeight: 500,
@@ -172,7 +173,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   {
     id: 'textures',
     title: 'Textures',
-    icon: '🖼️',
+    icon: 'textures',
     iconClass: 'textures',
     defaultWidth: 800,
     defaultHeight: 520,
@@ -180,7 +181,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   {
     id: 'render-targets',
     title: 'Render Targets',
-    icon: '🎯',
+    icon: 'render-targets',
     iconClass: 'render-targets',
     defaultWidth: 850,
     defaultHeight: 550,
@@ -188,7 +189,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   {
     id: 'webgpu',
     title: 'WebGPU',
-    icon: '🔷',
+    icon: 'webgpu',
     iconClass: 'webgpu',
     defaultWidth: 700,
     defaultHeight: 500,
@@ -196,7 +197,7 @@ const DEFAULT_PANELS: OverlayPanelDefinition[] = [
   {
     id: 'plugins',
     title: 'Plugins',
-    icon: '🔌',
+    icon: 'plugins',
     iconClass: 'plugin',
     defaultWidth: 420,
     defaultHeight: 480,
@@ -588,7 +589,7 @@ export class ThreeLensOverlay {
     const overlayPanel: OverlayPanelDefinition = {
       id: panelKey,
       title: corePanel.name,
-      icon: corePanel.icon ?? '🔌',
+      icon: corePanel.icon ?? 'plugins',
       iconClass: 'plugin',
       defaultWidth: 400,
       defaultHeight: 300,
@@ -645,7 +646,7 @@ export class ThreeLensOverlay {
     const toast = document.createElement('div');
     toast.className = `three-lens-toast three-lens-toast-${type}`;
     toast.innerHTML = `
-      <span class="three-lens-toast-icon">${type === 'success' ? '✓' : type === 'warning' ? '⚠' : type === 'error' ? '✕' : 'ℹ'}</span>
+      <span class="three-lens-toast-icon">${type === 'success' ? renderIcon('check', { size: 16, color: 'currentColor', strokeWidth: 2 }) : type === 'warning' ? renderIcon('alert-triangle', { size: 16, color: 'currentColor', strokeWidth: 2 }) : type === 'error' ? renderIcon('x', { size: 16, color: 'currentColor', strokeWidth: 2 }) : renderIcon('info', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
       <span class="three-lens-toast-message">${message}</span>
     `;
 
@@ -734,7 +735,7 @@ export class ThreeLensOverlay {
       .map(
         (panel) => `
           <button class="three-lens-menu-item ${this.openPanels.has(panel.id) ? 'active' : ''}" data-panel="${panel.id}">
-            <span class="three-lens-menu-icon ${panel.iconClass}">${panel.icon}</span>
+            <span class="three-lens-menu-icon ${panel.iconClass}">${renderIcon(panel.icon, { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
             <span>${panel.title}</span>
           </button>
         `
@@ -808,21 +809,18 @@ export class ThreeLensOverlay {
           </svg>
         </button>
         <div class="three-lens-sidebar-content">
-          <div class="three-lens-sidebar-header">
-            <div class="three-lens-sidebar-logo">
-              <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M50 10L85 70H70L50 35L30 70H15L50 10Z" fill="#EF6B6B"/>
-                <path d="M15 70L50 10L35 10L10 55L25 55L15 70Z" fill="#60A5FA"/>
-                <path d="M85 70L50 10L65 10L90 55L75 55L85 70Z" fill="#34D399"/>
-              </svg>
-              ${this.sidebarCollapsed ? '' : '<span>3Lens</span>'}
-            </div>
-          </div>
           <div class="three-lens-sidebar-panels" id="three-lens-sidebar-panels">
             ${this.renderSidebarPanelItems()}
           </div>
         </div>
       </div>
+      <button class="three-lens-sidebar-fab" id="three-lens-sidebar-fab" title="3Lens DevTools">
+        <svg width="20" height="20" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50 10L85 70H70L50 35L30 70H15L50 10Z" fill="#EF6B6B"/>
+          <path d="M15 70L50 10L35 10L10 55L25 55L15 70Z" fill="#60A5FA"/>
+          <path d="M85 70L50 10L65 10L90 55L75 55L85 70Z" fill="#34D399"/>
+        </svg>
+      </button>
     `;
   }
 
@@ -838,10 +836,9 @@ export class ThreeLensOverlay {
             draggable="true"
           >
             <div class="three-lens-sidebar-panel-icon ${panel.iconClass}" title="${panel.title}">
-              ${panel.icon}
+              ${renderIcon(panel.icon, { size: 18, color: 'currentColor', strokeWidth: 2 })}
             </div>
-            ${this.sidebarCollapsed ? '' : `<span class="three-lens-sidebar-panel-title">${panel.title}</span>`}
-            ${isDocked ? '<button class="three-lens-sidebar-panel-popout" data-action="popout" title="Pop out">↗</button>' : ''}
+            ${isDocked ? `<button class="three-lens-sidebar-panel-popout" data-action="popout" title="Pop out">${renderIcon('external-link', { size: 12, color: 'currentColor', strokeWidth: 2 })}</button>` : ''}
           </div>
         `;
       })
@@ -856,6 +853,16 @@ export class ThreeLensOverlay {
       toggle.addEventListener('click', () => {
         this.sidebarCollapsed = !this.sidebarCollapsed;
         this.updateSidebar();
+      });
+    }
+
+    // Sidebar FAB button (bottom left toggle)
+    const sidebarFab = document.getElementById('three-lens-sidebar-fab');
+    if (sidebarFab && !sidebarFab.hasAttribute('data-events-attached')) {
+      sidebarFab.setAttribute('data-events-attached', 'true');
+      sidebarFab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggle();
       });
     }
 
@@ -1202,7 +1209,7 @@ export class ThreeLensOverlay {
 
     panel.innerHTML = `
       <div class="three-lens-panel-header" data-panel="${config.id}">
-        <span class="three-lens-panel-icon ${config.iconClass}">${config.icon}</span>
+        <span class="three-lens-panel-icon ${config.iconClass}">${renderIcon(config.icon, { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
         <span class="three-lens-panel-title">${config.title}</span>
         ${
           hasSearch
@@ -1383,21 +1390,21 @@ export class ThreeLensOverlay {
 
     return `
       <div class="three-lens-plugin-item ${isSelected ? 'selected' : ''} ${isError ? 'error' : ''}" data-plugin-id="${plugin.id}">
-        <div class="three-lens-plugin-icon">${plugin.metadata.icon ?? '🔌'}</div>
+        <div class="three-lens-plugin-icon">${plugin.metadata.icon ? renderIcon(plugin.metadata.icon.toLowerCase(), { size: 16, color: 'currentColor', strokeWidth: 2 }) : renderIcon('plugins', { size: 16, color: 'currentColor', strokeWidth: 2 })}</div>
         <div class="three-lens-plugin-info">
           <div class="three-lens-plugin-name">${plugin.metadata.name}</div>
           <div class="three-lens-plugin-version">v${plugin.metadata.version}</div>
         </div>
         <div class="three-lens-plugin-status ${isActive ? 'active' : isError ? 'error' : 'inactive'}">
-          ${isActive ? '●' : isError ? '!' : '○'}
+          ${isActive ? renderIcon('circle', { size: 8, color: 'var(--3lens-accent-emerald)', strokeWidth: 3, class: 'filled' }) : isError ? renderIcon('alert-circle', { size: 8, color: 'var(--3lens-error)', strokeWidth: 2 }) : renderIcon('circle', { size: 8, color: 'var(--3lens-text-tertiary)', strokeWidth: 2 })}
         </div>
         <div class="three-lens-plugin-actions">
           ${
             isActive
-              ? `<button class="three-lens-plugin-action-btn" data-action="deactivate" data-plugin-id="${plugin.id}" title="Deactivate">⏸</button>`
-              : `<button class="three-lens-plugin-action-btn" data-action="activate" data-plugin-id="${plugin.id}" title="Activate">▶</button>`
+              ? `<button class="three-lens-plugin-action-btn" data-action="deactivate" data-plugin-id="${plugin.id}" title="Deactivate">${renderIcon('pause', { size: 14, color: 'currentColor', strokeWidth: 2 })}</button>`
+              : `<button class="three-lens-plugin-action-btn" data-action="activate" data-plugin-id="${plugin.id}" title="Activate">${renderIcon('play', { size: 14, color: 'currentColor', strokeWidth: 2 })}</button>`
           }
-          <button class="three-lens-plugin-action-btn" data-action="unregister" data-plugin-id="${plugin.id}" title="Unregister">✕</button>
+          <button class="three-lens-plugin-action-btn" data-action="unregister" data-plugin-id="${plugin.id}" title="Unregister">${renderIcon('x', { size: 14, color: 'currentColor', strokeWidth: 2 })}</button>
         </div>
       </div>
     `;
@@ -1442,7 +1449,7 @@ export class ThreeLensOverlay {
     return `
       <div class="three-lens-plugin-settings">
         <div class="three-lens-plugin-settings-header">
-          <button class="three-lens-plugin-back-btn" data-action="back-to-list">← Back</button>
+          <button class="three-lens-plugin-back-btn" data-action="back-to-list">${renderIcon('arrow-left', { size: 14, color: 'currentColor', strokeWidth: 2 })} Back</button>
           <span class="three-lens-plugin-settings-title">${plugin.metadata.name}</span>
         </div>
         
@@ -1701,11 +1708,11 @@ export class ThreeLensOverlay {
             setTimeout(() => this.updatePluginsPanel(), 1000);
           } else {
             if (statusEl)
-              statusEl.innerHTML = `<span class="error">✕ ${result.error?.message ?? 'Failed to load'}</span>`;
+              statusEl.innerHTML = `<span class="error">${renderIcon('x', { size: 12, color: 'currentColor', strokeWidth: 2 })} ${result.error?.message ?? 'Failed to load'}</span>`;
           }
         } catch (error) {
           if (statusEl)
-            statusEl.innerHTML = `<span class="error">✕ ${error instanceof Error ? error.message : 'Unknown error'}</span>`;
+            statusEl.innerHTML = `<span class="error">${renderIcon('x', { size: 12, color: 'currentColor', strokeWidth: 2 })} ${error instanceof Error ? error.message : 'Unknown error'}</span>`;
         }
       });
   }
@@ -1761,7 +1768,7 @@ export class ThreeLensOverlay {
       return `
         <div class="webgpu-panel">
           <div class="webgpu-not-available">
-            <div class="webgpu-not-available-icon">🔷</div>
+            <div class="webgpu-not-available-icon">${renderIcon('webgpu', { size: 48, color: 'var(--3lens-text-tertiary)', strokeWidth: 2 })}</div>
             <div class="webgpu-not-available-title">WebGPU Not Active</div>
             <div class="webgpu-not-available-desc">
               The current renderer is using WebGL. This panel provides debugging tools 
@@ -1872,12 +1879,12 @@ export class ThreeLensOverlay {
     usageCount?: number;
   }): string {
     const isSelected = this.selectedPipelineId === pipeline.id;
-    const icon = pipeline.type === 'render' ? '🎨' : '⚡';
+    const iconName = pipeline.type === 'render' ? 'palette' : 'zap';
     const label = pipeline.label ?? pipeline.id;
 
     return `
       <div class="webgpu-pipeline-item ${isSelected ? 'selected' : ''}" data-pipeline-id="${pipeline.id}">
-        <span class="webgpu-pipeline-icon">${icon}</span>
+        <span class="webgpu-pipeline-icon">${renderIcon(iconName, { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
         <span class="webgpu-pipeline-name">${this.escapeHtml(label)}</span>
         <span class="webgpu-pipeline-type">${pipeline.type}</span>
         ${pipeline.usageCount ? `<span class="webgpu-pipeline-usage">${pipeline.usageCount} uses</span>` : ''}
@@ -1903,8 +1910,8 @@ export class ThreeLensOverlay {
     return `
       <div class="webgpu-pipeline-details">
         <div class="webgpu-details-header">
-          <span class="webgpu-details-title">${pipeline.type === 'render' ? '🎨' : '⚡'} ${this.escapeHtml(pipeline.label ?? pipeline.id)}</span>
-          <button class="webgpu-close-btn" data-action="close-pipeline-details">×</button>
+          <span class="webgpu-details-title">${renderIcon(pipeline.type === 'render' ? 'palette' : 'zap', { size: 18, color: 'currentColor', strokeWidth: 2 })} ${this.escapeHtml(pipeline.label ?? pipeline.id)}</span>
+          <button class="webgpu-close-btn" data-action="close-pipeline-details">${renderIcon('x', { size: 16, color: 'currentColor', strokeWidth: 2 })}</button>
         </div>
         
         <div class="webgpu-details-content">
@@ -1981,22 +1988,22 @@ export class ThreeLensOverlay {
           <div class="webgpu-section-header">Common Bind Group Types</div>
           <div class="webgpu-bindgroup-types">
             <div class="webgpu-bindgroup-type">
-              <span class="webgpu-bindgroup-type-icon">📐</span>
+              <span class="webgpu-bindgroup-type-icon">${renderIcon('ruler', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
               <span class="webgpu-bindgroup-type-name">Camera Uniforms</span>
               <span class="webgpu-bindgroup-type-desc">View, projection, camera position</span>
             </div>
             <div class="webgpu-bindgroup-type">
-              <span class="webgpu-bindgroup-type-icon">🎨</span>
+              <span class="webgpu-bindgroup-type-icon">${renderIcon('palette', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
               <span class="webgpu-bindgroup-type-name">Material Properties</span>
               <span class="webgpu-bindgroup-type-desc">Color, roughness, metalness, textures</span>
             </div>
             <div class="webgpu-bindgroup-type">
-              <span class="webgpu-bindgroup-type-icon">💡</span>
+              <span class="webgpu-bindgroup-type-icon">${renderIcon('lightbulb', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
               <span class="webgpu-bindgroup-type-name">Lighting Data</span>
               <span class="webgpu-bindgroup-type-desc">Light positions, colors, shadow maps</span>
             </div>
             <div class="webgpu-bindgroup-type">
-              <span class="webgpu-bindgroup-type-icon">🦴</span>
+              <span class="webgpu-bindgroup-type-icon">${renderIcon('bone', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
               <span class="webgpu-bindgroup-type-name">Skeleton/Morph</span>
               <span class="webgpu-bindgroup-type-desc">Bone matrices, morph targets</span>
             </div>
@@ -2037,7 +2044,7 @@ export class ThreeLensOverlay {
                 .map(
                   (p) => `
                 <div class="webgpu-shader-item" data-pipeline-id="${p.id}">
-                  <span class="webgpu-shader-icon">${p.type === 'compute' ? '⚡' : '🎨'}</span>
+                  <span class="webgpu-shader-icon">${renderIcon(p.type === 'compute' ? 'zap' : 'palette', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
                   <span class="webgpu-shader-name">${this.escapeHtml(p.label ?? p.id)}</span>
                   <span class="webgpu-shader-stages">
                     ${p.vertexStage ? '<span class="webgpu-stage-badge vs">VS</span>' : ''}
@@ -3291,7 +3298,7 @@ export class ThreeLensOverlay {
             ${summary.errors > 0 ? `<span class="three-lens-violation-badge error">${summary.errors}</span>` : ''}
             ${summary.warnings > 0 ? `<span class="three-lens-violation-badge warning">${summary.warnings}</span>` : ''}
           </div>
-          <button class="three-lens-action-btn small" data-action="clear-violations" title="Clear violations">✕</button>
+          <button class="three-lens-action-btn small" data-action="clear-violations" title="Clear violations">${renderIcon('x', { size: 14, color: 'currentColor', strokeWidth: 2 })}</button>
           </div>
         <div class="three-lens-rule-violations-list">
           ${recentViolations
@@ -3544,7 +3551,7 @@ export class ThreeLensOverlay {
                 <span class="three-lens-bottleneck-severity ${b.severity}">${b.severity.toUpperCase()}</span>
               </div>
               <div class="three-lens-bottleneck-message">${b.message}</div>
-              <div class="three-lens-bottleneck-suggestion">💡 ${b.suggestion}</div>
+              <div class="three-lens-bottleneck-suggestion">${renderIcon('lightbulb', { size: 14, color: 'currentColor', strokeWidth: 2 })} ${b.suggestion}</div>
             </div>
           `
             )
@@ -3777,7 +3784,7 @@ export class ThreeLensOverlay {
           .map(
             (suggestion) => `
           <div class="three-lens-suggestion">
-            <span class="three-lens-issue-icon">💡</span>
+            <span class="three-lens-issue-icon">${renderIcon('lightbulb', { size: 14, color: 'currentColor', strokeWidth: 2 })}</span>
             <span class="three-lens-suggestion-text">${suggestion}</span>
           </div>
         `
@@ -4053,7 +4060,7 @@ export class ThreeLensOverlay {
         <!-- Texture Size Distribution -->
         <div class="three-lens-memory-category">
           <div class="three-lens-memory-category-header">
-            <span class="three-lens-memory-category-icon">🖼️</span>
+            <span class="three-lens-memory-category-icon">${renderIcon('image', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
             <span class="three-lens-memory-category-name">Textures</span>
             <span class="three-lens-memory-category-count">${textureCount}</span>
           </div>
@@ -4081,7 +4088,7 @@ export class ThreeLensOverlay {
         <!-- Geometry Complexity Distribution -->
         <div class="three-lens-memory-category">
           <div class="three-lens-memory-category-header">
-            <span class="three-lens-memory-category-icon">📐</span>
+            <span class="three-lens-memory-category-icon">${renderIcon('ruler', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
             <span class="three-lens-memory-category-name">Geometries</span>
             <span class="three-lens-memory-category-count">${geometryCount}</span>
           </div>
@@ -4126,7 +4133,7 @@ export class ThreeLensOverlay {
         <!-- Programs/Shaders -->
         <div class="three-lens-memory-category">
           <div class="three-lens-memory-category-header">
-            <span class="three-lens-memory-category-icon">⚡</span>
+            <span class="three-lens-memory-category-icon">${renderIcon('zap', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
             <span class="three-lens-memory-category-name">Shader Programs</span>
             <span class="three-lens-memory-category-count">${memory.programs}</span>
           </div>
@@ -4141,7 +4148,7 @@ export class ThreeLensOverlay {
             ? `
           <div class="three-lens-memory-category">
             <div class="three-lens-memory-category-header">
-              <span class="three-lens-memory-category-icon">🎯</span>
+              <span class="three-lens-memory-category-icon">${renderIcon('target', { size: 16, color: 'currentColor', strokeWidth: 2 })}</span>
               <span class="three-lens-memory-category-name">Render Targets</span>
               <span class="three-lens-memory-category-count">${memory.renderTargets}</span>
             </div>
@@ -4190,7 +4197,7 @@ export class ThreeLensOverlay {
 
     if (memory.textures > 30) {
       tips.push({
-        icon: '🎨',
+        icon: 'palette',
         tip: 'Use texture atlases to reduce texture count and draw calls',
         priority: 'medium',
       });
@@ -4198,7 +4205,7 @@ export class ThreeLensOverlay {
 
     if (stats.objectsTotal > 1000 && memory.geometryMemory > 64 * MB) {
       tips.push({
-        icon: '📏',
+        icon: 'ruler',
         tip: 'Implement LOD (Level of Detail) for distant objects',
         priority: 'high',
       });
@@ -4206,7 +4213,7 @@ export class ThreeLensOverlay {
 
     if (memory.programs > 15) {
       tips.push({
-        icon: '⚙️',
+        icon: 'settings',
         tip: 'Reduce shader variants by sharing materials when possible',
         priority: 'low',
       });
@@ -4214,7 +4221,7 @@ export class ThreeLensOverlay {
 
     if (memory.renderTargets > 5) {
       tips.push({
-        icon: '🎯',
+        icon: 'target',
         tip: 'Consolidate post-processing passes to reduce render target memory',
         priority: 'medium',
       });
@@ -4226,7 +4233,7 @@ export class ThreeLensOverlay {
       const last = this.memoryHistory[this.memoryHistory.length - 1].totalGpu;
       if (last > first * 1.5) {
         tips.push({
-          icon: '🔍',
+          icon: 'search',
           tip: 'Memory is growing - check for texture/geometry leaks. Dispose unused resources.',
           priority: 'high',
         });
@@ -4243,14 +4250,14 @@ export class ThreeLensOverlay {
 
     return `
       <div class="three-lens-memory-tips">
-        <div class="three-lens-memory-tips-title">💡 Optimization Tips</div>
+        <div class="three-lens-memory-tips-title">${renderIcon('lightbulb', { size: 16, color: 'currentColor', strokeWidth: 2 })} Optimization Tips</div>
         <div class="three-lens-memory-tips-list">
           ${tips
             .slice(0, 4)
             .map(
               (t) => `
             <div class="three-lens-memory-tip ${t.priority}">
-              <span class="three-lens-memory-tip-icon">${t.icon}</span>
+              <span class="three-lens-memory-tip-icon">${renderIcon(t.icon, { size: 14, color: 'currentColor', strokeWidth: 2 })}</span>
               <span class="three-lens-memory-tip-text">${t.tip}</span>
             </div>
           `
@@ -4690,7 +4697,7 @@ export class ThreeLensOverlay {
         <div class="three-lens-lighting-title">Lighting & Shadows</div>
         <div class="three-lens-lighting-grid">
           <div class="three-lens-lighting-item">
-            <div class="three-lens-lighting-icon">💡</div>
+            <div class="three-lens-lighting-icon">${renderIcon('lightbulb', { size: 20, color: 'currentColor', strokeWidth: 2 })}</div>
             <div class="three-lens-lighting-info">
               <div class="three-lens-lighting-value">${rendering.totalLights}</div>
               <div class="three-lens-lighting-label">Total Lights</div>
@@ -5018,7 +5025,7 @@ export class ThreeLensOverlay {
       <div class="three-lens-timeline-frame-details">
         <div class="three-lens-timeline-frame-details-header">
           <span>Frame #${frameIndex + 1}</span>
-          <button class="three-lens-timeline-close-btn" id="three-lens-timeline-close-details">×</button>
+          <button class="three-lens-timeline-close-btn" id="three-lens-timeline-close-details">${renderIcon('x', { size: 16, color: 'currentColor', strokeWidth: 2 })}</button>
         </div>
         <div class="three-lens-timeline-frame-details-grid">
           <div class="three-lens-timeline-frame-detail">
@@ -5117,7 +5124,7 @@ export class ThreeLensOverlay {
         <div class="three-lens-resource-summary-title">Resource Lifecycle Summary</div>
         <div class="three-lens-resource-summary-grid">
           <div class="three-lens-resource-summary-item">
-            <div class="three-lens-resource-summary-icon geometry">📐</div>
+            <div class="three-lens-resource-summary-icon geometry">${renderIcon('ruler', { size: 16, color: 'currentColor', strokeWidth: 2 })}</div>
             <div class="three-lens-resource-summary-details">
               <div class="three-lens-resource-summary-label">Geometries</div>
               <div class="three-lens-resource-summary-stats">
@@ -5129,7 +5136,7 @@ export class ThreeLensOverlay {
             </div>
           </div>
           <div class="three-lens-resource-summary-item">
-            <div class="three-lens-resource-summary-icon material">🎨</div>
+            <div class="three-lens-resource-summary-icon material">${renderIcon('palette', { size: 16, color: 'currentColor', strokeWidth: 2 })}</div>
             <div class="three-lens-resource-summary-details">
               <div class="three-lens-resource-summary-label">Materials</div>
               <div class="three-lens-resource-summary-stats">
@@ -5141,7 +5148,7 @@ export class ThreeLensOverlay {
             </div>
           </div>
           <div class="three-lens-resource-summary-item">
-            <div class="three-lens-resource-summary-icon texture">🖼</div>
+            <div class="three-lens-resource-summary-icon texture">${renderIcon('image', { size: 16, color: 'currentColor', strokeWidth: 2 })}</div>
             <div class="three-lens-resource-summary-details">
               <div class="three-lens-resource-summary-label">Textures</div>
               <div class="three-lens-resource-summary-stats">
@@ -5163,10 +5170,10 @@ export class ThreeLensOverlay {
       <div class="three-lens-resource-controls">
         <div class="three-lens-leak-controls-left">
           <button class="three-lens-action-btn" data-action="run-leak-detection" title="Run leak detection checks">
-            🔍 Detect Leaks
+            ${renderIcon('search', { size: 14, color: 'currentColor', strokeWidth: 2 })} Detect Leaks
           </button>
           <button class="three-lens-action-btn" data-action="generate-leak-report" title="Generate detailed leak report">
-            📋 Report
+            ${renderIcon('clipboard', { size: 14, color: 'currentColor', strokeWidth: 2 })} Report
           </button>
         </div>
         <div class="three-lens-leak-controls-right">
@@ -5232,7 +5239,7 @@ export class ThreeLensOverlay {
           <span>Leak Alerts (${alerts.length})</span>
           ${criticalAlerts.length > 0 ? `<span class="three-lens-alert-badge critical">${criticalAlerts.length} critical</span>` : ''}
           ${warningAlerts.length > 0 ? `<span class="three-lens-alert-badge warning">${warningAlerts.length} warning</span>` : ''}
-          <button class="three-lens-action-btn small" data-action="clear-leak-alerts" title="Clear alerts">✕</button>
+          <button class="three-lens-action-btn small" data-action="clear-leak-alerts" title="Clear alerts">${renderIcon('x', { size: 14, color: 'currentColor', strokeWidth: 2 })}</button>
         </div>
         <div class="three-lens-leak-alerts-list">
           ${alerts
@@ -5244,7 +5251,7 @@ export class ThreeLensOverlay {
               <div class="three-lens-alert-content">
                 <div class="three-lens-alert-message">${alert.message}</div>
                 <div class="three-lens-alert-details">${alert.details}</div>
-                <div class="three-lens-alert-suggestion">💡 ${alert.suggestion}</div>
+                <div class="three-lens-alert-suggestion">${renderIcon('lightbulb', { size: 14, color: 'currentColor', strokeWidth: 2 })} ${alert.suggestion}</div>
               </div>
             </div>
           `
@@ -5389,10 +5396,10 @@ export class ThreeLensOverlay {
         <div class="three-lens-resource-timeline-header">
           <span>Event Timeline (last 60s)</span>
           <div class="three-lens-resource-timeline-legend">
-            <span class="geometry">📐 Geo</span>
-            <span class="material">🎨 Mat</span>
-            <span class="texture">🖼 Tex</span>
-            <span class="disposed">✕ Disposed</span>
+            <span class="geometry">${renderIcon('ruler', { size: 12, color: 'currentColor', strokeWidth: 2 })} Geo</span>
+            <span class="material">${renderIcon('palette', { size: 12, color: 'currentColor', strokeWidth: 2 })} Mat</span>
+            <span class="texture">${renderIcon('image', { size: 12, color: 'currentColor', strokeWidth: 2 })} Tex</span>
+            <span class="disposed">${renderIcon('x', { size: 12, color: 'currentColor', strokeWidth: 2 })} Disposed</span>
           </div>
         </div>
         <div class="three-lens-resource-timeline-chart">
@@ -5463,28 +5470,64 @@ export class ThreeLensOverlay {
   private getResourceIcon(type: string): string {
     switch (type) {
       case 'geometry':
-        return '📐';
+        return renderIcon('ruler', {
+          size: 14,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
       case 'material':
-        return '🎨';
+        return renderIcon('palette', {
+          size: 14,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
       case 'texture':
-        return '🖼';
+        return renderIcon('image', {
+          size: 14,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
       default:
-        return '📦';
+        return renderIcon('package', {
+          size: 14,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
     }
   }
 
   private getEventTypeLabel(eventType: string): string {
     switch (eventType) {
       case 'created':
-        return '+';
+        return renderIcon('plus', {
+          size: 12,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
       case 'disposed':
-        return '✕';
+        return renderIcon('x', {
+          size: 12,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
       case 'attached':
-        return '→';
+        return renderIcon('arrow-right', {
+          size: 12,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
       case 'detached':
-        return '←';
+        return renderIcon('arrow-left', {
+          size: 12,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
       default:
-        return '?';
+        return renderIcon('help-circle', {
+          size: 12,
+          color: 'currentColor',
+          strokeWidth: 2,
+        });
     }
   }
 
@@ -5876,7 +5919,7 @@ export class ThreeLensOverlay {
             <span class="three-lens-material-type">${mat.type}</span>
             <span class="three-lens-material-score">${mat.complexityScore.toFixed(1)}/10</span>
             <div class="three-lens-material-features">
-              ${mat.textureCount > 0 ? `<span class="three-lens-mat-feature" title="Textures">🖼 ${mat.textureCount}</span>` : ''}
+              ${mat.textureCount > 0 ? `<span class="three-lens-mat-feature" title="Textures">${renderIcon('image', { size: 12, color: 'currentColor', strokeWidth: 2 })} ${mat.textureCount}</span>` : ''}
               ${mat.hasNormalMap ? `<span class="three-lens-mat-feature" title="Normal Map">N</span>` : ''}
               ${mat.hasEnvMap ? `<span class="three-lens-mat-feature" title="Environment Map">E</span>` : ''}
               ${mat.transparent ? `<span class="three-lens-mat-feature" title="Transparent">α</span>` : ''}
@@ -6352,7 +6395,7 @@ ${report.alerts
   .map(
     (a) => `[${a.severity.toUpperCase()}] ${a.message}
    ${a.details}
-   💡 ${a.suggestion}
+   ${renderIcon('lightbulb', { size: 12, color: 'currentColor', strokeWidth: 2 })} ${a.suggestion}
 `
   )
   .join('\n')}

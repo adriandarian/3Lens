@@ -399,7 +399,7 @@ const StatsMonitorPlugin: DevtoolPlugin = {
     {
       id: 'highlight-expensive',
       label: 'Find Similar Objects',
-      icon: '🔍',
+      icon: 'Search',
       target: 'scene-tree',
       order: 101,
       onClick(context) {

@@ -31,7 +31,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@3lens/core": "workspace:*"
+    "@3lens/core": "workspace:*",
+    "lucide": "^0.562.0"
   },
   "devDependencies": {
     "typescript": "catalog:",

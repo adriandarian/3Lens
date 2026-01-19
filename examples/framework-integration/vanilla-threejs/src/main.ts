@@ -342,7 +342,9 @@ probe.initializeCameraController(camera, THREE, { x: 0, y: 0, z: 0 });
 probe.observeRenderTarget(cubeRenderTarget, 'reflection');
 probe.observeRenderTarget(monitorRT, 'custom');
 
-const overlay = createOverlay(probe);
+const overlay = createOverlay(probe, {
+  layoutMode: 'sidebar', // Enable sidebar panel layout
+});
 
 // ───────────────────────────────────────────────────────────────
 // Animation Loop
@@ -461,7 +463,7 @@ window.addEventListener('keydown', (e) => {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         pointer-events: none;
       `;
-      div.textContent = '🔍 INSPECT MODE: Click objects to select them | Press I to disable';
+      div.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> INSPECT MODE: Click objects to select them | Press I to disable';
       document.body.appendChild(div);
     }
     
@@ -489,10 +491,10 @@ indicator.style.cssText = `
   pointer-events: none;
   display: none;
 `;
-indicator.textContent = '🔍 INSPECT MODE: Click objects to select them | Press I to disable';
+indicator.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 6px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> INSPECT MODE: Click objects to select them | Press I to disable';
 document.body.appendChild(indicator);
 
-console.log('🔍 3Lens initialized.');
+console.log('3Lens initialized.');
 console.log('');
 console.log('⌨️  Keyboard Shortcuts:');
 console.log('   • Ctrl+Shift+D - Toggle devtool overlay');
