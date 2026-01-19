@@ -26,7 +26,7 @@ import {
   getObjectIcon,
   getObjectClass,
 } from '../utils/format';
-import { renderIcon } from '@3lens/ui';
+import { renderIcon, getObjectIconName } from '@3lens/ui';
 import { OVERLAY_STYLES } from '../styles/styles';
 import {
   VirtualScroller,
@@ -803,11 +803,6 @@ export class ThreeLensOverlay {
   private renderSidebar(): string {
     return `
       <div class="three-lens-sidebar ${this.sidebarCollapsed ? 'collapsed' : ''}" id="three-lens-sidebar">
-        <button class="three-lens-sidebar-toggle" id="three-lens-sidebar-toggle" title="${this.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="${this.sidebarCollapsed ? 'M6 4 L10 8 L6 12' : 'M10 4 L6 8 L10 12'}"/>
-          </svg>
-        </button>
         <div class="three-lens-sidebar-content">
           <div class="three-lens-sidebar-panels" id="three-lens-sidebar-panels">
             ${this.renderSidebarPanelItems()}
@@ -846,16 +841,6 @@ export class ThreeLensOverlay {
   }
 
   private attachSidebarEvents(): void {
-    // Toggle button
-    const toggle = document.getElementById('three-lens-sidebar-toggle');
-    if (toggle && !toggle.hasAttribute('data-events-attached')) {
-      toggle.setAttribute('data-events-attached', 'true');
-      toggle.addEventListener('click', () => {
-        this.sidebarCollapsed = !this.sidebarCollapsed;
-        this.updateSidebar();
-      });
-    }
-
     // Sidebar FAB button (bottom left toggle)
     const sidebarFab = document.getElementById('three-lens-sidebar-fab');
     if (sidebarFab && !sidebarFab.hasAttribute('data-events-attached')) {
@@ -970,14 +955,8 @@ export class ThreeLensOverlay {
 
   private updateSidebar(): void {
     const sidebar = document.getElementById('three-lens-sidebar');
-    const toggle = document.getElementById('three-lens-sidebar-toggle');
     if (sidebar) {
       sidebar.className = `three-lens-sidebar ${this.sidebarCollapsed ? 'collapsed' : ''}`;
-    }
-    if (toggle) {
-      toggle.title = this.sidebarCollapsed
-        ? 'Expand sidebar'
-        : 'Collapse sidebar';
     }
     // Re-render panel items to update collapsed state
     const panelsContainer = document.getElementById(
@@ -3060,7 +3039,7 @@ export class ThreeLensOverlay {
           <span class="three-lens-node-toggle ${hasChildren ? (isExpanded ? 'expanded' : '') : 'hidden'}">
             <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1L6 4L2 7z"/></svg>
           </span>
-          <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${getObjectIcon(node.ref.type)}</span>
+          <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${renderIcon(getObjectIconName(node.ref.type), { size: 12, color: 'currentColor', strokeWidth: 2 })}</span>
           <span class="three-lens-node-name ${!node.ref.name ? 'unnamed' : ''}">${node.ref.name || 'unnamed'}</span>
           ${costLevel ? `<span class="three-lens-cost-indicator ${costClass}" title="Cost: ${costLevel}">${this.getCostIcon(costLevel)}</span>` : ''}
           <button class="three-lens-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">
@@ -3089,7 +3068,7 @@ export class ThreeLensOverlay {
           <span class="three-lens-node-toggle ${hasChildren ? (isExpanded ? 'expanded' : '') : 'hidden'}">
             <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1L6 4L2 7z"/></svg>
           </span>
-          <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${getObjectIcon(node.ref.type)}</span>
+          <span class="three-lens-node-icon ${getObjectClass(node.ref.type)}">${renderIcon(getObjectIconName(node.ref.type), { size: 12, color: 'currentColor', strokeWidth: 2 })}</span>
           <span class="three-lens-node-name ${!node.ref.name ? 'unnamed' : ''}">${node.ref.name || 'unnamed'}</span>
           ${costLevel ? `<span class="three-lens-cost-indicator ${costClass}" title="Cost: ${costLevel}">${this.getCostIcon(costLevel)}</span>` : ''}
           <button class="three-lens-visibility-btn ${isVisible ? 'visible' : 'hidden'}" data-id="${node.ref.debugId}" title="${isVisible ? 'Hide object' : 'Show object'}">

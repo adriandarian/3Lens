@@ -142,23 +142,41 @@ export function renderIcon(
 
   // Lucide icons are arrays of [tag, attrs] tuples
   // Example: [['path', { d: 'M...' }], ['rect', { x: 0, y: 0, width: 24, height: 24 }]]
+  // Lucide icons use viewBox "0 0 24 24"
   const viewBox = '0 0 24 24';
 
   const elements = iconData
     .map(([tag, attrs]: [string, Record<string, any>]) => {
-      // Merge default attributes
-      const mergedAttrs = {
-        ...attrs,
-        fill: attrs.fill || 'none',
-        stroke: attrs.stroke || color,
-        'stroke-width': attrs['stroke-width'] || strokeWidth,
-        'stroke-linecap': attrs['stroke-linecap'] || 'round',
-        'stroke-linejoin': attrs['stroke-linejoin'] || 'round',
-      };
+      // For rect and other non-path elements, preserve their attributes
+      // For path elements, add stroke attributes if not present
+      const mergedAttrs: Record<string, any> = { ...attrs };
+
+      // Only add stroke attributes to path elements (not rect, circle, etc.)
+      if (tag === 'path') {
+        if (!mergedAttrs.fill && mergedAttrs.fill !== 'none') {
+          mergedAttrs.fill = 'none';
+        }
+        if (!mergedAttrs.stroke) {
+          mergedAttrs.stroke = color;
+        }
+        if (!mergedAttrs['stroke-width']) {
+          mergedAttrs['stroke-width'] = strokeWidth;
+        }
+        if (!mergedAttrs['stroke-linecap']) {
+          mergedAttrs['stroke-linecap'] = 'round';
+        }
+        if (!mergedAttrs['stroke-linejoin']) {
+          mergedAttrs['stroke-linejoin'] = 'round';
+        }
+      }
 
       // Convert attrs object to HTML attributes string
       const attrsString = Object.entries(mergedAttrs)
-        .map(([key, value]) => `${key}="${String(value)}"`)
+        .map(([key, value]) => {
+          // Handle kebab-case attributes
+          const attrName = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+          return `${attrName}="${String(value).replace(/"/g, '&quot;')}"`;
+        })
         .join(' ');
 
       return `<${tag} ${attrsString}/>`;

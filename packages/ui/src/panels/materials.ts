@@ -10,6 +10,7 @@ import type {
   SceneNode,
 } from '../types';
 import { escapeHtml, getMaterialTypeIcon } from '../utils/format';
+import { renderIcon } from '../utils/icons';
 import { highlightGLSL, truncateShader } from '../utils/glsl-highlight';
 
 /**
@@ -135,7 +136,12 @@ function renderMaterialListItem(
   const isSelected = state.selectedMaterialId === mat.uuid;
   const colorHex =
     mat.color !== undefined ? mat.color.toString(16).padStart(6, '0') : null;
-  const typeIcon = getMaterialTypeIcon(mat.type);
+  const typeIconName = getMaterialTypeIcon(mat.type);
+  const typeIcon = renderIcon(typeIconName, {
+    size: 14,
+    color: 'currentColor',
+    strokeWidth: 2,
+  });
 
   // Get mesh names that use this material
   const usedByNames = mat.usedByMeshes

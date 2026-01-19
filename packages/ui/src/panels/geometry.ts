@@ -16,6 +16,7 @@ import {
   getGeometryIcon,
   getShortTypeName,
 } from '../utils/format';
+import { renderIcon } from '../utils/icons';
 
 /**
  * Build a map of debug ID -> mesh name from the scene tree
@@ -149,7 +150,12 @@ function renderGeometryListItem(
   meshNames: Map<string, string>
 ): string {
   const isSelected = state.selectedGeometryId === geo.uuid;
-  const geoIcon = getGeometryIcon(geo.type);
+  const geoIconName = getGeometryIcon(geo.type);
+  const geoIcon = renderIcon(geoIconName, {
+    size: 16,
+    color: 'currentColor',
+    strokeWidth: 2,
+  });
 
   // Get mesh names that use this geometry
   const usedByNames = geo.usedByMeshes
@@ -199,7 +205,12 @@ function renderGeometryInspector(
   state: UIState,
   meshNames: Map<string, string>
 ): string {
-  const geoIcon = getGeometryIcon(geo.type);
+  const geoIconName = getGeometryIcon(geo.type);
+  const geoIcon = renderIcon(geoIconName, {
+    size: 16,
+    color: 'currentColor',
+    strokeWidth: 2,
+  });
 
   // Get mesh names that use this geometry
   const usedByList = geo.usedByMeshes.map((debugId) => ({

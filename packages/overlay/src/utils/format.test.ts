@@ -97,33 +97,33 @@ describe('getObjectClass', () => {
 });
 
 describe('getObjectIcon', () => {
-  it('should return "S" for scene objects', () => {
-    expect(getObjectIcon('Scene')).toBe('S');
+  it('should return correct icon name for scene objects', () => {
+    expect(getObjectIcon('Scene')).toBe('object-scene');
   });
 
-  it('should return "M" for mesh objects', () => {
-    expect(getObjectIcon('Mesh')).toBe('M');
-    expect(getObjectIcon('SkinnedMesh')).toBe('M');
+  it('should return correct icon name for mesh objects', () => {
+    expect(getObjectIcon('Mesh')).toBe('object-mesh');
+    expect(getObjectIcon('SkinnedMesh')).toBe('object-mesh');
   });
 
-  it('should return "G" for group objects', () => {
-    expect(getObjectIcon('Group')).toBe('G');
+  it('should return correct icon name for group objects', () => {
+    expect(getObjectIcon('Group')).toBe('object-group');
   });
 
-  it('should return "L" for light objects', () => {
-    expect(getObjectIcon('PointLight')).toBe('L');
+  it('should return correct icon name for light objects', () => {
+    expect(getObjectIcon('PointLight')).toBe('object-light');
   });
 
-  it('should return "C" for camera objects', () => {
-    expect(getObjectIcon('PerspectiveCamera')).toBe('C');
+  it('should return correct icon name for camera objects', () => {
+    expect(getObjectIcon('PerspectiveCamera')).toBe('object-camera');
   });
 
-  it('should return "B" for bone objects', () => {
-    expect(getObjectIcon('Bone')).toBe('B');
+  it('should return correct icon name for bone objects', () => {
+    expect(getObjectIcon('Bone')).toBe('object-bone');
   });
 
-  it('should return "O" for unknown types', () => {
-    expect(getObjectIcon('Unknown')).toBe('O');
-    expect(getObjectIcon('')).toBe('O');
+  it('should return default for unknown types', () => {
+    expect(getObjectIcon('Unknown')).toBe('object-other');
+    expect(getObjectIcon('')).toBe('object-other');
   });
 });

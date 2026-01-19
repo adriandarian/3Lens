@@ -147,53 +147,53 @@ describe('truncateUrl', () => {
 });
 
 describe('getObjectIcon', () => {
-  it('should return correct icon for scene', () => {
-    expect(getObjectIcon('Scene')).toBe('S');
+  it('should return correct icon name for scene', () => {
+    expect(getObjectIcon('Scene')).toBe('object-scene');
   });
 
-  it('should return correct icon for mesh', () => {
-    expect(getObjectIcon('Mesh')).toBe('M');
-    expect(getObjectIcon('SkinnedMesh')).toBe('M');
-    expect(getObjectIcon('InstancedMesh')).toBe('M');
+  it('should return correct icon name for mesh', () => {
+    expect(getObjectIcon('Mesh')).toBe('object-mesh');
+    expect(getObjectIcon('SkinnedMesh')).toBe('object-mesh');
+    expect(getObjectIcon('InstancedMesh')).toBe('object-mesh');
   });
 
-  it('should return correct icon for group', () => {
-    expect(getObjectIcon('Group')).toBe('G');
+  it('should return correct icon name for group', () => {
+    expect(getObjectIcon('Group')).toBe('object-group');
   });
 
-  it('should return correct icon for light', () => {
-    expect(getObjectIcon('PointLight')).toBe('L');
-    expect(getObjectIcon('DirectionalLight')).toBe('L');
+  it('should return correct icon name for light', () => {
+    expect(getObjectIcon('PointLight')).toBe('object-light');
+    expect(getObjectIcon('DirectionalLight')).toBe('object-light');
   });
 
-  it('should return correct icon for camera', () => {
-    expect(getObjectIcon('PerspectiveCamera')).toBe('C');
-    expect(getObjectIcon('OrthographicCamera')).toBe('C');
+  it('should return correct icon name for camera', () => {
+    expect(getObjectIcon('PerspectiveCamera')).toBe('object-camera');
+    expect(getObjectIcon('OrthographicCamera')).toBe('object-camera');
   });
 
-  it('should return correct icon for bone', () => {
-    expect(getObjectIcon('Bone')).toBe('B');
+  it('should return correct icon name for bone', () => {
+    expect(getObjectIcon('Bone')).toBe('object-bone');
   });
 
-  it('should return correct icon for skeleton', () => {
-    expect(getObjectIcon('Skeleton')).toBe('K');
+  it('should return correct icon name for skeleton', () => {
+    expect(getObjectIcon('Skeleton')).toBe('object-skeleton');
   });
 
-  it('should return correct icon for sprite', () => {
-    expect(getObjectIcon('Sprite')).toBe('P');
+  it('should return correct icon name for sprite', () => {
+    expect(getObjectIcon('Sprite')).toBe('object-sprite');
   });
 
-  it('should return correct icon for line', () => {
-    expect(getObjectIcon('Line')).toBe('—');
-    expect(getObjectIcon('LineSegments')).toBe('—');
+  it('should return correct icon name for line', () => {
+    expect(getObjectIcon('Line')).toBe('object-line');
+    expect(getObjectIcon('LineSegments')).toBe('object-line');
   });
 
-  it('should return correct icon for points', () => {
-    expect(getObjectIcon('Points')).toBe('•');
+  it('should return correct icon name for points', () => {
+    expect(getObjectIcon('Points')).toBe('object-points');
   });
 
   it('should return default for unknown', () => {
-    expect(getObjectIcon('Unknown')).toBe('O');
+    expect(getObjectIcon('Unknown')).toBe('object-other');
   });
 });
 
@@ -225,127 +225,135 @@ describe('getObjectClass', () => {
 });
 
 describe('getMaterialTypeIcon', () => {
-  it('should return diamond for Physical materials', () => {
-    expect(getMaterialTypeIcon('MeshPhysicalMaterial')).toBe('◆');
+  it('should return correct icon name for Physical materials', () => {
+    expect(getMaterialTypeIcon('MeshPhysicalMaterial')).toBe(
+      'material-physical'
+    );
   });
 
-  it('should return empty diamond for Standard materials', () => {
-    expect(getMaterialTypeIcon('MeshStandardMaterial')).toBe('◇');
+  it('should return correct icon name for Standard materials', () => {
+    expect(getMaterialTypeIcon('MeshStandardMaterial')).toBe(
+      'material-standard'
+    );
   });
 
-  it('should return circle for Basic materials', () => {
-    expect(getMaterialTypeIcon('MeshBasicMaterial')).toBe('○');
+  it('should return correct icon name for Basic materials', () => {
+    expect(getMaterialTypeIcon('MeshBasicMaterial')).toBe('material-basic');
   });
 
-  it('should return half circle for Lambert materials', () => {
-    expect(getMaterialTypeIcon('MeshLambertMaterial')).toBe('◐');
+  it('should return correct icon name for Lambert materials', () => {
+    expect(getMaterialTypeIcon('MeshLambertMaterial')).toBe('material-lambert');
   });
 
-  it('should return half circle for Phong materials', () => {
-    expect(getMaterialTypeIcon('MeshPhongMaterial')).toBe('◑');
+  it('should return correct icon name for Phong materials', () => {
+    expect(getMaterialTypeIcon('MeshPhongMaterial')).toBe('material-phong');
   });
 
-  it('should return filled circle for Toon materials', () => {
-    expect(getMaterialTypeIcon('MeshToonMaterial')).toBe('◕');
+  it('should return correct icon name for Toon materials', () => {
+    expect(getMaterialTypeIcon('MeshToonMaterial')).toBe('material-toon');
   });
 
-  it('should return hexagon for Shader/Raw materials', () => {
-    expect(getMaterialTypeIcon('ShaderMaterial')).toBe('⬡');
-    expect(getMaterialTypeIcon('RawShaderMaterial')).toBe('⬡');
+  it('should return correct icon name for Shader/Raw materials', () => {
+    expect(getMaterialTypeIcon('ShaderMaterial')).toBe('material-shader');
+    expect(getMaterialTypeIcon('RawShaderMaterial')).toBe('material-shader');
   });
 
   it('should return default for unknown', () => {
-    expect(getMaterialTypeIcon('Unknown')).toBe('●');
+    expect(getMaterialTypeIcon('Unknown')).toBe('material-other');
   });
 });
 
 describe('getGeometryIcon', () => {
-  it('should return box for box/cube geometries', () => {
-    expect(getGeometryIcon('BoxGeometry')).toBe('📦');
-    expect(getGeometryIcon('CubeGeometry')).toBe('📦');
+  it('should return correct icon name for box/cube geometries', () => {
+    expect(getGeometryIcon('BoxGeometry')).toBe('geometry-box');
+    expect(getGeometryIcon('CubeGeometry')).toBe('geometry-box');
   });
 
-  it('should return sphere for sphere geometries', () => {
-    expect(getGeometryIcon('SphereGeometry')).toBe('🔮');
+  it('should return correct icon name for sphere geometries', () => {
+    expect(getGeometryIcon('SphereGeometry')).toBe('geometry-sphere');
   });
 
-  it('should return plane for plane geometries', () => {
-    expect(getGeometryIcon('PlaneGeometry')).toBe('⬛');
+  it('should return correct icon name for plane geometries', () => {
+    expect(getGeometryIcon('PlaneGeometry')).toBe('geometry-plane');
   });
 
-  it('should return cylinder for cylinder geometries', () => {
-    expect(getGeometryIcon('CylinderGeometry')).toBe('🧴');
+  it('should return correct icon name for cylinder geometries', () => {
+    expect(getGeometryIcon('CylinderGeometry')).toBe('geometry-cylinder');
   });
 
-  it('should return cone for cone geometries', () => {
-    expect(getGeometryIcon('ConeGeometry')).toBe('🔺');
+  it('should return correct icon name for cone geometries', () => {
+    expect(getGeometryIcon('ConeGeometry')).toBe('geometry-cone');
   });
 
-  it('should return torus for torus geometries', () => {
-    expect(getGeometryIcon('TorusGeometry')).toBe('🍩');
+  it('should return correct icon name for torus geometries', () => {
+    expect(getGeometryIcon('TorusGeometry')).toBe('geometry-torus');
   });
 
-  it('should return ring for ring geometries', () => {
-    expect(getGeometryIcon('RingGeometry')).toBe('💍');
+  it('should return correct icon name for ring geometries', () => {
+    expect(getGeometryIcon('RingGeometry')).toBe('geometry-ring');
   });
 
-  it('should return circle for circle geometries', () => {
-    expect(getGeometryIcon('CircleGeometry')).toBe('⭕');
+  it('should return correct icon name for circle geometries', () => {
+    expect(getGeometryIcon('CircleGeometry')).toBe('geometry-circle');
   });
 
-  it('should return tube for tube geometries', () => {
-    expect(getGeometryIcon('TubeGeometry')).toBe('🧪');
+  it('should return correct icon name for tube geometries', () => {
+    expect(getGeometryIcon('TubeGeometry')).toBe('geometry-tube');
   });
 
-  it('should return extrude for extrude geometries', () => {
-    expect(getGeometryIcon('ExtrudeGeometry')).toBe('📊');
+  it('should return correct icon name for extrude geometries', () => {
+    expect(getGeometryIcon('ExtrudeGeometry')).toBe('geometry-extrude');
   });
 
-  it('should return lathe for lathe geometries', () => {
-    expect(getGeometryIcon('LatheGeometry')).toBe('🏺');
+  it('should return correct icon name for lathe geometries', () => {
+    expect(getGeometryIcon('LatheGeometry')).toBe('geometry-lathe');
   });
 
-  it('should return text for text/shape geometries', () => {
-    expect(getGeometryIcon('TextGeometry')).toBe('✒️');
-    expect(getGeometryIcon('ShapeGeometry')).toBe('✒️');
+  it('should return correct icon name for text/shape geometries', () => {
+    expect(getGeometryIcon('TextGeometry')).toBe('geometry-text');
+    expect(getGeometryIcon('ShapeGeometry')).toBe('geometry-text');
   });
 
-  it('should return instanced for instanced geometries', () => {
-    expect(getGeometryIcon('InstancedBufferGeometry')).toBe('🔄');
+  it('should return correct icon name for instanced geometries', () => {
+    expect(getGeometryIcon('InstancedBufferGeometry')).toBe(
+      'geometry-instanced'
+    );
   });
 
   it('should return default for unknown', () => {
-    expect(getGeometryIcon('BufferGeometry')).toBe('📐');
+    expect(getGeometryIcon('BufferGeometry')).toBe('geometry-default');
   });
 });
 
 describe('getTextureIcon', () => {
-  it('should return cube icon for cube textures', () => {
-    expect(getTextureIcon({ isCubeTexture: true })).toBe('🎲');
+  it('should return correct icon name for cube textures', () => {
+    expect(getTextureIcon({ isCubeTexture: true })).toBe('texture-cube');
   });
 
-  it('should return video icon for video textures', () => {
-    expect(getTextureIcon({ isVideoTexture: true })).toBe('🎬');
+  it('should return correct icon name for video textures', () => {
+    expect(getTextureIcon({ isVideoTexture: true })).toBe('texture-video');
   });
 
-  it('should return canvas icon for canvas textures', () => {
-    expect(getTextureIcon({ isCanvasTexture: true })).toBe('🎨');
+  it('should return correct icon name for canvas textures', () => {
+    expect(getTextureIcon({ isCanvasTexture: true })).toBe('texture-canvas');
   });
 
-  it('should return data icon for data textures', () => {
-    expect(getTextureIcon({ isDataTexture: true })).toBe('📊');
+  it('should return correct icon name for data textures', () => {
+    expect(getTextureIcon({ isDataTexture: true })).toBe('texture-data');
   });
 
-  it('should return render target icon for render targets', () => {
-    expect(getTextureIcon({ isRenderTarget: true })).toBe('🎯');
+  it('should return correct icon name for render targets', () => {
+    expect(getTextureIcon({ isRenderTarget: true })).toBe(
+      'texture-render-target'
+    );
   });
 
-  it('should return compressed icon for compressed textures', () => {
-    expect(getTextureIcon({ isCompressed: true })).toBe('📦');
+  it('should return correct icon name for compressed textures', () => {
+    expect(getTextureIcon({ isCompressed: true })).toBe('texture-compressed');
   });
 
   it('should return default for regular textures', () => {
-    expect(getTextureIcon({})).toBe('🖼️');
+    expect(getTextureIcon({})).toBe('texture-default');
   });
 });
 

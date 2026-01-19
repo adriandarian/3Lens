@@ -14,6 +14,7 @@ import {
   getTextureIcon,
   truncateUrl,
 } from '../utils/format';
+import { renderIcon } from '../utils/icons';
 
 /**
  * Render the textures panel content
@@ -85,7 +86,12 @@ function renderTexturesSummary(
 function renderTextureListItem(tex: TextureData, state: UIState): string {
   const isSelected = state.selectedTextureId === tex.uuid;
   const displayName = tex.name || `<${tex.type}>`;
-  const texIcon = getTextureIcon(tex);
+  const texIconName = getTextureIcon(tex);
+  const texIcon = renderIcon(texIconName, {
+    size: 16,
+    color: 'currentColor',
+    strokeWidth: 2,
+  });
   const dimensionText =
     tex.dimensions.width > 0
       ? `${tex.dimensions.width}×${tex.dimensions.height}`
@@ -132,7 +138,12 @@ function renderNoTextureSelected(): string {
 }
 
 function renderTextureInspector(tex: TextureData, state: UIState): string {
-  const texIcon = getTextureIcon(tex);
+  const texIconName = getTextureIcon(tex);
+  const texIcon = renderIcon(texIconName, {
+    size: 24,
+    color: 'currentColor',
+    strokeWidth: 2,
+  });
   const dimensionText =
     tex.dimensions.width > 0
       ? `${tex.dimensions.width} × ${tex.dimensions.height}`
