@@ -89,6 +89,8 @@ interface ProbeConfig {
   appName: string;
   env?: 'development' | 'staging' | 'production';
   debug?: boolean;
+  // Allow auto postMessage transport in production (default false).
+  allowPostMessageTransport?: boolean;
   rules?: {
     maxDrawCalls?: number;
     maxTriangles?: number;
@@ -101,4 +103,3 @@ interface ProbeConfig {
 ## License
 
 MIT
-

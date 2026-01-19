@@ -280,7 +280,7 @@ const probe = createProbe({
 
 ## Auto-Connection
 
-When running in a browser environment, `createProbe()` automatically establishes a connection to the 3Lens browser extension via `postMessage` transport. This enables:
+When running in a browser environment, `createProbe()` automatically establishes a connection to the 3Lens browser extension via `postMessage` transport (except in production unless explicitly enabled). This enables:
 
 - Automatic detection by the browser extension
 - Zero-configuration extension integration
@@ -289,6 +289,13 @@ When running in a browser environment, `createProbe()` automatically establishes
 ```typescript
 // The probe auto-connects - no manual setup needed!
 const probe = createProbe({ appName: 'My App' });
+
+// In production, opt in explicitly to allow postMessage transport
+const productionProbe = createProbe({
+  appName: 'My App',
+  env: 'production',
+  allowPostMessageTransport: true,
+});
 
 // The browser extension will automatically discover this probe
 ```

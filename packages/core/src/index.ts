@@ -171,10 +171,7 @@ export type {
  * Transport types for communication with browser extensions.
  * @category Transport
  */
-export type {
-  Transport,
-  DebugMessage,
-} from './types/transport';
+export type { Transport, DebugMessage } from './types/transport';
 
 /**
  * Common utility types.
@@ -194,7 +191,8 @@ export { DevtoolProbe, PROBE_VERSION } from './probe/DevtoolProbe';
 
 /**
  * Factory function to create a configured DevtoolProbe instance.
- * Automatically sets up postMessage transport for browser extension integration.
+ * Automatically sets up postMessage transport for browser extension integration
+ * (disabled by default in production unless explicitly enabled).
  * @category Core
  */
 export { createProbe } from './probe/createProbe';
@@ -242,10 +240,7 @@ export { CameraController } from './helpers/CameraController';
  * Camera controller types.
  * @category Helpers
  */
-export type {
-  CameraInfo,
-  FlyToOptions,
-} from './helpers/CameraController';
+export type { CameraInfo, FlyToOptions } from './helpers/CameraController';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TRACKING - Resource Lifecycle & Memory
@@ -283,7 +278,11 @@ export type {
  * Configuration loader and rule checker.
  * @category Configuration
  */
-export { ConfigLoader, DEFAULT_THRESHOLDS, DEFAULT_SAMPLING } from './config/ConfigLoader';
+export {
+  ConfigLoader,
+  DEFAULT_THRESHOLDS,
+  DEFAULT_SAMPLING,
+} from './config/ConfigLoader';
 
 /**
  * Configuration and rule checking types.
@@ -368,7 +367,12 @@ export type {
  * Built-in plugins for common debugging tasks.
  * @category Plugins
  */
-export { LODCheckerPlugin, ShadowDebuggerPlugin, BUILTIN_PLUGINS, getBuiltinPlugins } from './plugins';
+export {
+  LODCheckerPlugin,
+  ShadowDebuggerPlugin,
+  BUILTIN_PLUGINS,
+  getBuiltinPlugins,
+} from './plugins';
 
 /**
  * Built-in plugin types.
@@ -403,7 +407,12 @@ export type { WebGLAdapterOptions } from './adapters/webgl-adapter';
  * WebGPU renderer adapter factory and utilities.
  * @category Adapters
  */
-export { createWebGPUAdapter, createExtendedWebGPUAdapter, isWebGPURenderer, getWebGPUCapabilities } from './adapters/webgpu-adapter';
+export {
+  createWebGPUAdapter,
+  createExtendedWebGPUAdapter,
+  isWebGPURenderer,
+  getWebGPUCapabilities,
+} from './adapters/webgpu-adapter';
 
 /**
  * WebGPU adapter types.
@@ -423,7 +432,11 @@ export type {
  * WebGPU GPU timing utilities.
  * @category Adapters
  */
-export { WebGpuTimingManager, createTimestampWrites, categorizePass } from './adapters/webgpu-timing';
+export {
+  WebGpuTimingManager,
+  createTimestampWrites,
+  categorizePass,
+} from './adapters/webgpu-timing';
 
 /**
  * WebGPU timing types.
