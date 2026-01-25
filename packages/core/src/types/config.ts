@@ -1,4 +1,4 @@
-import type { FrameStats } from './stats';
+import type { BenchmarkConfig, FrameStats } from './stats';
 
 /**
  * Main configuration for creating a DevtoolProbe
@@ -24,6 +24,11 @@ export interface ProbeConfig {
    * Performance rules and thresholds
    */
   rules?: RulesConfig;
+
+  /**
+   * Benchmark configuration for performance scoring
+   */
+  benchmark?: Partial<BenchmarkConfig>;
 
   /**
    * Custom tags for organization
