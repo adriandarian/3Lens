@@ -1,0 +1,45 @@
+{
+  "name": "@3lens/vite-plugin",
+  "version": "1.0.0",
+  "description": "Vite plugin for 3Lens - automatic injection and configuration for development",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@3lens/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0"
+  },
+  "keywords": [
+    "3lens",
+    "vite",
+    "vite-plugin",
+    "threejs",
+    "devtools"
+  ],
+  "license": "MIT"
+}

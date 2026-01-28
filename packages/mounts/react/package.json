@@ -1,0 +1,55 @@
+{
+  "name": "@3lens/mount-react",
+  "version": "1.0.0",
+  "description": "React mount kit for 3Lens - framework-specific UI wrappers",
+  "keywords": [
+    "3lens",
+    "threejs",
+    "react",
+    "devtools",
+    "debugging"
+  ],
+  "homepage": "https://github.com/adriandarian/3Lens",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adriandarian/3Lens",
+    "directory": "packages/mount-react"
+  },
+  "license": "MIT",
+  "author": "Adrian Darian <adrian.the.hactus@gmail.com> (https://github.com/adriandarian)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@3lens/runtime": "workspace:*",
+    "@3lens/ui-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0",
+    "react-dom": ">=17.0.0"
+  }
+}

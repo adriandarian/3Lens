@@ -1,0 +1,52 @@
+{
+  "name": "@3lens/cli",
+  "version": "1.0.0",
+  "description": "CLI and programmatic API for 3Lens - trace recording, analysis, and validation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "3lens": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "import": "./dist/commands/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@3lens/kernel": "workspace:*",
+    "@3lens/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "keywords": [
+    "3lens",
+    "cli",
+    "threejs",
+    "devtools",
+    "trace",
+    "profiling"
+  ],
+  "license": "MIT"
+}

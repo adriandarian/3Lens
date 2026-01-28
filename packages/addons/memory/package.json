@@ -1,0 +1,43 @@
+{
+  "name": "@3lens/addon-memory",
+  "version": "1.0.0",
+  "description": "3Lens addon - Resource lifecycle and leak detection",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@3lens/kernel": "workspace:*",
+    "@3lens/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "keywords": [
+    "3lens",
+    "threejs",
+    "devtools",
+    "addon",
+    "memory"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,53 @@
+{
+  "name": "@3lens/mount-svelte",
+  "version": "1.0.0",
+  "description": "Svelte mount kit for 3Lens - framework-specific UI wrappers",
+  "keywords": [
+    "3lens",
+    "threejs",
+    "svelte",
+    "devtools",
+    "debugging"
+  ],
+  "homepage": "https://github.com/adriandarian/3Lens",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adriandarian/3Lens",
+    "directory": "packages/mount-svelte"
+  },
+  "license": "MIT",
+  "author": "Adrian Darian <adrian.the.hactus@gmail.com> (https://github.com/adriandarian)",
+  "type": "module",
+  "svelte": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@3lens/runtime": "workspace:*",
+    "@3lens/ui-core": "workspace:*"
+  },
+  "devDependencies": {
+    "svelte": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  },
+  "peerDependencies": {
+    "svelte": ">=4.0.0 || >=5.0.0"
+  }
+}

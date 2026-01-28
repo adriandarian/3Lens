@@ -1,0 +1,55 @@
+{
+  "name": "@3lens/devtools",
+  "version": "1.0.0",
+  "description": "3Lens devtools - batteries-included package for most users",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./bootstrap": {
+      "types": "./dist/bootstrap.d.ts",
+      "import": "./dist/bootstrap.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@3lens/kernel": "workspace:*",
+    "@3lens/runtime": "workspace:*",
+    "@3lens/host-manual": "workspace:*",
+    "@3lens/addon-inspector": "workspace:*",
+    "@3lens/addon-perf": "workspace:*",
+    "@3lens/addon-memory": "workspace:*",
+    "@3lens/addon-diff": "workspace:*",
+    "@3lens/addon-shader": "workspace:*",
+    "@3lens/ui-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "three": ">=0.150.0"
+  },
+  "keywords": [
+    "3lens",
+    "threejs",
+    "devtools"
+  ],
+  "license": "MIT"
+}
