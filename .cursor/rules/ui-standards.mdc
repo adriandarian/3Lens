@@ -1,0 +1,107 @@
+# UI Standards, glob pattern(s) for applicable files: packages/ui/**/*.ts
+
+## UI Layer Separation
+
+UI code MUST:
+- Only depend on `@3lens/runtime` (public API)
+- Never import from `@3lens/kernel` directly
+- Never import framework-specific packages
+- Use UI Core abstractions
+
+## Panel Requirements
+
+Every panel MUST:
+
+### 1. Answer a Clear Question
+
+```typescript
+// ✅ GOOD: Clear purpose
+export function createPerformancePanel(client: LensClient): Panel {
+  // Answers: "What are the performance hotspots?"
+}
+
+// ❌ BAD: Vague purpose
+export function createMyPanel(client: LensClient): Panel {
+  // What does this do?
+}
+```
+
+### 2. Show Fidelity Badges
+
+```typescript
+function renderMetric(value: number, fidelity: Fidelity) {
+  return `
+    <span class="metric">
+      ${value}
+      <span class="fidelity-badge fidelity-${fidelity}">
+        ${fidelity}
+      </span>
+    </span>
+  `;
+}
+```
+
+### 3. Route Through Inspector
+
+```typescript
+// ✅ CORRECT: Route through Inspector
+onClick(entityId) {
+  client.select(entityId, { source: 'my-panel' });
+}
+
+// ❌ WRONG: Direct access
+onClick(entityId) {
+  object.userData.selected = true;
+}
+```
+
+### 4. Support Offline Traces
+
+```typescript
+// ✅ CORRECT: Works in both modes
+const data = client.isLive 
+  ? await client.queryLive(query, params)
+  : await client.queryTrace(query, params);
+
+// ❌ WRONG: Live-only
+const data = await fetchLiveData();
+```
+
+### 5. Include Attribution Paths
+
+```typescript
+// ✅ CORRECT: Clickable attribution
+function renderHotspot(hotspot) {
+  return `
+    <div onclick="selectEntity('${hotspot.entityId}')">
+      ${hotspot.gpuTime}ms
+      <span class="attribution">
+        ${hotspot.attribution.map(a => a.entityId).join(', ')}
+      </span>
+    </div>
+  `;
+}
+```
+
+## UI Core Components
+
+UI Core components MUST:
+- Be framework-agnostic
+- Use Web Components or DOM APIs
+- Not depend on React/Vue/Angular/etc.
+- Provide stable interfaces
+
+## Accessibility
+
+UI components MUST:
+- Support keyboard navigation
+- Include ARIA labels
+- Support screen readers
+- Follow WCAG guidelines
+
+## See Also
+
+- Contract: agents/contracts/ui-surfaces.md
+- Contract: agents/contracts/inspector.md
+- Playbook: agents/playbooks/add-a-panel.md
+- Skill: ui-operations

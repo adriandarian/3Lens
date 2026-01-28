@@ -1,0 +1,103 @@
+# Commit Standards, glob pattern(s) for applicable files: (always applied)
+
+## Commit Message Format
+
+All commits MUST follow conventional commits format:
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+## Types
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `test`: Test additions/changes
+- `chore`: Maintenance tasks
+- `perf`: Performance improvements
+- `contract`: Contract changes
+
+## Scopes
+
+Scopes indicate the area affected:
+
+- `kernel`: Kernel changes
+- `runtime`: Runtime API changes
+- `host`: Host implementations
+- `addon`: Addon implementations
+- `ui`: UI components
+- `mount`: Mount kits
+- `docs`: Documentation
+- `tests`: Tests
+- `ci`: CI/CD
+
+## Examples
+
+### Feature
+
+```
+feat(inspector): add cost attribution to entity view
+
+Adds GPU/CPU time attribution paths to inspector entity view.
+Each metric now shows clickable paths to responsible entities.
+
+Closes #123
+```
+
+### Fix
+
+```
+fix(capture): handle late attach context registration
+
+Fixes issue where contexts registered after capture start
+were not properly tracked. Now marks entities as 'preexisting'
+and includes attach_point marker.
+
+Fixes #456
+```
+
+### Contract Change
+
+```
+contract(fidelity): require explicit fidelity for all metrics
+
+Breaking change: All metrics must now include explicit fidelity
+labeling. Previously optional, now required for contract compliance.
+
+BREAKING CHANGE: Metric interface now requires fidelity field
+```
+
+### Documentation
+
+```
+docs(playbooks): add debug-issues playbook
+
+Adds new playbook for troubleshooting common issues using
+doctor, traces, and validation commands.
+```
+
+## Body Guidelines
+
+- Explain **what** and **why**, not just **how**
+- Reference issues/PRs when applicable
+- Include breaking changes notice
+- Explain migration path for breaking changes
+
+## Footer
+
+- `Closes #123`: Closes issue
+- `Fixes #456`: Fixes bug
+- `BREAKING CHANGE`: Breaking change notice
+- `See #789`: Related issue
+
+## See Also
+
+- Conventional Commits: https://www.conventionalcommits.org/
+- Project Guide: agents.md

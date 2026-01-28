@@ -1,0 +1,90 @@
+# Example Standards, glob pattern(s) for applicable files: examples/**/*
+
+## Example Structure
+
+Every example MUST follow this structure:
+
+```
+examples/[category]/[name]/
+├── README.md           # Example documentation
+├── package.json        # Dependencies
+├── index.html          # Entry point
+├── src/
+│   └── main.ts         # Example code
+└── vite.config.ts      # Build config
+```
+
+## README Requirements
+
+Every example MUST have a README.md with:
+
+- **Title**: Clear example name
+- **Description**: What the example demonstrates
+- **Features**: Key features shown
+- **Setup**: How to run the example
+- **Code Walkthrough**: Explanation of key code
+- **Related**: Links to related docs/examples
+
+## Code Quality
+
+Examples MUST:
+- Be complete and runnable
+- Include error handling
+- Show best practices
+- Include comments explaining key concepts
+- Use TypeScript with strict types
+
+## Feature Demonstration
+
+Examples MUST demonstrate:
+- Core 3Lens features
+- Integration patterns
+- Common use cases
+- Best practices
+
+## Setup Instructions
+
+Examples MUST include:
+
+```markdown
+## Setup
+
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+2. Run the example:
+   ```bash
+   pnpm dev
+   ```
+
+3. Open http://localhost:5173
+```
+
+## Code Comments
+
+Examples MUST include explanatory comments:
+
+```typescript
+// Create a 3Lens instance with STANDARD capture mode
+const lens = createLens({
+  capture: {
+    mode: 'STANDARD'  // Captures render events and resources
+  }
+});
+
+// Register the three.js renderer context
+lens.registerContext({
+  id: 'main',
+  renderer: renderer,
+  scenes: [scene],
+  cameras: [camera]
+});
+```
+
+## See Also
+
+- Project Guide: agents.md
+- Skills: .cursor/skills/
+- Playbooks: agents/playbooks/

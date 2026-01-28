@@ -1,0 +1,120 @@
+# Addon Standards, glob pattern(s) for applicable files: packages/addons/**/*.ts
+
+## Addon Structure
+
+Every addon MUST follow this structure:
+
+```
+packages/addons/[name]/
+├── package.json
+├── 3lens-addon.json      # Addon manifest
+├── src/
+│   ├── index.ts          # Main entry point
+│   ├── queries/          # Query implementations
+│   ├── panels/           # UI panels
+│   └── types.ts          # Type definitions
+├── tests/
+└── README.md
+```
+
+## Manifest Requirements
+
+Every addon MUST have a `3lens-addon.json` manifest:
+
+```json
+{
+  "id": "my-addon",
+  "version": "1.0.0",
+  "kernel_version": "^1.0.0",
+  "capabilities": ["queries", "panels"],
+  "description": "Addon description"
+}
+```
+
+## Namespacing
+
+All entity IDs from addons MUST be namespaced:
+
+```typescript
+// ✅ CORRECT: Namespaced ID
+const entityId = 'mesh:my-addon:myMesh';
+
+// ❌ WRONG: Non-namespaced ID
+const entityId = 'mesh:main:myMesh';
+```
+
+## Capability Declarations
+
+Addons MUST declare capabilities:
+
+```typescript
+// src/index.ts
+import { Addon } from '@3lens/runtime';
+
+export const myAddon: Addon = {
+  id: 'my-addon',
+  version: '1.0.0',
+  capabilities: {
+    queries: ['my_query'],
+    panels: ['my_panel']
+  },
+  register(client: LensClient) {
+    // Registration logic
+  }
+};
+```
+
+## Degraded Mode Handling
+
+Addons MUST handle missing capabilities gracefully:
+
+```typescript
+if (!client.hasCapability('shader_introspection')) {
+  // Return degraded result
+  return {
+    value: null,
+    fidelity: 'UNAVAILABLE',
+    reason: 'Shader introspection not available'
+  };
+}
+```
+
+## Trace Compatibility
+
+Addons MUST NOT break traces when not installed:
+
+- Traces MUST load without addon
+- Missing addon data MUST be marked as UNAVAILABLE
+- No errors when addon is missing
+
+## Version Compatibility
+
+Addons MUST check kernel version compatibility:
+
+```typescript
+import { KERNEL_VERSION } from '@3lens/kernel';
+
+if (!isCompatible(KERNEL_VERSION, '^1.0.0')) {
+  throw new Error(`Addon requires kernel ^1.0.0, got ${KERNEL_VERSION}`);
+}
+```
+
+## Attribution Requirements
+
+Addons that produce metrics MUST include attribution:
+
+```typescript
+return {
+  value: 42,
+  fidelity: 'EXACT',
+  attribution: [
+    { entityId: 'mesh:my-addon:myMesh', weight: 1.0 }
+  ]
+};
+```
+
+## See Also
+
+- Contract: agents/contracts/addons.md
+- Playbook: agents/playbooks/add-a-plugin.md
+- Skill: scaffold-operations

@@ -1,0 +1,146 @@
+# Test Standards, glob pattern(s) for applicable files: packages/**/*.test.ts, tests/**/*.ts
+
+## Test File Structure
+
+Test files MUST follow these patterns:
+
+- Unit tests: `*.test.ts` alongside source files
+- Contract tests: `tests/contracts/*.test.ts`
+- Regression tests: `tests/regression/*.test.ts`
+- Integration tests: `tests/integration/*.test.ts`
+
+## Test Organization
+
+### Contract Tests
+
+Contract tests MUST validate contract invariants:
+
+```typescript
+// tests/contracts/inspector.test.ts
+import { describe, it, expect } from 'vitest';
+import { createLens } from '@3lens/runtime';
+
+describe('Inspector Contract', () => {
+  describe('Invariant: Answers 5 questions', () => {
+    it('answers "What is this?" for any entity', async () => {
+      // Test implementation
+    });
+  });
+});
+```
+
+### Regression Tests
+
+Regression tests MUST use traces:
+
+```typescript
+// tests/regression/baseline.test.ts
+import { loadTrace } from '@3lens/kernel';
+
+describe('Regression: Baseline Performance', () => {
+  it('maintains frame time budget', async () => {
+    const trace = await loadTrace('./traces/baseline.json');
+    // Test implementation
+  });
+});
+```
+
+## Test Requirements
+
+### Fidelity Testing
+
+All tests that produce metrics MUST verify fidelity labeling:
+
+```typescript
+it('labels fidelity for all metrics', async () => {
+  const result = await client.query('top_hotspots');
+  result.items.forEach(item => {
+    expect(item).toHaveProperty('fidelity');
+    expect(['EXACT', 'ESTIMATED', 'UNAVAILABLE']).toContain(item.fidelity);
+  });
+});
+```
+
+### Attribution Testing
+
+All tests that produce metrics MUST verify attribution paths:
+
+```typescript
+it('provides attribution path for metrics', async () => {
+  const metric = await client.query('top_hotspots');
+  expect(metric.attribution).toBeArray();
+  expect(metric.attribution.length).toBeGreaterThan(0);
+  expect(metric.attribution[0]).toHaveProperty('entityId');
+  expect(metric.attribution[0]).toHaveProperty('weight');
+});
+```
+
+### Live/Offline Parity Testing
+
+Features MUST be tested in both live and offline modes:
+
+```typescript
+describe('Live and Offline Parity', () => {
+  it('works in live mode', async () => {
+    const lens = createLens();
+    // Test live mode
+  });
+  
+  it('works with offline traces', async () => {
+    const trace = await loadTrace('./traces/test.json');
+    // Test offline mode
+  });
+});
+```
+
+## Mocking Conventions
+
+### Entity Graph Mocking
+
+```typescript
+import { createMockEntityGraph } from '@3lens/kernel/testing';
+
+const graph = createMockEntityGraph({
+  entities: [
+    { id: 'mesh:main:myMesh', type: 'mesh' }
+  ],
+  edges: [
+    { from: 'mesh:main:myMesh', to: 'material:main:myMat', type: 'uses' }
+  ]
+});
+```
+
+### Trace Mocking
+
+```typescript
+import { createMockTrace } from '@3lens/kernel/testing';
+
+const trace = createMockTrace({
+  frames: 120,
+  contexts: ['main'],
+  events: [/* event list */]
+});
+```
+
+## Test Naming
+
+Test names MUST be descriptive and indicate what contract/feature they test:
+
+- ✅ `it('answers the 5 Inspector questions for any entity')`
+- ✅ `it('maintains frame time budget')`
+- ❌ `it('works')`
+- ❌ `it('test 1')`
+
+## Test Coverage
+
+Contract tests MUST cover:
+- All contract invariants
+- Degradation scenarios
+- Error cases
+- Edge cases
+
+## See Also
+
+- Contract: agents/contracts/testing.md (if exists)
+- Playbook: agents/playbooks/write-tests.md
+- Skill: testing-operations

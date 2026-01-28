@@ -1,0 +1,105 @@
+---
+description: Core 3Lens project standards and non-negotiable design principles
+alwaysApply: true
+---
+
+# 3Lens Project Standards
+
+## Non-negotiable Design Principles
+
+### 1. Shared Primitives Before New UI
+
+Always improve capture/model/query primitives first, then add minimal view to validate.
+
+- Capture schema
+- Entity graph
+- Query engine
+- Time + diff are first-class
+
+### 2. Inspector is the Spine
+
+Global selection uses stable entity IDs. Tools route through selection and queries.
+
+```typescript
+// Correct: Route through Inspector
+client.select(entityId, { source: 'my-panel' });
+
+// Wrong: Direct access
+object.userData.selected = true;
+```
+
+### 3. Metrics Must Attribute
+
+No metric without a clickable path to culprit entities.
+
+```typescript
+// Every metric needs:
+{
+  value: number,
+  fidelity: 'EXACT' | 'ESTIMATED' | 'UNAVAILABLE',
+  attribution: EntityId[] // Blame chain
+}
+```
+
+### 4. Live and Offline Parity
+
+Every core capability must work on saved traces.
+
+```typescript
+// Support both modes
+const data = client.isLive 
+  ? await client.queryLive(query, params)
+  : await client.queryTrace(query, params);
+```
+
+### 5. Kernel is Privileged; Plugins are Constrained
+
+- Internal tools may use private hooks
+- Plugins consume stable events/queries only
+- No framework code in kernel
+
+### 6. Data Fidelity is Explicit
+
+Never silent degradation. UI shows fidelity badges.
+
+```typescript
+// Always include fidelity
+fidelity: 'EXACT' | 'ESTIMATED' | 'UNAVAILABLE'
+```
+
+## Architecture Layers
+
+```
+Mount Kits (Angular / React / Vue / Svelte)
+         ↓
+UI Core (DOM island / Web Component)
+         ↓
+Runtime Client API (Lens, queries, commands)
+         ↓
+Hosts (manual / r3f / tres / worker)
+         ↓
+Kernel (capture / graph / query / trace)
+```
+
+### Dependency Rules
+
+- Kernel: ZERO imports from UI/Mount packages
+- UI Core: ZERO imports from framework-specific packages
+- Hosts: ZERO imports from UI Core/Mount packages
+- Mount Kits: Use only public client APIs
+
+## Definition of Done
+
+A change is "done" only if:
+
+- Does not violate any applicable contract
+- Includes an attribution path (metrics -> culprit)
+- Works in both live mode and offline trace mode
+- Updates or adds acceptance tests for touched contracts
+- Fidelity is explicit for any new metrics
+
+## References
+
+- Project guide: agents.md
+- Contracts: agents/contracts/
+- Checklists: agents/checklists/

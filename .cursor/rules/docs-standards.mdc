@@ -1,0 +1,99 @@
+# Documentation Standards, glob pattern(s) for applicable files: docs/**/*.md
+
+## Documentation Structure
+
+All documentation files MUST follow this structure:
+
+```markdown
+---
+title: Page Title
+description: Brief description
+---
+
+# Page Title
+
+## Overview
+[Introduction]
+
+## Sections
+[Content]
+
+## Examples
+[Code examples]
+
+## See Also
+[Related links]
+```
+
+## Frontmatter Requirements
+
+Every documentation file MUST include:
+
+- `title`: Page title
+- `description`: Brief description (used in navigation)
+
+Optional:
+- `category`: Category for navigation
+- `order`: Display order
+- `tags`: Tags for search
+
+## Code Examples
+
+Code examples MUST:
+- Be executable (tested)
+- Include imports
+- Show complete patterns
+- Include error handling where relevant
+
+```typescript
+// ✅ GOOD: Complete example
+import { createLens } from '@3lens/runtime';
+
+const lens = createLens({
+  capture: { mode: 'STANDARD' }
+});
+
+// ❌ BAD: Incomplete example
+const lens = createLens();
+```
+
+## Cross-References
+
+Documentation MUST cross-reference:
+- Related contracts: `[Contract Name](agents/contracts/[name].md)`
+- Related playbooks: `[Playbook Name](agents/playbooks/[name].md)`
+- Related skills: `[Skill Name](.cursor/skills/[name]/SKILL.md)`
+- Related commands: `[Command Name](.cursor/commands/[name].md)`
+
+## API Documentation
+
+API documentation MUST:
+- Include TypeScript types
+- Show parameter descriptions
+- Include return types
+- Show examples
+- Document errors/exceptions
+
+## Contract Documentation
+
+Contract documentation MUST:
+- Explain purpose clearly
+- List all invariants
+- Describe degradation rules
+- Include acceptance tests
+- List anti-goals
+
+## Example Documentation
+
+Example documentation MUST:
+- Include setup instructions
+- Show complete working code
+- Explain key concepts
+- Link to related docs
+- Include troubleshooting
+
+## See Also
+
+- Project Guide: agents.md
+- Contracts: agents/contracts/
+- Skills: .cursor/skills/

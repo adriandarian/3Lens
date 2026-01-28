@@ -1,0 +1,137 @@
+# Host Standards, glob pattern(s) for applicable files: packages/hosts/**/*.ts
+
+## Host Interface
+
+Every host MUST implement the Host interface:
+
+```typescript
+import { Host } from '@3lens/runtime';
+
+export const myHost: Host = {
+  name: 'my-host',
+  
+  attach(renderer: THREE.WebGLRenderer) {
+    // Attach to renderer
+  },
+  
+  detach() {
+    // Detach from renderer
+  },
+  
+  registerContext(context: RenderContext) {
+    // Register render context
+  },
+  
+  unregisterContext(contextId: string) {
+    // Unregister context
+  }
+};
+```
+
+## Context Registration
+
+Hosts MUST:
+- Register contexts before emitting events
+- Include context metadata
+- Support multiple contexts
+- Handle context lifecycle
+
+```typescript
+// ✅ CORRECT: Proper context registration
+client.registerContext({
+  id: 'main',
+  renderer: renderer,
+  scenes: [scene],
+  cameras: [camera]
+});
+
+// Then emit events with context_id
+emitEvent({
+  type: 'render_event',
+  context_id: 'main',
+  // ...
+});
+```
+
+## Event Emission
+
+Hosts MUST:
+- Emit events in correct order (seq per context)
+- Include context_id in all events
+- Follow capture contract schema
+- Handle late attach scenarios
+
+```typescript
+// ✅ CORRECT: Proper event emission
+let seq = 0;
+
+function onRender() {
+  emitEvent({
+    type: 'render_event',
+    context_id: 'main',
+    seq: seq++,
+    renderer_id: 'renderer:main:webgl',
+    scene_id: 'scene:main:myScene',
+    camera_id: 'camera:main:perspective'
+  });
+}
+```
+
+## Multi-Context Support
+
+Hosts MUST support multiple renderers/scenes/cameras:
+
+```typescript
+// Support multiple contexts
+const contexts = new Map<string, RenderContext>();
+
+function registerContext(context: RenderContext) {
+  contexts.set(context.id, context);
+  client.registerContext(context);
+}
+```
+
+## Late Attach Handling
+
+Hosts MUST handle late attachment:
+
+```typescript
+// Mark attach point
+emitEvent({
+  type: 'attach_point',
+  context_id: 'main',
+  timestamp: Date.now()
+});
+
+// Mark pre-existing entities
+scanEntities().forEach(entity => {
+  emitEvent({
+    type: 'resource_create',
+    context_id: 'main',
+    entity_id: entity.id,
+    origin: 'preexisting'
+  });
+});
+```
+
+## Overhead Management
+
+Hosts MUST respect overhead budgets:
+
+```typescript
+// Check overhead budget
+const budget = getOverheadBudget(captureMode);
+
+if (currentOverhead > budget) {
+  // Degrade capture mode
+  degradeCaptureMode();
+}
+```
+
+## See Also
+
+- Contract: agents/contracts/runtime-boundaries.md
+- Contract: agents/contracts/capture.md
+- Contract: agents/contracts/overhead.md
+- Playbook: agents/playbooks/add-a-host.md
+- Skill: host-operations

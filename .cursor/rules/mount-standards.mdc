@@ -1,0 +1,121 @@
+# Mount Standards, glob pattern(s) for applicable files: packages/mounts/**/*.ts
+
+## Mount Kit Structure
+
+Every mount kit MUST follow this structure:
+
+```
+packages/mounts/[framework]/
+├── package.json
+├── src/
+│   ├── index.ts          # Public exports
+│   ├── provider.tsx      # Context provider (framework-specific)
+│   └── hooks.ts          # Hooks/composables (framework-specific)
+└── README.md
+```
+
+## Framework Integration
+
+Mount kits MUST:
+- Only depend on `@3lens/ui-core` and `@3lens/runtime`
+- Never import from `@3lens/kernel` directly
+- Provide framework-specific APIs (hooks, components, etc.)
+- Integrate with UI Core components
+
+## React Mount Kit
+
+```typescript
+// ✅ CORRECT: React mount kit pattern
+import { createContext, useContext } from 'react';
+import { createLens, LensClient } from '@3lens/runtime';
+
+export const LensContext = createContext<LensClient | null>(null);
+
+export function LensProvider({ children }: React.PropsWithChildren) {
+  const lens = createLens();
+  return (
+    <LensContext.Provider value={lens}>
+      {children}
+    </LensContext.Provider>
+  );
+}
+
+export function useLens(): LensClient {
+  const context = useContext(LensContext);
+  if (!context) throw new Error('useLens must be used within LensProvider');
+  return context;
+}
+```
+
+## Vue Mount Kit
+
+```typescript
+// ✅ CORRECT: Vue mount kit pattern
+import { provide, inject } from 'vue';
+import { createLens, LensClient } from '@3lens/runtime';
+
+export const LENS_KEY = Symbol('3lens');
+
+export function useThreeLens(): LensClient {
+  const lens = inject<LensClient>(LENS_KEY);
+  if (!lens) throw new Error('useThreeLens must be used within ThreeLensProvider');
+  return lens;
+}
+
+export function provideThreeLens() {
+  const lens = createLens();
+  provide(LENS_KEY, lens);
+  return lens;
+}
+```
+
+## UI Component Integration
+
+Mount kits MUST integrate with UI Core:
+
+```typescript
+// React example
+import { ThreeLensDock } from '@3lens/ui-web';
+
+function App() {
+  return (
+    <LensProvider>
+      <ThreeLensDock />
+      {/* Your app */}
+    </LensProvider>
+  );
+}
+```
+
+## Live/Offline Parity
+
+Mount kits MUST support both modes:
+
+```typescript
+// ✅ CORRECT: Works in both modes
+const data = client.isLive 
+  ? await client.queryLive(query, params)
+  : await client.queryTrace(query, params);
+```
+
+## Error Handling
+
+Mount kits MUST handle errors gracefully:
+
+```typescript
+// ✅ CORRECT: Graceful error handling
+try {
+  const lens = createLens();
+} catch (error) {
+  if (error.code === 'CSP_BLOCKED') {
+    console.warn('3Lens blocked by CSP, running in degraded mode');
+  }
+}
+```
+
+## See Also
+
+- Contract: agents/contracts/runtime-boundaries.md
+- Contract: agents/contracts/ui-surfaces.md
+- Playbook: agents/playbooks/add-a-mount-kit.md
+- Skill: mount-operations

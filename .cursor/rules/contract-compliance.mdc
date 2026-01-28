@@ -1,0 +1,127 @@
+---
+description: Contract compliance rules for kernel and runtime code
+globs: packages/core/**/*.ts, packages/hosts/**/*.ts
+alwaysApply: false
+---
+
+# Contract Compliance Rules
+
+When working on kernel or runtime code, ensure compliance with these contracts.
+
+## Core Contracts
+
+### Capture Contract
+
+Render events are the source of truth. Event schema must be stable.
+
+```typescript
+// Required event fields
+interface RenderEvent {
+  type: string;
+  timestamp: number;
+  context_id: string;
+  frame: number;
+  payload: unknown;
+}
+```
+
+Reference: `agents/contracts/capture.md`
+
+### Entity Graph Contract
+
+Use stable, namespaced entity IDs. Never use raw object references.
+
+```typescript
+// Correct: Stable ID
+const id = `mesh:scene:${mesh.name}_${mesh.uuid.slice(0, 8)}`;
+
+// Wrong: Object reference
+const ref = mesh; // Breaks offline traces
+```
+
+Reference: `agents/contracts/entity-graph.md`
+
+### Attribution Contract
+
+Every metric must have a weighted blame chain.
+
+```typescript
+// Required for metrics
+interface AttributedMetric {
+  value: number;
+  fidelity: Fidelity;
+  culprits: {
+    entity_id: string;
+    weight: number;
+  }[];
+}
+```
+
+Reference: `agents/contracts/attribution.md`
+
+### Fidelity Contract
+
+Always declare metric fidelity. Never silently degrade.
+
+```typescript
+type Fidelity = 'EXACT' | 'ESTIMATED' | 'UNAVAILABLE';
+
+// Required for all metrics
+{ value: 42, fidelity: 'EXACT' }
+```
+
+Reference: `agents/contracts/fidelity.md`
+
+### Overhead Contract
+
+Respect capture mode budgets:
+
+- MINIMAL: <1% overhead
+- STANDARD: <5% overhead
+- DEEP: <15% overhead
+
+Reference: `agents/contracts/overhead.md`
+
+## Runtime Boundaries
+
+### Kernel Layer
+
+- ZERO imports from UI packages
+- ZERO imports from framework packages
+- Only pure TypeScript
+
+### Host Layer
+
+- ZERO imports from UI packages
+- Framework-specific bindings allowed
+- Must register contexts properly
+
+### UI Layer
+
+- ZERO imports from framework packages
+- DOM-only APIs
+- Uses public client API
+
+## Validation Commands
+
+Before submitting changes:
+
+```bash
+# Validate all contracts
+3lens validate all
+
+# Validate specific contract
+3lens validate capture
+3lens validate entity-graph
+3lens validate attribution
+```
+
+## PR Checklist
+
+- [ ] Does not violate any applicable contract
+- [ ] Includes attribution path for new metrics
+- [ ] Works in live AND offline modes
+- [ ] Fidelity is explicit
+- [ ] Tests updated for touched contracts
+
+Reference: `agents/checklists/pr.md`
