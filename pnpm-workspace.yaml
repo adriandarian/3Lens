@@ -1,6 +1,18 @@
 packages:
-  - 'packages/*'
-  - 'examples/**/*'
+  # Core packages
+  - 'packages/core/*'
+  # Host integrations
+  - 'packages/hosts/*'
+  # Feature addons
+  - 'packages/addons/*'
+  # UI packages
+  - 'packages/ui/*'
+  # Framework mounts
+  - 'packages/mounts/*'
+  # CLI & build tools
+  - 'packages/tools/*'
+  # Examples (coming soon)
+  # - 'examples/**/*'
 
 catalog:
   # Build tools
