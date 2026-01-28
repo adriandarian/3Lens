@@ -1,65 +1,90 @@
 # 3Lens Documentation
 
-> The definitive developer toolkit for three.js — one tool to rule all three.js projects.
+> The render introspection OS for three.js — deep causal analysis, not just metrics.
 
 ## Overview
 
-3Lens is a comprehensive, browser-based inspector and utility toolkit for working with [three.js](https://threejs.org/) scenes. Unlike existing fragmented solutions, 3Lens aims to be **the** standard devtool that works with any three.js application — vanilla, React Three Fiber, Vue, Angular, or any custom setup.
+3Lens is a comprehensive debugging and introspection toolkit for [three.js](https://threejs.org/) applications. Unlike simple metrics panels, 3Lens is built on 5 foundational primitives that enable deep causal analysis:
+
+1. **Capture** — Authoritative event stream (render events, resource lifecycle)
+2. **Model** — Unified typed dependency graph (entities + relationships)
+3. **Query** — Tools query the model, not the renderer directly
+4. **Visualize** — Views are projections of queries
+5. **Act + Verify** — Actions produce events, verification shows diffs
 
 ## Documentation Index
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](./ARCHITECTURE.md) | System design, components, and data flow |
-| [API Specification](./API-SPECIFICATION.md) | TypeScript interfaces and SDK reference |
-| [Debug Protocol](./PROTOCOL.md) | Message protocol between probe and UI |
-| [Implementation Notes](./IMPLEMENTATION-NOTES.md) | Code snippets and implementation guidance |
-| [Development Plan](./DEVELOPMENT-PLAN.md) | Phased roadmap with milestones |
-| [Competitive Analysis](./COMPETITIVE-ANALYSIS.md) | Analysis of existing tools and gaps |
-| [Contributing](./CONTRIBUTING.md) | Contribution guidelines |
+| [Architecture](../agents.md) | System design, philosophy, and contracts |
+| [Contracts](../agents/contracts/) | System invariants and guarantees |
+| [Plugin API](./guide/plugin-api.md) | Building third-party addons |
+| [Skills & Commands](../skills.md) | CLI commands and programmatic APIs |
 
-## Quick Links
+## Project Status
 
-- **Vision**: Universal devtool for all three.js projects
-- **Core Principles**: Framework-agnostic, renderer-agnostic (WebGL + WebGPU), deeply introspective
-- **Deployment Mode**: Embedded in-app overlay via npm package
+🚧 **Major Redesign In Progress**
+
+| Component | Status |
+|-----------|--------|
+| Kernel (capture, graph, query, trace) | ✅ Implemented |
+| Runtime (createLens, hosts, addons) | ✅ Implemented |
+| Hosts (manual, r3f, tres, worker) | 🟡 Manual implemented, others stub |
+| Addons (inspector, perf, memory, diff, shader) | 🟡 Inspector implemented, others stub |
+| UI (core, web components) | ✅ Implemented |
+| Mount Kits (react, vue, angular, svelte) | 🔜 Stub |
+| CLI & Vite Plugin | ✅ Implemented |
+| Examples | 🔜 Not Started |
+| Documentation | 🔜 In Progress |
 
 ## Key Features
 
 ### 🔍 Deep Introspection
-- Full scene graph exploration with object hierarchy
-- Material and shader inspection with live editing
-- Geometry analysis with vertex/index counts and memory estimates
-- Render target and texture inspection
+- Entity graph browser with namespaced IDs
+- Blame navigator for attribution chains
+- Resource lifecycle tracking
 
 ### ⚡ Performance Analysis
-- Per-frame CPU and GPU timing
-- Draw call and triangle count tracking
-- Object-level performance cost heatmaps
-- Memory and resource lifecycle tracking with leak detection
+- GPU/CPU attribution with weighted blame chains
+- Per-entity cost breakdown
+- Data fidelity labels (EXACT/ESTIMATED/UNAVAILABLE)
 
-### 🔧 Interactive Debugging
-- In-scene object picker (like Chrome DevTools element picker)
-- Transform gizmos and bounding box overlays
-- Real-time property editing
-- Object isolation and camera focus
+### 🔧 Trace-Based Debugging
+- Capture and replay sessions
+- Offline diff/regression analysis
+- CI integration for automated testing
 
-### 🏢 Enterprise Features
-- npm package for deep integration with company apps
-- Framework bridges (React, Angular, Vue, R3F)
-- Module-level metrics for Nx/ngLib architectures
-- CI mode for automated performance regression testing
-- Custom metrics and domain-specific panels via plugin API
+### 🏢 Multi-Context Support
+- Multiple renderers, scenes, cameras
+- Per-context and aggregated queries
+- Dynamic context registration
 
-## Project Status
+## Quick Links
 
-🚧 **Early Development** — Architecture and planning phase
+- **[Examples](/examples/)** — Coming soon
+- **[API Reference](/api/)** — Package APIs
+- **[Guides](/guide/)** — How-to guides
 
 ## Getting Started
 
-Documentation for getting started will be added as the project progresses. See the [Development Plan](./DEVELOPMENT-PLAN.md) for the roadmap.
+Once packages are published, the basic setup will look like:
+
+```typescript
+import { createLens, manualHost, uiOverlay } from "@3lens/devtools";
+
+const lens = createLens({
+  ui: uiOverlay(),
+  addons: ["inspector", "perf", "memory"],
+});
+
+lens.registerContext({
+  id: "main",
+  host: manualHost({ renderer, scene, camera }),
+});
+
+lens.attach();
+```
 
 ## License
 
 MIT License — See [LICENSE](../LICENSE) for details.
-
