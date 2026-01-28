@@ -1,156 +1,260 @@
 # 3Lens Examples
 
-This directory contains example projects demonstrating 3Lens devtool integration with various Three.js setups and frameworks.
+> **Status: Coming Soon**
+>
+> Examples are being rebuilt to showcase the new 3Lens architecture.
 
-## ⚠️ Example Refactoring In Progress
+## Example Categories
 
-Many examples in this directory are being refactored. The issue: examples were built to showcase their scenarios (render pipelines, particle systems, games, etc.) with their own custom debugging UIs, rather than demonstrating how to use **3Lens** as the debugging tool.
+### 🚀 Getting Started
 
-### What's Changing
+Quick start guides for different setups.
 
-**Before**: Examples included custom stats panels, property inspectors, timeline UIs, etc.
-**After**: Examples should use 3Lens overlay and helpers for all debugging/inspection needs.
+| Example | Description | Host | Status |
+|---------|-------------|------|--------|
+| `getting-started/minimal` | Absolute minimal setup - one file | manual | 🔜 |
+| `getting-started/vanilla-threejs` | Standard three.js app with 3Lens | manual | 🔜 |
+| `getting-started/vite-plugin` | Zero-config with `@3lens/vite-plugin` | manual | 🔜 |
+| `getting-started/web-components` | Using `<three-lens-overlay>` custom element | manual | 🔜 |
+| `getting-started/bootstrap-api` | `bootstrap3Lens()` one-liner | manual | 🔜 |
 
-### Guidelines
+### 🔌 Framework Integration
 
-See `EXAMPLE_GUIDELINES.md` for the new pattern all examples should follow.
+Framework-specific setups with mount kits.
 
-### Missing Features
+| Example | Description | Host | Mount | Status |
+|---------|-------------|------|-------|--------|
+| `frameworks/react-basic` | React with `@3lens/mount-react` | manual | react | 🔜 |
+| `frameworks/react-three-fiber` | R3F with `@3lens/host-r3f` | r3f | react | 🔜 |
+| `frameworks/vue-basic` | Vue 3 with `@3lens/mount-vue` | manual | vue | 🔜 |
+| `frameworks/vue-tresjs` | TresJS with `@3lens/host-tres` | tres | vue | 🔜 |
+| `frameworks/angular` | Angular with `@3lens/mount-angular` | manual | angular | 🔜 |
+| `frameworks/svelte-basic` | Svelte with `@3lens/mount-svelte` | manual | svelte | 🔜 |
+| `frameworks/svelte-threlte` | Threlte with manual host | manual | svelte | 🔜 |
+| `frameworks/nextjs-app-router` | Next.js 14+ App Router | r3f | react | 🔜 |
+| `frameworks/nuxt` | Nuxt 3 with TresJS | tres | vue | 🔜 |
 
-Some examples need 3Lens features that don't exist yet. These are tracked in `MISSING_FEATURES.md`.
+### 🔍 Inspector Addon
+
+Entity graph browser and blame navigator demos.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `inspector/scene-browser` | Browse scene graph hierarchy | Entity Graph | 🔜 |
+| `inspector/entity-search` | Search entities by type/name | Query Engine | 🔜 |
+| `inspector/blame-navigator` | Navigate blame chains | Attribution | 🔜 |
+| `inspector/five-questions` | The 5 inspector questions in action | Inspector Contract | 🔜 |
+| `inspector/selection-sync` | Selection synced across panels | Global Selection | 🔜 |
+| `inspector/relationships` | View entity relationships/edges | Entity Graph | 🔜 |
+
+### ⚡ Performance Addon
+
+GPU/CPU attribution and profiling demos.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `perf/frame-timing` | Per-frame CPU/GPU timing | Capture | 🔜 |
+| `perf/draw-call-attribution` | Draw calls attributed to objects | Attribution | 🔜 |
+| `perf/hotspot-detection` | Find performance hotspots | Query Engine | 🔜 |
+| `perf/cost-heatmap` | Visual heatmap overlay | Visualization | 🔜 |
+| `perf/capture-modes` | MINIMAL vs STANDARD vs DEEP | Overhead Contract | 🔜 |
+| `perf/fidelity-labels` | EXACT/ESTIMATED/UNAVAILABLE display | Fidelity Contract | 🔜 |
+
+### 🧠 Memory Addon
+
+Resource lifecycle and leak detection demos.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `memory/resource-lifecycle` | Track create/dispose cycles | Capture | 🔜 |
+| `memory/leak-detection` | Detect undisposed resources | Query Engine | 🔜 |
+| `memory/texture-analysis` | Texture memory breakdown | Resource Tracking | 🔜 |
+| `memory/geometry-analysis` | Geometry memory breakdown | Resource Tracking | 🔜 |
+| `memory/material-sharing` | Shared vs duplicated materials | Entity Graph | 🔜 |
+| `memory/gc-pressure` | Monitor allocation patterns | Capture | 🔜 |
+
+### 🔄 Diff Addon
+
+Frame/trace comparison demos.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `diff/frame-diff` | Compare two frames | Diff Engine | 🔜 |
+| `diff/trace-diff` | Compare two recorded traces | Diff Engine | 🔜 |
+| `diff/entity-changes` | Track entity changes over time | Entity Graph | 🔜 |
+| `diff/cost-regression` | Detect performance regressions | Attribution | 🔜 |
+| `diff/visual-diff` | Side-by-side visual comparison | Visualization | 🔜 |
+
+### 🎨 Shader Addon
+
+Shader introspection and analysis demos.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `shader/variant-browser` | Browse compiled shader variants | Shader Graph Contract | 🔜 |
+| `shader/uniform-inspector` | Inspect uniform values | Capture | 🔜 |
+| `shader/define-analysis` | Analyze #define combinations | Shader Graph Contract | 🔜 |
+| `shader/cost-attribution` | Shader compile/render cost | Attribution | 🔜 |
+| `shader/webgpu-pipelines` | WebGPU pipeline inspection | Pipelines Contract | 🔜 |
+
+### 📼 Trace & Replay
+
+Recording, saving, and replaying sessions.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `trace/record-session` | Record a trace with CLI | Trace Format | 🔜 |
+| `trace/replay-offline` | Replay trace in offline viewer | Trace Replay | 🔜 |
+| `trace/export-profiles` | MINIMAL/STANDARD/FULL exports | Storage Contract | 🔜 |
+| `trace/share-redacted` | Export with sensitive data redacted | Storage Contract | 🔜 |
+| `trace/ring-buffer` | Understand ring buffer behavior | Storage Contract | 🔜 |
+
+### 🌐 Multi-Context
+
+Multiple renderers, scenes, and cameras.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `multi-context/dual-renderer` | Two WebGL renderers side-by-side | Context Registration | 🔜 |
+| `multi-context/minimap` | Main scene + minimap context | Context Registration | 🔜 |
+| `multi-context/webgl-webgpu` | WebGL + WebGPU mixed | Compatibility Contract | 🔜 |
+| `multi-context/context-switching` | Switch between contexts in UI | UI Surfaces | 🔜 |
+| `multi-context/aggregated-stats` | Combined stats across contexts | Query Engine | 🔜 |
+
+### 👷 Worker & OffscreenCanvas
+
+Background rendering scenarios.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `worker/offscreen-basic` | OffscreenCanvas with worker host | host-worker | 🔜 |
+| `worker/transport-channel` | PostMessage transport setup | Transport Contract | 🔜 |
+| `worker/remote-ui` | UI in main thread, render in worker | Transport Contract | 🔜 |
+| `worker/shared-worker` | SharedWorker rendering | host-worker | 🔜 |
+
+### 🖥️ UI Surfaces
+
+Different UI modes and layouts.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `ui/overlay-mode` | Floating overlay panel | UI Surfaces Contract | 🔜 |
+| `ui/dock-left` | Docked panel on left | UI Surfaces Contract | 🔜 |
+| `ui/dock-right` | Docked panel on right | UI Surfaces Contract | 🔜 |
+| `ui/dock-bottom` | Docked panel on bottom | UI Surfaces Contract | 🔜 |
+| `ui/separate-window` | DevTools in separate window | UI Surfaces Contract | 🔜 |
+| `ui/minimal-hud` | Tiny FPS/context HUD | UI Surfaces Contract | 🔜 |
+| `ui/keyboard-toggle` | Toggle with keyboard shortcut | UI Core | 🔜 |
+| `ui/theming` | Custom CSS variables | UI Core | 🔜 |
+
+### 🔧 CLI & Tooling
+
+Command-line workflows.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `cli/trace-record` | `3lens trace:record` usage | CLI | 🔜 |
+| `cli/trace-diff` | `3lens diff` usage | CLI | 🔜 |
+| `cli/query-hotspots` | `3lens query top_hotspots` | CLI | 🔜 |
+| `cli/validate-contracts` | `3lens validate` in CI | CLI | 🔜 |
+| `cli/doctor-diagnostics` | `3lens doctor` output | CLI | 🔜 |
+| `cli/scaffold-addon` | `3lens scaffold addon` | CLI | 🔜 |
+
+### 🔌 Addon Development
+
+Building custom addons.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `addons/minimal-addon` | Smallest possible addon | Addons Contract | 🔜 |
+| `addons/custom-panel` | Addon with custom UI panel | Addons Contract | 🔜 |
+| `addons/custom-query` | Addon registering queries | Query Engine | 🔜 |
+| `addons/custom-events` | Addon emitting custom events | Capture | 🔜 |
+| `addons/capability-check` | Addon capability handshake | Addons Contract | 🔜 |
+| `addons/version-compat` | Addon version compatibility | Addons Contract | 🔜 |
+
+### 🔐 Security & Enterprise
+
+CSP, enterprise constraints, and production scenarios.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `security/csp-safe` | CSP-safe mode (no inline styles) | Security Contract | 🔜 |
+| `security/style-nonce` | Using nonce for styles | Security Contract | 🔜 |
+| `security/external-css` | External CSS file mode | Security Contract | 🔜 |
+| `enterprise/dev-only-loading` | Load only in development | Loading Contract | 🔜 |
+| `enterprise/url-toggle` | `?3lens=1` activation | Loading Contract | 🔜 |
+| `enterprise/localstorage-persist` | Persist settings | Loading Contract | 🔜 |
+
+### 🎮 Real-World Scenarios
+
+Complete application examples.
+
+| Example | Description | Features | Status |
+|---------|-------------|----------|--------|
+| `apps/model-viewer` | GLTF model viewer with inspection | Inspector, Memory | 🔜 |
+| `apps/particle-system` | Particle effects with profiling | Perf, Memory | 🔜 |
+| `apps/procedural-terrain` | Procedural world with debugging | Inspector, Perf | 🔜 |
+| `apps/physics-game` | Physics-based game debugging | Multi-Context, Perf | 🔜 |
+| `apps/vr-experience` | WebXR debugging | Inspector, Perf | 🔜 |
+| `apps/data-visualization` | 3D charts with profiling | Perf, Memory | 🔜 |
+
+### 🧪 CI/CD Integration
+
+Automated testing and regression detection.
+
+| Example | Description | Feature | Status |
+|---------|-------------|---------|--------|
+| `ci/github-actions` | GitHub Actions workflow | CLI, Validation | 🔜 |
+| `ci/performance-budget` | Fail on perf regression | Diff, CLI | 🔜 |
+| `ci/contract-validation` | Validate contracts in CI | Validation | 🔜 |
+| `ci/visual-regression` | Screenshot comparison | Trace, Diff | 🔜 |
+| `ci/headless-profiling` | Headless trace recording | CLI, Trace | 🔜 |
 
 ---
-
-## Available Examples
-
-| Category | Example | Description | Status |
-|----------|---------|-------------|--------|
-| **Advanced Techniques** | [custom-render-pipeline](./advanced-techniques/custom-render-pipeline) | Deferred rendering pipeline | ✅ Complete |
-| | [shadow-comparison](./advanced-techniques/shadow-comparison) | Shadow techniques | ✅ Complete |
-| | [environment-mapping](./advanced-techniques/environment-mapping) | Environment/IBL debugging | ✅ Complete |
-| | [compute-shaders](./advanced-techniques/compute-shaders) | WebGPU compute | ✅ Complete |
-| | [skinned-mesh-inspector](./advanced-techniques/skinned-mesh-inspector) | Skeletal animation | ✅ Complete |
-| | [morph-target-analyzer](./advanced-techniques/morph-target-analyzer) | Blend shapes | ✅ Complete |
-| **Debugging & Profiling** | [performance-debugging](./debugging-profiling/performance-debugging) | Performance issues lab | ✅ Complete |
-| | [memory-leak-detection](./debugging-profiling/memory-leak-detection) | Leak detection | ✅ Complete |
-| | [shader-debugging](./debugging-profiling/shader-debugging) | Shader inspection | ✅ Complete |
-| | [animation-profiling](./debugging-profiling/animation-profiling) | Animation debugging | ✅ Complete |
-| | [draw-call-batching](./debugging-profiling/draw-call-batching) | Batching analysis | ✅ Complete |
-| | [large-scene-optimization](./debugging-profiling/large-scene-optimization) | Scene optimization | ✅ Complete |
-| | [raycasting-debugger](./debugging-profiling/raycasting-debugger) | Raycasting visualization | ✅ Complete |
-| | [texture-optimization](./debugging-profiling/texture-optimization) | Texture analysis | ✅ Complete |
-| **Feature Showcase** | [transform-gizmo](./feature-showcase/transform-gizmo) | Transform controls | ✅ Complete |
-| | [camera-controls](./feature-showcase/camera-controls) | Camera navigation | ✅ Complete |
-| | [visual-overlays](./feature-showcase/visual-overlays) | Debug visualization | ✅ Complete |
-| | [custom-plugin](./feature-showcase/custom-plugin) | Plugin system | ✅ Complete |
-| | [timeline-recording](./feature-showcase/timeline-recording) | Performance timeline | ✅ Complete |
-| | [webgpu-features](./feature-showcase/webgpu-features) | WebGPU-specific features | ✅ Complete |
-| | [configuration-rules](./feature-showcase/configuration-rules) | Rules and thresholds | ✅ Complete |
-| | [cost-analysis](./feature-showcase/cost-analysis) | Rendering cost analysis | ✅ Complete |
-| **Framework Integration** | [vanilla-threejs](./framework-integration/vanilla-threejs) | Basic Three.js + 3Lens | 🔄 In Progress |
-| | [react-three-fiber](./framework-integration/react-three-fiber) | React Three Fiber integration | 🔄 In Progress |
-| | [vue-tresjs](./framework-integration/vue-tresjs) | Vue 3 + TresJS | 🔄 In Progress |
-| | [angular-threejs](./framework-integration/angular-threejs) | Angular + Three.js | 🔄 In Progress |
-| | [svelte-threlte](./framework-integration/svelte-threlte) | Svelte + Threlte | 🔄 In Progress |
-| | [electron-desktop](./framework-integration/electron-desktop) | Desktop app with Electron | 🔄 In Progress |
-| | [nextjs-ssr](./framework-integration/nextjs-ssr) | Next.js SSR | 🔄 In Progress |
-| **Real-World Scenarios** | [particle-system](./real-world-scenarios/particle-system) | Particle debugging | 🔄 HTML Done |
-| | [physics-inspector](./real-world-scenarios/physics-inspector) | Physics debugging | 🔄 HTML Done |
-| | [3d-model-viewer](./real-world-scenarios/3d-model-viewer) | Model inspection | 🔄 HTML Done |
-| | [audio-visualization](./real-world-scenarios/audio-visualization) | Audio reactive | 🔄 HTML Done |
-| | [multi-scene-management](./real-world-scenarios/multi-scene-management) | Multiple scenes | 🔄 HTML Done |
-| | [post-processing](./real-world-scenarios/post-processing) | Post-processing effects | 🔄 HTML Done |
-| | [procedural-generation](./real-world-scenarios/procedural-generation) | Procedural content | 🔄 HTML Done |
-| | [vr-xr-debugging](./real-world-scenarios/vr-xr-debugging) | VR/XR debugging | 🔄 HTML Done |
-| **Game Development** | [platformer-physics](./game-development/platformer-physics) | 2D platformer | ✅ Complete |
-| | [racing-game](./game-development/racing-game) | Vehicle physics | ✅ Complete |
-| | [first-person-shooter](./game-development/first-person-shooter) | FPS mechanics | ✅ Complete |
-| | [top-down-rpg](./game-development/top-down-rpg) | RPG mechanics | ✅ Complete |
-| **Data Visualization** | [3d-charts](./data-visualization/3d-charts) | Chart debugging | ✅ Complete |
-| | [geographic-data](./data-visualization/geographic-data) | Map visualization | ✅ Complete |
-| | [realtime-streaming](./data-visualization/realtime-streaming) | Streaming data | ✅ Complete |
-| | [scientific-viz](./data-visualization/scientific-viz) | Scientific visualization | ✅ Complete |
-
-## Running Examples
-
-### Quick Start
-
-From the 3Lens root directory:
-
-```bash
-# Install all dependencies
-pnpm install
-
-# Run packages + base example (vanilla-threejs)
-pnpm dev
-```
-
-### Running Specific Examples
-
-```bash
-# Interactive example selector
-pnpm example
-
-# Run by name
-pnpm example vanilla-threejs
-pnpm example custom-render-pipeline
-
-# Or run directly from the example directory
-cd examples/feature-showcase/transform-gizmo
-pnpm dev
-```
 
 ## Example Structure
 
 Each example follows this structure:
 
 ```
-example-name/
-├── src/
-│   └── main.ts       # Entry point with 3Lens integration
-├── index.html        # Minimal HTML (canvas only, no custom UI)
-├── package.json      # Dependencies
-├── tsconfig.json     # TypeScript config
-├── vite.config.ts    # Vite configuration
-└── README.md         # What to explore with 3Lens
+examples/
+├── <category>/
+│   └── <example-name>/
+│       ├── README.md         # Description, setup, walkthrough
+│       ├── package.json      # Dependencies
+│       ├── vite.config.ts    # Build config
+│       ├── index.html        # Entry HTML
+│       ├── src/
+│       │   └── main.ts       # Main code
+│       └── tsconfig.json     # TypeScript config
 ```
 
-## Basic Integration Pattern
+## Running Examples
 
-```typescript
-import * as THREE from 'three';
-import { createProbe } from '@3lens/core';
-import { bootstrapOverlay } from '@3lens/overlay';
-import '@3lens/themes/styles.css';
+Once examples are available:
 
-// Setup Three.js
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
+```bash
+# Clone the repository
+git clone https://github.com/adriandarian/3Lens.git
+cd 3Lens
 
-// Initialize 3Lens
-const probe = createProbe({ name: 'My App' });
-probe.observeRenderer(renderer);
-probe.observeScene(scene);
+# Install dependencies
+pnpm install
 
-// Create overlay UI
-bootstrapOverlay({ probe, defaultOpen: true });
-
-// Register logical entities for domain concepts
-probe.registerLogicalEntity('player', {
-  name: 'Player Character',
-  type: 'character',
-  object3D: playerMesh,
-  metadata: { health: 100 }
-});
+# Run a specific example
+cd examples/getting-started/minimal
+pnpm dev
 ```
 
-## Contributing
+## Contributing Examples
 
-When adding or modifying examples:
+Contributions welcome! See [CONTRIBUTING.md](../docs/CONTRIBUTING.md) for guidelines.
 
-1. **Read `EXAMPLE_GUIDELINES.md`** - Follow the established pattern
-2. **Use 3Lens for debugging** - Don't build custom debug UIs
-3. **Focus on the scenario** - Examples should showcase realistic use cases
-4. **Document 3Lens usage** - README should explain what to explore
-5. **Track missing features** - Add to `MISSING_FEATURES.md` if needed
+When adding an example:
+
+1. Follow the structure above
+2. Include clear README with setup instructions
+3. Add comments explaining key concepts
+4. Demonstrate at least one contract/feature
+5. Test with `pnpm build && pnpm preview`
