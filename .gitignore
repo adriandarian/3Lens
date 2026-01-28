@@ -40,3 +40,6 @@ pnpm-debug.log*
 tmp/
 temp/
 .cache/
+
+# Archived old packages (kept for reference)
+_archive/
