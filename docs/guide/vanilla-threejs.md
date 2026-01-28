@@ -1,3 +1,8 @@
+---
+title: Vanilla Three.js Integration
+description: Guide for integrating 3Lens with vanilla Three.js applications without frameworks
+---
+
 # Vanilla Three.js Integration Guide
 
 This guide covers integrating 3Lens with vanilla Three.js applications—no frameworks, just pure JavaScript/TypeScript and Three.js.

@@ -1,3 +1,8 @@
+---
+title: Material Editing Guide
+description: Live material editing capabilities including property inspection, texture management, and shader parameter adjustment
+---
+
 # Material Editing Guide
 
 This guide covers 3Lens's live material editing capabilities, including property inspection, texture management, and real-time shader parameter adjustment.

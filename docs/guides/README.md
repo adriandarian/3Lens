@@ -1,3 +1,8 @@
+---
+title: 3Lens Documentation
+description: Welcome to the 3Lens documentation - the definitive developer toolkit for three.js applications
+---
+
 # 3Lens Documentation
 
 Welcome to the 3Lens documentation! 3Lens is the definitive developer toolkit for three.js applications.

@@ -1,3 +1,8 @@
+---
+title: 3Lens Documentation
+description: The render introspection OS for three.js — deep causal analysis, not just metrics
+---
+
 # 3Lens Documentation
 
 > The render introspection OS for three.js — deep causal analysis, not just metrics.

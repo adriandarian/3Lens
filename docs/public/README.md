@@ -1,3 +1,8 @@
+---
+title: 3Lens Branding Assets
+description: Branding assets including logos, favicons, and brand guidelines for the 3Lens documentation site
+---
+
 # 3Lens Branding Assets
 
 This directory contains all branding assets for the 3Lens documentation site.

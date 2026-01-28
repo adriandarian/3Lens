@@ -1,3 +1,8 @@
+---
+title: Getting Started with 3Lens
+description: Installation, basic setup, and your first debugging session with 3Lens
+---
+
 # Getting Started with 3Lens
 
 Welcome to 3Lens, the definitive developer toolkit for three.js! This guide will walk you through installation, basic setup, and your first debugging session.

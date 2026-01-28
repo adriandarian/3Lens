@@ -1,3 +1,8 @@
+---
+title: 3Lens Debug Protocol
+description: Message protocol specification for communication between the 3Lens Probe SDK and DevTool UI
+---
+
 # 3Lens Debug Protocol
 
 This document specifies the message protocol used for communication between the 3Lens Probe SDK and the DevTool UI.

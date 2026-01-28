@@ -1,3 +1,8 @@
+---
+title: Custom Rules Guide
+description: Create custom performance and quality rules to automatically detect issues and enforce standards
+---
+
 # Custom Rules Guide
 
 This guide covers creating custom performance and quality rules in 3Lens to automatically detect issues and enforce standards in your Three.js applications.

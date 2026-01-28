@@ -1,3 +1,8 @@
+---
+title: Large Scene Optimization Guide
+description: Best practices for optimizing large Three.js scenes including LOD systems, culling, and instancing
+---
+
 # Large Scene Optimization Guide
 
 This guide covers best practices and techniques for optimizing large Three.js scenes using 3Lens, including LOD systems, culling, instancing, and memory management.

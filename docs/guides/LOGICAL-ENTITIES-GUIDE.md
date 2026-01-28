@@ -1,3 +1,8 @@
+---
+title: Logical Entities Guide
+description: Logical Entity system for tracking module-level metrics and grouping related objects
+---
+
 # Logical Entities Guide
 
 This guide covers 3Lens's Logical Entity system for tracking module-level metrics, grouping related objects, and debugging high-level game concepts rather than individual Three.js objects.

@@ -1,3 +1,8 @@
+---
+title: Plugin Development Guide
+description: Create custom plugins for 3Lens to extend functionality with custom panels and analysis tools
+---
+
 # Plugin Development Guide
 
 This guide covers creating custom plugins for 3Lens to extend its functionality with custom panels, toolbar actions, and analysis tools.

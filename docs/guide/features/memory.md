@@ -1,3 +1,8 @@
+---
+title: Memory Profiling Guide
+description: Identify, track, and fix memory leaks using 3Lens memory profiling and leak detection tools
+---
+
 # Memory Profiling Guide
 
 This guide covers how to identify, track, and fix memory leaks in your Three.js applications using 3Lens's memory profiling and leak detection tools.

@@ -1,3 +1,8 @@
+---
+title: API Reference
+description: Complete API reference documentation for all 3Lens packages, types, and interfaces
+---
+
 # API Reference
 
 Welcome to the 3Lens API reference documentation. This section provides detailed information about all public APIs, types, and interfaces.

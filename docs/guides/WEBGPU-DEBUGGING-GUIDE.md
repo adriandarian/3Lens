@@ -1,3 +1,8 @@
+---
+title: WebGPU Debugging Guide
+description: WebGPU-specific debugging features including compute shader inspection and performance profiling
+---
+
 # WebGPU Debugging Guide
 
 This guide covers WebGPU-specific debugging features in 3Lens, including compute shader inspection, buffer analysis, and WebGPU-specific performance profiling.

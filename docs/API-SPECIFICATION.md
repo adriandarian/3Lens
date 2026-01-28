@@ -1,3 +1,8 @@
+---
+title: 3Lens API Specification
+description: TypeScript interfaces and API contracts for 3Lens packages
+---
+
 # 3Lens API Specification
 
 This document defines the TypeScript interfaces and API contracts for 3Lens packages.

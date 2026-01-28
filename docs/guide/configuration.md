@@ -1,3 +1,8 @@
+---
+title: Configuration Deep Dive
+description: Complete guide to configuring 3Lens for your project's needs
+---
+
 # Configuration Deep Dive
 
 3Lens is highly configurable, allowing you to tailor the devtools to your project's needs. This guide covers all configuration options and best practices.

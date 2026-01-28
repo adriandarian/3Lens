@@ -1,3 +1,8 @@
+---
+title: Contributing to 3Lens
+description: Guidelines and information for contributing to 3Lens
+---
+
 # Contributing to 3Lens
 
 Thank you for your interest in contributing to 3Lens! This document provides guidelines and information for contributors.

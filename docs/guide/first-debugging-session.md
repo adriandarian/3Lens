@@ -1,3 +1,8 @@
+---
+title: Your First Debugging Session
+description: Walkthrough of a realistic debugging session using 3Lens to identify and fix common issues
+---
+
 # Your First Debugging Session
 
 This guide walks you through a realistic debugging session using 3Lens. You'll learn how to identify and fix common Three.js performance and rendering issues.

@@ -1,3 +1,8 @@
+---
+title: Migration from three-inspect to 3Lens
+description: Guide for migrating from three-inspect to 3Lens for Three.js debugging and development
+---
+
 # Migration from three-inspect to 3Lens
 
 This guide helps you migrate from [three-inspect](https://github.com/nicolo-ribaudo/three-inspect) to 3Lens for Three.js debugging and development.

@@ -1,3 +1,8 @@
+---
+title: Camera Controls Guide
+description: Camera control features including focus, fly-to, orbit, and viewport manipulation for scene navigation
+---
+
 # Camera Controls Guide
 
 This guide covers 3Lens's camera control features including focus, fly-to, orbit, and viewport manipulation for efficient scene navigation.

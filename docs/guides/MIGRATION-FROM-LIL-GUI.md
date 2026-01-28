@@ -1,3 +1,8 @@
+---
+title: Migration from lil-gui to 3Lens
+description: Guide for migrating from lil-gui or dat.GUI to 3Lens for Three.js debugging
+---
+
 # Migration from lil-gui to 3Lens
 
 This guide helps you migrate from [lil-gui](https://lil-gui.georgealways.com/) (or its predecessor dat.GUI) to 3Lens for Three.js debugging and development.

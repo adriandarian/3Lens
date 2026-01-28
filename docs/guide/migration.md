@@ -1,3 +1,8 @@
+---
+title: Migration Guide
+description: Guide for migrating between major versions of 3Lens
+---
+
 # Migration Guide
 
 This guide helps you migrate between major versions of 3Lens.

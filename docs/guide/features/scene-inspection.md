@@ -1,3 +1,8 @@
+---
+title: Scene Inspection Guide
+description: Navigate and inspect your Three.js scene graph using 3Lens Scene Explorer and object inspection
+---
+
 # Scene Inspection Guide
 
 This guide covers how to navigate and inspect your Three.js scene graph using 3Lens's Scene Explorer and object inspection features.

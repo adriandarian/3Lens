@@ -1,3 +1,8 @@
+---
+title: 3Lens API Documentation
+description: Public API reference for integrating 3Lens into your three.js application
+---
+
 # 3Lens API Documentation
 
 This guide covers the public API for integrating 3Lens into your three.js application.

@@ -1,3 +1,8 @@
+---
+title: Performance Debugging Guide
+description: Identify, analyze, and fix performance issues using 3Lens performance monitoring and profiling tools
+---
+
 # Performance Debugging Guide
 
 This guide covers how to identify, analyze, and fix performance issues in your Three.js applications using 3Lens's performance monitoring and profiling tools.

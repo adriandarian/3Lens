@@ -1,3 +1,8 @@
+---
+title: Transform Gizmos Guide
+description: Use 3Lens transform gizmos to manipulate objects through translate, rotate, and scale operations
+---
+
 # Transform Gizmos Guide
 
 This guide covers how to use 3Lens's transform gizmos to manipulate objects in your Three.js scene through translate, rotate, and scale operations.

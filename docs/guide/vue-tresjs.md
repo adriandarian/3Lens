@@ -1,3 +1,8 @@
+---
+title: Vue & TresJS Integration
+description: Guide for integrating 3Lens with Vue 3 applications and TresJS projects
+---
+
 # Vue & TresJS Integration Guide
 
 This guide covers integrating 3Lens with Vue 3 applications, including projects using TresJS for declarative Three.js.

@@ -1,3 +1,8 @@
+---
+title: React & React Three Fiber Integration Guide
+description: Guide for integrating 3Lens with React applications and React Three Fiber projects
+---
+
 # React & React Three Fiber Integration Guide
 
 This guide covers integrating 3Lens with React applications, including React Three Fiber (R3F) projects.

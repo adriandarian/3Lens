@@ -1,3 +1,8 @@
+---
+title: Getting Started
+description: Installation, basic setup, and your first steps with 3Lens devtools
+---
+
 # Getting Started
 
 Get up and running with 3Lens in your three.js project in just a few minutes. This guide covers installation, basic setup, and your first steps with the devtools.

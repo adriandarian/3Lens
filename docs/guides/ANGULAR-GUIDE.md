@@ -1,3 +1,8 @@
+---
+title: Angular Integration Guide
+description: Guide for integrating 3Lens with Angular applications using the angular-bridge package
+---
+
 # Angular Integration Guide
 
 This guide covers integrating 3Lens with Angular applications using the `@3lens/angular-bridge` package.

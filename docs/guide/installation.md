@@ -1,3 +1,8 @@
+---
+title: Installation
+description: Install 3Lens in your three.js project to start debugging and optimizing
+---
+
 # Installation
 
 Install 3Lens in your three.js project to start debugging and optimizing your WebGL/WebGPU applications.

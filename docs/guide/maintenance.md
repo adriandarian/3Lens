@@ -1,3 +1,8 @@
+---
+title: Documentation Maintenance Guide
+description: Guide for maintaining healthy documentation through automated checks and validation
+---
+
 # Documentation Maintenance Guide
 
 This guide covers maintaining healthy documentation through automated link checking, spell checking, and content validation.

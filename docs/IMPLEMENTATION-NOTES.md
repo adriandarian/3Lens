@@ -1,3 +1,8 @@
+---
+title: 3Lens Implementation Notes
+description: Detailed implementation guidance, code snippets, and technical notes for 3Lens development
+---
+
 # 3Lens Implementation Notes
 
 This document contains detailed implementation guidance, code snippets, and technical notes extracted from the design discussions. Use this as a reference when implementing specific features.

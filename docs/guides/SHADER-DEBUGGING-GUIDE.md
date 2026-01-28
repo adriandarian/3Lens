@@ -1,3 +1,8 @@
+---
+title: Shader Debugging Guide
+description: Shader debugging tools including GLSL/WGSL inspection, uniform editing, and real-time shader recompilation
+---
+
 # Shader Debugging Guide
 
 This guide covers 3Lens's shader debugging tools including GLSL/WGSL inspection, uniform editing, real-time shader recompilation, and visual debugging techniques.

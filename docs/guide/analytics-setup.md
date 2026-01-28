@@ -1,3 +1,8 @@
+---
+title: Analytics Setup Guide
+description: Guide for adding privacy-friendly analytics to the 3Lens documentation site
+---
+
 # Analytics Setup Guide
 
 This guide covers adding privacy-friendly analytics to the 3Lens documentation site.

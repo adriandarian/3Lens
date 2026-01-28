@@ -1,3 +1,8 @@
+---
+title: Examples
+description: Example projects demonstrating 3Lens features and integration patterns
+---
+
 # Examples
 
 > **Status: Coming Soon**

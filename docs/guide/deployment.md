@@ -1,3 +1,8 @@
+---
+title: Deployment Guide
+description: Guide for deploying the 3Lens documentation site
+---
+
 # Deployment Guide
 
 This guide explains how to deploy the 3Lens documentation site.

@@ -1,3 +1,8 @@
+---
+title: Archived Documentation Versions
+description: Archived documentation for previous major versions of 3Lens
+---
+
 # Archived Documentation Versions
 
 This directory contains archived documentation for previous major versions of 3Lens.

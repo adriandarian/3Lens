@@ -1,3 +1,8 @@
+---
+title: Competitive Analysis
+description: Analysis of the three.js developer tools ecosystem, identifying gaps and opportunities
+---
+
 # Competitive Analysis: three.js DevTools Ecosystem
 
 This document analyzes the current state of three.js developer tools, identifying gaps and opportunities that 3Lens aims to address.

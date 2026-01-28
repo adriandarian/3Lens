@@ -1,3 +1,8 @@
+---
+title: Plugin API Reference
+description: Stable API surface for creating third-party addons and plugins
+---
+
 # Plugin API Reference
 
 This document describes the stable API surface for third-party addons.

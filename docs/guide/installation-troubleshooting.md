@@ -1,3 +1,8 @@
+---
+title: Installation Troubleshooting
+description: Solutions to common installation and setup issues with 3Lens
+---
+
 # Installation Troubleshooting
 
 Having issues getting 3Lens installed or running? This guide covers the most common problems and their solutions.

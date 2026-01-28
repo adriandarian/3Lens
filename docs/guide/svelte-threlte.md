@@ -1,3 +1,8 @@
+---
+title: Svelte & Threlte Integration
+description: Guide for integrating 3Lens with Svelte applications and Threlte projects
+---
+
 # Svelte & Threlte Integration Guide
 
 This guide covers integrating 3Lens with Svelte applications, including projects using Threlte for declarative Three.js.

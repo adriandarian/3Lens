@@ -1,3 +1,8 @@
+---
+title: CI Integration Guide
+description: Integrate 3Lens into your CI pipeline for automated performance testing and regression detection
+---
+
 # CI Integration Guide
 
 This guide covers integrating 3Lens into your continuous integration (CI) pipeline for automated performance testing, regression detection, and quality gates.

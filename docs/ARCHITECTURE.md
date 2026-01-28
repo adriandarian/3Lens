@@ -1,3 +1,8 @@
+---
+title: 3Lens Architecture
+description: High-level architecture of 3Lens, including core components, data flow, and design principles
+---
+
 # 3Lens Architecture
 
 This document describes the high-level architecture of 3Lens, including its core components, data flow, and design principles.

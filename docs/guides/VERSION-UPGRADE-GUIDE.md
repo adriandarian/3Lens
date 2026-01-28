@@ -1,3 +1,8 @@
+---
+title: 3Lens Version Upgrade Guide
+description: Guide for upgrading between 3Lens versions including breaking changes and migration steps
+---
+
 # 3Lens Version Upgrade Guide
 
 This guide covers upgrading between 3Lens versions, including breaking changes, migration steps, and compatibility notes.

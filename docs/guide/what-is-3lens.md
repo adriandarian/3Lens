@@ -1,3 +1,8 @@
+---
+title: What is 3Lens?
+description: Introduction to 3Lens, a comprehensive developer toolkit for three.js applications
+---
+
 # What is 3Lens?
 
 3Lens is a comprehensive developer toolkit designed specifically for three.js applications. It provides real-time debugging, performance monitoring, and scene inspection capabilities that help you build better WebGL and WebGPU experiences.

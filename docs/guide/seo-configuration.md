@@ -1,3 +1,8 @@
+---
+title: SEO Configuration Guide
+description: SEO configuration for the 3Lens documentation site including meta tags, sitemaps, and structured data
+---
+
 # SEO Configuration Guide
 
 This guide covers Search Engine Optimization (SEO) configuration for the 3Lens documentation site, including meta tags, sitemaps, structured data, and best practices.
