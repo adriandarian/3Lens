@@ -1,86 +1,251 @@
 # Examples
 
-Learn 3Lens through practical examples. Each example includes complete source code, setup instructions, and a detailed walkthrough.
+> **Status: Coming Soon**
+>
+> Examples are being rebuilt to showcase the new 3Lens architecture.
 
-## Framework Integration
+## Overview
 
-Get started with 3Lens in your preferred framework:
+3Lens examples are organized by category, each demonstrating specific features and contracts of the new architecture. All examples will follow the same structure and can be run locally with `pnpm dev`.
 
-| Example | Description | Difficulty |
-|---------|-------------|------------|
-| [Vanilla Three.js](./framework-integration#vanilla-three-js) | Basic setup without any framework | ⭐ Beginner |
-| [React Three Fiber](./framework-integration#react-three-fiber) | Integration with R3F and hooks | ⭐ Beginner |
-| [Vue + TresJS](./framework-integration#vue-tresjs) | Using composables with TresJS | ⭐ Beginner |
-| [Next.js SSR](./framework-integration#next-js-ssr) | Server-side rendering considerations | ⭐⭐ Intermediate |
-| [Angular](./framework-integration#angular-three-js) | Service injection and RxJS | ⭐⭐ Intermediate |
-| [Svelte + Threlte](./framework-integration#svelte-threlte) | Component-based 3D with Svelte | ⭐⭐ Intermediate |
-| [Electron Desktop](./framework-integration#electron-desktop) | Desktop app integration | ⭐⭐ Intermediate |
+## Example Categories
 
-## Debugging & Profiling
+### 🚀 Getting Started
 
-Learn to diagnose and fix common issues:
+Quick start guides for different setups - from minimal one-file examples to full Vite plugin integration.
 
-| Example | Description | Difficulty |
-|---------|-------------|------------|
-| [Performance Debugging](./debugging-examples#performance-debugging) | Finding and fixing bottlenecks | ⭐⭐ Intermediate |
-| [Memory Leak Detection](./debugging-examples#memory-leak-detection) | Tracking down resource leaks | ⭐⭐ Intermediate |
-| [Shader Debugging](./debugging-examples#shader-debugging) | Inspecting GLSL/WGSL shaders | ⭐⭐⭐ Advanced |
-| [Large Scene Optimization](./debugging-examples#large-scene-optimization) | Scaling techniques for complex scenes | ⭐⭐ Intermediate |
+| Example | Description | Status |
+|---------|-------------|--------|
+| Minimal Setup | Absolute minimal - one file | 🔜 Coming Soon |
+| Vanilla Three.js | Standard three.js with 3Lens | 🔜 Coming Soon |
+| Vite Plugin | Zero-config with `@3lens/vite-plugin` | 🔜 Coming Soon |
+| Web Components | Using `<three-lens-overlay>` | 🔜 Coming Soon |
+| Bootstrap API | `bootstrap3Lens()` one-liner | 🔜 Coming Soon |
 
-## Feature Showcase
+### 🔌 Framework Integration
 
-Explore 3Lens capabilities:
+Framework-specific setups with mount kits and host integrations.
 
-| Example | Description | Difficulty |
-|---------|-------------|------------|
-| [Transform Gizmo](./feature-showcase#transform-gizmo) | Interactive object manipulation | ⭐ Beginner |
-| [Custom Plugin](./feature-showcase#custom-plugin) | Building your own devtools panel | ⭐⭐⭐ Advanced |
-| [WebGPU Features](./feature-showcase#webgpu-features) | WebGPU-specific capabilities | ⭐⭐⭐ Advanced |
-| [Configuration Rules](./feature-showcase#configuration-rules) | Defining performance budgets | ⭐⭐ Intermediate |
+| Example | Framework | Host | Status |
+|---------|-----------|------|--------|
+| React Basic | React | manual | 🔜 Coming Soon |
+| React Three Fiber | React + R3F | r3f | 🔜 Coming Soon |
+| Vue Basic | Vue 3 | manual | 🔜 Coming Soon |
+| Vue TresJS | Vue + TresJS | tres | 🔜 Coming Soon |
+| Angular | Angular | manual | 🔜 Coming Soon |
+| Svelte Basic | Svelte | manual | 🔜 Coming Soon |
+| Svelte Threlte | Svelte + Threlte | manual | 🔜 Coming Soon |
+| Next.js | Next.js 14+ | r3f | 🔜 Coming Soon |
+| Nuxt | Nuxt 3 | tres | 🔜 Coming Soon |
 
-## Game Development
+### 🔍 Inspector Addon
 
-Build games with 3Lens debugging:
+Entity graph browser and blame navigator demos.
 
-| Example | Description | Difficulty |
-|---------|-------------|------------|
-| [First-Person Shooter](./game-development#first-person-shooter) | FPS game debugging setup | ⭐⭐ Intermediate |
-| [Top-Down RPG](./game-development#top-down-rpg) | RPG game inspection | ⭐⭐ Intermediate |
-| [Racing Game](./game-development#racing-game) | Vehicle physics debugging | ⭐⭐⭐ Advanced |
-| [Platformer Physics](./game-development#platformer-physics) | Platform game mechanics | ⭐⭐ Intermediate |
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Scene Browser | Entity graph hierarchy | 🔜 Coming Soon |
+| Entity Search | Query engine | 🔜 Coming Soon |
+| Blame Navigator | Attribution chains | 🔜 Coming Soon |
+| Five Questions | Inspector contract | 🔜 Coming Soon |
+| Selection Sync | Global selection | 🔜 Coming Soon |
+| Relationships | Entity edges | 🔜 Coming Soon |
 
-## Real-World Scenarios
+### ⚡ Performance Addon
 
-Production-ready patterns:
+GPU/CPU attribution and profiling.
 
-| Example | Description | Difficulty |
-|---------|-------------|------------|
-| [3D Model Viewer](./real-world-scenarios#_3d-model-viewer) | Model loading and inspection | ⭐ Beginner |
-| [Particle System](./real-world-scenarios#particle-system) | Particle effects debugging | ⭐⭐ Intermediate |
-| [Physics Inspector](./real-world-scenarios#physics-inspector) | Physics engine integration | ⭐⭐⭐ Advanced |
-| [VR/XR Debugging](./real-world-scenarios#vr-xr-debugging) | WebXR development tools | ⭐⭐⭐ Advanced |
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Frame Timing | Per-frame capture | 🔜 Coming Soon |
+| Draw Call Attribution | Attribution to objects | 🔜 Coming Soon |
+| Hotspot Detection | Query engine | 🔜 Coming Soon |
+| Cost Heatmap | Visual overlay | 🔜 Coming Soon |
+| Capture Modes | MINIMAL/STANDARD/DEEP | 🔜 Coming Soon |
+| Fidelity Labels | EXACT/ESTIMATED/UNAVAILABLE | 🔜 Coming Soon |
 
-## Code Snippets
+### 🧠 Memory Addon
 
-Ready-to-use code patterns:
+Resource lifecycle and leak detection.
 
-| Example | Description | Difficulty |
-|---------|-------------|------------|
-| [Basic Setup](./code-examples#basic-setup) | Simplest 3Lens integration | ⭐ Beginner |
-| [Development-Only Setup](./code-examples#development-only-setup) | Conditional loading for production | ⭐ Beginner |
-| [Monitoring Frame Stats](./code-examples#monitoring-frame-stats) | Real-time performance metrics | ⭐⭐ Intermediate |
-| [Object Selection Handling](./code-examples#object-selection-handling) | Responding to user selections | ⭐⭐ Intermediate |
-| [Custom Performance Rules](./code-examples#custom-performance-rules) | Setting performance budgets | ⭐⭐ Intermediate |
-| [Transform Gizmo Setup](./code-examples#transform-gizmo-setup) | Interactive object controls | ⭐⭐ Intermediate |
-| [Camera Controls](./code-examples#camera-controls) | Viewport navigation | ⭐⭐ Intermediate |
-| [Logical Entities](./code-examples#logical-entities) | Grouping related objects | ⭐⭐ Intermediate |
-| [Resource Tracking](./code-examples#resource-tracking-leak-detection) | Memory leak detection | ⭐⭐⭐ Advanced |
-| [Plugin Development](./code-examples#plugin-development) | Extending 3Lens | ⭐⭐⭐ Advanced |
-| [WebGPU Support](./code-examples#webgpu-support) | WebGPU renderer integration | ⭐⭐⭐ Advanced |
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Resource Lifecycle | Create/dispose tracking | 🔜 Coming Soon |
+| Leak Detection | Undisposed resources | 🔜 Coming Soon |
+| Texture Analysis | Texture memory | 🔜 Coming Soon |
+| Geometry Analysis | Geometry memory | 🔜 Coming Soon |
+| Material Sharing | Shared vs duplicated | 🔜 Coming Soon |
+
+### 🔄 Diff Addon
+
+Frame/trace comparison.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Frame Diff | Compare two frames | 🔜 Coming Soon |
+| Trace Diff | Compare traces | 🔜 Coming Soon |
+| Entity Changes | Changes over time | 🔜 Coming Soon |
+| Cost Regression | Performance regression | 🔜 Coming Soon |
+
+### 🎨 Shader Addon
+
+Shader introspection and analysis.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Variant Browser | Compiled variants | 🔜 Coming Soon |
+| Uniform Inspector | Uniform values | 🔜 Coming Soon |
+| Define Analysis | #define combinations | 🔜 Coming Soon |
+| WebGPU Pipelines | Pipeline inspection | 🔜 Coming Soon |
+
+### 📼 Trace & Replay
+
+Recording and replaying sessions.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Record Session | CLI recording | 🔜 Coming Soon |
+| Replay Offline | Offline viewer | 🔜 Coming Soon |
+| Export Profiles | MINIMAL/STANDARD/FULL | 🔜 Coming Soon |
+| Share Redacted | Data redaction | 🔜 Coming Soon |
+
+### 🌐 Multi-Context
+
+Multiple renderers, scenes, and cameras.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Dual Renderer | Two renderers | 🔜 Coming Soon |
+| Minimap | Main + minimap | 🔜 Coming Soon |
+| WebGL + WebGPU | Mixed backends | 🔜 Coming Soon |
+| Context Switching | UI context selector | 🔜 Coming Soon |
+
+### 👷 Worker & OffscreenCanvas
+
+Background rendering scenarios.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Offscreen Basic | Worker host | 🔜 Coming Soon |
+| Transport Channel | PostMessage | 🔜 Coming Soon |
+| Remote UI | Split render/UI | 🔜 Coming Soon |
+
+### 🖥️ UI Surfaces
+
+Different UI modes and layouts.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Overlay Mode | Floating panel | 🔜 Coming Soon |
+| Dock Left/Right/Bottom | Docked panels | 🔜 Coming Soon |
+| Separate Window | DevTools window | 🔜 Coming Soon |
+| Minimal HUD | Tiny overlay | 🔜 Coming Soon |
+| Theming | CSS variables | 🔜 Coming Soon |
+
+### 🔧 CLI & Tooling
+
+Command-line workflows.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Trace Record | `3lens trace:record` | 🔜 Coming Soon |
+| Trace Diff | `3lens diff` | 🔜 Coming Soon |
+| Query Hotspots | `3lens query` | 🔜 Coming Soon |
+| Doctor | `3lens doctor` | 🔜 Coming Soon |
+
+### 🔌 Addon Development
+
+Building custom addons.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| Minimal Addon | Basic structure | 🔜 Coming Soon |
+| Custom Panel | UI panel | 🔜 Coming Soon |
+| Custom Query | Query registration | 🔜 Coming Soon |
+| Custom Events | Event emission | 🔜 Coming Soon |
+
+### 🔐 Security & Enterprise
+
+CSP, enterprise constraints.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| CSP Safe Mode | No inline styles | 🔜 Coming Soon |
+| Style Nonce | Nonce support | 🔜 Coming Soon |
+| Dev-Only Loading | Conditional load | 🔜 Coming Soon |
+| URL Toggle | `?3lens=1` | 🔜 Coming Soon |
+
+### 🎮 Real-World Apps
+
+Complete application examples.
+
+| Example | Features Used | Status |
+|---------|--------------|--------|
+| Model Viewer | Inspector, Memory | 🔜 Coming Soon |
+| Particle System | Perf, Memory | 🔜 Coming Soon |
+| Physics Game | Multi-Context, Perf | 🔜 Coming Soon |
+| VR Experience | Inspector, Perf | 🔜 Coming Soon |
+
+### 🧪 CI/CD Integration
+
+Automated testing.
+
+| Example | Feature Demonstrated | Status |
+|---------|---------------------|--------|
+| GitHub Actions | CI workflow | 🔜 Coming Soon |
+| Performance Budget | Regression detection | 🔜 Coming Soon |
+| Contract Validation | `3lens validate` | 🔜 Coming Soon |
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Your App                             │
+├─────────────────────────────────────────────────────────────┤
+│  Mount Kit (optional)     │  Host Integration               │
+│  @3lens/mount-react       │  @3lens/host-manual             │
+│  @3lens/mount-vue         │  @3lens/host-r3f                │
+│  @3lens/mount-angular     │  @3lens/host-tres               │
+│  @3lens/mount-svelte      │  @3lens/host-worker             │
+├─────────────────────────────────────────────────────────────┤
+│                     @3lens/runtime                          │
+│            createLens() • registerContext()                 │
+├─────────────────────────────────────────────────────────────┤
+│  Addons                   │  UI                             │
+│  @3lens/addon-inspector   │  @3lens/ui-core                 │
+│  @3lens/addon-perf        │  @3lens/ui-web                  │
+│  @3lens/addon-memory      │                                 │
+│  @3lens/addon-diff        │                                 │
+│  @3lens/addon-shader      │                                 │
+├─────────────────────────────────────────────────────────────┤
+│                      @3lens/kernel                          │
+│         Capture • Entity Graph • Query • Trace              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Quick Start Preview
+
+Once examples are available, the basic setup will look like:
+
+```typescript
+import { createLens, manualHost, uiOverlay } from "@3lens/devtools";
+
+const lens = createLens({
+  ui: uiOverlay(),
+  addons: ["inspector", "perf", "memory"],
+});
+
+lens.registerContext({
+  id: "main",
+  host: manualHost({ renderer, scene, camera }),
+});
+
+lens.attach();
+```
 
 ## Running Examples Locally
-
-All examples are available in the repository under `/examples`:
 
 ```bash
 # Clone the repository
@@ -91,35 +256,18 @@ cd 3Lens
 pnpm install
 
 # Run a specific example
-cd examples/framework-integration/react-three-fiber
+cd examples/getting-started/minimal
 pnpm dev
 ```
 
-## Live Demos
+## Stay Updated
 
-Try 3Lens directly in your browser with our interactive examples:
+- Watch the [GitHub repository](https://github.com/adriandarian/3Lens) for updates
+- Check the [Changelog](/changelog) for release notes
+- Join [Discussions](https://github.com/adriandarian/3Lens/discussions) for Q&A
 
-::: tip 🎮 Interactive Examples Available!
-We now have live, interactive examples you can run directly in your browser. No setup required!
+## Contributing
 
-**[→ Browse Live Examples](/examples/live/)**
-:::
-
-### Quick Links
-
-- **[Vanilla Three.js](/examples/live/vanilla-threejs)** - Basic setup without any framework
-- **[React Three Fiber](/examples/live/react-three-fiber)** - R3F integration with hooks
-- **[Vue + TresJS](/examples/live/vue-tresjs)** - Vue composables with TresJS
-- **[Transform Gizmo](/examples/live/transform-gizmo)** - Interactive object manipulation
-- **[Performance Debugging](/examples/live/performance-debugging)** - Finding bottlenecks
-
-## Contributing Examples
-
-Have an interesting use case? We welcome example contributions!
-
-1. Create a new directory in `/examples`
-2. Include a README with setup instructions
-3. Add clear comments explaining key concepts
-4. Submit a pull request
+Once core packages are stable, example contributions will be welcome!
 
 See [Contributing](/contributing) for guidelines.
