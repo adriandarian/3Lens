@@ -67,7 +67,17 @@
 
 ## Getting Started
 
-Once packages are published, the basic setup will look like:
+Install 3Lens using the main package:
+
+```bash
+npm install @3lens/devtools
+# or
+pnpm add @3lens/devtools
+# or
+yarn add @3lens/devtools
+```
+
+### Basic Setup
 
 ```typescript
 import { createLens, manualHost, uiOverlay } from "@3lens/devtools";
@@ -84,6 +94,32 @@ lens.registerContext({
 
 lens.attach();
 ```
+
+### Framework Integration
+
+3Lens provides framework-specific packages for seamless integration:
+
+- **React / React Three Fiber**: `@3lens/devtools/r3f`
+- **Vue / TresJS**: `@3lens/devtools/tres`
+- **Angular**: `@3lens/devtools/angular`
+- **Svelte**: `@3lens/devtools/svelte`
+
+See the [Framework Guides](/guide/) for detailed setup instructions.
+
+### Troubleshooting
+
+If something isn't working, use `lens.doctor()` to diagnose issues:
+
+```typescript
+const report = lens.doctor();
+console.log(report.actionable_fixes);
+```
+
+The doctor report will tell you:
+- What contexts were found
+- Which hooks are active
+- What capabilities are available
+- Actionable fixes for common issues
 
 ## License
 

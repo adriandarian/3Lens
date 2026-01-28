@@ -100,6 +100,8 @@ Contracts define non-negotiable behaviors. Agents MUST implement and validate th
 ### Feature Contracts
 - [inspector.md](agents/contracts/inspector.md) - The 5 questions
 - [shader-graph.md](agents/contracts/shader-graph.md) - Runtime introspection
+- [animation.md](agents/contracts/animation.md) - Animation clip tracking and timeline scrubbing
+- [asset-loading.md](agents/contracts/asset-loading.md) - Loader lifecycle and asset dependency graphs
 
 ### Infrastructure Contracts
 - [transport.md](agents/contracts/transport.md) - Worker/remote UI protocol

@@ -227,7 +227,13 @@ Automated testing.
 
 ## Quick Start Preview
 
-Once examples are available, the basic setup will look like:
+Install 3Lens:
+
+```bash
+npm install @3lens/devtools
+```
+
+Then set up your lens:
 
 ```typescript
 import { createLens, manualHost, uiOverlay } from "@3lens/devtools";
@@ -244,6 +250,8 @@ lens.registerContext({
 
 lens.attach();
 ```
+
+That's it! The 3Lens overlay will appear in your application. Press the toggle key (default: `Ctrl+Shift+D`) to show/hide the devtools panel.
 
 ## Running Examples Locally
 

@@ -20,9 +20,15 @@ import type { Selection, UISurface, DiscoveryMode, ExportProfile } from './types
 import type { ContextRegistration, ContextOptions } from './context';
 import type { Host } from './host';
 import type { LensClient } from './client';
-import type { LensTransport } from './transport';
+import type { LensTransport, TransportMessage } from './transport';
 import type { Addon } from './addon';
 import type { DoctorReport } from './doctor';
+import { runDoctor } from './doctor';
+import { checkAddonCompatibility } from './addon';
+import { KERNEL_VERSION } from '@3lens/kernel';
+import { TRACE_VERSION } from '@3lens/kernel';
+import { createTraceManager, type TraceManager } from '@3lens/kernel';
+import { RUNTIME_VERSION } from './index';
 
 /**
  * Lens configuration
@@ -197,10 +203,25 @@ export function createLens(config: LensConfig = {}): Lens {
   const selectionHandlers = new Set<(selection: Selection) => void>();
   const eventHandlers = new Set<(event: Event) => void>();
   const addons = new Map<string, Addon>();
+  let transport: LensTransport | null = null;
+  const transportHandlers = new Set<(message: TransportMessage) => void>();
 
   // Placeholder implementations - these will be properly implemented
   // when the kernel modules are fully wired up
   let graph: EntityGraph | null = null;
+
+  // Create trace manager
+  const traceManager: TraceManager = createTraceManager({
+    sessionId: crypto.randomUUID(),
+    environment: {
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      three_version: 'unknown',
+      backend: 'webgl2',
+    },
+    captureMode: config.captureMode ?? 'STANDARD',
+    chunkSize: 1000,
+    snapshotInterval: 60,
+  });
 
   const lens: Lens = {
     // Lifecycle
@@ -296,7 +317,31 @@ export function createLens(config: LensConfig = {}): Lens {
 
     // Addons
     async registerAddon(addon: Addon) {
-      // TODO: Check compatibility
+      // Check compatibility
+      const doctorReport = runDoctor();
+      const capabilities: Record<string, boolean> = {};
+      
+      // Build capabilities map from doctor report
+      for (const [capName, status] of Object.entries(doctorReport.capability_matrix)) {
+        capabilities[capName] = status.available;
+      }
+
+      const compatibility = checkAddonCompatibility(addon, {
+        kernelVersion: KERNEL_VERSION,
+        traceVersion: TRACE_VERSION,
+        capabilities,
+      });
+
+      if (!compatibility.compatible) {
+        const errorMsg = `Addon ${addon.id} is incompatible: ${compatibility.errors.join(', ')}`;
+        console.error(`[3Lens] ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+
+      if (compatibility.warnings.length > 0) {
+        console.warn(`[3Lens] Addon ${addon.id} has warnings: ${compatibility.warnings.join(', ')}`);
+      }
+
       addons.set(addon.id, addon);
       await addon.register?.(lens);
     },
@@ -330,16 +375,19 @@ export function createLens(config: LensConfig = {}): Lens {
 
     // Trace
     startRecording() {
-      // TODO: Implement trace recording
+      traceManager.startRecording();
     },
 
     stopRecording() {
-      // TODO: Implement trace recording
+      traceManager.stopRecording();
     },
 
     async exportTrace(options?: { profile?: ExportProfile }) {
-      // TODO: Implement trace export
-      return new Blob(['{}'], { type: 'application/json' });
+      const trace = traceManager.export({
+        profile: options?.profile ?? 'STANDARD',
+      });
+      const json = JSON.stringify(trace, null, 2);
+      return new Blob([json], { type: 'application/json' });
     },
 
     async loadTrace(trace: Blob | File) {
@@ -348,19 +396,7 @@ export function createLens(config: LensConfig = {}): Lens {
 
     // Doctor
     doctor(): DoctorReport {
-      return {
-        environment: {
-          three_version: 'unknown',
-          three_tier: 'UNKNOWN',
-          backend: 'webgl2',
-          is_worker: false,
-          csp_restrictions: [],
-          capabilities: {},
-        },
-        capability_matrix: {},
-        actionable_fixes: [],
-        warnings: [],
-      };
+      return runDoctor();
     },
 
     // UI
@@ -397,12 +433,32 @@ export function createLens(config: LensConfig = {}): Lens {
     },
 
     // Transport
-    connectTransport(transport: LensTransport) {
-      // TODO: Implement transport connection
+    connectTransport(newTransport: LensTransport) {
+      // Disconnect existing transport if any
+      if (transport) {
+        lens.disconnectTransport();
+      }
+
+      transport = newTransport;
+
+      // Set up message handler
+      const unsubscribe = transport.onMessage((message: TransportMessage) => {
+        // Forward messages to all handlers
+        for (const handler of transportHandlers) {
+          handler(message);
+        }
+      });
+
+      // Store unsubscribe function (would need to track this if we want to clean up properly)
+      // For now, transport.close() will handle cleanup
     },
 
     disconnectTransport() {
-      // TODO: Implement transport disconnection
+      if (transport) {
+        transport.close();
+        transport = null;
+        transportHandlers.clear();
+      }
     },
 
     // Overhead
