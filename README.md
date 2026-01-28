@@ -5,147 +5,198 @@
 </p>
 
 <p align="center">
-  <strong>The definitive developer toolkit for three.js</strong>
+  <strong>The render introspection OS for three.js</strong>
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
   <a href="https://threejs.org/"><img src="https://img.shields.io/badge/three.js-≥0.150-orange" alt="Three.js" /></a>
-  <img src="https://img.shields.io/badge/version-alpha-yellow" alt="Version" />
+  <img src="https://img.shields.io/badge/status-redesign-yellow" alt="Status" />
   <a href="https://github.com/adriandarian/3Lens/actions/workflows/ci.yml"><img src="https://github.com/adriandarian/3Lens/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
 </p>
 
 <p align="center">
-  Inspect scenes, track performance, and debug WebGL/WebGPU apps without leaving the browser.
+  Deep causal analysis, trace-based debugging, and actionable optimization for WebGL/WebGPU apps.
 </p>
 
 ---
 
-## ✨ Features
-
-- **Scene Inspector** — Explore the scene graph with a tree view, select objects, and inspect properties
-- **Performance Monitoring** — Real-time stats for FPS, draw calls, triangles, and frame timing
-- **Memory Profiling** — Track GPU memory, textures, geometries, and detect potential leaks
-- **Transform Gizmos** — Translate, rotate, scale objects with visual gizmos and undo/redo
-- **Camera Controls** — Focus on objects, fly-to animations, camera switching, and home position
-- **Object Cost Analysis** — Per-mesh cost scoring with heatmap visualization
-- **Resource Lifecycle Tracking** — Monitor creation/disposal of geometries, materials, and textures
-- **Leak Detection** — Detect orphaned resources, undisposed objects, and memory growth
-- **Rule Violations** — Set thresholds and get warned when performance degrades
-- **Zero Config** — Works out of the box with any three.js application
-
-## 📦 Packages
-
-| Package | Description |
-|---------|-------------|
-| `@3lens/core` | Probe SDK that collects stats, manages scene observation, and exposes events |
-| `@3lens/overlay` | In-app floating panel UI with full devtools functionality |
-| `@3lens/react-bridge` | React and React Three Fiber integration with hooks and components |
-| `@3lens/angular-bridge` | Angular integration with services, directives, and Nx workspace helpers |
-| `@3lens/vue-bridge` | Vue 3 and TresJS integration with composables and plugin |
+> **🚧 Major Redesign In Progress**
+>
+> 3Lens is undergoing a complete architectural redesign. The new system is built on 5 foundational primitives: **Capture**, **Model**, **Query**, **Visualize**, and **Act + Verify**. See the [Architecture](#-architecture) section for details.
 
 ---
 
-## 🚀 Quick Start
+## ✨ Vision
 
-### Installation
+3Lens is not just another metrics panel. It's a **render introspection OS** where every tool is a view over shared primitives:
 
-```bash
-npm install @3lens/core @3lens/overlay
-# or
-pnpm add @3lens/core @3lens/overlay
-# or
-yarn add @3lens/core @3lens/overlay
-# or
-bun add @3lens/core @3lens/overlay
-```
+- **Deep Trace + Causal Analysis** — Understand *why* something is slow, not just *that* it's slow
+- **Offline Diff/Regression** — Compare traces across sessions, catch regressions in CI
+- **Resource Leak Detection** — Full lifecycle tracking, not just counts
+- **Actionable Optimization Paths** — Click a metric → see the blame chain → fix the culprit
+- **Multi-Context Support** — First-class support for multiple renderers, scenes, cameras
 
-> **Note:** 3Lens is currently in alpha. The packages are not yet published to npm. See [Development Setup](#development-setup) to try it locally.
+## 📦 Package Architecture
 
-### Basic Usage
+### Core Packages
+
+| Package | Description |
+|---------|-------------|
+| `@3lens/kernel` | Event capture, entity graph, query engine, trace format |
+| `@3lens/runtime` | Public API: `createLens()`, context registration, discovery |
+| `@3lens/devtools` | Batteries-included meta-package for most users |
+
+### Host Packages
+
+| Package | Description |
+|---------|-------------|
+| `@3lens/host-manual` | Vanilla three.js (user provides renderer/scene/camera) |
+| `@3lens/host-r3f` | React Three Fiber integration |
+| `@3lens/host-tres` | TresJS/Vue integration |
+| `@3lens/host-worker` | OffscreenCanvas/Worker support |
+
+### Addon Packages
+
+| Package | Description |
+|---------|-------------|
+| `@3lens/addon-inspector` | Entity graph browser + blame navigator |
+| `@3lens/addon-perf` | Performance analysis with attribution |
+| `@3lens/addon-memory` | Resource lifecycle + leak detection |
+| `@3lens/addon-diff` | Frame/session/trace comparison |
+| `@3lens/addon-shader` | Shader introspection |
+
+### UI Packages
+
+| Package | Description |
+|---------|-------------|
+| `@3lens/ui-core` | Framework-agnostic UI shell |
+| `@3lens/ui-web` | Web Components for universal mounting |
+
+### Mount Kits
+
+| Package | Description |
+|---------|-------------|
+| `@3lens/mount-angular` | Angular service/component wrapper |
+| `@3lens/mount-react` | React context/hooks wrapper |
+| `@3lens/mount-vue` | Vue plugin/composables |
+| `@3lens/mount-svelte` | Svelte action/component |
+
+### Tooling
+
+| Package | Description |
+|---------|-------------|
+| `@3lens/vite-plugin` | Dev server injection |
+| `@3lens/cli` | Trace recording, diff, validation commands |
+
+---
+
+## 🚀 Quick Start (Preview)
+
+> **Note:** Packages are not yet published. This shows the target API.
 
 ```typescript
-import * as THREE from 'three';
-import { createProbe } from '@3lens/core';
-import { createOverlay } from '@3lens/overlay';
+import { createLens, manualHost, uiOverlay } from "@3lens/devtools";
 
-// Your three.js setup
-const renderer = new THREE.WebGLRenderer();
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-// Create the probe and start observing
-const probe = createProbe({
-  appName: 'My three.js App',
-  rules: {
-    maxDrawCalls: 1000,
-    maxTriangles: 500_000,
-    maxFrameTimeMs: 16.67,
-  },
+const lens = createLens({
+  ui: uiOverlay(),
+  addons: ["inspector", "perf", "memory"],
 });
 
-probe.observeRenderer(renderer);
-probe.observeScene(scene);
-
-// Mount the overlay UI
-const overlay = createOverlay(probe);
-
-// Optional: toggle with keyboard shortcut
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'd' && e.ctrlKey && e.shiftKey) {
-    overlay.toggle();
-  }
+lens.registerContext({
+  id: "main",
+  host: manualHost({ renderer, scene, camera }),
 });
+
+lens.attach();
 ```
 
-### One-Line Bootstrap
+### Web Components
 
-For quick setup, use the `bootstrapOverlay` helper:
+```html
+<script type="module">
+  import '@3lens/ui-web';
+  import { createLens, manualHost } from '@3lens/runtime';
 
-```typescript
-import * as THREE from 'three';
-import { bootstrapOverlay } from '@3lens/overlay';
+  const lens = createLens();
+  lens.registerContext({ id: 'main', host: manualHost({ renderer, scene, camera }) });
 
-const renderer = new THREE.WebGLRenderer();
-const scene = new THREE.Scene();
+  const overlay = document.querySelector('three-lens-overlay');
+  overlay.lens = lens;
+</script>
 
-// One call does it all
-const { probe, overlay } = bootstrapOverlay({
-  renderer,
-  scene,
-  appName: 'My App',
-});
+<three-lens-overlay></three-lens-overlay>
 ```
 
-### React Three Fiber Usage
+---
 
-```tsx
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { ThreeLensProvider, createR3FConnector, useFPS } from '@3lens/react-bridge';
+## 🏗 Architecture
 
-// Create the R3F connector with R3F's hooks
-const ThreeLensR3F = createR3FConnector(useThree, useFrame);
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Your App                             │
+├─────────────────────────────────────────────────────────────┤
+│  Mount Kit (optional)     │  Host Integration               │
+│  @3lens/mount-react       │  @3lens/host-manual             │
+│  @3lens/mount-vue         │  @3lens/host-r3f                │
+│  @3lens/mount-angular     │  @3lens/host-tres               │
+│  @3lens/mount-svelte      │  @3lens/host-worker             │
+├─────────────────────────────────────────────────────────────┤
+│                     @3lens/runtime                          │
+│            createLens() • registerContext()                 │
+├─────────────────────────────────────────────────────────────┤
+│  Addons                   │  UI                             │
+│  @3lens/addon-inspector   │  @3lens/ui-core                 │
+│  @3lens/addon-perf        │  @3lens/ui-web                  │
+│  @3lens/addon-memory      │                                 │
+│  @3lens/addon-diff        │                                 │
+│  @3lens/addon-shader      │                                 │
+├─────────────────────────────────────────────────────────────┤
+│                      @3lens/kernel                          │
+│         Capture • Entity Graph • Query • Trace              │
+└─────────────────────────────────────────────────────────────┘
+```
 
-function PerformanceHUD() {
-  const fps = useFPS(true);
-  return <div className="hud">FPS: {fps.current.toFixed(0)}</div>;
-}
+### The 5 Foundational Primitives
 
-function App() {
-  return (
-    <ThreeLensProvider config={{ appName: 'My R3F App' }}>
-      <PerformanceHUD />
-      <Canvas>
-        <ThreeLensR3F />
-        <ambientLight />
-        <mesh>
-          <boxGeometry />
-          <meshStandardMaterial color="orange" />
-        </mesh>
-      </Canvas>
-    </ThreeLensProvider>
-  );
-}
+1. **Capture** — Authoritative event stream (render events, resource lifecycle)
+2. **Model** — Unified typed dependency graph (entities + relationships)
+3. **Query** — Tools query the model, not the renderer directly
+4. **Visualize** — Views are projections of queries
+5. **Act + Verify** — Actions produce events, verification shows diffs
+
+---
+
+## 📁 Project Structure
+
+```
+packages/
+├── core/                 # Core packages
+│   ├── kernel/          # Event capture, entity graph, queries, trace
+│   ├── runtime/         # Public API, createLens, hosts, addons
+│   └── devtools/        # Batteries-included meta-package
+├── hosts/               # Runtime integrations
+│   ├── manual/          # Vanilla three.js
+│   ├── r3f/             # React Three Fiber
+│   ├── tres/            # TresJS/Vue
+│   └── worker/          # OffscreenCanvas/Worker
+├── addons/              # Feature modules
+│   ├── inspector/       # Entity browser, blame navigator
+│   ├── perf/            # Performance analysis
+│   ├── memory/          # Resource lifecycle, leak detection
+│   ├── diff/            # Frame/trace comparison
+│   └── shader/          # Shader introspection
+├── ui/                  # UI packages
+│   ├── core/            # Framework-agnostic UI shell
+│   └── web/             # Web Components
+├── mounts/              # Framework mount kits
+│   ├── angular/
+│   ├── react/
+│   ├── vue/
+│   └── svelte/
+└── tools/               # Build & CLI tools
+    ├── cli/
+    └── vite-plugin/
 ```
 
 ---
@@ -154,14 +205,14 @@ function App() {
 
 ### Prerequisites
 
-- Node.js 18+
-- pnpm 8+
+- Node.js 20+
+- pnpm 9+
 
 ### Clone and Install
 
 ```bash
 git clone https://github.com/adriandarian/3Lens.git
-cd 3lens
+cd 3Lens
 pnpm install
 ```
 
@@ -171,147 +222,40 @@ pnpm install
 pnpm build
 ```
 
-### Run the Example App
+### Run Tests
 
 ```bash
-pnpm --filter @3lens/example-basic dev
-```
-
-Open `http://localhost:5173` to see the example scene with the overlay panel.
-
-### Development Mode
-
-Run packages in watch mode with the base example app:
-
-```bash
-pnpm dev
-```
-
-This starts the core packages in watch mode along with the vanilla-threejs example.
-
-### Running Examples
-
-```bash
-# List all available examples
-pnpm example:list
-
-# Interactive example selector
-pnpm example
-
-# Run specific example(s) by name
-pnpm example vanilla-threejs
-pnpm example react-three-fiber vue-tresjs
-
-# Run by number (from example:list)
-pnpm example 1 5 12
-
-# Run a range of examples
-pnpm example 1-5
+pnpm test
 ```
 
 ---
 
-## 🔧 Configuration
+## 📋 Project Status
 
-### Probe Options
-
-```typescript
-interface ProbeConfig {
-  appName: string;              // Application name for identification
-  env?: string;                 // Environment: 'development' | 'staging' | 'production'
-  debug?: boolean;              // Enable verbose logging
-  rules?: RulesConfig;          // Performance thresholds
-  sampling?: SamplingConfig;    // How often to collect stats
-}
-
-interface RulesConfig {
-  maxDrawCalls?: number;        // Warn when draw calls exceed this
-  maxTriangles?: number;        // Warn when triangles exceed this
-  maxFrameTimeMs?: number;      // Warn when frame time exceeds this (ms)
-  maxTextures?: number;         // Warn when texture count exceeds this
-}
-```
-
-### Overlay Options
-
-```typescript
-interface OverlayOptions {
-  probe: DevtoolProbe;          // The probe instance
-  position?: 'left' | 'right';  // Panel position (default: 'right')
-  collapsed?: boolean;          // Start collapsed (default: false)
-}
-```
+| Component | Status |
+|-----------|--------|
+| Kernel (capture, graph, query, trace) | ✅ Implemented |
+| Runtime (createLens, hosts, addons) | ✅ Implemented |
+| Host: Manual | ✅ Implemented |
+| Host: R3F, TresJS, Worker | 🔜 Stub |
+| Addons: Inspector | ✅ Implemented |
+| Addons: Perf, Memory, Diff, Shader | 🔜 Stub |
+| UI: Core | ✅ Implemented |
+| UI: Web Components | ✅ Implemented |
+| Mount Kits | 🔜 Stub |
+| CLI | ✅ Implemented |
+| Vite Plugin | ✅ Implemented |
+| Examples | 🔜 Not Started |
+| Documentation | 🔜 In Progress |
 
 ---
 
-## 📖 API Reference
+## 📖 Documentation
 
-See the full [API Documentation](./docs/API.md) for detailed usage.
-
-### Core API
-
-```typescript
-import { createProbe, DevtoolProbe } from '@3lens/core';
-
-const probe = createProbe({ appName: 'My App' });
-
-// Observe renderer and scene
-probe.observeRenderer(renderer);
-probe.observeScene(scene);
-
-// Get current stats
-const stats = probe.getLatestFrameStats();
-
-// Subscribe to frame updates
-const unsubscribe = probe.onFrameStats((stats) => {
-  console.log(`Frame ${stats.frame}: ${stats.triangles} triangles`);
-});
-
-// Take a scene snapshot
-const snapshot = probe.takeSnapshot();
-
-// Clean up
-probe.dispose();
-```
-
-### Overlay API
-
-```typescript
-import { createOverlay, ThreeLensOverlay } from '@3lens/overlay';
-
-const overlay = createOverlay(probe);
-
-overlay.show();      // Show the panel
-overlay.hide();      // Hide the panel
-overlay.toggle();    // Toggle visibility
-overlay.destroy();   // Remove from DOM
-```
-
----
-
-## 🎮 Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+Shift+D` | Toggle overlay panel |
-
----
-
-## 📁 Project Structure
-
-```
-3lens/
-├── packages/
-│   ├── core/            # Probe SDK - data collection, scene observation, helpers
-│   ├── overlay/         # In-app floating panel UI with full devtools
-│   ├── react-bridge/    # React and R3F integration (hooks, components)
-│   ├── angular-bridge/  # Angular integration (services, directives, Nx helpers)
-│   ├── vue-bridge/      # Vue 3 and TresJS integration (composables, plugin)
-│   └── ui/              # Shared UI components
-├── examples/
-│   └── basic/           # Vanilla three.js example
-└── docs/                # Documentation
-```
+- [Architecture Guide](./agents.md) — Project philosophy and design principles
+- [Contracts](./agents/contracts/) — System invariants and guarantees
+- [Plugin API](./docs/guide/plugin-api.md) — Building third-party addons
+- [Skills & Commands](./skills.md) — CLI commands and programmatic APIs
 
 ---
 
@@ -328,9 +272,6 @@ pnpm typecheck
 
 # Lint
 pnpm lint
-
-# Format code
-pnpm format
 ```
 
 ---
