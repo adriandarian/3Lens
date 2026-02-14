@@ -79,7 +79,7 @@ Examples:
 
 ## Additional Resources
 
-- For detailed command syntax, see [skills.md](../../../skills.md)
+- For detailed command syntax, see [.cursor/commands/](../../commands/)
 - For Inspector contract, see [agents/contracts/inspector.md](../../../agents/contracts/inspector.md)
 - For entity graph rules, see [agents/contracts/entity-graph.md](../../../agents/contracts/entity-graph.md)
 - Command: [inspect](../../../commands/inspect.md)

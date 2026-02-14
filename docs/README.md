@@ -24,7 +24,7 @@ description: The render introspection OS for three.js — deep causal analysis, 
 | [Architecture](../agents.md) | System design, philosophy, and contracts |
 | [Contracts](../agents/contracts/) | System invariants and guarantees |
 | [Plugin API](./guide/plugin-api.md) | Building third-party addons |
-| [Skills & Commands](../skills.md) | CLI commands and programmatic APIs |
+| [Skills & Commands](../.cursor/commands/) | CLI commands and programmatic APIs |
 
 ## Project Status
 

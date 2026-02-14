@@ -134,6 +134,6 @@ Doctor operations diagnose project and tooling issues, providing actionable reco
 
 ## Additional Resources
 
-- For detailed command syntax, see [skills.md](../../../skills.md)
+- For detailed command syntax, see [.cursor/commands/](../../commands/)
 - For compatibility contract, see [agents/contracts/compatibility.md](../../../agents/contracts/compatibility.md)
 - For CSP handling, see [agents/contracts/security-csp.md](../../../agents/contracts/security-csp.md)

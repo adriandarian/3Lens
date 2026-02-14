@@ -144,7 +144,7 @@ After scaffolding, follow the relevant playbook:
 
 ## Additional Resources
 
-- For detailed command syntax, see [skills.md](../../../skills.md)
+- For detailed command syntax, see [.cursor/commands/](../../commands/)
 - For addon contract, see [agents/contracts/addons.md](../../../agents/contracts/addons.md)
 - Commands: [.cursor/commands/scaffold-*.md](../../../commands/)
 - Playbooks: [agents/playbooks/add-a-*.md](../../../agents/playbooks/)

@@ -69,7 +69,7 @@ Trace operations are the foundation of 3Lens analysis. Use these commands to cap
 
 ## Additional Resources
 
-- For detailed command syntax, see [skills.md](../../../skills.md)
+- For detailed command syntax, see [.cursor/commands/](../../commands/)
 - For trace format details, see [agents/contracts/capture.md](../../../agents/contracts/capture.md)
 - Commands: [trace-record](../../../commands/trace-record.md), [trace-open](../../../commands/trace-open.md)
 - Skill: [diff-operations](../diff-operations/SKILL.md)

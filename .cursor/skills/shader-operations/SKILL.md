@@ -89,5 +89,5 @@ For TSL (Three.js Shading Language) shaders, additional introspection is availab
 
 ## Additional Resources
 
-- For detailed command syntax, see [skills.md](../../../skills.md)
+- For detailed command syntax, see [.cursor/commands/](../../commands/)
 - For shader graph contract, see [agents/contracts/shader-graph.md](../../../agents/contracts/shader-graph.md)

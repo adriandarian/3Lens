@@ -121,7 +121,7 @@ Always provide analysis in this format:
 - Trace attribution paths to specific entities
 - Reference `agents/contracts/capture.md` for trace format
 - Reference `agents/contracts/fidelity.md` for metric accuracy
-- Use `skills.md` for complete command syntax
+- Use `.cursor/commands/` for complete command syntax
 
 ## Related Resources
 

@@ -119,7 +119,7 @@ Contracts are defined in `agents/contracts/`:
 
 ## Additional Resources
 
-- For detailed command syntax, see [skills.md](../../../skills.md)
+- For detailed command syntax, see [.cursor/commands/](../../commands/)
 - For PR checklist, see [agents/checklists/pr.md](../../../agents/checklists/pr.md)
 - Command: [validate-contracts](../../../commands/validate-contracts.md)
 - Command: [test-contracts](../../../commands/test-contracts.md)

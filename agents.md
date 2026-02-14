@@ -149,7 +149,7 @@ Use checklist: [agents/checklists/pr.md](agents/checklists/pr.md)
 
 ## Commands
 
-See [skills.md](skills.md) for the full command reference.
+See [.cursor/commands/](.cursor/commands/) for the full command reference and [.cursor/skills/](.cursor/skills/) for operation-specific guidance.
 
 ### Quick Reference
 
