@@ -16,7 +16,7 @@ export { createLens, type LensConfig } from './lens';
 export { type ContextRegistration, type ContextOptions } from './context';
 
 // Host interface
-export { type Host, type HostConfig } from './host';
+export { BaseHost, type Host, type HostConfig } from './host';
 
 // Client interface
 export { type LensClient } from './client';

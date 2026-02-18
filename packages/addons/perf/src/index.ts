@@ -802,12 +802,6 @@ function registerPerfQueries(lens: Lens) {
   // For now, the exported functions can be used directly
 }
 
-// Export query functions
-export {
-  queryTopHotspots,
-  computeAttribution,
-  buildAttributionChain,
-  createPerfPanel,
-};
+export { buildAttributionChain };
 
 export default perfAddon;

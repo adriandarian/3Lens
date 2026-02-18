@@ -1143,13 +1143,4 @@ function subscribeToResourceEvents(lens: Lens) {
   });
 }
 
-// Export query functions
-export {
-  queryResourceLeaks,
-  findOrphanedResources,
-  getMemorySummary,
-  createMemoryPanel,
-  lifecycleTracker,
-};
-
 export default memoryAddon;

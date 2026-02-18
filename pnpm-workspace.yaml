@@ -11,8 +11,8 @@ packages:
   - 'packages/mounts/*'
   # CLI & build tools
   - 'packages/tools/*'
-  # Examples (coming soon)
-  # - 'examples/**/*'
+  # Examples
+  - 'examples/**/*'
 
 catalog:
   # Build tools

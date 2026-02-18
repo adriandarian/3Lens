@@ -1,0 +1,23 @@
+{
+  "name": "@3lens/example-vanilla-threejs",
+  "version": "1.0.0",
+  "description": "3Lens example - vanilla three.js with manual host",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@3lens/devtools": "workspace:*",
+    "@3lens/host-manual": "workspace:*",
+    "@3lens/ui-web": "workspace:*",
+    "three": "catalog:"
+  },
+  "devDependencies": {
+    "@types/three": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}
