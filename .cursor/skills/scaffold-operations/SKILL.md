@@ -108,7 +108,7 @@ packages/hosts/
 └── my-framework/
     ├── package.json
     ├── src/
-    │   └── index.ts
+    �?  └── index.ts
     └── tsconfig.json
 ```
 
@@ -119,9 +119,9 @@ my-addon/
 ├── package.json
 ├── 3lens-addon.json
 ├── src/
-│   ├── index.ts
-│   ├── queries/
-│   └── panels/
+�?  ├── index.ts
+�?  ├── queries/
+�?  └── panels/
 ├── tests/
 └── README.md
 ```
@@ -137,15 +137,15 @@ my-addon/
 
 After scaffolding, follow the relevant playbook:
 
-- Panels: [agents/playbooks/add-a-panel.md](../../../agents/playbooks/add-a-panel.md)
-- Probes: [agents/playbooks/add-a-probe.md](../../../agents/playbooks/add-a-probe.md)
-- Hosts: [agents/playbooks/add-a-host.md](../../../agents/playbooks/add-a-host.md)
-- Addons: [agents/playbooks/add-a-plugin.md](../../../agents/playbooks/add-a-plugin.md)
+- Panels: [.cursor/playbooks/add-a-panel.md](../../../.cursor/playbooks/add-a-panel.md)
+- Probes: [.cursor/playbooks/add-a-probe.md](../../../.cursor/playbooks/add-a-probe.md)
+- Hosts: [.cursor/playbooks/add-a-host.md](../../../.cursor/playbooks/add-a-host.md)
+- Addons: [.cursor/playbooks/add-a-plugin.md](../../../.cursor/playbooks/add-a-plugin.md)
 
 ## Additional Resources
 
 - For detailed command syntax, see [.cursor/commands/](../../commands/)
-- For addon contract, see [agents/contracts/addons.md](../../../agents/contracts/addons.md)
+- For addon contract, see [.cursor/contracts/addons.md](../../../.cursor/contracts/addons.md)
 - Commands: [.cursor/commands/scaffold-*.md](../../../commands/)
-- Playbooks: [agents/playbooks/add-a-*.md](../../../agents/playbooks/)
-- Agent: [playbook-executor](../../../agents/playbook-executor.md)
+- Playbooks: [.cursor/playbooks/add-a-*.md](../../../.cursor/playbooks/)
+- Read playbooks in [.cursor/playbooks/](../../../.cursor/playbooks/)

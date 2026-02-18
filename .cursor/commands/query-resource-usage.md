@@ -85,5 +85,5 @@ Query resource usage statistics including memory consumption, counts, and attrib
 ## See Also
 
 - Skill: query-operations
-- Contract: agents/contracts/attribution.md
+- Contract: .cursor/contracts/attribution.md
 - Addon: @3lens/addon-memory

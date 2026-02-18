@@ -109,7 +109,7 @@ interface Host {
 ### Context Registration
 
 ```typescript
-// âœ… CORRECT: Proper context registration
+// âœ?CORRECT: Proper context registration
 client.registerContext({
   id: 'main',
   renderer: renderer,
@@ -221,12 +221,12 @@ Every host MUST:
 ## Post-Scaffold Steps
 
 After scaffolding, follow the playbook:
-- [agents/playbooks/add-a-host.md](../../../agents/playbooks/add-a-host.md)
+- [.cursor/playbooks/add-a-host.md](../../../.cursor/playbooks/add-a-host.md)
 
 ## Additional Resources
 
-- Contract: [agents/contracts/runtime-boundaries.md](../../../agents/contracts/runtime-boundaries.md)
-- Contract: [agents/contracts/capture.md](../../../agents/contracts/capture.md)
-- Contract: [agents/contracts/overhead.md](../../../agents/contracts/overhead.md)
+- Contract: [.cursor/contracts/runtime-boundaries.md](../../../.cursor/contracts/runtime-boundaries.md)
+- Contract: [.cursor/contracts/capture.md](../../../.cursor/contracts/capture.md)
+- Contract: [.cursor/contracts/overhead.md](../../../.cursor/contracts/overhead.md)
 - Rule: [.cursor/rules/host-standards.mdc](../../../rules/host-standards.mdc)
 - Command: [.cursor/commands/scaffold-host.md](../../../commands/scaffold-host.md)

@@ -193,22 +193,22 @@ query('animation_timeline', {
 ## Acceptance Tests (Definition of Done)
 
 - **Animation clip tracking:**
-  - Create animation clip â†’ entity appears in graph
-  - Play animation â†’ playback events emitted
-  - Dispose clip â†’ disposal event emitted
+  - Create animation clip â†?entity appears in graph
+  - Play animation â†?playback events emitted
+  - Dispose clip â†?disposal event emitted
 
 - **Keyframe attribution:**
-  - Update keyframe â†’ attributed to clip
-  - Query keyframes â†’ returns with fidelity
+  - Update keyframe â†?attributed to clip
+  - Query keyframes â†?returns with fidelity
 
 - **Timeline scrubbing:**
-  - Scrub timeline â†’ scrub event emitted
-  - Query timeline â†’ returns current time
+  - Scrub timeline â†?scrub event emitted
+  - Query timeline â†?returns current time
   - Works with offline traces
 
 - **Performance attribution:**
-  - Animation update â†’ cost attributed to clip
-  - Query top costs â†’ returns clips with attribution
+  - Animation update â†?cost attributed to clip
+  - Query top costs â†?returns clips with attribution
 
 ## Anti-goals (MUST NOT DO)
 
@@ -220,6 +220,6 @@ query('animation_timeline', {
 
 ## See Also
 
-- Contract: agents/contracts/entity-graph.md
-- Contract: agents/contracts/attribution.md
-- Contract: agents/contracts/fidelity.md
+- Contract: .cursor/contracts/entity-graph.md
+- Contract: .cursor/contracts/attribution.md
+- Contract: .cursor/contracts/fidelity.md

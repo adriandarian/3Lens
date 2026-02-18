@@ -107,7 +107,7 @@ Add validation to your CI workflow:
 
 ## Contract Locations
 
-Contracts are defined in `agents/contracts/`:
+Contracts are defined in `.cursor/contracts/`:
 
 - `inspector.md` - Inspector contract
 - `capture.md` - Capture contract
@@ -120,10 +120,9 @@ Contracts are defined in `agents/contracts/`:
 ## Additional Resources
 
 - For detailed command syntax, see [.cursor/commands/](../../commands/)
-- For PR checklist, see [agents/checklists/pr.md](../../../agents/checklists/pr.md)
+- For PR checklist, see [.cursor/agents/code-reviewer.md (PR Checklist section)](../../../.cursor/agents/code-reviewer.md (PR Checklist section))
 - Command: [validate-contracts](../../../commands/validate-contracts.md)
-- Command: [test-contracts](../../../commands/test-contracts.md)
-- Agent: [contract-validator](../../../agents/contract-validator.md)
+- Agent: [code-reviewer](../../../agents/code-reviewer.md)
 - Agent: [test-generator](../../../agents/test-generator.md)
-- Playbook: [write-tests](../../../agents/playbooks/write-tests.md)
+- Playbook: [write-tests](../../../.cursor/playbooks/write-tests.md)
 - Skill: [testing-operations](../testing-operations/SKILL.md)

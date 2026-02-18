@@ -1,16 +1,16 @@
 ---
-name: scaffold-plugin
-description: Generate boilerplate for a new 3Lens addon/plugin
+name: scaffold-addon
+description: Generate boilerplate for a new 3Lens addon
 ---
 
-# /scaffold-plugin
+# /scaffold-addon
 
-Generate boilerplate code for a third-party addon/plugin.
+Generate boilerplate code for a third-party addon.
 
 ## Usage
 
 ```
-/scaffold-plugin [name]
+/scaffold-addon [name]
 ```
 
 ## Parameters
@@ -29,37 +29,20 @@ Generate boilerplate code for a third-party addon/plugin.
 ## Generated Files
 
 ```
-[name]/
+packages/addon-[name]/
 ├── package.json
-├── 3lens-addon.json
+├── vite.config.ts
+├── tsconfig.json
 ├── src/
-│   ├── index.ts
-│   ├── queries/
-│   └── panels/
-├── tests/
+�?  ├── index.ts
+�?  └── ...
 └── README.md
-```
-
-## Manifest (3lens-addon.json)
-
-```json
-{
-  "id": "com.company.[name]",
-  "version": "1.0.0",
-  "requires": {
-    "kernel": "^1.0.0"
-  },
-  "capabilities": {
-    "required": [],
-    "optional": []
-  }
-}
 ```
 
 ## Next Steps
 
 After scaffolding, follow the playbook:
-- `agents/playbooks/add-a-plugin.md`
+- `.cursor/playbooks/add-a-plugin.md`
 
 ## Requirements
 
@@ -73,5 +56,5 @@ Every addon must:
 ## See Also
 
 - Skill: scaffold-operations
-- Playbook: agents/playbooks/add-a-plugin.md
-- Contract: agents/contracts/addons.md
+- Playbook: .cursor/playbooks/add-a-plugin.md
+- Contract: .cursor/contracts/addons.md

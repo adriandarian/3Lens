@@ -216,8 +216,8 @@ const trace = createMockTrace({
 
 ## See Also
 
-- Contract: agents/contracts/fidelity.md
-- Contract: agents/contracts/attribution.md
+- Contract: .cursor/contracts/fidelity.md
+- Contract: .cursor/contracts/attribution.md
 - Skill: testing-operations
-- Playbook: agents/playbooks/write-tests.md
+- Playbook: .cursor/playbooks/write-tests.md
 - Rule: .cursor/rules/test-standards.mdc

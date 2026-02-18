@@ -121,7 +121,7 @@ Doctor operations diagnose project and tooling issues, providing actionable reco
 ```
 
 - Enable CSP-safe mode: `createLens({ cspSafe: true })`
-- See [agents/contracts/security-csp.md](../../../agents/contracts/security-csp.md)
+- See [.cursor/contracts/security-csp.md](../../../.cursor/contracts/security-csp.md)
 
 ### Storage Issues
 
@@ -135,5 +135,5 @@ Doctor operations diagnose project and tooling issues, providing actionable reco
 ## Additional Resources
 
 - For detailed command syntax, see [.cursor/commands/](../../commands/)
-- For compatibility contract, see [agents/contracts/compatibility.md](../../../agents/contracts/compatibility.md)
-- For CSP handling, see [agents/contracts/security-csp.md](../../../agents/contracts/security-csp.md)
+- For compatibility contract, see [.cursor/contracts/compatibility.md](../../../.cursor/contracts/compatibility.md)
+- For CSP handling, see [.cursor/contracts/security-csp.md](../../../.cursor/contracts/security-csp.md)

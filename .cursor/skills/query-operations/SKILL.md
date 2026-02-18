@@ -91,7 +91,7 @@ All queries return results with fidelity indicators:
 ## Additional Resources
 
 - For detailed command syntax, see [.cursor/commands/](../../commands/)
-- For attribution rules, see [agents/contracts/attribution.md](../../../agents/contracts/attribution.md)
+- For attribution rules, see [.cursor/contracts/attribution.md](../../../.cursor/contracts/attribution.md)
 - Commands: [query-hotspots](../../../commands/query-hotspots.md), [query-leaks](../../../commands/query-leaks.md), [query-shader-variants](../../../commands/query-shader-variants.md), [query-resource-usage](../../../commands/query-resource-usage.md)
-- Contract: [fidelity.md](../../../agents/contracts/fidelity.md)
+- Contract: [fidelity.md](../../../.cursor/contracts/fidelity.md)
 - Agent: [performance-optimizer](../../../agents/performance-optimizer.md)

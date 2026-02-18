@@ -62,9 +62,9 @@ Run diagnostics to check environment, capabilities, and tooling health.
 3lens doctor csp
 ```
 - Enable CSP-safe mode
-- See agents/contracts/security-csp.md
+- See .cursor/contracts/security-csp.md
 
 ## See Also
 
 - Skill: doctor-operations
-- Contract: agents/contracts/compatibility.md
+- Contract: .cursor/contracts/compatibility.md

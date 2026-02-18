@@ -194,11 +194,11 @@ $lensStore.client.query(/* ... */);
 ## Post-Scaffold Steps
 
 After scaffolding, follow the playbook:
-- [agents/playbooks/add-a-mount-kit.md](../../../agents/playbooks/add-a-mount-kit.md)
+- [.cursor/playbooks/add-a-mount-kit.md](../../../.cursor/playbooks/add-a-mount-kit.md)
 
 ## Additional Resources
 
-- Contract: [agents/contracts/runtime-boundaries.md](../../../agents/contracts/runtime-boundaries.md)
-- Contract: [agents/contracts/ui-surfaces.md](../../../agents/contracts/ui-surfaces.md)
+- Contract: [.cursor/contracts/runtime-boundaries.md](../../../.cursor/contracts/runtime-boundaries.md)
+- Contract: [.cursor/contracts/ui-surfaces.md](../../../.cursor/contracts/ui-surfaces.md)
 - Rule: [.cursor/rules/mount-standards.mdc](../../../rules/mount-standards.mdc)
-- Command: [.cursor/commands/scaffold-mount.md](../../../commands/scaffold-mount.md)
+- No scaffold command; follow [add-a-mount-kit playbook](../../../.cursor/playbooks/add-a-mount-kit.md) manually

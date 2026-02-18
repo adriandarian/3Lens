@@ -33,14 +33,14 @@ packages/hosts/
 └── [name]/
     ├── package.json
     ├── src/
-    │   └── index.ts
+    �?  └── index.ts
     └── tsconfig.json
 ```
 
 ## Next Steps
 
 After scaffolding, follow the playbook:
-- `agents/playbooks/add-a-host.md`
+- `.cursor/playbooks/add-a-host.md`
 
 ## Requirements
 
@@ -61,9 +61,9 @@ Every host must:
 
 - Skill: scaffold-operations
 - Skill: host-operations
-- Playbook: agents/playbooks/add-a-host.md
-- Agent: playbook-executor
-- Contract: agents/contracts/runtime-boundaries.md
-- Contract: agents/contracts/capture.md
+- Playbook: .cursor/playbooks/add-a-host.md
+- Playbook: .cursor/playbooks/add-a-host.md
+- Contract: .cursor/contracts/runtime-boundaries.md
+- Contract: .cursor/contracts/capture.md
 - Rule: .cursor/rules/host-standards.mdc
-- Contract: agents/contracts/runtime-boundaries.md
+- Contract: .cursor/contracts/runtime-boundaries.md

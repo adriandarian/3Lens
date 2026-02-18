@@ -212,23 +212,23 @@ query('loading_state', {}): {
 ## Acceptance Tests (Definition of Done)
 
 - **Loader tracking:**
-  - Create loader â†’ entity appears in graph
-  - Start loading â†’ start event emitted
-  - Complete loading â†’ complete event emitted
+  - Create loader â†?entity appears in graph
+  - Start loading â†?start event emitted
+  - Complete loading â†?complete event emitted
 
 - **Asset dependency tracking:**
-  - Load asset with dependencies â†’ dependencies tracked
-  - Query dependencies â†’ returns dependency graph
-  - Circular dependencies â†’ detected and reported
+  - Load asset with dependencies â†?dependencies tracked
+  - Query dependencies â†?returns dependency graph
+  - Circular dependencies â†?detected and reported
 
 - **Loading performance:**
-  - Load asset â†’ performance attributed to loader
-  - Query performance â†’ returns loaders with attribution
+  - Load asset â†?performance attributed to loader
+  - Query performance â†?returns loaders with attribution
   - Performance metrics include fidelity
 
 - **Loading state:**
-  - Query loading state â†’ returns current state
-  - Progress updates â†’ progress events emitted
+  - Query loading state â†?returns current state
+  - Progress updates â†?progress events emitted
   - Works with offline traces
 
 ## Anti-goals (MUST NOT DO)
@@ -241,6 +241,6 @@ query('loading_state', {}): {
 
 ## See Also
 
-- Contract: agents/contracts/entity-graph.md
-- Contract: agents/contracts/attribution.md
-- Contract: agents/contracts/fidelity.md
+- Contract: .cursor/contracts/entity-graph.md
+- Contract: .cursor/contracts/attribution.md
+- Contract: .cursor/contracts/fidelity.md

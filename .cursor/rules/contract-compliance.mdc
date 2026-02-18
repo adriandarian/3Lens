@@ -25,7 +25,7 @@ interface RenderEvent {
 }
 ```
 
-Reference: `agents/contracts/capture.md`
+Reference: `.cursor/contracts/capture.md`
 
 ### Entity Graph Contract
 
@@ -39,7 +39,7 @@ const id = `mesh:scene:${mesh.name}_${mesh.uuid.slice(0, 8)}`;
 const ref = mesh; // Breaks offline traces
 ```
 
-Reference: `agents/contracts/entity-graph.md`
+Reference: `.cursor/contracts/entity-graph.md`
 
 ### Attribution Contract
 
@@ -57,7 +57,7 @@ interface AttributedMetric {
 }
 ```
 
-Reference: `agents/contracts/attribution.md`
+Reference: `.cursor/contracts/attribution.md`
 
 ### Fidelity Contract
 
@@ -70,7 +70,7 @@ type Fidelity = 'EXACT' | 'ESTIMATED' | 'UNAVAILABLE';
 { value: 42, fidelity: 'EXACT' }
 ```
 
-Reference: `agents/contracts/fidelity.md`
+Reference: `.cursor/contracts/fidelity.md`
 
 ### Overhead Contract
 
@@ -80,7 +80,7 @@ Respect capture mode budgets:
 - STANDARD: <5% overhead
 - DEEP: <15% overhead
 
-Reference: `agents/contracts/overhead.md`
+Reference: `.cursor/contracts/overhead.md`
 
 ## Runtime Boundaries
 
@@ -124,4 +124,4 @@ Before submitting changes:
 - [ ] Fidelity is explicit
 - [ ] Tests updated for touched contracts
 
-Reference: `agents/checklists/pr.md`
+Reference: `.cursor/agents/code-reviewer.md` (see PR Checklist section)

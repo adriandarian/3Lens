@@ -9,10 +9,10 @@ packages/addons/[name]/
 ├── package.json
 ├── 3lens-addon.json      # Addon manifest
 ├── src/
-│   ├── index.ts          # Main entry point
-│   ├── queries/          # Query implementations
-│   ├── panels/           # UI panels
-│   └── types.ts          # Type definitions
+�?  ├── index.ts          # Main entry point
+�?  ├── queries/          # Query implementations
+�?  ├── panels/           # UI panels
+�?  └── types.ts          # Type definitions
 ├── tests/
 └── README.md
 ```
@@ -36,10 +36,10 @@ Every addon MUST have a `3lens-addon.json` manifest:
 All entity IDs from addons MUST be namespaced:
 
 ```typescript
-// ✅ CORRECT: Namespaced ID
+// �?CORRECT: Namespaced ID
 const entityId = 'mesh:my-addon:myMesh';
 
-// ❌ WRONG: Non-namespaced ID
+// �?WRONG: Non-namespaced ID
 const entityId = 'mesh:main:myMesh';
 ```
 
@@ -115,6 +115,6 @@ return {
 
 ## See Also
 
-- Contract: agents/contracts/addons.md
-- Playbook: agents/playbooks/add-a-plugin.md
+- Contract: .cursor/contracts/addons.md
+- Playbook: .cursor/playbooks/add-a-plugin.md
 - Skill: scaffold-operations

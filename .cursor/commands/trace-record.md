@@ -41,4 +41,4 @@ Record a trace capture for debugging, performance analysis, or baseline comparis
 ## See Also
 
 - Skill: trace-operations
-- Contract: agents/contracts/capture.md
+- Contract: .cursor/contracts/capture.md

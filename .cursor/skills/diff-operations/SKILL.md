@@ -101,4 +101,4 @@ Use diff operations for regression detection:
 ## Additional Resources
 
 - For detailed command syntax, see [.cursor/commands/](../../commands/)
-- For fidelity rules on diff metrics, see [agents/contracts/fidelity.md](../../../agents/contracts/fidelity.md)
+- For fidelity rules on diff metrics, see [.cursor/contracts/fidelity.md](../../../.cursor/contracts/fidelity.md)

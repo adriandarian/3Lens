@@ -217,17 +217,17 @@ Before submitting:
 
 ## Anti-patterns to Avoid
 
-- ‚ùå Importing from kernel directly
-- ‚ùå Framework-specific code in UI Core
-- ‚ùå Only supporting live mode
-- ‚ùå Not handling CSP errors
-- ‚ùå Missing TypeScript types
-- ‚ùå No examples or documentation
+- ‚ù?Importing from kernel directly
+- ‚ù?Framework-specific code in UI Core
+- ‚ù?Only supporting live mode
+- ‚ù?Not handling CSP errors
+- ‚ù?Missing TypeScript types
+- ‚ù?No examples or documentation
 
 ## See Also
 
 - Skill: mount-operations
-- Command: scaffold-mount
-- Contract: agents/contracts/runtime-boundaries.md
-- Contract: agents/contracts/ui-surfaces.md
+- No scaffold command; create manually following playbook
+- Contract: .cursor/contracts/runtime-boundaries.md
+- Contract: .cursor/contracts/ui-surfaces.md
 - Rule: .cursor/rules/mount-standards.mdc

@@ -8,9 +8,9 @@ Every mount kit MUST follow this structure:
 packages/mounts/[framework]/
 ├── package.json
 ├── src/
-│   ├── index.ts          # Public exports
-│   ├── provider.tsx      # Context provider (framework-specific)
-│   └── hooks.ts          # Hooks/composables (framework-specific)
+�?  ├── index.ts          # Public exports
+�?  ├── provider.tsx      # Context provider (framework-specific)
+�?  └── hooks.ts          # Hooks/composables (framework-specific)
 └── README.md
 ```
 
@@ -25,7 +25,7 @@ Mount kits MUST:
 ## React Mount Kit
 
 ```typescript
-// ✅ CORRECT: React mount kit pattern
+// �?CORRECT: React mount kit pattern
 import { createContext, useContext } from 'react';
 import { createLens, LensClient } from '@3lens/runtime';
 
@@ -50,7 +50,7 @@ export function useLens(): LensClient {
 ## Vue Mount Kit
 
 ```typescript
-// ✅ CORRECT: Vue mount kit pattern
+// �?CORRECT: Vue mount kit pattern
 import { provide, inject } from 'vue';
 import { createLens, LensClient } from '@3lens/runtime';
 
@@ -92,7 +92,7 @@ function App() {
 Mount kits MUST support both modes:
 
 ```typescript
-// ✅ CORRECT: Works in both modes
+// �?CORRECT: Works in both modes
 const data = client.isLive 
   ? await client.queryLive(query, params)
   : await client.queryTrace(query, params);
@@ -103,7 +103,7 @@ const data = client.isLive
 Mount kits MUST handle errors gracefully:
 
 ```typescript
-// ✅ CORRECT: Graceful error handling
+// �?CORRECT: Graceful error handling
 try {
   const lens = createLens();
 } catch (error) {
@@ -115,7 +115,7 @@ try {
 
 ## See Also
 
-- Contract: agents/contracts/runtime-boundaries.md
-- Contract: agents/contracts/ui-surfaces.md
-- Playbook: agents/playbooks/add-a-mount-kit.md
+- Contract: .cursor/contracts/runtime-boundaries.md
+- Contract: .cursor/contracts/ui-surfaces.md
+- Playbook: .cursor/playbooks/add-a-mount-kit.md
 - Skill: mount-operations

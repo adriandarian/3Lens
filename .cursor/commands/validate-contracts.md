@@ -52,5 +52,5 @@ Run contract validation to ensure code compliance.
 ## See Also
 
 - Skill: validation-operations
-- Subagent: contract-validator
-- Contracts: agents/contracts/
+- Agent: code-reviewer
+- Contracts: .cursor/contracts/

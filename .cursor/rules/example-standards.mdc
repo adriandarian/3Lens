@@ -10,7 +10,7 @@ examples/[category]/[name]/
 ├── package.json        # Dependencies
 ├── index.html          # Entry point
 ├── src/
-│   └── main.ts         # Example code
+�?  └── main.ts         # Example code
 └── vite.config.ts      # Build config
 ```
 
@@ -87,4 +87,4 @@ lens.registerContext({
 
 - Project Guide: agents.md
 - Skills: .cursor/skills/
-- Playbooks: agents/playbooks/
+- Playbooks: .cursor/playbooks/

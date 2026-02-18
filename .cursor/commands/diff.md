@@ -92,4 +92,4 @@ Use in CI workflows to detect regressions:
 
 - Skill: diff-operations
 - Subagent: trace-analyzer
-- Contract: agents/contracts/fidelity.md
+- Contract: .cursor/contracts/fidelity.md

@@ -217,15 +217,15 @@ Before submitting:
 
 ## Anti-patterns to Avoid
 
-- âŒ Queries that only work in live mode
-- âŒ Metrics without attribution paths
-- âŒ Results without fidelity labeling
-- âŒ Queries that break when entities are missing
-- âŒ Hardcoded entity types instead of parameters
+- â?Queries that only work in live mode
+- â?Metrics without attribution paths
+- â?Results without fidelity labeling
+- â?Queries that break when entities are missing
+- â?Hardcoded entity types instead of parameters
 
 ## See Also
 
 - Skill: query-operations
-- Command: scaffold-query
-- Contract: agents/contracts/fidelity.md
-- Contract: agents/contracts/attribution.md
+- No scaffold command; create manually in packages/kernel/src/query/
+- Contract: .cursor/contracts/fidelity.md
+- Contract: .cursor/contracts/attribution.md

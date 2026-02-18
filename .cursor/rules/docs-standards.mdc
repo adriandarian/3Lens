@@ -46,22 +46,22 @@ Code examples MUST:
 - Include error handling where relevant
 
 ```typescript
-// ‚úÖ GOOD: Complete example
+// ‚ú?GOOD: Complete example
 import { createLens } from '@3lens/runtime';
 
 const lens = createLens({
   capture: { mode: 'STANDARD' }
 });
 
-// ‚ùå BAD: Incomplete example
+// ‚ù?BAD: Incomplete example
 const lens = createLens();
 ```
 
 ## Cross-References
 
 Documentation MUST cross-reference:
-- Related contracts: `[Contract Name](agents/contracts/[name].md)`
-- Related playbooks: `[Playbook Name](agents/playbooks/[name].md)`
+- Related contracts: `[Contract Name](.cursor/contracts/[name].md)`
+- Related playbooks: `[Playbook Name](.cursor/playbooks/[name].md)`
 - Related skills: `[Skill Name](.cursor/skills/[name]/SKILL.md)`
 - Related commands: `[Command Name](.cursor/commands/[name].md)`
 
@@ -95,5 +95,5 @@ Example documentation MUST:
 ## See Also
 
 - Project Guide: agents.md
-- Contracts: agents/contracts/
+- Contracts: .cursor/contracts/
 - Skills: .cursor/skills/

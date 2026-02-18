@@ -126,10 +126,10 @@ const trace = createMockTrace({
 
 Test names MUST be descriptive and indicate what contract/feature they test:
 
-- ‚úÖ `it('answers the 5 Inspector questions for any entity')`
-- ‚úÖ `it('maintains frame time budget')`
-- ‚ùå `it('works')`
-- ‚ùå `it('test 1')`
+- ‚ú?`it('answers the 5 Inspector questions for any entity')`
+- ‚ú?`it('maintains frame time budget')`
+- ‚ù?`it('works')`
+- ‚ù?`it('test 1')`
 
 ## Test Coverage
 
@@ -141,6 +141,6 @@ Contract tests MUST cover:
 
 ## See Also
 
-- Contract: agents/contracts/testing.md (if exists)
-- Playbook: agents/playbooks/write-tests.md
+- Contract: .cursor/contracts/testing.md (if exists)
+- Playbook: .cursor/playbooks/write-tests.md
 - Skill: testing-operations

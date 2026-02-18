@@ -157,8 +157,8 @@ Check coverage against contracts:
 3lens test:coverage contracts
 
 # Should report:
-# - capture.md: ✅ Covered
-# - entity-graph.md: ✅ Covered
+# - capture.md: �?Covered
+# - entity-graph.md: �?Covered
 # - fidelity.md: ⚠️ Partial (missing ESTIMATED tests)
 ```
 
@@ -229,7 +229,7 @@ Provide test generation in this format:
 ## Test Generation Report
 
 ### Contract Coverage
-- [Contract name]: ✅ Covered / ⚠️ Partial / ❌ Missing
+- [Contract name]: �?Covered / ⚠️ Partial / �?Missing
   - Tests: [count]
   - Coverage: [X%]
 
@@ -237,7 +237,7 @@ Provide test generation in this format:
 1. **[Test file path]**
    - Type: [Contract/Regression/Snapshot]
    - Coverage: [what it tests]
-   - Status: ✅ Generated
+   - Status: �?Generated
 
 ### Test Gaps
 - [Missing test scenario]
@@ -252,12 +252,12 @@ Provide test generation in this format:
 - Generate tests for all contract invariants
 - Include degradation scenario tests
 - Validate test coverage against contracts
-- Reference `agents/contracts/testing.md` for test patterns
-- Use `agents/playbooks/write-tests.md` for test structure
+- Reference `.cursor/contracts/testing.md` for test patterns
+- Use `.cursor/playbooks/write-tests.md` for test structure
 
 ## Related Resources
 
-- Testing Contract: `agents/contracts/testing.md` (if exists)
-- Test Playbook: `agents/playbooks/write-tests.md`
-- Contract Files: `agents/contracts/`
+- Testing Contract: `.cursor/contracts/testing.md` (if exists)
+- Test Playbook: `.cursor/playbooks/write-tests.md`
+- Contract Files: `.cursor/contracts/`
 - Test Operations: `.cursor/skills/testing-operations/SKILL.md`

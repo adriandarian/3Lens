@@ -12,6 +12,8 @@ The `.cursor` folder provides structured guidance for AI agents working on 3Lens
 .cursor/
 ├── agents/          # Specialized subagents for specific tasks
 ├── commands/        # CLI command documentation
+├── contracts/       # Architectural contracts (source of truth)
+├── playbooks/       # Step-by-step development workflows
 ├── rules/           # File-pattern-specific rules and standards
 └── skills/          # Detailed skill documentation
 ```
@@ -32,7 +34,7 @@ flowchart TD
     end
     
     subgraph validation [Validation]
-        validator[Contract Validator]
+        reviewer[Code Reviewer]
         checklist[PR Checklist]
         tests[Contract Tests]
     end
@@ -41,8 +43,8 @@ flowchart TD
     contracts --> playbook
     scaffold --> playbook
     playbook --> skill
-    skill --> validator
-    validator --> checklist
+    skill --> reviewer
+    reviewer --> checklist
     checklist --> tests
 ```
 
@@ -50,48 +52,44 @@ flowchart TD
 
 ### For New Contributors
 
-1. Read [agents.md](../agents.md) for project overview
+1. Read [AGENTS.md](../AGENTS.md) for project overview
 2. Check [.cursor/agents/onboarding-guide.md](agents/onboarding-guide.md) for navigation help
-3. Review [agents/contracts/](../agents/contracts/) for requirements
+3. Review [.cursor/contracts/](contracts/) for requirements
 
 ### For Adding Features
 
 1. Use scaffold commands: `3lens scaffold [component]`
-2. Follow playbooks: `agents/playbooks/add-a-[component].md`
+2. Follow playbooks: `.cursor/playbooks/add-a-[component].md`
 3. Reference skills: `.cursor/skills/[operation]/SKILL.md`
-4. Validate: `3lens validate contracts`
+4. Validate: `3lens validate all`
 
 ### For Code Review
 
 1. Use code-reviewer agent for architectural checks
-2. Validate contracts: `3lens validate contracts`
-3. Check PR checklist: `agents/checklists/pr.md`
+2. Validate contracts: `3lens validate all`
 
 ## Agents
 
 Specialized subagents for specific tasks:
 
-- **contract-validator** - Validates code against contracts
-- **playbook-executor** - Guides through structured playbooks
+- **bug-fixer** - Autonomous end-to-end bug fixing
+- **code-reviewer** - PR review (normal or harsh mode)
 - **trace-analyzer** - Deep trace analysis
-- **code-reviewer** - PR review with architectural awareness
-- **migration-assistant** - Version upgrade guidance
 - **performance-optimizer** - Performance analysis and optimization
+- **migration-assistant** - Version upgrade guidance
 - **test-generator** - Generate contract and regression tests
-- **onboarding-guide** - Help new contributors navigate
+- **onboarding-guide** - Help new contributors navigate and learn
 
-See [agents/README.md](agents/README.md) for details.
+See [agents/README.md](agents/README.md) for the full routing table.
 
 ## Commands
 
-CLI command documentation:
+CLI command documentation (only documented commands exist in CLI):
 
 - **trace** - Record, open, and compare traces
 - **query** - Performance analysis queries
-- **inspect** - Entity inspection
-- **scaffold** - Generate boilerplate code
+- **scaffold** - Generate boilerplate (panel, probe, host, addon)
 - **validate** - Contract validation
-- **test** - Run contract tests
 - **doctor** - Diagnostics
 
 See [commands/README.md](commands/README.md) for complete list.
@@ -130,13 +128,57 @@ Detailed skill documentation for specialized operations:
 - **host-operations** - Host development
 - **testing-operations** - Test workflows
 - **example-operations** - Example creation
-- **cli-operations** - Advanced CLI usage
 
 See [skills/README.md](skills/README.md) for complete list.
 
+## Parallel Sessions with Git Worktrees
+
+Run multiple independent Cursor sessions against the same repository without context collisions.
+
+### Setup
+
+```bash
+# Create a new worktree for a parallel session
+git worktree add ../3Lens-wt2 main
+
+# Create additional sessions as needed
+git worktree add ../3Lens-wt3 main
+```
+
+Open each worktree folder in a separate Cursor window. Each window gets its own isolated AI context.
+
+### How it works
+
+- Each worktree = one isolated Cursor session
+- Sessions share the same git history but have separate working directories
+- Use for: parallel feature work, A/B implementation exploration, reviewing while developing
+- `worktrees.json` configures the automatic setup hook — `pnpm install` runs on worktree creation
+
+### Cleanup
+
+```bash
+git worktree remove ../3Lens-wt2
+```
+
+---
+
+## Creating New Skills
+
+If you find yourself typing the same instructions to Cursor repeatedly, convert that into a skill.
+
+**When to create a skill:** Any task you repeat daily or more often.
+
+**How:**
+1. Create `.cursor/skills/[name]-operations/SKILL.md`
+2. Include: `when-to-use`, commands, step-by-step workflow, examples
+3. Optionally add a command shortcut in `.cursor/commands/`
+4. See `.cursor/playbooks/add-a-skill.md` for the full guide
+
+---
+
 ## Related Resources
 
-- Project Guide: [agents.md](../agents.md)
-- Contracts: [agents/contracts/](../agents/contracts/)
-- Playbooks: [agents/playbooks/](../agents/playbooks/)
-- Checklists: [agents/checklists/](../agents/checklists/)
+- Project Guide: [AGENTS.md](../AGENTS.md)
+- Contracts: [.cursor/contracts/](contracts/)
+- Playbooks: [.cursor/playbooks/](playbooks/)
+- Persistent Memory: [MEMORY.md](../MEMORY.md)

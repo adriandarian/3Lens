@@ -87,5 +87,5 @@ A compilation storm is detected when:
 ## See Also
 
 - Skill: shader-operations
-- Contract: agents/contracts/shader-graph.md
+- Contract: .cursor/contracts/shader-graph.md
 - Addon: @3lens/addon-shader

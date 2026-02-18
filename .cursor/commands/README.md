@@ -1,6 +1,6 @@
 # Commands
 
-CLI command documentation for 3Lens operations.
+CLI command documentation for 3Lens operations. Documents only commands that exist in the CLI.
 
 ## Command Categories
 
@@ -17,23 +17,16 @@ CLI command documentation for 3Lens operations.
 - **[query-shader-variants.md](query-shader-variants.md)** - Analyze shader variants
 - **[query-resource-usage.md](query-resource-usage.md)** - Query resource usage
 
-### Inspection
-
-- **[inspect.md](inspect.md)** - Inspect entities to answer the 5 Inspector questions
-
 ### Scaffold Operations
 
 - **[scaffold-panel.md](scaffold-panel.md)** - Generate panel boilerplate
 - **[scaffold-probe.md](scaffold-probe.md)** - Generate probe boilerplate
 - **[scaffold-host.md](scaffold-host.md)** - Generate host boilerplate
-- **[scaffold-plugin.md](scaffold-plugin.md)** - Generate addon boilerplate
-- **[scaffold-query.md](scaffold-query.md)** - Generate query boilerplate
-- **[scaffold-mount.md](scaffold-mount.md)** - Generate mount kit boilerplate
+- **[scaffold-addon.md](scaffold-addon.md)** - Generate addon boilerplate
 
-### Validation & Testing
+### Validation
 
 - **[validate-contracts.md](validate-contracts.md)** - Validate code against contracts
-- **[test-contracts.md](test-contracts.md)** - Run contract compliance tests
 
 ### Diagnostics
 
@@ -48,11 +41,10 @@ CLI command documentation for 3Lens operations.
 | `3lens diff` | Compare traces | diff-operations |
 | `3lens query top_hotspots` | Find hotspots | query-operations |
 | `3lens query leaks` | Detect leaks | query-operations |
-| `3lens inspect` | Inspect entity | inspector-operations |
 | `3lens scaffold panel` | Create panel | scaffold-operations |
 | `3lens scaffold host` | Create host | scaffold-operations |
-| `3lens validate contracts` | Validate contracts | validation-operations |
-| `3lens test contracts` | Test contracts | testing-operations |
+| `3lens scaffold addon` | Create addon | scaffold-operations |
+| `3lens validate all` | Validate contracts | validation-operations |
 | `3lens doctor` | Run diagnostics | doctor-operations |
 
 ## Command Structure
@@ -69,4 +61,4 @@ All command docs follow this structure:
 
 - Skills: [../skills/](../skills/)
 - Agents: [../agents/](../agents/)
-- Contracts: [../../agents/contracts/](../../agents/contracts/)
+- Contracts: [../../.cursor/contracts/](../../.cursor/contracts/)

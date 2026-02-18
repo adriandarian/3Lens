@@ -80,8 +80,8 @@ Examples:
 ## Additional Resources
 
 - For detailed command syntax, see [.cursor/commands/](../../commands/)
-- For Inspector contract, see [agents/contracts/inspector.md](../../../agents/contracts/inspector.md)
-- For entity graph rules, see [agents/contracts/entity-graph.md](../../../agents/contracts/entity-graph.md)
-- Command: [inspect](../../../commands/inspect.md)
-- Contract: [attribution.md](../../../agents/contracts/attribution.md)
-- Contract: [fidelity.md](../../../agents/contracts/fidelity.md)
+- For Inspector contract, see [.cursor/contracts/inspector.md](../../../.cursor/contracts/inspector.md)
+- For entity graph rules, see [.cursor/contracts/entity-graph.md](../../../.cursor/contracts/entity-graph.md)
+- Inspector is runtime/UI; see addon-inspector for implementation
+- Contract: [attribution.md](../../../.cursor/contracts/attribution.md)
+- Contract: [fidelity.md](../../../.cursor/contracts/fidelity.md)

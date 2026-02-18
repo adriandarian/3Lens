@@ -1,0 +1,34 @@
+---
+description: Persistent memory rule – update MEMORY.md after every correction
+alwaysApply: true
+---
+
+# Persistent Memory Rule
+
+`MEMORY.md` at the repo root is long-term AI memory. Read it at the start of every session for context on known mistakes and patterns.
+
+## After Every Correction
+
+When you make a mistake and the user corrects you:
+
+1. Add a row to `MEMORY.md` in this format:
+
+   ```
+   | YYYY-MM-DD | What went wrong | What to do instead |
+   ```
+
+2. Tell the user: "I've updated MEMORY.md so I won't make this mistake again."
+
+## Rules
+
+- Read `MEMORY.md` before starting any non-trivial task
+- Update it immediately after any correction
+- Edit entries ruthlessly — remove outdated rows, merge duplicates
+- Treat it as authoritative: if MEMORY.md contradicts your training, MEMORY.md wins for this project
+
+## Key Known Patterns (summary — see MEMORY.md for full list)
+
+- Contracts: `.cursor/contracts/` (not `agents/contracts/`)
+- Playbooks: `.cursor/playbooks/` (not `agents/playbooks/`)
+- Validate command: `3lens validate all` (not `3lens validate contracts`)
+- PR checklist: `.cursor/agents/code-reviewer.md` (not a separate file)

@@ -208,22 +208,22 @@ try {
 ## Acceptance Tests (Definition of Done)
 
 - **Error tracking:**
-  - Emit error â†’ error event recorded
-  - Query errors â†’ returns error summary
+  - Emit error â†?error event recorded
+  - Query errors â†?returns error summary
   - Errors preserved in traces
 
 - **Error attribution:**
-  - Error with entity â†’ attributed correctly
-  - Query attribution â†’ returns blame chain
+  - Error with entity â†?attributed correctly
+  - Query attribution â†?returns blame chain
   - Attribution includes weights
 
 - **Error recovery:**
-  - Recover from error â†’ recovery event emitted
-  - Query recovery â†’ returns recovery state
+  - Recover from error â†?recovery event emitted
+  - Query recovery â†?returns recovery state
   - Recovery state is queryable
 
 - **Trace compatibility:**
-  - Trace with errors â†’ loads successfully
+  - Trace with errors â†?loads successfully
   - Errors queryable from trace
   - Error data preserved
 
@@ -237,7 +237,7 @@ try {
 
 ## See Also
 
-- Contract: agents/contracts/entity-graph.md
-- Contract: agents/contracts/attribution.md
-- Contract: agents/contracts/fidelity.md
-- Contract: agents/contracts/capture.md
+- Contract: .cursor/contracts/entity-graph.md
+- Contract: .cursor/contracts/attribution.md
+- Contract: .cursor/contracts/fidelity.md
+- Contract: .cursor/contracts/capture.md

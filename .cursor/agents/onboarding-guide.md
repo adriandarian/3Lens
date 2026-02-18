@@ -109,10 +109,10 @@ Explain the dependency hierarchy:
 ### Where do I find...
 
 **Contract definitions?**
-→ `agents/contracts/*.md`
+→ `.cursor/contracts/*.md`
 
 **Playbooks for adding features?**
-→ `agents/playbooks/add-a-*.md`
+→ `.cursor/playbooks/add-a-*.md`
 
 **CLI command documentation?**
 → `.cursor/commands/*.md`
@@ -148,17 +148,16 @@ Explain the dependency hierarchy:
 ### 1. Understanding Requirements
 
 Start with contracts:
-- Read `agents/contracts/` for requirements
-- Check `agents.md` for design principles
-- Review `agents/checklists/pr.md` for DoD
+- Read `.cursor/contracts/` for requirements
+- Check `AGENTS.md` for design principles
 
 ### 2. Creating Features
 
 Use playbooks:
-- `agents/playbooks/add-a-panel.md` for UI panels
-- `agents/playbooks/add-a-probe.md` for instrumentation
-- `agents/playbooks/add-a-host.md` for hosts
-- `agents/playbooks/add-a-plugin.md` for addons
+- `.cursor/playbooks/add-a-panel.md` for UI panels
+- `.cursor/playbooks/add-a-probe.md` for instrumentation
+- `.cursor/playbooks/add-a-host.md` for hosts
+- `.cursor/playbooks/add-a-plugin.md` for addons
 
 ### 3. Scaffolding Code
 
@@ -190,38 +189,38 @@ pnpm typecheck
 Write tests:
 - Contract compliance tests in `tests/contracts/`
 - Regression tests in `tests/regression/`
-- Follow `agents/playbooks/write-tests.md`
+- Use `.cursor/skills/testing-operations/SKILL.md` for guidance
 
 ## Key Files to Read
 
 ### For New Contributors
 
-1. **`agents.md`** - Project overview and principles
+1. **`AGENTS.md`** - Project overview and principles
 2. **`README.md`** - Quick start guide
-3. **`agents/contracts/capture.md`** - Understanding the event system
-4. **`agents/contracts/entity-graph.md`** - Understanding entities
-5. **`agents/contracts/inspector.md`** - Understanding the Inspector
+3. **`.cursor/contracts/capture.md`** - Understanding the event system
+4. **`.cursor/contracts/entity-graph.md`** - Understanding entities
+5. **`.cursor/contracts/inspector.md`** - Understanding the Inspector
 
 ### For Specific Tasks
 
 **Adding a panel:**
-- `agents/playbooks/add-a-panel.md`
+- `.cursor/playbooks/add-a-panel.md`
 - `.cursor/commands/scaffold-panel.md`
 - `.cursor/skills/scaffold-operations/SKILL.md`
 
 **Adding a host:**
-- `agents/playbooks/add-a-host.md`
+- `.cursor/playbooks/add-a-host.md`
 - `.cursor/commands/scaffold-host.md`
-- `agents/contracts/runtime-boundaries.md`
+- `.cursor/contracts/runtime-boundaries.md`
 
 **Understanding contracts:**
-- `agents/contracts/` directory
-- `.cursor/agents/contract-validator.md`
+- `.cursor/contracts/` directory
+- `.cursor/agents/code-reviewer.md`
 
 **Performance analysis:**
 - `.cursor/skills/query-operations/SKILL.md`
 - `.cursor/skills/trace-operations/SKILL.md`
-- `agents/contracts/overhead.md`
+- `.cursor/contracts/overhead.md`
 
 ## Common Questions
 
@@ -235,9 +234,9 @@ Write tests:
 ### "How do I test my changes?"
 
 1. Write contract tests in `tests/contracts/`
-2. Run `3lens validate contracts`
+2. Run `3lens validate all`
 3. Test with traces: `3lens trace:record` then `3lens trace:open`
-4. Check PR checklist: `agents/checklists/pr.md`
+4. Review PR checklist in `.cursor/agents/code-reviewer.md`
 
 ### "What contracts apply to my change?"
 
@@ -253,20 +252,59 @@ Write tests:
 2. Record trace: `3lens trace:record`
 3. Analyze trace: `3lens trace:open`
 4. Use queries: `3lens query top_hotspots`
-5. Follow `agents/playbooks/debug-issues.md`
+5. Follow `.cursor/playbooks/debug-issues.md`
+
+## Learning Mode
+
+Use this agent as a learning and retention engine, not just a navigator. Learning Mode is activated by phrasing your question as a learning request.
+
+### Activating Learning Mode
+
+Use prompts like:
+- "Explain the capture contract from scratch"
+- "Quiz me on entity-graph concepts"
+- "I don't understand attribution — explain it simply"
+- "What's the difference between fidelity levels? Give me examples"
+- "Draw an ASCII diagram of the architecture layers"
+
+### What to Expect in Learning Mode
+
+The agent will:
+1. **Explain concepts clearly** — no assumed knowledge, build from first principles
+2. **Use concrete examples** — show code, ASCII diagrams, or step-by-step walkthroughs
+3. **Flag gaps in understanding** — ask follow-up questions to find where understanding breaks down
+4. **Store insights** — ask the agent to summarize key takeaways to add to `MEMORY.md`
+5. **Apply spaced repetition** — revisit topics with "Quiz me again on X" periodically
+
+### Spaced Repetition Prompts
+
+Return to these periodically to reinforce understanding:
+
+```
+Quiz me on the capture contract.
+Explain entity-graph from scratch — no notes.
+What are the 5 questions the Inspector must answer?
+What does fidelity: UNAVAILABLE mean in practice?
+Explain the overhead budget for each capture mode.
+What makes a metric attribution chain valid?
+```
+
+### Storing Insights
+
+After a learning session, ask:
+> "Summarize the 3 most important things I just learned in one sentence each. I'll add them to MEMORY.md."
 
 ## Key Rules
 
 - Always start with contracts and design principles
 - Use playbooks for structured workflows
 - Validate against contracts before submitting
-- Reference `agents.md` for overall context
-- Check `agents/checklists/pr.md` for DoD
+- Reference `AGENTS.md` for overall context
 
 ## Related Resources
 
-- Project Guide: `agents.md`
-- Contracts: `agents/contracts/`
-- Playbooks: `agents/playbooks/`
+- Project Guide: `AGENTS.md`
+- Contracts: `.cursor/contracts/`
+- Playbooks: `.cursor/playbooks/`
 - Skills: `.cursor/skills/`
 - Commands: `.cursor/commands/`

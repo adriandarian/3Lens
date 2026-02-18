@@ -158,9 +158,7 @@ Ensure overhead stays within budget:
 3lens doctor overhead --mode STANDARD
 
 # Should report:
-# - CPU overhead: X% (Budget: 5%) ‚úÖ
-# - Memory overhead: Y% (Budget: 10%) ‚úÖ
-```
+# - CPU overhead: X% (Budget: 5%) ‚ú?# - Memory overhead: Y% (Budget: 10%) ‚ú?```
 
 ### 10. Document Optimizations
 
@@ -181,9 +179,7 @@ Document what was optimized and why:
 
 ## Results
 
-- CPU overhead: 8% ‚Üí 3% (within 5% budget) ‚úÖ
-- Memory overhead: 12% ‚Üí 7% (within 10% budget) ‚úÖ
-- Average frame time: 18ms ‚Üí 16ms
+- CPU overhead: 8% ‚Ü?3% (within 5% budget) ‚ú?- Memory overhead: 12% ‚Ü?7% (within 10% budget) ‚ú?- Average frame time: 18ms ‚Ü?16ms
 ```
 
 ## Optimization Strategies
@@ -246,18 +242,18 @@ When optimizing:
 
 ## Anti-patterns to Avoid
 
-- ‚ùå Optimizing without measuring
-- ‚ùå Breaking fidelity without documenting
+- ‚ù?Optimizing without measuring
+- ‚ù?Breaking fidelity without documenting
 - [ ] Exceeding overhead budgets
-- ‚ùå Optimizing prematurely
-- ‚ùå Not validating improvements
-- ‚ùå Not documenting trade-offs
+- ‚ù?Optimizing prematurely
+- ‚ù?Not validating improvements
+- ‚ù?Not documenting trade-offs
 
 ## See Also
 
 - Skill: performance-optimizer
 - Skill: query-operations
 - Skill: trace-operations
-- Contract: agents/contracts/overhead.md
-- Contract: agents/contracts/attribution.md
+- Contract: .cursor/contracts/overhead.md
+- Contract: .cursor/contracts/attribution.md
 - Agent: performance-optimizer

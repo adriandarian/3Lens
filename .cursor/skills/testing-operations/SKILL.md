@@ -204,11 +204,11 @@ Every test MUST:
 ## Post-Scaffold Steps
 
 After writing tests, follow the playbook:
-- [agents/playbooks/write-tests.md](../../../agents/playbooks/write-tests.md)
+- [.cursor/playbooks/write-tests.md](../../../.cursor/playbooks/write-tests.md)
 
 ## Additional Resources
 
-- Contract: [agents/contracts/testing.md](../../../agents/contracts/testing.md) (if exists)
+- Contract: [.cursor/contracts/testing.md](../../../.cursor/contracts/testing.md) (if exists)
 - Rule: [.cursor/rules/test-standards.mdc](../../../rules/test-standards.mdc)
-- Command: [.cursor/commands/test-contracts.md](../../../commands/test-contracts.md)
+- Use `vitest` for tests; [validate-contracts](../../../commands/validate-contracts.md) for contract validation
 - Subagent: [.cursor/agents/test-generator.md](../../../agents/test-generator.md)

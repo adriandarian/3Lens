@@ -43,9 +43,9 @@ if (traceVersion.split('.')[0] !== currentVersion.split('.')[0]) {
 
 Check contract compatibility:
 
-- **Breaking contract changes** â†’ Major version bump
-- **Additive contract changes** â†’ Minor version bump
-- **Clarifications only** â†’ Patch version bump
+- **Breaking contract changes** â†?Major version bump
+- **Additive contract changes** â†?Minor version bump
+- **Clarifications only** â†?Patch version bump
 
 ### API Version Compatibility
 
@@ -80,10 +80,10 @@ Search codebase for:
 Create step-by-step migration:
 
 ```markdown
-## Migration Plan: v1.0.0 â†’ v2.0.0
+## Migration Plan: v1.0.0 â†?v2.0.0
 
 ### Breaking Changes
-1. **Trace format v1 â†’ v2**
+1. **Trace format v1 â†?v2**
    - Schema: `render_event` structure changed
    - Impact: All existing traces need conversion
    - Migration: Use `3lens trace:convert` command
@@ -190,7 +190,7 @@ interface Metric {
 Provide migration guidance in this format:
 
 ```markdown
-## Migration Guide: [From Version] â†’ [To Version]
+## Migration Guide: [From Version] â†?[To Version]
 
 ### Overview
 - Breaking changes: [count]
@@ -231,11 +231,11 @@ If issues occur:
 - Test migrations on sample code first
 - Provide rollback instructions
 - Validate after migration
-- Reference `agents/contracts/compatibility.md` for version support
+- Reference `.cursor/contracts/compatibility.md` for version support
 
 ## Related Resources
 
 - Changelog: `CHANGELOG.md`
-- Compatibility Contract: `agents/contracts/compatibility.md`
+- Compatibility Contract: `.cursor/contracts/compatibility.md`
 - Version History: Git tags and releases
-- Migration Playbook: `agents/playbooks/migrate-versions.md` (if exists)
+- Migration Playbook: `.cursor/playbooks/migrate-versions.md` (if exists)

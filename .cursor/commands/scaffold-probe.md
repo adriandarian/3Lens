@@ -42,10 +42,10 @@ packages/kernel/src/probes/
 ## Next Steps
 
 After scaffolding, follow the playbook:
-- `agents/playbooks/add-a-probe.md`
+- `.cursor/playbooks/add-a-probe.md`
 
 ## See Also
 
 - Skill: scaffold-operations
-- Playbook: agents/playbooks/add-a-probe.md
-- Contract: agents/contracts/capture.md
+- Playbook: .cursor/playbooks/add-a-probe.md
+- Contract: .cursor/contracts/capture.md

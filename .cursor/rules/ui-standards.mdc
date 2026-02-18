@@ -15,12 +15,12 @@ Every panel MUST:
 ### 1. Answer a Clear Question
 
 ```typescript
-// ‚úÖ GOOD: Clear purpose
+// ‚ú?GOOD: Clear purpose
 export function createPerformancePanel(client: LensClient): Panel {
   // Answers: "What are the performance hotspots?"
 }
 
-// ‚ùå BAD: Vague purpose
+// ‚ù?BAD: Vague purpose
 export function createMyPanel(client: LensClient): Panel {
   // What does this do?
 }
@@ -44,12 +44,12 @@ function renderMetric(value: number, fidelity: Fidelity) {
 ### 3. Route Through Inspector
 
 ```typescript
-// ‚úÖ CORRECT: Route through Inspector
+// ‚ú?CORRECT: Route through Inspector
 onClick(entityId) {
   client.select(entityId, { source: 'my-panel' });
 }
 
-// ‚ùå WRONG: Direct access
+// ‚ù?WRONG: Direct access
 onClick(entityId) {
   object.userData.selected = true;
 }
@@ -58,19 +58,19 @@ onClick(entityId) {
 ### 4. Support Offline Traces
 
 ```typescript
-// ‚úÖ CORRECT: Works in both modes
+// ‚ú?CORRECT: Works in both modes
 const data = client.isLive 
   ? await client.queryLive(query, params)
   : await client.queryTrace(query, params);
 
-// ‚ùå WRONG: Live-only
+// ‚ù?WRONG: Live-only
 const data = await fetchLiveData();
 ```
 
 ### 5. Include Attribution Paths
 
 ```typescript
-// ‚úÖ CORRECT: Clickable attribution
+// ‚ú?CORRECT: Clickable attribution
 function renderHotspot(hotspot) {
   return `
     <div onclick="selectEntity('${hotspot.entityId}')">
@@ -101,7 +101,7 @@ UI components MUST:
 
 ## See Also
 
-- Contract: agents/contracts/ui-surfaces.md
-- Contract: agents/contracts/inspector.md
-- Playbook: agents/playbooks/add-a-panel.md
+- Contract: .cursor/contracts/ui-surfaces.md
+- Contract: .cursor/contracts/inspector.md
+- Playbook: .cursor/playbooks/add-a-panel.md
 - Skill: ui-operations

@@ -93,7 +93,7 @@ Each rule file includes:
 
 ## Related Resources
 
-- Contracts: [../../agents/contracts/](../../agents/contracts/)
-- Playbooks: [../../agents/playbooks/](../../agents/playbooks/)
+- Contracts: [../../.cursor/contracts/](../../.cursor/contracts/)
+- Playbooks: [../../.cursor/playbooks/](../../.cursor/playbooks/)
 - Skills: [../skills/](../skills/)
 - Project Guide: [../../agents.md](../../agents.md)

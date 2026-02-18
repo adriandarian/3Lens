@@ -2,27 +2,42 @@
 
 Specialized subagents for specific tasks in the 3Lens development workflow.
 
+**Core rule: Use a specialized agent instead of describing the task inline. Keeps main context small and answers more focused.**
+
+## Task → Agent Routing
+
+| Task | Agent | Trigger |
+|------|-------|---------|
+| Fix a bug autonomously | [bug-fixer](bug-fixer.md) | Paste context, say "fix" |
+| Review a PR (normal) | [code-reviewer](code-reviewer.md) | "Review my changes" |
+| Review a PR (strict) | [code-reviewer](code-reviewer.md) | "Grill me" / "Harsh review" |
+| Analyze a trace file | [trace-analyzer](trace-analyzer.md) | Paste trace path |
+| Optimize performance | [performance-optimizer](performance-optimizer.md) | Describe bottleneck |
+| Onboard / explain codebase | [onboarding-guide](onboarding-guide.md) | "Where do I find X?" |
+| Learn a 3Lens concept | [onboarding-guide](onboarding-guide.md) | "Explain X from scratch" |
+| Write tests | [test-generator](test-generator.md) | Describe what to test |
+| Upgrade versions / migrate APIs | [migration-assistant](migration-assistant.md) | Describe version change |
+
 ## Available Agents
+
+### Bug Fixing
+
+- **[bug-fixer.md](bug-fixer.md)** - Autonomous end-to-end bug fixer
+  - Use when: You have a bug report, CI failure, logs, or a trace and want it fixed with minimal supervision
+  - Process: Diagnose → Plan → Fix → Verify
 
 ### Validation & Review
 
-- **[contract-validator.md](contract-validator.md)** - Validates code changes against 3Lens contracts
-  - Use when: Reviewing PRs, checking contract compliance, validating architectural rules
-  - Checks: Contract violations, dependency rules, attribution paths, fidelity labeling
-
 - **[code-reviewer.md](code-reviewer.md)** - PR review with architectural awareness
   - Use when: Reviewing pull requests, checking code quality, ensuring architectural compliance
+  - Modes: Normal (constructive) or Harsh ("Grill me" / "Prove this works")
   - Checks: Dependency violations, contract compliance, anti-patterns, code quality
 
 ### Workflow Guidance
 
-- **[playbook-executor.md](playbook-executor.md)** - Guides through structured playbooks
-  - Use when: Adding panels, probes, hosts, or plugins
-  - Guides: Step-by-step through playbooks, tracks progress, validates completion
-
-- **[onboarding-guide.md](onboarding-guide.md)** - Help new contributors navigate
-  - Use when: Onboarding new team members, explaining project structure, answering "where do I find X?"
-  - Provides: Project structure, architecture explanation, file locations, common questions
+- **[onboarding-guide.md](onboarding-guide.md)** - Help new contributors navigate and learn
+  - Use when: Onboarding new team members, explaining project structure, learning 3Lens concepts
+  - Provides: Project structure, architecture explanation, file locations, learning mode
 
 ### Analysis & Optimization
 
@@ -44,19 +59,6 @@ Specialized subagents for specific tasks in the 3Lens development workflow.
   - Use when: Adding new features, ensuring contract compliance, creating regression test suites
   - Generates: Contract compliance tests, regression tests, snapshot tests
 
-## When to Use Which Agent
-
-| Task | Agent |
-|------|-------|
-| Review PR code | code-reviewer |
-| Validate contracts | contract-validator |
-| Add a component | playbook-executor |
-| Analyze trace | trace-analyzer |
-| Optimize performance | performance-optimizer |
-| Upgrade version | migration-assistant |
-| Write tests | test-generator |
-| Navigate codebase | onboarding-guide |
-
 ## Agent Patterns
 
 All agents follow consistent patterns:
@@ -72,5 +74,5 @@ All agents follow consistent patterns:
 
 - Commands: [../commands/](../commands/)
 - Skills: [../skills/](../skills/)
-- Playbooks: [../../agents/playbooks/](../../agents/playbooks/)
-- Contracts: [../../agents/contracts/](../../agents/contracts/)
+- Playbooks: [../playbooks/](../playbooks/)
+- Contracts: [../contracts/](../contracts/)

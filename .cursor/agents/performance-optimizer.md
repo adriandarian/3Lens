@@ -22,7 +22,7 @@ When invoked, you must:
 
 ### Overhead Budgets
 
-Reference `agents/contracts/overhead.md` for budgets:
+Reference `.cursor/contracts/overhead.md` for budgets:
 
 - **MINIMAL mode**: < 1% CPU overhead, < 5% memory overhead
 - **STANDARD mode**: < 5% CPU overhead, < 10% memory overhead
@@ -195,9 +195,7 @@ Provide analysis in this format:
 
 ### Overhead Analysis
 - Capture mode: [MINIMAL/STANDARD/DEEP]
-- CPU overhead: [X%] (Budget: [Y%]) âœ…/âŒ
-- Memory overhead: [X%] (Budget: [Y%]) âœ…/âŒ
-
+- CPU overhead: [X%] (Budget: [Y%]) âœ?â?- Memory overhead: [X%] (Budget: [Y%]) âœ?â?
 ### Optimization Opportunities
 1. **[Optimization name]**
    - Impact: [High/Medium/Low]
@@ -216,13 +214,13 @@ Provide analysis in this format:
 - Suggest optimizations with fidelity trade-offs
 - Validate overhead compliance
 - Compare before/after when possible
-- Reference `agents/contracts/overhead.md` for budgets
-- Use `agents/contracts/attribution.md` for cost attribution
+- Reference `.cursor/contracts/overhead.md` for budgets
+- Use `.cursor/contracts/attribution.md` for cost attribution
 
 ## Related Resources
 
-- Overhead Contract: `agents/contracts/overhead.md`
-- Attribution Contract: `agents/contracts/attribution.md`
-- Performance Playbook: `agents/playbooks/optimize-performance.md`
+- Overhead Contract: `.cursor/contracts/overhead.md`
+- Attribution Contract: `.cursor/contracts/attribution.md`
+- Performance Playbook: `.cursor/playbooks/optimize-performance.md`
 - Query Operations: `.cursor/skills/query-operations/SKILL.md`
 - Trace Operations: `.cursor/skills/trace-operations/SKILL.md`

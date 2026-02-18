@@ -90,31 +90,31 @@ built on shared primitives so features compose instead of becoming isolated pane
 Contracts define non-negotiable behaviors. Agents MUST implement and validate these contracts before shipping features.
 
 ### Core Contracts
-- [capture.md](agents/contracts/capture.md) - Event schema, render events as source of truth
-- [entity-graph.md](agents/contracts/entity-graph.md) - Stable namespaced IDs, typed nodes/edges
-- [attribution.md](agents/contracts/attribution.md) - Weighted blame chains
-- [fidelity.md](agents/contracts/fidelity.md) - EXACT/ESTIMATED/UNAVAILABLE
-- [runtime-boundaries.md](agents/contracts/runtime-boundaries.md) - Layer separation
-- [overhead.md](agents/contracts/overhead.md) - Capture modes, performance budget
+- [capture.md](.cursor/contracts/capture.md) - Event schema, render events as source of truth
+- [entity-graph.md](.cursor/contracts/entity-graph.md) - Stable namespaced IDs, typed nodes/edges
+- [attribution.md](.cursor/contracts/attribution.md) - Weighted blame chains
+- [fidelity.md](.cursor/contracts/fidelity.md) - EXACT/ESTIMATED/UNAVAILABLE
+- [runtime-boundaries.md](.cursor/contracts/runtime-boundaries.md) - Layer separation
+- [overhead.md](.cursor/contracts/overhead.md) - Capture modes, performance budget
 
 ### Feature Contracts
-- [inspector.md](agents/contracts/inspector.md) - The 5 questions
-- [shader-graph.md](agents/contracts/shader-graph.md) - Runtime introspection
-- [animation.md](agents/contracts/animation.md) - Animation clip tracking and timeline scrubbing
-- [asset-loading.md](agents/contracts/asset-loading.md) - Loader lifecycle and asset dependency graphs
+- [inspector.md](.cursor/contracts/inspector.md) - The 5 questions
+- [shader-graph.md](.cursor/contracts/shader-graph.md) - Runtime introspection
+- [animation.md](.cursor/contracts/animation.md) - Animation clip tracking and timeline scrubbing
+- [asset-loading.md](.cursor/contracts/asset-loading.md) - Loader lifecycle and asset dependency graphs
 
 ### Infrastructure Contracts
-- [transport.md](agents/contracts/transport.md) - Worker/remote UI protocol
-- [ui-surfaces.md](agents/contracts/ui-surfaces.md) - Overlay/dock/window/extension
-- [discovery.md](agents/contracts/discovery.md) - Auto-detect with fidelity
-- [pipelines.md](agents/contracts/pipelines.md) - Pass boundaries, MRT
-- [loading.md](agents/contracts/loading.md) - 5 loading modes
+- [transport.md](.cursor/contracts/transport.md) - Worker/remote UI protocol
+- [ui-surfaces.md](.cursor/contracts/ui-surfaces.md) - Overlay/dock/window/extension
+- [discovery.md](.cursor/contracts/discovery.md) - Auto-detect with fidelity
+- [pipelines.md](.cursor/contracts/pipelines.md) - Pass boundaries, MRT
+- [loading.md](.cursor/contracts/loading.md) - 5 loading modes
 
 ### Production Contracts
-- [compatibility.md](agents/contracts/compatibility.md) - three.js versions, WebGL/WebGPU
-- [storage.md](agents/contracts/storage.md) - Ring buffer, compression, export
-- [addons.md](agents/contracts/addons.md) - Versioning, capabilities
-- [security-csp.md](agents/contracts/security-csp.md) - CSP-safe mode
+- [compatibility.md](.cursor/contracts/compatibility.md) - three.js versions, WebGL/WebGPU
+- [storage.md](.cursor/contracts/storage.md) - Ring buffer, compression, export
+- [addons.md](.cursor/contracts/addons.md) - Versioning, capabilities
+- [security-csp.md](.cursor/contracts/security-csp.md) - CSP-safe mode
 
 ---
 
@@ -129,10 +129,12 @@ You MUST declare:
 4. **Verification method** - How do you validate it works? (diff/baseline)
 
 Then follow the relevant playbook:
-- [agents/playbooks/add-a-panel.md](agents/playbooks/add-a-panel.md) - Adding UI
-- [agents/playbooks/add-a-probe.md](agents/playbooks/add-a-probe.md) - Adding instrumentation
-- [agents/playbooks/add-a-plugin.md](agents/playbooks/add-a-plugin.md) - Creating an addon
-- [agents/playbooks/add-a-host.md](agents/playbooks/add-a-host.md) - Creating a host
+- [.cursor/playbooks/add-a-panel.md](.cursor/playbooks/add-a-panel.md) - Adding UI
+- [.cursor/playbooks/add-a-probe.md](.cursor/playbooks/add-a-probe.md) - Adding instrumentation
+- [.cursor/playbooks/add-a-plugin.md](.cursor/playbooks/add-a-plugin.md) - Creating an addon
+- [.cursor/playbooks/add-a-host.md](.cursor/playbooks/add-a-host.md) - Creating a host
+
+For complex tasks, use [.cursor/playbooks/plan-then-execute.md](.cursor/playbooks/plan-then-execute.md) before coding.
 
 ### Definition of Done (DoD)
 
@@ -142,8 +144,6 @@ A change is "done" only if:
 - [ ] It works in both live mode and offline trace mode
 - [ ] It updates or adds acceptance tests for touched contracts
 - [ ] Fidelity is explicit for any new metrics
-
-Use checklist: [agents/checklists/pr.md](agents/checklists/pr.md)
 
 ---
 
@@ -198,8 +198,10 @@ If a panel feels like "just numbers", it's missing:
 | `packages/addon-*/` | Feature addons (inspector, perf, memory, etc.) |
 | `packages/ui-core/` | Framework-agnostic UI shell |
 | `packages/mount-*/` | Framework-specific mounting |
-| `agents/contracts/` | Contract definitions |
+| `.cursor/contracts/` | Contract definitions |
+| `.cursor/playbooks/` | Development playbooks |
 | `tests/contracts/` | Contract validation tests |
+| `MEMORY.md` | Persistent AI corrections and learned patterns |
 
 ---
 

@@ -6,6 +6,9 @@ Detailed skill documentation for specialized 3Lens operations.
 
 ### Core Operations
 
+- **[analytics-operations/SKILL.md](analytics-operations/SKILL.md)** - Interpret and act on query/diff output
+  - Use when: Analyzing `3lens query` or `3lens diff` output, validating attribution chains, ad-hoc regression exploration
+
 - **[diff-operations/SKILL.md](diff-operations/SKILL.md)** - Compare traces and frames
   - Use when: Comparing before/after states, detecting regressions, analyzing changes
 
@@ -47,9 +50,6 @@ Detailed skill documentation for specialized 3Lens operations.
 - **[example-operations/SKILL.md](example-operations/SKILL.md)** - Creating and maintaining examples
   - Use when: Creating example code, documenting features, providing usage demonstrations
 
-- **[cli-operations/SKILL.md](cli-operations/SKILL.md)** - Extended CLI usage patterns
-  - Use when: Automating tasks, integrating CLI into workflows, using advanced CLI features
-
 ## Skill Structure
 
 All skills follow this structure:
@@ -64,24 +64,24 @@ All skills follow this structure:
 
 | Operation | Skill | Command |
 |-----------|-------|---------|
+| Interpret query/diff output | analytics-operations | `3lens query` / `3lens diff` |
 | Compare traces | diff-operations | `3lens diff` |
 | Diagnose issues | doctor-operations | `3lens doctor` |
-| Inspect entities | inspector-operations | `3lens inspect` |
+| Inspector (runtime) | inspector-operations | UI / client API |
 | Query data | query-operations | `3lens query` |
 | Scaffold code | scaffold-operations | `3lens scaffold` |
-| Analyze shaders | shader-operations | `3lens shader:*` |
+| Analyze shaders | shader-operations | addon-shader |
 | Capture traces | trace-operations | `3lens trace:*` |
 | Validate contracts | validation-operations | `3lens validate` |
-| Create mounts | mount-operations | `3lens scaffold mount` |
+| Create mounts | mount-operations | manual / playbook |
 | Create UI | ui-operations | `3lens scaffold panel` |
 | Create hosts | host-operations | `3lens scaffold host` |
-| Write tests | testing-operations | `3lens test contracts` |
-| Create examples | example-operations | (manual) |
-| Advanced CLI | cli-operations | (various) |
+| Write tests | testing-operations | vitest |
+| Create examples | example-operations | manual |
 
 ## Related Resources
 
 - Commands: [../commands/](../commands/)
 - Agents: [../agents/](../agents/)
-- Contracts: [../../agents/contracts/](../../agents/contracts/)
-- Playbooks: [../../agents/playbooks/](../../agents/playbooks/)
+- Contracts: [../contracts/](../contracts/)
+- Playbooks: [../playbooks/](../playbooks/)

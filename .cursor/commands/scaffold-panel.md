@@ -44,7 +44,7 @@ packages/ui-core/src/panels/
 ## Next Steps
 
 After scaffolding, follow the playbook:
-- `agents/playbooks/add-a-panel.md`
+- `.cursor/playbooks/add-a-panel.md`
 
 ## Requirements
 
@@ -59,8 +59,8 @@ Every panel must:
 
 - Skill: scaffold-operations
 - Skill: ui-operations
-- Playbook: agents/playbooks/add-a-panel.md
-- Agent: playbook-executor
-- Contract: agents/contracts/ui-surfaces.md
-- Contract: agents/contracts/inspector.md
+- Playbook: .cursor/playbooks/add-a-panel.md
+- Playbook: .cursor/playbooks/add-a-panel.md
+- Contract: .cursor/contracts/ui-surfaces.md
+- Contract: .cursor/contracts/inspector.md
 - Rule: .cursor/rules/ui-standards.mdc

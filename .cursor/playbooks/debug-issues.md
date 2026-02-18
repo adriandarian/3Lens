@@ -2,6 +2,22 @@
 
 This playbook describes how to debug issues in 3Lens using diagnostic tools, traces, and validation.
 
+## Automated Path
+
+For bugs where you have a report, CI output, or logs: **use the bug-fixer agent** instead of this playbook.
+
+1. Paste the bug report, failing CI output, runtime logs, or trace path
+2. Say: **"fix"**
+3. The bug-fixer operates end-to-end
+
+See `.cursor/agents/bug-fixer.md` for details.
+
+---
+
+## Manual Path (step-by-step)
+
+Follow the steps below when you need direct control over the debug process.
+
 ## Prerequisites
 
 - [ ] Understand the issue (symptoms, when it occurs, steps to reproduce)
@@ -55,7 +71,7 @@ Check if the issue is a contract violation:
 
 ```bash
 # Validate all contracts
-3lens validate contracts
+3lens validate all
 
 # Validate specific contract
 3lens validate inspector
@@ -134,7 +150,7 @@ If the issue is in code:
    - Verify compliance
 
 3. Check PR checklist:
-   - Review `agents/checklists/pr.md`
+   - Review `.cursor/agents/code-reviewer.md (PR Checklist section)`
    - Ensure all items are addressed
 
 ### 9. Check Logs
@@ -250,4 +266,4 @@ When debugging:
 - Skill: query-operations
 - Command: doctor
 - Command: validate-contracts
-- Contract: agents/contracts/overhead.md
+- Contract: .cursor/contracts/overhead.md

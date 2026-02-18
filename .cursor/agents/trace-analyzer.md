@@ -119,8 +119,8 @@ Always provide analysis in this format:
 
 - Always include fidelity level for metrics
 - Trace attribution paths to specific entities
-- Reference `agents/contracts/capture.md` for trace format
-- Reference `agents/contracts/fidelity.md` for metric accuracy
+- Reference `.cursor/contracts/capture.md` for trace format
+- Reference `.cursor/contracts/fidelity.md` for metric accuracy
 - Use `.cursor/commands/` for complete command syntax
 
 ## Related Resources
@@ -129,7 +129,7 @@ Always provide analysis in this format:
 - Skill: diff-operations
 - Skill: query-operations
 - Skill: inspector-operations
-- Contract: agents/contracts/capture.md
-- Contract: agents/contracts/fidelity.md
-- Contract: agents/contracts/attribution.md
+- Contract: .cursor/contracts/capture.md
+- Contract: .cursor/contracts/fidelity.md
+- Contract: .cursor/contracts/attribution.md
 - Commands: .cursor/commands/trace-*, .cursor/commands/diff.md

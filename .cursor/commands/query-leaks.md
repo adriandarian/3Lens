@@ -82,5 +82,5 @@ A resource is considered a leak if:
 ## See Also
 
 - Skill: query-operations
-- Contract: agents/contracts/attribution.md
+- Contract: .cursor/contracts/attribution.md
 - Addon: @3lens/addon-memory

@@ -32,9 +32,9 @@ packages/ui/core/
 ```
 packages/ui/web/
 ├── elements/
-│   ├── ThreeLensDock.ts      # Dock Web Component
-│   ├── ThreeLensOverlay.ts   # Overlay Web Component
-│   └── ThreeLensPanel.ts     # Panel Web Component
+�?  ├── ThreeLensDock.ts      # Dock Web Component
+�?  ├── ThreeLensOverlay.ts   # Overlay Web Component
+�?  └── ThreeLensPanel.ts     # Panel Web Component
 └── styles.ts                 # Shared styles
 ```
 
@@ -215,12 +215,12 @@ interface Overlay {
 ## Post-Scaffold Steps
 
 After scaffolding, follow the playbook:
-- [agents/playbooks/add-a-panel.md](../../../agents/playbooks/add-a-panel.md)
+- [.cursor/playbooks/add-a-panel.md](../../../.cursor/playbooks/add-a-panel.md)
 
 ## Additional Resources
 
-- Contract: [agents/contracts/ui-surfaces.md](../../../agents/contracts/ui-surfaces.md)
-- Contract: [agents/contracts/inspector.md](../../../agents/contracts/inspector.md)
+- Contract: [.cursor/contracts/ui-surfaces.md](../../../.cursor/contracts/ui-surfaces.md)
+- Contract: [.cursor/contracts/inspector.md](../../../.cursor/contracts/inspector.md)
 - Rule: [.cursor/rules/ui-standards.mdc](../../../rules/ui-standards.mdc)
 - Command: [.cursor/commands/scaffold-panel.md](../../../commands/scaffold-panel.md)
 - Skill: [scaffold-operations](../scaffold-operations/SKILL.md)

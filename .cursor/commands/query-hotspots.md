@@ -44,7 +44,7 @@ Query the top performance hotspots by GPU time, CPU time, or other metrics.
 ## See Also
 
 - Skill: query-operations
-- Contract: agents/contracts/attribution.md
-- Contract: agents/contracts/fidelity.md
+- Contract: .cursor/contracts/attribution.md
+- Contract: .cursor/contracts/fidelity.md
 - Command: inspect (for entity details)
 - Agent: performance-optimizer
