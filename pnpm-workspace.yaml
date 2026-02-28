@@ -48,7 +48,7 @@ catalog:
   zone.js: ^0.14.0
 
   # Svelte ecosystem
-  svelte: ^4.0.0
+  svelte: ^5.53.5
 
   # Linting & Formatting
   oxlint: ^1.1.0
