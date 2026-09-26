@@ -81,6 +81,16 @@ export interface TransportOptions {
   maxBatchSize?: number;
   /** Enable compression */
   compression?: boolean;
+  /**
+   * Target origin used when sending to a Window.
+   * Defaults to the current page origin. Use "*" only when explicitly required.
+   */
+  targetOrigin?: string;
+  /**
+   * Origins accepted from Window message events.
+   * Defaults to the current page origin. Use ["*"] only when explicitly required.
+   */
+  allowedOrigins?: string[];
 }
 
 /**
@@ -95,21 +105,42 @@ export function createPostMessageTransport(
   let pendingMessages: TransportMessage[] = [];
   let batchTimeout: number | null = null;
 
+  const windowTarget =
+    typeof Window !== 'undefined' && target instanceof Window ? target : null;
+  const currentOrigin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : undefined;
+  const targetOrigin = options.targetOrigin ?? currentOrigin ?? '*';
+  const allowedOrigins = new Set(
+    options.allowedOrigins ?? (currentOrigin ? [currentOrigin] : [])
+  );
+  const allowAnyOrigin = allowedOrigins.has('*');
+
   const flushBatch = () => {
     if (pendingMessages.length === 0) return;
 
     const messages = pendingMessages;
     pendingMessages = [];
 
-    if (messages.length === 1) {
-      target.postMessage(messages[0]);
+    const payload = messages.length === 1 ? messages[0] : { type: 'batch', messages };
+
+    if (windowTarget) {
+      windowTarget.postMessage(payload, targetOrigin);
     } else {
-      target.postMessage({ type: 'batch', messages });
+      target.postMessage(payload);
     }
   };
 
   // Listen for messages
   const messageHandler = (event: MessageEvent) => {
+    if (windowTarget) {
+      if (event.source !== windowTarget) return;
+      if (!allowAnyOrigin && allowedOrigins.size > 0 && !allowedOrigins.has(event.origin)) {
+        return;
+      }
+    }
+
     const data = event.data;
     if (!data || typeof data !== 'object') return;
 
@@ -127,7 +158,7 @@ export function createPostMessageTransport(
     }
   };
 
-  if (target instanceof Window) {
+  if (windowTarget) {
     window.addEventListener('message', messageHandler);
   } else if ('onmessage' in target) {
     target.onmessage = messageHandler;
@@ -148,6 +179,8 @@ export function createPostMessageTransport(
             flushBatch();
           }, options.batchInterval ?? 16) as unknown as number;
         }
+      } else if (windowTarget) {
+        windowTarget.postMessage(message, targetOrigin);
       } else {
         target.postMessage(message);
       }
@@ -171,6 +204,12 @@ export function createPostMessageTransport(
       handlers.clear();
       if (batchTimeout) {
         clearTimeout(batchTimeout);
+        batchTimeout = null;
+      }
+      if (windowTarget) {
+        window.removeEventListener('message', messageHandler);
+      } else if ('onmessage' in target && target.onmessage === messageHandler) {
+        target.onmessage = null;
       }
     },
 

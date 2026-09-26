@@ -22,7 +22,12 @@ export { BaseHost, type Host, type HostConfig } from './host';
 export { type LensClient } from './client';
 
 // Transport interface
-export { type LensTransport, type TransportMessage } from './transport';
+export {
+  createPostMessageTransport,
+  type LensTransport,
+  type TransportMessage,
+  type TransportOptions,
+} from './transport';
 
 // Addon interface
 export { type Addon, type AddonConfig, type AddonRequirements } from './addon';
