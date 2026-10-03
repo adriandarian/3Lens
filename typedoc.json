@@ -1,15 +1,19 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": [
-    "./packages/core/src/index.ts",
-    "./packages/overlay/src/index.ts",
-    "./packages/react-bridge/src/index.ts",
-    "./packages/angular-bridge/src/index.ts",
-    "./packages/vue-bridge/src/index.ts",
-    "./packages/ui/src/index.ts"
+    "./packages/core/*/src/index.ts",
+    "./packages/core/devtools/src/bootstrap.ts",
+    "./packages/hosts/*/src/index.ts",
+    "./packages/addons/*/src/index.ts",
+    "./packages/ui/*/src/index.ts",
+    "./packages/mounts/*/src/index.ts",
+    "./packages/tools/*/src/index.ts"
   ],
-  "entryPointStrategy": "expand",
-  "out": "./docs/api",
+  "entryPointStrategy": "resolve",
+  "tsconfig": "./tsconfig.docs.json",
+  "out": "./docs/api/reference",
+  "entryFileName": "index.md",
+  "mergeReadme": true,
   "name": "3Lens API Reference",
   "readme": "./docs/guides/GETTING-STARTED.md",
   "includeVersion": true,

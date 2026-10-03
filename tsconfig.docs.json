@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "experimentalDecorators": true,
+    "paths": {
+      "@3lens/*": ["./packages/core/*/src/index.ts"],
+      "@3lens/host-*": ["./packages/hosts/*/src/index.ts"],
+      "@3lens/addon-*": ["./packages/addons/*/src/index.ts"],
+      "@3lens/ui-*": ["./packages/ui/*/src/index.ts"],
+      "@3lens/mount-*": ["./packages/mounts/*/src/index.ts"],
+      "@3lens/cli": ["./packages/tools/cli/src/index.ts"],
+      "@3lens/vite-plugin": ["./packages/tools/vite-plugin/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/*/src/**/*"],
+  "exclude": [
+    "node_modules",
+    "**/dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.bench.ts"
+  ]
+}
