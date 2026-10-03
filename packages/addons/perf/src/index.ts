@@ -1,3 +1,5 @@
+export * from './benchmark';
+
 /**
  * @3lens/addon-perf
  *
