@@ -124,6 +124,33 @@ jobs:
           path: packages/*/dist
           retention-days: 7
 
+  docs:
+    name: Documentation Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API reference and documentation site
+        run: pnpm -w run docs && pnpm -w run docs:build
+
+      - name: Verify generated reference and preserve authored API pages
+        run: |
+          test -f docs/.vitepress/dist/api/reference/index.html
+          git diff --exit-code -- docs/api
+
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest
