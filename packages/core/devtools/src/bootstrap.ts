@@ -7,6 +7,7 @@
  */
 
 import { createLens, type Lens, type LensConfig } from '@3lens/runtime';
+import { createInvestigationUI } from '@3lens/ui-core';
 
 /**
  * Bootstrap options
@@ -16,6 +17,14 @@ export interface BootstrapOptions {
   enabled?: boolean;
   /** UI mode */
   ui?: 'overlay' | 'dock' | 'window';
+  /** Host-owned container for dock mode */
+  target?: HTMLElement;
+  /** Optional application-owned viewport element to place inside the workspace. */
+  viewport?: HTMLElement;
+  /** Start with the full workspace or a compact floating inspector. */
+  layout?: 'workspace' | 'overlay' | 'dock';
+  /** Disable live scene mutations while retaining captured-data navigation. */
+  readonly?: boolean;
   /** Auto-discover contexts */
   autoDiscover?: boolean;
   /** Persist enabled state to localStorage */
@@ -28,6 +37,7 @@ export interface BootstrapOptions {
   csp?: {
     styleNonce?: string;
     cssUrl?: string;
+    safeMode?: boolean;
   };
 }
 
@@ -69,16 +79,29 @@ export function bootstrap3Lens(options: BootstrapOptions = {}): Lens {
     enabled: true,
     ui: options.ui ?? 'overlay',
     autoDiscover: options.autoDiscover ?? true,
-    discoveryMode: options.autoDiscover ? 'observe' : 'off',
+    discoveryMode: (options.autoDiscover ?? true) ? 'observe' : 'off',
     persist: options.persist ?? true,
     contextNameStrategy: options.contextNameStrategy ?? 'canvasId',
     logLevel: options.logLevel ?? 'warn',
     csp: options.csp,
-    addons: ['inspector', 'perf', 'memory', 'diff', 'shader'],
+    uiAdapter: createInvestigationUI({
+      surface: options.ui ?? 'overlay',
+      target: options.target,
+      viewport: options.viewport,
+      layout: options.layout,
+      readonly: options.readonly,
+      csp: options.csp,
+    }),
   };
 
   // Create lens
   instance = createLens(config);
+  const created = instance;
+  const dispose = created.dispose.bind(created);
+  created.dispose = () => {
+    dispose();
+    if (instance === created) instance = null;
+  };
 
   // Auto-attach
   instance.attach();

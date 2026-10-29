@@ -10,7 +10,7 @@
 export * from './types';
 
 // Lens creation
-export { createLens, type LensConfig } from './lens';
+export { createLens, type LensConfig, type Lens, type LensUIAdapter, type EntityChange } from './lens';
 
 // Context registration
 export { type ContextRegistration, type ContextOptions } from './context';

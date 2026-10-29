@@ -22,6 +22,10 @@ export function serializeTrace(trace: Trace): string {
 export function deserializeTrace(json: string): Trace {
   const trace = JSON.parse(json) as Trace;
 
+  if (!trace || typeof trace !== 'object' || !trace.header ||
+      !Array.isArray(trace.events) || !Array.isArray(trace.snapshots)) {
+    throw new Error('Invalid trace: missing header, event chunks, or graph checkpoints');
+  }
   // Validate header
   const validation = validateTraceHeader(trace.header);
   if (!validation.valid) {

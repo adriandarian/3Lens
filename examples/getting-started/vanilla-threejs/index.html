@@ -3,21 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
     <title>3Lens — Vanilla Three.js Example</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { background: #0a0a0f; overflow: hidden; font-family: system-ui, sans-serif; }
-      canvas { display: block; width: 100vw; height: 100vh; }
+      canvas { display: block; width: 100%; height: 100%; }
+      #app-viewport { position: relative; width: 100%; height: 100%; min-height: 0; }
+      body > #app-viewport { height: 100vh; }
       #info {
-        position: fixed;
-        top: 16px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: absolute;
+        bottom: 64px;
+        left: 16px;
+        max-width: calc(100% - 32px);
         color: rgba(255,255,255,0.6);
         font-size: 13px;
         letter-spacing: 0.04em;
-        pointer-events: none;
-        text-align: center;
+        text-align: left;
+        background: rgba(10,10,15,0.88);
+        border: 1px solid #30303d;
+        border-radius: 10px;
+        padding: 16px;
+        line-height: 1.6;
+      }
+      #info p { display: none; }
+      #info > strong { display: none; }
+      #info button { background: #24243b; color: #eee; border: 1px solid #505074;
+        border-radius: 6px; padding: 7px 10px; margin: 4px 4px 0 0; cursor: pointer; }
+      #info button:disabled { opacity: 0.45; cursor: default; }
+      @media (max-width: 1100px) {
+        #info { top: auto; bottom: 64px; padding: 10px; max-width: calc(100% - 32px); }
+        #info p { display: none; }
       }
       #info strong { color: rgba(255,255,255,0.9); }
       #info kbd {
@@ -30,11 +46,19 @@
     </style>
   </head>
   <body>
+    <div id="app-viewport" data-3lens-app-viewport>
     <canvas id="canvas"></canvas>
     <div id="info">
-      <strong>3Lens</strong> — Vanilla Three.js &nbsp;|&nbsp;
-      Press <kbd>F2</kbd> to toggle devtools &nbsp;|&nbsp;
-      Orbit: drag &nbsp; Zoom: scroll
+      <strong>3Lens — Devtools development fixture</strong>
+      <p>Inspect this scene with the tools on the right. Select <strong>MainCube</strong>
+        to explore its geometry, material, and captured state.</p>
+      <p>Try: pause motion, save a baseline in the tools, hide MainCube, then inspect
+        changes. Export the trace and load it to repeat the investigation offline.</p>
+      <button id="open-tools" type="button">Open devtools</button>
+      <button id="pause-motion" type="button">Pause motion</button>
+      <button id="toggle-cube" type="button">Hide MainCube</button>
+      <p><kbd>F2</kbd> toggles tools · Drag to orbit · Scroll to zoom</p>
+    </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

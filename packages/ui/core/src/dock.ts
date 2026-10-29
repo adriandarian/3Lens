@@ -135,5 +135,3 @@ export function uiDock(config: UIDockConfig): UIAdapter {
     },
   };
 }
-
-export type { UIDockConfig };

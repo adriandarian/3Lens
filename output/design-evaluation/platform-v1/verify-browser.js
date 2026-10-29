@@ -1,0 +1,130 @@
+async page => {
+  const destination = 'C:/Users/hello/Projects/3Lens/output/design-evaluation/platform-v1';
+  const errors = [];
+  const onError = error => errors.push(error.message);
+  page.on('pageerror', onError);
+  const capture = name => page.screenshot({ path: `${destination}/${name}.png` });
+  const checks = [];
+  try {
+    await page.goto('http://localhost:3000/');
+    await page.setViewportSize({ width: 1774, height: 887 });
+    await page.locator('.tlp-timeline-bars button').nth(50).waitFor();
+    await page.getByRole('button', { name: 'Pause motion', exact: true }).click();
+    await capture('01-inspection-final');
+
+    await page.getByRole('button', { name: 'Highlight', exact: true }).first().click();
+    const bounds = await page.getByLabel('Selected entity bounds').boundingBox();
+    if (!bounds) throw new Error('Selection bounds were not drawn');
+    await page.getByRole('button', { name: 'Pick entity', exact: true }).click();
+    await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.locator('.tlp-identity-name').filter({ hasText: 'MainCube' }).waitFor();
+    await page.getByRole('button', { name: 'Focus', exact: true }).first().click();
+    checks.push('Picking, projected bounds, shared selection and application-owned camera focus');
+
+    await page.getByRole('tab', { name: 'Performance', exact: true }).click();
+    await page.locator('.tlpa-frame-bar').nth(50).waitFor();
+    await capture('02-performance-final');
+    await page.setViewportSize({ width: 1672, height: 941 });
+    await page.getByRole('tab', { name: 'Memory', exact: true }).click();
+    await page.getByText('Asset loading activity', { exact: true }).waitFor();
+    const resourceSearch = page.getByLabel(/Search resources/);
+    await resourceSearch.fill('Box');
+    if (!(await resourceSearch.evaluate(element => element === element.ownerDocument.activeElement))) throw new Error('Resource filter lost focus');
+    await resourceSearch.fill('');
+    await capture('03-memory-final');
+    await page.getByRole('tab', { name: 'Shaders', exact: true }).click();
+    await page.getByText('Shader source', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Vertex shader', exact: true }).click();
+    await page.getByRole('button', { name: 'Fragment shader (captured)', exact: true }).click();
+    await capture('05-shaders-final');
+    checks.push('Performance, resource filtering without focus loss, runtime shader source and stage navigation');
+
+    await page.getByRole('tab', { name: 'Inspect', exact: true }).click();
+    await page.locator('nav[aria-label="Captured entities"]').getByRole('button', { name: 'MainCube', exact: true }).click();
+    await page.setViewportSize({ width: 1536, height: 1024 });
+    await page.getByRole('tab', { name: 'Surfaces', exact: true }).click();
+    await capture('06-surfaces-final');
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByRole('button', { name: 'Open trace window', exact: true }).click();
+    const popup = await popupPromise;
+    await popup.getByRole('complementary', { name: '3Lens developer tools' }).waitFor();
+    await popup.screenshot({ path: `${destination}/06-trace-window-final.png` });
+    await popup.close();
+    await page.getByRole('button', { name: 'Back to workspace', exact: true }).click();
+    await page.getByLabel('UI surface').selectOption('overlay');
+    const header = await page.locator('.tlp-topbar').boundingBox();
+    await page.mouse.move(header.x + 36, header.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(header.x + 6, header.y + 40);
+    await page.mouse.up();
+    await capture('06-overlay-final');
+    await page.getByLabel('UI surface').selectOption('dock');
+    await capture('06-dock-final');
+    await page.getByLabel('UI surface').selectOption('workspace');
+    await page.keyboard.down('Alt');
+    if (!(await page.locator('.tlp-pass-input').count())) throw new Error('Alt input passthrough failed');
+    await page.keyboard.up('Alt');
+    await page.keyboard.press('F2');
+    await page.locator('.tlp-launcher').click();
+    await page.keyboard.press('F2');
+    if (await page.getByRole('complementary', { name: '3Lens developer tools' }).isVisible()) throw new Error('F2/launcher visibility tracking failed');
+    await page.keyboard.press('F2');
+    await page.getByRole('button', { name: 'Commands', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Command palette' }).waitFor();
+    await capture('06-command-palette-final');
+    await page.keyboard.press('Escape');
+    checks.push('All mounting surfaces, popup lifecycle, overlay drag, Alt passthrough, F2/launcher, commands');
+
+    await page.setViewportSize({ width: 887, height: 998 });
+    await capture('01-narrow-final');
+    const root = await page.getByRole('complementary', { name: '3Lens developer tools' }).boundingBox();
+    const inspector = await page.getByRole('complementary', { name: 'Entity inspector' }).boundingBox();
+    if (inspector.x + inspector.width > root.width + 1) throw new Error('Inspector clipped at narrow viewport');
+    await page.setViewportSize({ width: 1672, height: 941 });
+    await page.locator('.tlp-timeline-toolbar').getByRole('button', { name: 'Set baseline', exact: true }).click();
+    await page.getByRole('button', { name: 'Add marker', exact: true }).click();
+    await page.getByLabel('Marker name').fill('Before visibility change');
+    await page.getByRole('button', { name: 'Save marker', exact: true }).click();
+    let download = page.waitForEvent('download');
+    await page.locator('.tlp-topbar').getByRole('button', { name: 'Export trace', exact: true }).click();
+    await (await download).saveAs(`${destination}/baseline.json`);
+    await page.getByRole('button', { name: 'Hide MainCube', exact: true }).click();
+    await page.getByText('visible: true -> false', { exact: true }).waitFor();
+    download = page.waitForEvent('download');
+    await page.locator('.tlp-topbar').getByRole('button', { name: 'Export trace', exact: true }).click();
+    await (await download).saveAs(`${destination}/candidate.json`);
+    await page.getByRole('tab', { name: 'Changes', exact: true }).click();
+    await page.getByLabel('Load baseline trace').setInputFiles(`${destination}/baseline.json`);
+    await page.getByLabel('Load candidate trace').setInputFiles(`${destination}/candidate.json`);
+    await page.getByLabel('Filter trace changes').fill('MainCube');
+    await page.locator('.tlp-trace-table tbody tr').first().click();
+    await page.getByRole('button', { name: '+ Save selection', exact: true }).click();
+    await page.getByLabel('Trace alignment').selectOption('marker');
+    const beforeFrame = Number(await page.getByLabel('baseline end frame').inputValue());
+    await capture('04-traces-final');
+    await page.getByRole('button', { name: 'Inspect candidate', exact: true }).click();
+    await page.locator('[data-three-lens][data-mode=offline]').waitFor();
+    await capture('04-offline-final');
+    checks.push('Two real file exports/imports, marker alignment, changed property, bookmark and offline candidate');
+
+    for (const tool of ['Performance', 'Memory', 'Shaders', 'Inspect']) {
+      await page.getByRole('tab', { name: tool, exact: true }).click();
+      if (await page.locator('[data-three-lens]').getAttribute('data-mode') !== 'offline') throw new Error(`${tool} lost offline mode`);
+    }
+    if (!(await page.locator('[data-action=record]').isDisabled())) throw new Error('Offline recording remained enabled');
+    checks.push('All core views preserve offline state and disable unsupported live actions');
+    await page.locator('nav[aria-label="Captured entities"]').getByRole('button', { name: 'MainCube', exact: true }).click();
+    await page.getByLabel('Selected frame', { exact: true }).fill(String(beforeFrame));
+    await page.getByLabel('Selected frame', { exact: true }).press('Tab');
+    const before = JSON.parse(await page.locator('.tl-detail details pre').first().textContent());
+    if (before.visible !== true) throw new Error('Frame navigation did not restore the pre-change entity state');
+    await page.locator('.tlp-timeline-toolbar').getByRole('button', { name: 'Latest', exact: true }).click();
+    const after = JSON.parse(await page.locator('.tl-detail details pre').first().textContent());
+    if (after.visible !== false) throw new Error('Latest did not restore the final entity state');
+    checks.push('Recorded-frame navigation restores before/after entity state offline');
+    if (errors.length) throw new Error(`Browser exceptions: ${errors.join('; ')}`);
+    return { passed: true, concepts: 6, checks, browserExceptions: errors };
+  } finally {
+    page.off('pageerror', onError);
+  }
+}

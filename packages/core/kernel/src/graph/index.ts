@@ -6,3 +6,5 @@
 
 export * from './entity-graph-impl';
 export * from './queries';
+
+export { applyCaptureEvent, validateGraphCheckpoint } from './capture-projection';

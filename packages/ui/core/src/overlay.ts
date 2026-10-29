@@ -193,5 +193,3 @@ function makeDraggable(element: HTMLElement, handle: HTMLElement): void {
     isDragging = false;
   });
 }
-
-export type { UIOverlayConfig };

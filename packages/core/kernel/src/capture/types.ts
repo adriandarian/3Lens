@@ -25,18 +25,22 @@ export interface CaptureContextConfig {
 /**
  * Capture context interface
  */
+export type CaptureEvent = Event extends infer E ? E extends Event ? Omit<E, 'seq' | 'context_id'> : never : never;
+
 export interface CaptureContext {
   /** Context ID */
   readonly id: string;
   /** Current capture mode */
   readonly mode: CaptureMode;
+  /** Explicit user-controlled capture mode change. */
+  setMode(mode: CaptureMode): void;
   /** Current sequence number */
   readonly seq: number;
   /** Whether capture is active */
   readonly active: boolean;
 
   /** Emit an event */
-  emit(event: Omit<Event, 'seq' | 'context_id'>): void;
+  emit(event: CaptureEvent): void;
 
   /** Start capture */
   start(): void;

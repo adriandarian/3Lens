@@ -120,6 +120,26 @@ Contracts define non-negotiable behaviors. Agents MUST implement and validate th
 
 ## Project Workflow
 
+### Current Priority: Complete the Devtools Workflow
+
+Prioritize a working developer investigation from capture through inspection and
+verification. Example scenes support that work; expanding the example catalog is
+not a delivery milestone.
+
+- Start with the existing vanilla three.js scene as the development fixture.
+- Close runtime, host, query, UI, and trace integration gaps before adding demos.
+- Assess each example as keep, merge, replace with an upstream reference, or remove.
+  Retain local fixtures when they provide deterministic contract or regression coverage.
+- New examples must name a developer question, the contract they verify, and an
+  observable expected result that existing fixtures cannot cover.
+- Use existing three.js/community scenes for broader compatibility investigations
+  when practical. Record source, version, and reproduction steps; check licensing
+  before copying assets or code. Keep automated acceptance checks reproducible locally.
+- A rendered scene or a built panel is insufficient evidence of a working tool.
+  Verify real captured data, entity attribution, explicit fidelity, and offline parity.
+
+See [the example assessment and first milestone](examples/README.md).
+
 ### When Adding a Feature/Panel/Tool
 
 You MUST declare:

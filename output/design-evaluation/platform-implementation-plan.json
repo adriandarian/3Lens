@@ -1,0 +1,11 @@
+{
+  "objective": "Implement all six saved devtools concepts and cross-check every area against its image.",
+  "entities": ["renderer", "scene", "camera", "object3d", "geometry", "material", "texture", "render_target", "shader", "shader_variant", "pass", "frame", "capture events"],
+  "queries": ["platform_snapshot", "entity_changes", "resource_cost", "search_nodes", "get_node_by_id", "resources_used_by", "platform_diff"],
+  "actions": ["select", "pick", "focus", "highlight", "set frame", "capture baseline", "record", "export", "load", "compare traces", "bookmark selection", "dock", "overlay", "open trace window", "command palette", "doctor"],
+  "ownership": {"root": "Shared shell, inspector, interactions, fixture integration, browser evaluation", "platform_data": "Kernel queries, runtime capture and scene commands", "analysis_views": "Performance, memory/assets, shader/pipeline screens", "trace_compare": "Offline two-trace comparison and bookmarks"},
+  "files": ["packages/ui/core/src/investigation.ts", "packages/ui/core/src/platform/*", "packages/core/kernel/src/query/platform-queries.ts", "packages/core/runtime/src/*", "packages/hosts/manual/src/index.ts", "packages/core/devtools/src/bootstrap.ts", "examples/getting-started/vanilla-threejs/*", "tests/contracts/platform-*.test.ts"],
+  "contracts": ["capture", "entity-graph", "attribution", "fidelity", "runtime-boundaries", "overhead", "inspector", "shader-graph", "asset-loading", "pipelines", "storage", "ui-surfaces", "security-csp"],
+  "risks": ["Illustrative concept numbers must not become fabricated runtime measurements", "Mounting and scene interaction must preserve application input", "Selection and query answers must survive offline loading", "Views must share one data model and remain bounded", "Dirty prior work must be preserved"],
+  "verification": ["All source-connected TypeScript checks", "Focused contract tests and existing test suite", "Relevant package builds", "Real browser workflows for every concept", "Saved captures at concept resolutions", "Visual comparison and correction for each concept", "Live/offline query and selection parity", "Teardown, popup, docking, input, and F2 checks"]
+}

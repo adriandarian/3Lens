@@ -1,0 +1,179 @@
+{
+  "status": "passed",
+  "concepts": 6,
+  "scope": "All six concept areas implemented and evaluated. Images contain illustrative data; running views use captured data and explicitly unavailable states.",
+  "references": "output/imagegen/3lens-platform-v1",
+  "evaluation": "Inspected original references and successive browser screenshots; made scoped layout and interaction corrections, then repeated the real browser workflow.",
+  "areas": [
+    {
+      "id": "01",
+      "name": "Inspection workspace",
+      "reference": "../../imagegen/3lens-platform-v1/01-inspection-workspace.png",
+      "capture": "01-inspection-final.png",
+      "coverage": [
+        "Scene tree and shared inspector",
+        "Identity, relationships, fidelity, changes and actions",
+        "Live viewport slot and recorded timeline",
+        "Picking, camera focus and projected bounds"
+      ],
+      "corrections": [
+        "Matched three-column proportions",
+        "Compacted relationship groups",
+        "Removed HUD from expanded workspace",
+        "Kept bounds inside viewport and clear of modal controls"
+      ],
+      "visualReview": "completed",
+      "interactionReview": "passed"
+    },
+    {
+      "id": "02",
+      "name": "Performance investigation",
+      "reference": "../../imagegen/3lens-platform-v1/02-performance-investigation.png",
+      "capture": "02-performance-final.png",
+      "coverage": [
+        "Observed CPU submission chart and renderer counters",
+        "Recorded frame navigation",
+        "Actual relation paths without inferred per-object blame",
+        "Timing baseline comparison"
+      ],
+      "corrections": [
+        "Removed duplicate navigation and lower timeline",
+        "Preserved space for lower comparison section",
+        "Only connected graph edges appear in relation paths"
+      ],
+      "visualReview": "completed",
+      "interactionReview": "passed"
+    },
+    {
+      "id": "03",
+      "name": "Memory and assets",
+      "reference": "../../imagegen/3lens-platform-v1/03-memory-and-assets.png",
+      "capture": "03-memory-final.png",
+      "coverage": [
+        "Resource lifecycle and captured storage history",
+        "Scrollable resource table with search/kind/fidelity filters",
+        "Weighted shared-resource attribution and dependency navigation",
+        "Loading-evidence table and explicit unavailable state"
+      ],
+      "corrections": [
+        "Capped table height to expose dependency and loading panels",
+        "Preserved keyboard focus and table scrolling",
+        "Unavailable storage never displays zero as a measurement"
+      ],
+      "visualReview": "completed",
+      "interactionReview": "passed"
+    },
+    {
+      "id": "04",
+      "name": "Traces and regressions",
+      "reference": "../../imagegen/3lens-platform-v1/04-traces-and-regressions.png",
+      "capture": "04-traces-final.png",
+      "coverage": [
+        "Two independently validated trace files",
+        "Real marker/frame alignment and range filtering",
+        "Captured property differences and before/after inspector",
+        "Side inspection, user navigation, bookmarks and history-loss reporting"
+      ],
+      "corrections": [
+        "Compact left comparison rail",
+        "Summarized entity additions/removals",
+        "Bounded difference table height",
+        "Separated relation groups to prevent overlap",
+        "Before/after values placed near inspector identity"
+      ],
+      "visualReview": "completed",
+      "interactionReview": "passed"
+    },
+    {
+      "id": "05",
+      "name": "Shader and pipeline analysis",
+      "reference": "../../imagegen/3lens-platform-v1/05-shader-and-pipeline-analysis.png",
+      "capture": "05-shaders-final.png",
+      "coverage": [
+        "Observed runtime WebGL source, programs and material variants",
+        "Useful feature defines and observed users",
+        "Read-only token-colored vertex/fragment source with copy",
+        "Explicit pipeline descriptors/attachments and compilation evidence"
+      ],
+      "corrections": [
+        "Added the secondary scene/material tree",
+        "Bounded feature defines and long tables",
+        "Kept full source in the source viewer",
+        "Pass links require captured edges",
+        "Uninstrumented boundaries and timing remain unavailable"
+      ],
+      "visualReview": "completed",
+      "interactionReview": "passed"
+    },
+    {
+      "id": "06",
+      "name": "Interaction surfaces",
+      "reference": "../../imagegen/3lens-platform-v1/06-interaction-surfaces.png",
+      "capture": "06-surfaces-final.png",
+      "coverage": [
+        "Picking/selection toolbar and bounds",
+        "Workspace and host-owned dock target",
+        "Compact draggable/resizable overlay and Alt passthrough",
+        "User-initiated same-origin trace window",
+        "Commands, file drop/import and shared selection"
+      ],
+      "corrections": [
+        "Gave interaction sheet the full content area",
+        "Made four panels distinct and connected to working actions",
+        "Reduced overlay to a compact inspector",
+        "Fixed docking without an explicit target",
+        "Fixed F2 tracking after launcher reopening",
+        "Rechecked 887x998 layout"
+      ],
+      "visualReview": "completed",
+      "interactionReview": "passed"
+    }
+  ],
+  "verification": {
+    "sourceTypecheck": "pnpm typecheck:investigation passed",
+    "tests": "pnpm test: 60 passed across 11 files",
+    "builds": [
+      "kernel",
+      "runtime",
+      "ui-core",
+      "host-manual",
+      "devtools",
+      "example-vanilla-threejs"
+    ],
+    "browser": {
+      "passed": true,
+      "browserExceptions": [],
+      "checks": [
+        "All six views reachable and captured",
+        "Picking/bounds/focus",
+        "Search focus and shader stage switching",
+        "Dock, overlay drag, popup lifecycle, commands",
+        "Alt passthrough and F2/launcher",
+        "Narrow viewport inspector fits",
+        "Two real trace exports/imports, marker alignment, property diff, bookmark",
+        "Offline navigation across all core views",
+        "Historical frame restores visible=true and Latest restores visible=false"
+      ]
+    },
+    "browserCommand": "npx --yes --package @playwright/cli playwright-cli -s=3lens-platform run-code --filename=output/design-evaluation/platform-v1/verify-browser.js"
+  },
+  "limits": [
+    "GPU and shader-compilation timing require authoritative instrumentation and remain UNAVAILABLE here.",
+    "Loader decode/upload timing and uninstrumented pass boundaries remain UNAVAILABLE.",
+    "Geometry storage and equal-share resource attribution are ESTIMATED.",
+    "Trace window uses the public Lens in the same-origin opener; this is not a remote cross-origin transport implementation.",
+    "The six concepts are visual/product references rather than fixed sample measurements or a guarantee of identical raster pixels."
+  ],
+  "additionalCaptures": [
+    "01-narrow-final.png",
+    "04-offline-final.png",
+    "06-overlay-final.png",
+    "06-dock-final.png",
+    "06-trace-window-final.png",
+    "06-command-palette-final.png"
+  ],
+  "traceArtifacts": [
+    "baseline.json",
+    "candidate.json"
+  ]
+}

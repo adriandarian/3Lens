@@ -39,6 +39,17 @@
 
 ## 📦 Package Architecture
 
+### Current Development Focus
+
+The immediate priority is a usable devtools investigation: attach to an application,
+open the tools, inspect captured entities and their relationships, then export and
+reopen a trace to verify the same findings offline.
+
+The existing vanilla three.js scene is a development fixture. Example count is not
+an indicator of product completeness. New scenes should address a specific coverage
+gap; broader scene coverage can use existing three.js and community applications.
+See [example assessment and the first milestone](examples/README.md).
+
 ### Core Packages
 
 | Package | Description |

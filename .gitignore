@@ -27,6 +27,8 @@ scripts/.tui-result-*.json
 
 # Test
 coverage/
+.playwright-cli/
+output/playwright/
 
 # Logs
 *.log

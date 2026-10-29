@@ -44,6 +44,12 @@ export interface Host {
 
   /** Whether host is attached */
   isAttached(): boolean;
+  /** Optional scene interaction, using normalized canvas coordinates (0..1). */
+  pick?(x: number, y: number): string | null;
+  focus?(entityId: string): boolean;
+  highlight?(entityId: string | null): boolean;
+  getViewportBounds?(): { x: number; y: number; width: number; height: number } | null;
+  getEntityBounds?(entityId: string): { x: number; y: number; width: number; height: number } | null;
 }
 
 /**

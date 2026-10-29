@@ -18,9 +18,13 @@ export * from './graph';
 
 // Query engine
 export * from './query';
+export type { QueryResult } from './query/query-engine';
+export type { QueryResult as GraphQueryResult } from './schema/entity-graph';
 
 // Trace format
 export * from './trace';
+export type { TraceStats } from './schema/trace';
+export type { TraceStats as TraceManagerStats } from './trace/trace-manager';
 
 // Version
 export const KERNEL_VERSION = '1.0.0';

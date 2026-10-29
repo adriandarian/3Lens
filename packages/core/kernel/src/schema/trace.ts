@@ -40,6 +40,13 @@ export interface Trace {
   snapshots: TraceSnapshot[];
   /** Event chunks */
   events: TraceEventChunk[];
+  /** Portable investigation state. Optional for compatibility with older traces. */
+  investigation?: {
+    selection: { entity_ids: string[]; context_id: string };
+    baseline: GraphSnapshot;
+    /** Optional frame cursor retained across live/offline investigations. */
+    frame?: number | null;
+  };
   /** Index for random access (optional) */
   index?: TraceIndex;
 }
@@ -52,6 +59,8 @@ export interface Trace {
  * Trace header containing metadata
  */
 export interface TraceHeader {
+  /** Number of old events discarded by the recording budget. */
+  dropped_events?: number;
   /** Trace format version */
   version: string;
   /** 3Lens kernel version that created this trace */
@@ -173,6 +182,8 @@ export interface TraceDictionary {
  * Entity graph snapshot within trace
  */
 export interface TraceSnapshot {
+  /** Number of events already applied to this checkpoint (global across contexts). */
+  event_index?: number;
   /** Snapshot timestamp */
   timestamp: number;
   /** Frame number at snapshot time */
@@ -389,8 +400,7 @@ export function isVersionCompatible(version: string): boolean {
   const [major, minor] = version.split('.').map(Number);
   const [minMajor, minMinor] = MIN_COMPATIBLE_VERSION.split('.').map(Number);
 
-  if (major > minMajor) return true;
-  if (major < minMajor) return false;
+  if (major !== minMajor) return false;
   return minor >= minMinor;
 }
 

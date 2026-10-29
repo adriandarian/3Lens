@@ -14,7 +14,7 @@ export * from '@3lens/runtime';
 export { manualHost, type ManualHostConfig } from '@3lens/host-manual';
 
 // Re-export UI
-export { uiOverlay, uiDock, type UIOverlayConfig, type UIDockConfig } from '@3lens/ui-core';
+export { uiOverlay, uiDock, createInvestigationUI, type UIOverlayConfig, type UIDockConfig, type InvestigationUIOptions } from '@3lens/ui-core';
 
 // Bootstrap
 export { bootstrap3Lens, type BootstrapOptions } from './bootstrap';

@@ -9,6 +9,7 @@
 import type { Event } from '../schema/events';
 import type { Trace, TraceSnapshot, TraceEventChunk } from '../schema/trace';
 import type { EntityGraph, GraphSnapshot } from '../schema/entity-graph';
+import { applyCaptureEvent } from '../graph/capture-projection';
 import { createEntityGraph } from '../graph/entity-graph-impl';
 
 /**
@@ -103,9 +104,18 @@ export function createTraceReplayer(trace: Trace, options: ReplayOptions = {}): 
   let playing = false;
   let playbackSpeed = 1;
 
-  // Restore from initial snapshot if available
-  if (trace.snapshots.length > 0) {
-    graph.restore(trace.snapshots[0].graph);
+  function checkpointCursor(snapshot: TraceSnapshot): number {
+    if (snapshot.event_index !== undefined) return snapshot.event_index;
+    const index = allEvents.findIndex(event => event.timestamp > snapshot.timestamp);
+    return index < 0 ? allEvents.length : index;
+  }
+
+  // A final checkpoint is not an initial graph. Start from the genuine initial
+  // snapshot, if supplied, and use global event cursors rather than per-context seq.
+  const initialSnapshot = trace.snapshots.find(snapshot => snapshot.is_initial);
+  if (initialSnapshot) {
+    graph.restore(structuredClone(initialSnapshot.graph));
+    eventIndex = checkpointCursor(initialSnapshot);
   }
 
   function getState(): ReplayState {
@@ -121,45 +131,7 @@ export function createTraceReplayer(trace: Trace, options: ReplayOptions = {}): 
   }
 
   function applyEvent(event: Event): void {
-    // Update graph based on event
-    if (event.type === 'object_added') {
-      const e = event as Event & { entity_id: string; object_type: string; parent_id: string };
-      graph.addNode({
-        id: e.entity_id,
-        type: 'object3d',
-        context_id: event.context_id,
-        name: (event as { name?: string }).name,
-        created_at: event.seq,
-        modified_at: event.seq,
-        origin: 'created',
-        active: true,
-        object_type: e.object_type,
-        visible: true,
-        frustum_culled: true,
-        render_order: 0,
-        layer_mask: 1,
-        parent_id: e.parent_id,
-        child_count: 0,
-      });
-    } else if (event.type === 'object_removed') {
-      const e = event as Event & { entity_id: string };
-      graph.updateNode(e.entity_id, { active: false });
-    } else if (event.type === 'resource_create') {
-      const e = event as Event & { entity_id: string; resource_type: string };
-      // Add appropriate node based on resource type
-      graph.addNode({
-        id: e.entity_id,
-        type: e.resource_type as any,
-        context_id: event.context_id,
-        created_at: event.seq,
-        modified_at: event.seq,
-        origin: 'created',
-        active: true,
-      } as any);
-    } else if (event.type === 'resource_dispose') {
-      const e = event as Event & { entity_id: string };
-      graph.updateNode(e.entity_id, { active: false });
-    }
+    applyCaptureEvent(graph, event);
 
     // Track frame
     if (event.type === 'frame_begin') {
@@ -174,34 +146,20 @@ export function createTraceReplayer(trace: Trace, options: ReplayOptions = {}): 
     getState,
 
     seekToEvent(index: number) {
-      if (index < 0 || index >= allEvents.length) return;
-
-      // If seeking backward, restore from nearest snapshot
-      if (index < eventIndex) {
-        // Find nearest snapshot before target
-        let nearestSnapshot: TraceSnapshot | undefined;
-        for (const snapshot of trace.snapshots) {
-          if (snapshot.seq <= allEvents[index]?.seq) {
-            nearestSnapshot = snapshot;
-          } else {
-            break;
-          }
-        }
-
-        if (nearestSnapshot) {
-          graph.restore(nearestSnapshot.graph);
-          eventIndex = allEvents.findIndex((e) => e.seq >= nearestSnapshot!.seq);
-        } else {
-          // No snapshot, replay from start
-          graph = createEntityGraph();
-          if (trace.snapshots.length > 0) {
-            graph.restore(trace.snapshots[0].graph);
-          }
-          eventIndex = 0;
-        }
+      if (index < 0 || index > allEvents.length) return;
+      // Reconstruct from the nearest checkpoint at or before the requested event
+      // count. This also correctly handles stepping backward and end-of-trace.
+      const checkpoint = [...trace.snapshots]
+        .filter(snapshot => checkpointCursor(snapshot) <= index)
+        .sort((a,b) => checkpointCursor(b) - checkpointCursor(a))[0];
+      graph = createEntityGraph();
+      eventIndex = 0;
+      currentFrame = 0;
+      if (checkpoint) {
+        graph.restore(structuredClone(checkpoint.graph));
+        eventIndex = checkpointCursor(checkpoint);
+        currentFrame = checkpoint.frame;
       }
-
-      // Apply events up to target
       while (eventIndex < index) {
         applyEvent(allEvents[eventIndex]);
         eventIndex++;
@@ -234,9 +192,9 @@ export function createTraceReplayer(trace: Trace, options: ReplayOptions = {}): 
     stepBackward(): Event | undefined {
       if (eventIndex <= 0) return undefined;
 
-      eventIndex--;
-      replayer.seekToEvent(eventIndex);
-      return allEvents[eventIndex];
+      const previous = eventIndex - 1;
+      replayer.seekToEvent(previous);
+      return allEvents[previous];
     },
 
     play(speed: number = 1) {

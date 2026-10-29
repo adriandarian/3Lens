@@ -1,0 +1,22 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@3lens/kernel": ["../packages/core/kernel/src/index.ts"],
+      "@3lens/runtime": ["../packages/core/runtime/src/index.ts"],
+      "@3lens/devtools": ["../packages/core/devtools/src/index.ts"],
+      "@3lens/host-manual": ["../packages/hosts/manual/src/index.ts"],
+      "@3lens/ui-core": ["../packages/ui/core/src/index.ts"]
+    }
+  },
+  "include": [
+    "../packages/core/kernel/src/**/*.ts",
+    "../packages/core/runtime/src/**/*.ts",
+    "../packages/core/devtools/src/**/*.ts",
+    "../packages/hosts/manual/src/**/*.ts",
+    "../packages/ui/core/src/**/*.ts",
+    "../examples/getting-started/vanilla-threejs/src/**/*.ts"
+  ]
+}

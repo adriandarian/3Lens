@@ -33,6 +33,11 @@ export interface TraceManagerConfig {
   chunkSize: number;
   /** Snapshot interval (frames) */
   snapshotInterval: number;
+  /** Bounded recording limits; oldest events are dropped before checkpoints. */
+  maxEvents?: number;
+  maxBytes?: number;
+  /** Maintain a replay checkpoint while oldest events leave the retained window. */
+  onDrop?: (event: Event) => void;
 }
 
 /**
@@ -47,6 +52,8 @@ export interface TraceManager {
 
   /** Whether recording is active */
   isRecording(): boolean;
+  /** Read retained capture events for query projections without exporting a file. */
+  getEvents(): Event[];
 
   /** Add an event to the trace */
   addEvent(event: Event): void;
@@ -65,6 +72,7 @@ export interface TraceManager {
  * Trace statistics
  */
 export interface TraceStats {
+  droppedEvents: number;
   eventCount: number;
   snapshotCount: number;
   chunkCount: number;
@@ -83,6 +91,12 @@ export function createTraceManager(config: TraceManagerConfig): TraceManager {
   let seqNumber = 0;
   let startTime = 0;
   let lastSnapshotFrame = -config.snapshotInterval;
+
+  let droppedEvents = 0;
+  let eventBytes = 0;
+  let retainedEvents = 0;
+  const maxEvents = config.maxEvents ?? 20000;
+  const maxBytes = config.maxBytes ?? 8 * 1024 * 1024;
 
   const contexts = new Map<string, { display_name: string }>();
 
@@ -116,6 +130,10 @@ export function createTraceManager(config: TraceManagerConfig): TraceManager {
       snapshots = [];
       frameNumber = 0;
       seqNumber = 0;
+      droppedEvents = 0;
+      eventBytes = 0;
+      retainedEvents = 0;
+      lastSnapshotFrame = -config.snapshotInterval;
     },
 
     stopRecording() {
@@ -125,6 +143,10 @@ export function createTraceManager(config: TraceManagerConfig): TraceManager {
 
     isRecording() {
       return recording;
+    },
+
+    getEvents() {
+      return chunks.flatMap(chunk => chunk.events).concat(events);
     },
 
     addEvent(event: Event) {
@@ -141,7 +163,26 @@ export function createTraceManager(config: TraceManagerConfig): TraceManager {
         contexts.set(regEvent.context_id, { display_name: regEvent.display_name });
       }
 
-      events.push(event);
+      events.push(structuredClone(event));
+      retainedEvents++;
+      eventBytes += JSON.stringify(event).length * 2;
+      // Drop oldest chunks/events to keep prolonged captures bounded. Export includes
+      // a current graph checkpoint, and explicitly reports any missing history.
+      while (retainedEvents > maxEvents || eventBytes > maxBytes) {
+        if (chunks.length) {
+          const chunk = chunks.shift()!;
+          for (const old of chunk.events) { eventBytes -= JSON.stringify(old).length * 2; config.onDrop?.(old); }
+          retainedEvents -= chunk.events.length;
+          droppedEvents += chunk.events.length;
+        } else {
+          const old = events.shift();
+          if (!old) break;
+          eventBytes -= JSON.stringify(old).length * 2;
+          config.onDrop?.(old);
+          retainedEvents--;
+          droppedEvents++;
+        }
+      }
 
       // Flush chunk if needed
       if (events.length >= config.chunkSize) {
@@ -164,7 +205,8 @@ export function createTraceManager(config: TraceManagerConfig): TraceManager {
         context_ids: Array.from(contexts.keys()),
       };
 
-      snapshots.push(snapshot);
+      snapshots.push(structuredClone(snapshot));
+      if (snapshots.length > 2) snapshots.splice(1, snapshots.length - 2);
       lastSnapshotFrame = frame;
     },
 
@@ -177,6 +219,7 @@ export function createTraceManager(config: TraceManagerConfig): TraceManager {
       // Build header
       trace.header.kernel_version = TRACE_VERSION;
       trace.header.capture_mode = config.captureMode;
+      trace.header.dropped_events = droppedEvents;
       trace.header.time_range = {
         start: startTime,
         end: performance.now(),
@@ -245,12 +288,11 @@ export function createTraceManager(config: TraceManagerConfig): TraceManager {
 
     getStats(): TraceStats {
       return {
-        eventCount: events.length + chunks.reduce((sum, c) => sum + c.events.length, 0),
+        droppedEvents,
+        eventCount: retainedEvents,
         snapshotCount: snapshots.length,
         chunkCount: chunks.length,
-        estimatedBytes:
-          events.reduce((sum, e) => sum + JSON.stringify(e).length, 0) +
-          chunks.reduce((sum, c) => sum + JSON.stringify(c).length, 0),
+        estimatedBytes: eventBytes,
       };
     },
   };

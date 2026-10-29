@@ -11,3 +11,5 @@ export * from './types';
 export * from './overlay';
 export * from './dock';
 export * from './material-builder';
+
+export * from './investigation';

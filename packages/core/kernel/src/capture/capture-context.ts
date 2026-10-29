@@ -7,6 +7,7 @@
 import type { Event, CaptureMode } from '../schema/events';
 import type {
   CaptureContext,
+  CaptureEvent,
   CaptureContextConfig,
   EventHandler,
   Unsubscribe,
@@ -41,6 +42,9 @@ export function createCaptureContext(config: CaptureContextConfig): CaptureConte
     get mode() {
       return currentMode;
     },
+    setMode(mode) {
+      currentMode = mode;
+    },
 
     get seq() {
       return seq;
@@ -50,7 +54,7 @@ export function createCaptureContext(config: CaptureContextConfig): CaptureConte
       return active;
     },
 
-    emit(partialEvent: Omit<Event, 'seq' | 'context_id'>) {
+    emit(partialEvent: CaptureEvent) {
       if (!active) return;
 
       const startTime = performance.now();
@@ -181,7 +185,7 @@ function shouldEmitEvent(event: Event, mode: CaptureMode): boolean {
 
   // MINIMAL mode: only counters/signals, no detailed events
   if (mode === 'MINIMAL') {
-    const minimalEvents = ['frame_begin', 'frame_end'];
+    const minimalEvents = ['frame_begin', 'frame_end', 'render_event'];
     return minimalEvents.includes(event.type);
   }
 

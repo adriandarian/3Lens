@@ -94,7 +94,8 @@ function detectEnvironment(): EnvironmentSummary {
   const backend = detectBackend();
 
   // Detect worker
-  const isWorker = typeof WorkerGlobalScope !== 'undefined';
+  const workerScope = (globalThis as { WorkerGlobalScope?: { prototype: object } }).WorkerGlobalScope;
+  const isWorker = Boolean(workerScope?.prototype.isPrototypeOf(globalThis));
 
   // Detect CSP
   const cspRestrictions = detectCSPRestrictions();

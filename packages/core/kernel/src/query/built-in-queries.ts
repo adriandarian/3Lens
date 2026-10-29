@@ -7,7 +7,8 @@
  */
 
 import { defineQuery, type QueryRegistry } from './query-engine';
-import type { EntityGraph, Node, NodeType } from '../schema/entity-graph';
+import { registerPlatformQueries } from './platform-queries';
+import type { EntityGraph, Node, NodeType, GraphSnapshot } from '../schema/entity-graph';
 import {
   getResourcesUsedBy,
   getResourceUsers,
@@ -21,7 +22,11 @@ import {
  * Register all built-in queries
  */
 export function registerBuiltInQueries(registry: QueryRegistry): void {
+  registerPlatformQueries(registry);
   // Entity queries
+  registry.register(entityChangesQuery);
+  registry.register({ ...entityChangesQuery, name: 'platform_diff' });
+  registry.register(resourceCostQuery);
   registry.register(getNodeByIdQuery);
   registry.register(getNodesByTypeQuery);
   registry.register(searchNodesQuery);
@@ -236,5 +241,64 @@ const contextSummaryQuery = defineQuery<{ context_id: string }, ContextSummary>(
       },
       fidelity: 'EXACT',
     };
+  }
+);
+
+/** Compare only observed entity properties; sequence bookkeeping is excluded. */
+export interface EntityChange {
+  entity_id: string;
+  before: Node | null;
+  after: Node | null;
+  changes: string[];
+}
+
+const entityChangesQuery = defineQuery<
+  {baseline: GraphSnapshot; entity_id?: string}, EntityChange[]
+>('entity_changes', 'Compare captured entity properties against a baseline', (graph, params) => {
+  const before = new Map(params.baseline.nodes.map(node => [node.id, node]));
+  const after = new Map(graph.getNodes().nodes.map(node => [node.id, node]));
+  const data: EntityChange[] = [];
+  for (const id of new Set([...before.keys(), ...after.keys()])) {
+    if (params.entity_id && params.entity_id !== id) continue;
+    const previous = before.get(id) ?? null;
+    const next = after.get(id) ?? null;
+    const keys = new Set([...Object.keys(previous ?? {}), ...Object.keys(next ?? {})]);
+    keys.delete('modified_at');
+    const changes = [...keys].filter(key =>
+      JSON.stringify((previous as unknown as Record<string, unknown> | null)?.[key]) !==
+      JSON.stringify((next as unknown as Record<string, unknown> | null)?.[key]));
+    if (changes.length) data.push({entity_id: id, before: previous, after: next, changes});
+  }
+  return {data, fidelity: 'EXACT'};
+});
+
+export interface ResourceCost {
+  entity_id: string;
+  bytes: number | null;
+  fidelity: 'ESTIMATED' | 'UNAVAILABLE';
+  reason: string;
+  primary_entities: {entity_id: string; weight: number; contribution: number}[];
+  chain: {from_entity: string; to_entity: string; edge_type: 'uses'; weight: number}[];
+}
+
+const resourceCostQuery = defineQuery<{entity_id: string}, ResourceCost>(
+  'resource_cost', 'Captured resource storage and auditable equal-share usage attribution', (graph, params) => {
+    const node = graph.getNode(params.entity_id);
+    const users = graph.getIncomingEdges(params.entity_id, 'uses').filter(edge =>
+      edge.active && graph.getNode(edge.from)?.active);
+    const bytes = node && 'memory_bytes' in node && node.memory_fidelity !== 'UNAVAILABLE'
+      ? node.memory_bytes : null;
+    const available = bytes !== null && users.length > 0;
+    const fidelity = available ? 'ESTIMATED' as const : 'UNAVAILABLE' as const;
+    const reason = available
+      ? 'Storage is captured from the resource. User contributions are an equal-share estimate across observed usage edges, not measured per-object GPU allocation.'
+      : bytes === null ? 'No supported memory measurement was captured for this resource.'
+        : 'No active usage edges were captured; responsibility cannot be attributed.';
+    const data: ResourceCost = {entity_id: params.entity_id, bytes, fidelity, reason,
+      primary_entities: available ? users.map(edge => ({entity_id:edge.from, weight:1/users.length,
+        contribution:bytes!/users.length})) : [],
+      chain: available ? users.map(edge => ({from_entity:edge.from,to_entity:edge.to,
+        edge_type:'uses' as const,weight:1/users.length})) : []};
+    return {data, fidelity};
   }
 );
