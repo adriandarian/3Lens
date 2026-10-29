@@ -3,6 +3,7 @@ import type { Lens } from '@3lens/runtime';
 import type { Node, PlatformSnapshot, CaptureMode } from '@3lens/kernel';
 import { uiDom } from './platform/dom';
 import { platformStyles } from './platform/styles';
+import { componentTheme } from './platform/component-theme';
 import { renderInspector } from './platform/inspector';
 import { renderAnalysisView, analysisStyles } from './platform/analysis-views';
 import { createTraceViewController, traceStyles } from './platform/trace-view';
@@ -533,7 +534,7 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       link.href = options.csp.cssUrl;
       stylesheet = link;
     } else if (!options.csp?.safeMode || options.csp.styleNonce) {
-      const style = el('style', platformStyles + analysisStyles + traceStyles);
+      const style = el('style', platformStyles + analysisStyles + traceStyles + componentTheme);
       if (options.csp?.styleNonce) style.nonce = options.csp.styleNonce;
       stylesheet = style;
     }

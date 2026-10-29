@@ -5,6 +5,10 @@ description: Install 3Lens in your three.js project to start debugging and optim
 
 # Installation
 
+::: warning Previous API
+The package instructions on this page describe the earlier probe/overlay implementation. Use the current [setup guide](./setup) for the source-based development workflow and distribution status.
+:::
+
 Install 3Lens in your three.js project to start debugging and optimizing your WebGL/WebGPU applications.
 
 ## Prerequisites

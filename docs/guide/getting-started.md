@@ -5,6 +5,10 @@ description: Installation, basic setup, and your first steps with 3Lens devtools
 
 # Getting Started
 
+::: warning Previous API
+This page describes the earlier probe/overlay implementation. For the current devtools, follow [Set up 3Lens](./setup), including local source setup, application attachment, cleanup, and trace verification.
+:::
+
 Get up and running with 3Lens in your three.js project in just a few minutes. This guide covers installation, basic setup, and your first steps with the devtools.
 
 ## Prerequisites

@@ -5,6 +5,10 @@ description: Guide for integrating 3Lens with vanilla Three.js applications with
 
 # Vanilla Three.js Integration Guide
 
+::: warning Previous API
+This page describes the earlier `createProbe` integration. The current [setup guide](./setup) uses `bootstrap3Lens` and `manualHost` to attach to an existing renderer, with development-only loading, cleanup, camera controls, and offline trace verification.
+:::
+
 This guide covers integrating 3Lens with vanilla Three.js applications—no frameworks, just pure JavaScript/TypeScript and Three.js.
 
 ## Table of Contents

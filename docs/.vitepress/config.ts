@@ -99,7 +99,7 @@ export default defineConfig({
 
     // Navigation bar
     nav: [
-      { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Guide', link: '/guide/setup' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
       {
@@ -134,6 +134,7 @@ export default defineConfig({
           text: 'Introduction',
           items: [
             { text: 'What is 3Lens?', link: '/guide/what-is-3lens' },
+            { text: 'Set Up 3Lens', link: '/guide/setup' },
             { text: 'Getting Started', link: '/guide/getting-started' },
             { text: 'Installation', link: '/guide/installation' },
           ]

@@ -21,6 +21,7 @@ description: The render introspection OS for three.js — deep causal analysis, 
 
 | Document | Description |
 |----------|-------------|
+| [Setup Guide](./guide/setup.md) | Run locally and connect the current devtools to your three.js application |
 | [Architecture](../agents.md) | System design, philosophy, and contracts |
 | [Contracts](../agents/contracts/) | System invariants and guarantees |
 | [Plugin API](./guide/plugin-api.md) | Building third-party addons |
