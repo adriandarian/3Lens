@@ -95,7 +95,9 @@ export function createLensHud(options: HudOptions = {}): LensHud {
   let disposed = false;
   let picking = false;
   let highlighted = false;
-  let baselineSet = false;
+  // Baselines saved from this HUD. A loaded trace always carries its own investigation baseline.
+  let localBaseline = false;
+  const hasBaseline = () => localBaseline || lens?.getMode() === 'offline';
   let drawerOpen = false;
   let paletteOpen = false;
   let cardDismissed: string | undefined;
@@ -297,7 +299,7 @@ export function createLensHud(options: HudOptions = {}): LensHud {
       what: whatBits.join(' · '),
       relations,
       cost: own ? [own, ...cost] : cost,
-      changed: !baselineSet
+      changed: !hasBaseline()
         ? 'no-baseline'
         : brief.changes
           ? describeChange(brief.changes)
@@ -316,7 +318,7 @@ export function createLensHud(options: HudOptions = {}): LensHud {
       cardKey = '';
       return;
     }
-    const brief = describeEntity(lens, id, baselineSet);
+    const brief = describeEntity(lens, id, hasBaseline());
     if (!brief || !lens.getNode(id)) {
       card.hidden = true;
       outline.hidden = true;
@@ -471,7 +473,7 @@ export function createLensHud(options: HudOptions = {}): LensHud {
   function setBaseline() {
     if (!canMutate()) return;
     lens.captureBaseline();
-    baselineSet = true;
+    localBaseline = true;
     notify('Baseline saved. Change something, then check What changed.');
     renderCard(true);
     refreshDrawer();
@@ -494,7 +496,7 @@ export function createLensHud(options: HudOptions = {}): LensHud {
       mode: options.analysis ?? 'window',
       readonly: options.readonly,
       csp: options.csp,
-      baselineSet: () => baselineSet,
+      baselineSet: hasBaseline,
       setBaseline,
       notify,
       onClose: () => undefined,
@@ -567,8 +569,8 @@ export function createLensHud(options: HudOptions = {}): LensHud {
         );
       else rows.append(el('div', `No captured entity matches “${query}”.`, 'tlh-empty'));
     } else {
-      const insights = worthLookingAt(lens, baselineSet);
-      if (!baselineSet) {
+      const insights = worthLookingAt(lens, hasBaseline());
+      if (!hasBaseline()) {
         const hint = el('div', undefined, 'tlh-empty');
         hint.append(
           el('span', 'Set a baseline to rank what changed after your next edit.'),
@@ -589,9 +591,9 @@ export function createLensHud(options: HudOptions = {}): LensHud {
           const group = insights.filter((insight) => insight.kind === kind);
           if (group.length) renderRows(rows, group.map((insight) => insightRow(insight)), title);
         }
-      } else if (baselineSet)
+      } else if (hasBaseline())
         rows.append(el('div', 'Nothing stands out. Captured data shows no changes, leaks, or outliers.', 'tlh-empty'));
-      if (baselineSet && !insights.some((insight) => insight.kind === 'changed'))
+      if (hasBaseline() && !insights.some((insight) => insight.kind === 'changed'))
         rows.prepend(el('div', 'Baseline set: no entity has changed since. Edit the scene and this list updates.', 'tlh-empty'));
     }
     drawerList.replaceChildren(rows);
@@ -659,13 +661,13 @@ export function createLensHud(options: HudOptions = {}): LensHud {
       const head = el('div', undefined, 'tlh-group-title');
       head.append(el('span', question.label), back);
       content.append(head);
-      const results = question.run(lens, baselineSet);
+      const results = question.run(lens, hasBaseline());
       if (results.length) renderRows(content, results.map((insight) => insightRow(insight, close)));
       else
         content.append(
           el(
             'div',
-            question.id === 'changed' && !baselineSet
+            question.id === 'changed' && !hasBaseline()
               ? 'No baseline yet. Run “Set baseline”, make a change, then ask again.'
               : 'No captured evidence answers this right now.',
             'tlh-empty'

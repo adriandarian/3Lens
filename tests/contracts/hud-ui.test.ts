@@ -167,6 +167,12 @@ describe('HUD surface contract', () => {
     expect(hudRoot().querySelector('[data-kind="status"]')!.textContent).toBe('SAVED TRACE');
     expect(hudRoot().querySelector<HTMLButtonElement>('button.tlh-pill[data-active]')!.disabled).toBe(true);
     expect(card().textContent).toContain('MainCube');
+    // The baseline comes from the loaded investigation, not from this HUD's own Set baseline.
+    expect(card().textContent).not.toContain('No baseline yet');
+    expect(card().textContent).toContain('visible: true → false');
+    click('Worth looking at', hudRoot());
+    const titles = [...hudRoot().querySelectorAll('.tlh-drawer .tlh-group-title')].map((node) => node.textContent);
+    expect(titles[0]).toBe('Changed since baseline');
   });
 
   it('opens a single-investigation analysis page from the card without claiming causality', () => {
