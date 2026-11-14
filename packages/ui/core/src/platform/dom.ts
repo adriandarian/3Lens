@@ -34,6 +34,21 @@ const paths: Record<string, string[]> = {
     'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
   ],
   chevron: ['m9 5 7 7-7 7'],
+  chevronDown: ['m6 9 6 6 6-6'],
+  more: ['M12 5.5v.01M12 12v.01M12 18.5v.01'],
+  info: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18', 'M12 11v5M12 8v.01'],
+  help: [
+    'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18',
+    'M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8M12 17v.01',
+  ],
+  copy: ['M9 9h11v11H9Z', 'M5 15V4h11'],
+  identity: ['M4 6h16M4 12h16M4 18h10'],
+  relations: [
+    'M6 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4M18 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4M12 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4',
+    'm7.5 8 3.5 8m5.5-8L13 16M8 6h8',
+  ],
+  cost: ['M12 3a9 9 0 1 0 9 9h-9Z', 'M15 3.4A9 9 0 0 1 20.6 9H15Z'],
+  bookmark: ['M6 3h12v18l-6-4-6 4Z'],
 };
 
 export function uiDom(doc: Document) {
@@ -56,7 +71,7 @@ export function uiDom(doc: Document) {
     svg.setAttribute('stroke-linecap', 'round');
     svg.setAttribute('stroke-linejoin', 'round');
     svg.setAttribute('aria-hidden', 'true');
-    svg.classList.add('tlp-icon');
+    svg.classList.add('tlp-icon', `tlp-icon-${name}`);
     for (const d of paths[name] ?? paths.cube) {
       const p = doc.createElementNS(svg.namespaceURI, 'path');
       p.setAttribute('d', d);

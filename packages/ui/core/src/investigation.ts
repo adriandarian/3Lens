@@ -4,6 +4,7 @@ import type { Node, PlatformSnapshot, CaptureMode } from '@3lens/kernel';
 import { uiDom } from './platform/dom';
 import { platformStyles } from './platform/styles';
 import { componentTheme } from './platform/component-theme';
+import { benchmarkTheme } from './platform/benchmark-theme';
 import { renderInspector } from './platform/inspector';
 import { renderAnalysisView, analysisStyles } from './platform/analysis-views';
 import { createTraceViewController, traceStyles } from './platform/trace-view';
@@ -64,6 +65,7 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
   let contextPicker: HTMLSelectElement;
   let fidelityPicker: HTMLSelectElement;
   let surfacePicker: HTMLSelectElement;
+  const collapsedNodes = new Set<string>();
   let modePicker: HTMLSelectElement;
   let record: HTMLButtonElement;
   let modeBadge: HTMLElement;
@@ -534,7 +536,14 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       link.href = options.csp.cssUrl;
       stylesheet = link;
     } else if (!options.csp?.safeMode || options.csp.styleNonce) {
-      const style = el('style', platformStyles + analysisStyles + traceStyles + componentTheme);
+      const style = el(
+        'style',
+        platformStyles +
+          analysisStyles +
+          traceStyles +
+          componentTheme +
+          benchmarkTheme
+      );
       if (options.csp?.styleNonce) style.nonce = options.csp.styleNonce;
       stylesheet = style;
     }
@@ -579,6 +588,12 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     });
     header.append(modePicker);
     const topActions = el('div', undefined, 'tlp-top-actions');
+    // Secondary window controls stay in the DOM and accessible but render as compact icons.
+    const iconOnly = (control: HTMLButtonElement) => {
+      control.classList.add('tlp-icon-only');
+      control.title = control.textContent ?? '';
+      return control;
+    };
     record = button(
       'Record',
       () => {
@@ -597,6 +612,8 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       'export'
     );
     const openButton = button('Open trace', () => file.click(), 'folder');
+    exportButton.title = 'Export trace';
+    openButton.title = 'Open trace';
     file = el('input');
     file.type = 'file';
     file.accept = '.json,.3lens,application/json';
@@ -621,21 +638,25 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       record,
       exportButton,
       openButton,
-      button('Commands', commandPalette, 'search'),
-      button(
-        'Minimize',
-        () => {
-          collapsed = true;
-          root!.hidden = true;
-          restoreViewport();
-          hud!.hidden = false;
-        },
-        'clock'
+      iconOnly(button('Commands', commandPalette, 'more')),
+      iconOnly(
+        button(
+          'Minimize',
+          () => {
+            collapsed = true;
+            root!.hidden = true;
+            restoreViewport();
+            hud!.hidden = false;
+          },
+          'clock'
+        )
       ),
-      button(
-        'Close (F2)',
-        () => (options.document ? hide() : lens.hideUI()),
-        'close'
+      iconOnly(
+        button(
+          'Close (F2)',
+          () => (options.document ? hide() : lens.hideUI()),
+          'close'
+        )
       ),
       file
     );
@@ -669,7 +690,6 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       } else setLayout(surfacePicker.value as typeof layout);
     });
     surface.append(surfacePicker);
-    nav.append(surface);
     const content = el('div', undefined, 'tlp-content');
     tree = el('div', undefined, 'tlp-tree');
     main = el('main', undefined, 'tlp-main');
@@ -736,6 +756,7 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     footer.append(
       connection,
       status,
+      surface,
       fidelityPicker,
       button(
         'Doctor',
@@ -862,20 +883,10 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
         contextPicker.append(el('option', 'No rendering context'));
       contextPicker.dataset.contexts = ids;
     }
-    const surface = surfacePicker.parentElement!;
-    const parent =
-      activeTool === 'inspect'
-        ? nav
-        : header.querySelector('.tlp-top-actions')!;
-    if (surface.parentElement !== parent) {
-      if (activeTool === 'inspect') parent.append(surface);
-      else parent.prepend(surface);
-    }
     contextPicker.value = chosen ?? current;
     record.disabled = !canMutate();
-    record.querySelector('span')!.textContent = lens.isRecording()
-      ? 'Stop recording'
-      : 'Record';
+    record.querySelector('span')!.textContent = record.title =
+      lens.isRecording() ? 'Stop recording' : 'Record';
     modePicker.value = lens.getOverheadMetrics().currentMode;
     modePicker.disabled = !canMutate();
     connection.textContent =
@@ -894,30 +905,14 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     if (activeTool !== 'inspect') {
       const rail = el('nav', undefined, 'tlp-tool-rail');
       rail.setAttribute('aria-label', 'Investigation navigation');
-      const entries: [string, string, PlatformTool, string?][] =
-        activeTool === 'changes'
-          ? [
-              ['Session', 'folder', 'inspect'],
-              ['Compare', 'changes', 'changes'],
-              ['Timeline', 'clock', 'performance'],
-              ['Resources', 'memory', 'memory'],
-              ['Passes', 'surfaces', 'shaders'],
-              ['Entities', 'cube', 'inspect', 'object3d'],
-              ['Surfaces', 'surfaces', 'surfaces'],
-            ]
-          : [
-              ['Scene', 'cube', 'inspect'],
-              ['Performance', 'performance', 'performance'],
-              ['Rendering', 'surfaces', 'shaders'],
-              ['Resources', 'memory', 'memory'],
-              ['Materials', 'cube', 'memory', 'material'],
-              ['Textures', 'folder', 'memory', 'texture'],
-              ['Geometries', 'cube', 'memory', 'geometry'],
-              ['Lights', 'light', 'inspect', 'light'],
-              ['Cameras', 'camera', 'inspect', 'camera'],
-              ['Changes', 'changes', 'changes'],
-              ['Surfaces', 'surfaces', 'surfaces'],
-            ];
+      // Tabs own tool switching; the rail only offers entity-class jumps the tabs cannot express.
+      const entries: [string, string, PlatformTool, string?][] = [
+        ['Materials', 'shaders', activeTool, 'material'],
+        ['Textures', 'folder', activeTool, 'texture'],
+        ['Geometries', 'cube', activeTool, 'geometry'],
+        ['Lights', 'light', activeTool, 'light'],
+        ['Cameras', 'camera', activeTool, 'camera'],
+      ];
       for (const [label, symbol, tool, type] of entries) {
         const b = button(
           label,
@@ -940,30 +935,9 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
           symbol,
           'tlp-tree-node'
         );
-        b.setAttribute('aria-current', String(tool === activeTool && !type));
-        if (!type) {
-          b.setAttribute('role', 'tab');
-          b.setAttribute('aria-label', tools.find((t) => t.id === tool)!.label);
-          b.setAttribute('aria-selected', String(tool === activeTool));
-        }
+        b.setAttribute('aria-current', 'false');
         rail.append(b);
       }
-      const bottom = el('div', undefined, 'tlp-rail-bottom');
-      bottom.append(
-        button(
-          'Record trace',
-          () => {
-            if (canMutate()) {
-              lens.startRecording();
-              refreshHeader();
-            }
-          },
-          'record',
-          'tlp-tree-node'
-        ),
-        button('Load trace', () => file.click(), 'folder', 'tlp-tree-node')
-      );
-      rail.append(bottom);
       tree.append(rail);
       if (activeTool === 'shaders') {
         const list = el('div', undefined, 'tlp-shader-tree');
@@ -1014,7 +988,15 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       return;
     }
     const heading = el('div', undefined, 'tlp-tree-head');
-    heading.append(el('h3', 'Scene graph'), button('⋮', commandPalette));
+    heading.append(
+      el('h3', 'Scene graph'),
+      button(
+        'Scene graph actions',
+        commandPalette,
+        'more',
+        'tlp-btn tlp-icon-only'
+      )
+    );
     tree.append(heading);
     const input = el('input');
     input.type = 'search';
@@ -1026,7 +1008,9 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       search = input.value;
       renderTreeRows();
     });
-    tree.append(input);
+    const searchBox = el('div', undefined, 'tlp-search-box');
+    searchBox.append(icon('search'), input);
+    tree.append(searchBox);
     const list = el('nav');
     list.setAttribute('aria-label', 'Captured entities');
     list.dataset.treeRows = '';
@@ -1043,6 +1027,14 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       const graph = lens.getGraph();
       const ordered: Node[] = [];
       const seen = new Set<string>();
+      // Descendants of a collapsed node count as handled so no later pass re-lists them.
+      function hide(id: string) {
+        for (const edge of graph.getOutgoingEdges(id, 'contains'))
+          if (!seen.has(edge.to)) {
+            seen.add(edge.to);
+            hide(edge.to);
+          }
+      }
       function visit(node: Node, depth: number) {
         if (seen.has(node.id)) return;
         seen.add(node.id);
@@ -1066,13 +1058,34 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
           'tlp-tree-node'
         );
         b.dataset.entityId = node.id;
+        b.dataset.kind = node.type;
+        b.dataset.depth = String(Math.min(depth, 4));
         b.title = node.id;
         b.setAttribute('aria-current', String(context.selectedId === node.id));
         if (!options.csp?.safeMode)
-          b.style.paddingLeft = `${7 + Math.min(depth, 4) * 15}px`;
+          b.style.paddingLeft = `${depth === 0 ? 22 : 68 + (Math.min(depth, 4) - 1) * 20}px`;
+        const children = search
+          ? []
+          : graph
+              .getOutgoingEdges(node.id, 'contains')
+              .filter((edge) => visible.some((n) => n.id === edge.to));
+        if (children.length || node.type === 'scene') {
+          const open = !collapsedNodes.has(node.id);
+          b.setAttribute('aria-expanded', String(open));
+          const caret = el('span', undefined, 'tlp-caret');
+          caret.dataset.open = String(open);
+          caret.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (collapsedNodes.has(node.id)) collapsedNodes.delete(node.id);
+            else collapsedNodes.add(node.id);
+            renderTreeRows();
+          });
+          b.prepend(caret);
+        }
         list.append(b);
-        if (!search)
-          for (const edge of graph.getOutgoingEdges(node.id, 'contains')) {
+        if (collapsedNodes.has(node.id)) hide(node.id);
+        else
+          for (const edge of children) {
             const child = visible.find((n) => n.id === edge.to);
             if (child) visit(child, depth + 1);
           }
@@ -1178,6 +1191,9 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
         'tlp-toolbar-hint'
       )
     );
+    const help = icon('help');
+    help.classList.add('tlp-help');
+    toolbar.append(help);
     viewport.append(toolbar);
     const breadcrumb = el('div', undefined, 'tlp-breadcrumb');
     breadcrumb.append(icon('cube'));
@@ -1227,7 +1243,15 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
         refresh(true);
       }
     };
-    toolbar.append(button('‹', () => chooseFrame(Math.max(0, index - 1))));
+    const stepper = el('div', undefined, 'tlp-stepper');
+    stepper.append(
+      button(
+        'Previous frame',
+        () => chooseFrame(Math.max(0, index - 1)),
+        'chevron',
+        'tlp-btn tlp-icon-only tlp-prev'
+      )
+    );
     const input = el('input');
     input.type = 'number';
     input.value = current ? String(current.frame) : '0';
@@ -1241,14 +1265,19 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
         );
       refresh(true);
     });
-    toolbar.append(
+    stepper.append(
       input,
-      button('›', () =>
-        chooseFrame(Math.min(snapshot.frames.length - 1, index + 1))
+      button(
+        'Next frame',
+        () => chooseFrame(Math.min(snapshot.frames.length - 1, index + 1)),
+        'chevron',
+        'tlp-btn tlp-icon-only tlp-next'
       )
     );
+    toolbar.append(stepper);
     if (current) {
       toolbar.append(
+        el('span', `Frame ${current.frame}`, 'tlp-frame-label'),
         el(
           'span',
           `CPU submit ${current.cpu_ms === null ? 'unavailable' : current.cpu_ms.toFixed(2) + ' ms'}`
@@ -1298,6 +1327,19 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     timeline.append(bars);
     const lanes = el('div', undefined, 'tlp-timeline-lanes');
     if (current) {
+      if (current.cpu_ms !== null) {
+        // Ruler spans the observed CPU submit time of the selected frame (not GPU time).
+        const ruler = el('div', undefined, 'tlp-ruler');
+        for (let tick = 0; tick <= 4; tick++)
+          ruler.append(
+            el('span', `${((current.cpu_ms * tick) / 4).toFixed(1)} ms`)
+          );
+        lanes.append(
+          el('span', undefined, 'tlp-ruler-pad'),
+          ruler,
+          el('span', undefined, 'tlp-ruler-pad')
+        );
+      }
       for (const [id, label] of [
         [current.entity_ids[0], 'Scene / renderer'],
         [current.entity_ids[1], 'Camera'],
@@ -1321,6 +1363,15 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
           )
         );
         lanes.append(lane);
+        lanes.append(
+          el(
+            'span',
+            label === 'Scene / renderer' && current.cpu_ms !== null
+              ? `${current.cpu_ms.toFixed(2)} ms`
+              : '—',
+            'tlp-lane-ms'
+          )
+        );
       }
     } else lanes.append(el('span', 'No frame events recorded', 'tlp-muted'));
     timeline.append(lanes);

@@ -73,6 +73,101 @@ function click(label: string) {
   control!.click();
 }
 
+describe('Benchmark shell structure', () => {
+  it('keeps the header and tab bar on every tool so navigation never depends on the rail', () => {
+    setup();
+    for (const tool of [
+      'inspect',
+      'performance',
+      'memory',
+      'changes',
+      'shaders',
+      'surfaces',
+    ]) {
+      clickTab(tool);
+      expect(document.querySelector('.tlp-topbar'), tool).toBeTruthy();
+      const tab = document.querySelector(`.tlp-nav [data-tool="${tool}"]`)!;
+      expect(tab.getAttribute('aria-selected'), tool).toBe('true');
+    }
+  });
+  it('limits the rail to entity jumps and routes them through shared selection', () => {
+    const lens = setup();
+    clickTab('memory');
+    const labels = [...document.querySelectorAll('.tlp-tool-rail button')].map(
+      (button) => button.textContent
+    );
+    expect(labels).toEqual([
+      'Materials',
+      'Textures',
+      'Geometries',
+      'Lights',
+      'Cameras',
+    ]);
+    click('Geometries');
+    expect(lens.getSelection().entity_ids[0]).toBe('main:geometry:box');
+  });
+  it('keeps window controls accessible when rendered as icons', () => {
+    setup();
+    for (const label of ['Commands', 'Minimize', 'Close (F2)']) {
+      const control = [...document.querySelectorAll('.tlp-top-actions button')].find(
+        (button) => button.textContent === label
+      );
+      expect(control, label).toBeTruthy();
+      expect(control!.classList.contains('tlp-icon-only')).toBe(true);
+      expect(control!.getAttribute('title')).toBe(label);
+    }
+    expect(document.querySelector('[aria-label="UI surface"]')!.closest('.tlp-statusbar')).toBeTruthy();
+  });
+  it('names the inspector contract question behind each short section title', () => {
+    setup();
+    const sections = Object.fromEntries(
+      [...document.querySelectorAll('.tlp-inspector-section')].map((section) => [
+        section.querySelector('h3')!.textContent,
+        section.getAttribute('aria-label'),
+      ])
+    );
+    expect(sections).toMatchObject({
+      Identity: 'What is this?',
+      Relationships: 'Where is it used?',
+      Cost: 'What does it cost?',
+      Changes: 'How did it change over time?',
+      Actions: 'What can I do about it?',
+    });
+  });
+  it('collapses and expands the scene tree without losing the selection', () => {
+    const lens = setup();
+    lens.getGraph().addNode({
+      context_id: 'main',
+      created_at: 0,
+      modified_at: 0,
+      origin: 'preexisting',
+      active: true,
+      id: 'main:scene:root',
+      type: 'scene',
+      name: 'Scene',
+    } as Node);
+    lens.getGraph().addEdge({
+      from: 'main:scene:root',
+      to: 'main:object3d:cube',
+      type: 'contains',
+      created_at: 0,
+      active: true,
+    });
+    lens.select('main:geometry:box');
+    lens.select('main:object3d:cube');
+    const rows = () =>
+      document.querySelectorAll('.tlp-tree [data-entity-id]').length;
+    const before = rows();
+    const caret = document.querySelector<HTMLElement>('.tlp-caret');
+    expect(caret, 'scene root exposes a caret').toBeTruthy();
+    caret!.click();
+    expect(rows()).toBe(before - 1);
+    document.querySelector<HTMLElement>('.tlp-caret')!.click();
+    expect(rows()).toBe(before);
+    expect(lens.getSelection().entity_ids[0]).toBe('main:object3d:cube');
+  });
+});
+
 describe('Six-concept workspace integration', () => {
   it('renders every concept area through one shared model and keeps supported entities selected', () => {
     const lens = setup();

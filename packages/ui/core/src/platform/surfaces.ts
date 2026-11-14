@@ -19,7 +19,7 @@ export function renderSurfaces(
   const root = el('div', undefined, 'tlp-surfaces');
   const title = el('div', undefined, 'tlp-section-head');
   title.append(
-    el('h2', '3Lens / Interaction surfaces'),
+    el('h2', 'Interaction surfaces'),
     button('Back to workspace', actions.workspace, 'cube')
   );
   root.append(title);
