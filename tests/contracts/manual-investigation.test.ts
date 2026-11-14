@@ -58,6 +58,40 @@ describe('Manual host investigation contract', () => {
     f.host.detach();
   });
 
+  it('skips the full scene rebuild while nothing observable changed, and reports scan cost to the overhead budget', () => {
+    const f = fixture();
+    const record = vi.spyOn(f.context, 'recordOverhead');
+    f.host.attach(f.context);
+    const baseline = f.snapshots().length;
+    for (let i = 0; i < 50; i++) f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline);
+    expect(record.mock.calls.length).toBeGreaterThanOrEqual(50);
+    // Every kind of observable change still reaches the graph.
+    f.scene.add(new Mesh(f.geometry, f.material));
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 1);
+    f.material.opacity = 0.5;
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 2);
+    f.material.map = new Texture();
+    f.material.needsUpdate = true;
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 3);
+    expect(f.snapshots().at(-1)!.nodes.some((node) => node.type === 'texture')).toBe(true);
+    f.host.detach();
+  });
+
+  it('reports capture overhead per frame, including host scan time', () => {
+    const f = fixture();
+    f.host.attach(f.context);
+    f.context.recordOverhead(40);
+    f.renderer.render(f.scene, f.camera);
+    const metrics = f.context.getOverheadMetrics();
+    expect(metrics.captureTimeMs).toBeGreaterThanOrEqual(40 / 2);
+    expect(metrics.captureTimeMs).toBeLessThan(1000);
+    f.host.detach();
+  });
+
   it('records observable changes while preserving creation identity, and observes explicit disposal', () => {
     const f = fixture();
     f.host.attach(f.context);

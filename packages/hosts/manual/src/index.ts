@@ -37,6 +37,9 @@ class ManualHost implements Host {
   private observedPrograms = new Set<string>();
   private programSources = new Map<string,{vertex:string|null;fragment:string|null;defines:Record<string,string|boolean>;definesTruncated:boolean}>();
   private historyTrimmed = false;
+  /** Allocation-free structural hash of the last full scan; unchanged => skip the rebuild. */
+  private fingerprint = NaN;
+  private lastFullScanAt = -Infinity;
 
   constructor(private config: ManualHostConfig) {
     this.id = config.id ?? 'manual';
@@ -51,6 +54,8 @@ class ManualHost implements Host {
     this.snapshotSignature = '';
     this.frameNumber = 0;
     this.historyTrimmed = false;
+    this.fingerprint = NaN;
+    this.lastFullScanAt = -Infinity;
     const { renderer, scene, camera } = this.config;
     const backend = (renderer.capabilities as { isWebGL2?: boolean }).isWebGL2 === false ? 'webgl1' : 'webgl2';
     context.emit({
@@ -191,8 +196,74 @@ class ManualHost implements Host {
     return right > left && bottom > top ? {x:left,y:top,width:right-left,height:bottom-top} : null;
   }
 
-  private scan(context: CaptureContext, scene: Scene, camera: Camera): void {
+  /**
+   * Per-render entry point. A full scan allocates a node/edge per scene entity and
+   * serializes the snapshot, so it only runs when a cheap, allocation-free
+   * fingerprint of everything the snapshot observes has changed. The pass itself
+   * is O(entities) but never allocates; its cost is reported to the overhead budget.
+   */
+  private scan(context: CaptureContext, scene: Scene, camera: Camera, force = false): void {
     if (context.mode === 'MINIMAL') return;
+    const start = performance.now();
+    const next = this.computeFingerprint(scene, camera);
+    if (force || next !== this.fingerprint) {
+      this.fingerprint = next;
+      this.scanFull(context, scene, camera);
+    }
+    context.recordOverhead(performance.now() - start);
+  }
+
+  private computeFingerprint(scene: Scene, camera: Camera): number {
+    let h = 0x811c9dc5;
+    const mix = (n: number) => { h = Math.imul(h ^ (n | 0), 16777619); };
+    const mixStr = (value: string | undefined) => { if (value) for (let i = 0; i < value.length; i++) mix(value.charCodeAt(i)); };
+    const mixNum = (n: number | undefined) => { if (n !== undefined) mix(Math.round(n * 1000)); };
+    const { renderer } = this.config;
+    const programs = (renderer.info as { programs?: unknown[] | null }).programs;
+    mix(programs?.length ?? 0);
+    mix(renderer.domElement.width); mix(renderer.domElement.height);
+    const view = camera as Camera & { near?: number; far?: number; fov?: number; zoom?: number; aspect?: number };
+    mixStr(camera.uuid); mixNum(view.near); mixNum(view.far); mixNum(view.fov); mixNum(view.zoom); mixNum(view.aspect);
+    mixStr(scene.uuid); mixStr(scene.name); mix(scene.children.length);
+    const visitMaterial = (value: Material) => {
+      const m = value as Material & { roughness?: number; metalness?: number; color?: { getHex(): number } };
+      mix(value.id); mixStr(value.name); mix(value.transparent ? 1 : 0); mixNum(value.opacity); mix(value.side);
+      mix(value.depthTest ? 1 : 0); mix(value.depthWrite ? 1 : 0); mix(value.blending); mix(value.version);
+      mixNum(m.roughness); mixNum(m.metalness); if (m.color) mix(m.color.getHex());
+      for (const key in value) {
+        const candidate = (value as unknown as Record<string, unknown>)[key] as Texture | null | undefined;
+        if (candidate && candidate.isTexture) {
+          const image = candidate.image as { width?: number; height?: number; currentSrc?: string; src?: string } | undefined;
+          mix(candidate.id); mixStr(key); mix(candidate.version); mix(image?.width ?? 0); mix(image?.height ?? 0);
+          mixStr(image?.currentSrc ?? image?.src);
+        }
+      }
+    };
+    const visit = (object: Object3D) => {
+      const mesh = object as Object3D & { geometry?: BufferGeometry; material?: Material | Material[] };
+      mix(object.id); mixStr(object.name); mix(object.visible ? 1 : 0); mix(object.frustumCulled ? 1 : 0);
+      mix(object.renderOrder); mix(object.layers.mask); mix(object.children.length); mix(object.parent?.id ?? 0);
+      const geometry = mesh.geometry;
+      if (geometry) {
+        mix(geometry.id);
+        const position = geometry.attributes.position;
+        mix(position?.count ?? 0); mix(geometry.index?.count ?? -1);
+        let attributes = 0; for (const _ in geometry.attributes) attributes++;
+        mix(attributes);
+      }
+      if (mesh.material) {
+        if (Array.isArray(mesh.material)) for (const material of mesh.material) visitMaterial(material);
+        else visitMaterial(mesh.material);
+      }
+      for (const child of object.children) visit(child);
+    };
+    for (const child of scene.children) visit(child);
+    // Disposal events change resource `active` flags; they always force a scan.
+    mix(this.disposedResources.size);
+    return h;
+  }
+
+  private scanFull(context: CaptureContext, scene: Scene, camera: Camera): void {
     const next = new Map<string, ObservedNode>();
     const edges: Edge[] = [];
     const id = (type: string, uuid: string) => createEntityId(context.id, type, uuid);
@@ -225,7 +296,7 @@ class ManualHost implements Host {
         const listener = () => {
           this.disposedResources.add(value);
           context.emit({ type: 'resource_dispose', timestamp: performance.now(), entity_id: resourceId, reason: 'explicit' });
-          this.scan(context, scene, camera);
+          this.scan(context, scene, camera, true);
         };
         value.addEventListener('dispose', listener);
         this.resourceListeners.set(value, listener);

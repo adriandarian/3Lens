@@ -17,6 +17,7 @@ type ViewState = {
   resourceKind: string;
   resourceFidelity: string;
   shaderSearch: string;
+  sourceExpanded: boolean;
   sourceStage: 'fragment' | 'vertex';
   baselineCpu: number | null;
   baselineFrame: number | null;
@@ -31,6 +32,7 @@ function stateFor(context: PlatformViewContext): ViewState {
       resourceKind: 'all',
       resourceFidelity: 'all',
       shaderSearch: '',
+      sourceExpanded: false,
       sourceStage: 'fragment',
       baselineCpu: null,
       baselineFrame: null,
@@ -1079,7 +1081,11 @@ export function renderAnalysisView(
     source.append(sourceTools);
     const sourceBody = el('div', undefined, 'tlpa-source-body');
     if (sourceText) {
-      const lines = sourceText.split('\n');
+      const allLines = sourceText.split('\n');
+      // Full three.js programs run to hundreds of lines; one element per token
+      // is thousands of nodes. Render a window and expand on demand.
+      const limit = state.sourceExpanded ? allLines.length : 160;
+      const lines = allLines.slice(0, limit);
       lines.forEach((text, index) => {
         const line = el('div', undefined, 'tlpa-source-line');
         const code = el('code');
@@ -1109,6 +1115,17 @@ export function renderAnalysisView(
         line.append(el('span', String(index + 1), 'tlpa-line-number'), code);
         sourceBody.append(line);
       });
+      if (allLines.length > limit)
+        sourceBody.append(
+          button(
+            `Show all ${allLines.length} lines`,
+            () => {
+              state.sourceExpanded = true;
+              context.refresh();
+            },
+            'tlpa-source-tab'
+          )
+        );
     } else {
       sourceBody.append(
         el('p', 'Shader source unavailable', 'tlpa-source-empty'),

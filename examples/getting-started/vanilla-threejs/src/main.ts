@@ -162,11 +162,31 @@ window.addEventListener('mousemove', pointerMove);
 canvas.addEventListener('wheel', wheel);
 
 // --- 3Lens devtools ---
+let viewInsetRight = 0;
+function applyViewOffset() {
+  const bounds = canvas.getBoundingClientRect();
+  if (!bounds.width || !bounds.height) return;
+  if (viewInsetRight > 0)
+    camera.setViewOffset(
+      bounds.width,
+      bounds.height,
+      viewInsetRight / 2,
+      0,
+      bounds.width,
+      bounds.height
+    );
+  else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+}
 const lens = bootstrap3Lens({
   ui: 'overlay',
-  viewport: document.getElementById('app-viewport')!,
-  layout: 'workspace',
   autoDiscover: false,
+  // The canvas stays full-bleed; the tools float above it. Re-center the scene
+  // in the uncovered area by shifting the projection instead of resizing.
+  onInsets: (insets) => {
+    viewInsetRight = insets.right;
+    applyViewOffset();
+  },
   logLevel: 'info',
 });
 lens.registerContext({
@@ -265,8 +285,8 @@ const resizeHandler = () => {
   const bounds = canvas.getBoundingClientRect();
   if (!bounds.width || !bounds.height) return;
   camera.aspect = bounds.width / bounds.height;
-  camera.updateProjectionMatrix();
   renderer.setSize(bounds.width, bounds.height, false);
+  applyViewOffset();
 };
 window.addEventListener('resize', resizeHandler);
 const resizeObserver = new ResizeObserver(resizeHandler);

@@ -5,18 +5,33 @@ import { uiDom } from './platform/dom';
 import { platformStyles } from './platform/styles';
 import { componentTheme } from './platform/component-theme';
 import { benchmarkTheme } from './platform/benchmark-theme';
+import { sidebarTheme } from './platform/sidebar-theme';
 import { renderInspector } from './platform/inspector';
 import { renderAnalysisView, analysisStyles } from './platform/analysis-views';
 import { createTraceViewController, traceStyles } from './platform/trace-view';
 import { renderSurfaces } from './platform/surfaces';
 import type { PlatformTool, PlatformViewContext } from './platform/types';
 
+/** Screen edges covered by the tools. Hosts may reflow, offset a camera, or ignore it. */
+export interface LensInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 export interface InvestigationUIOptions {
   surface?: 'overlay' | 'dock' | 'window';
   target?: HTMLElement;
   /** Optional application-owned canvas/viewport slot, supplied explicitly by the host app. */
   viewport?: HTMLElement;
-  layout?: 'workspace' | 'overlay' | 'dock';
+  /**
+   * `sidebar` (default without a `viewport`) docks to the right edge above the
+   * application and never moves or resizes host DOM.
+   */
+  layout?: 'workspace' | 'overlay' | 'dock' | 'sidebar';
+  /** Called with the screen edges the tools currently cover, in CSS pixels. */
+  onInsets?: (insets: LensInsets) => void;
   document?: Document;
   readonly?: boolean;
   csp?: { styleNonce?: string; cssUrl?: string; safeMode?: boolean };
@@ -75,7 +90,12 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
   let shown = false;
   let activeTool: PlatformTool = 'inspect';
   let layout =
-    options.layout ?? (options.surface === 'dock' ? 'dock' : 'workspace');
+    options.layout ??
+    (options.surface === 'dock'
+      ? 'dock'
+      : options.viewport
+        ? 'workspace'
+        : 'sidebar');
   let inspectorTab = 'Overview';
   let fidelity: 'all' | 'exact' = 'all';
   let search = '';
@@ -229,6 +249,26 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       host.prepend(options.viewport);
     }
   }
+  let lastInsets = '';
+  function emitInsets() {
+    if (!win || !doc) return;
+    const rect =
+      root && shown && !root.hidden && layout === 'sidebar'
+        ? root.getBoundingClientRect()
+        : undefined;
+    const insets: LensInsets = {
+      top: 0,
+      left: 0,
+      bottom: 0,
+      right: rect ? Math.max(0, Math.round(win.innerWidth - rect.left)) : 0,
+    };
+    const key = JSON.stringify(insets);
+    if (key === lastInsets) return;
+    lastInsets = key;
+    doc.documentElement.style.setProperty('--3lens-inset-right', `${insets.right}px`);
+    options.onInsets?.(insets);
+    win.dispatchEvent(new CustomEvent('3lens:insets', { detail: insets }));
+  }
   function setLayout(value: typeof layout) {
     if (!root) return;
     restoreViewport();
@@ -250,6 +290,7 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     );
     lastIdentity = '';
     refresh(true);
+    emitInsets();
   }
   async function exportTrace() {
     const blob = await lens.exportTrace({ profile: 'STANDARD' });
@@ -283,7 +324,7 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     }
     picking = !picking;
     if (activeTool !== 'inspect') activeTool = 'inspect';
-    if (layout === 'overlay')
+    if (layout === 'overlay' || layout === 'sidebar')
       notify('Pick mode: click an object in the application behind the tools.');
     else
       notify(
@@ -542,7 +583,8 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
           analysisStyles +
           traceStyles +
           componentTheme +
-          benchmarkTheme
+          benchmarkTheme +
+          sidebarTheme
       );
       if (options.csp?.styleNonce) style.nonce = options.csp.styleNonce;
       stylesheet = style;
@@ -674,6 +716,7 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     surfacePicker = el('select');
     surfacePicker.setAttribute('aria-label', 'UI surface');
     for (const [value, label] of [
+      ['sidebar', 'Sidebar'],
       ['workspace', 'Workspace'],
       ['overlay', 'Overlay'],
       ['dock', 'Dock right'],
@@ -794,6 +837,34 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       })
     );
     doc.body.append(hud);
+    const handle = el('div', undefined, 'tlp-sidebar-handle');
+    handle.setAttribute('role', 'separator');
+    handle.setAttribute('aria-orientation', 'vertical');
+    handle.setAttribute('aria-label', 'Resize tools');
+    handle.addEventListener('pointerdown', (event) => {
+      if (layout !== 'sidebar' || event.button !== 0 || !root || !win) return;
+      handle.setPointerCapture(event.pointerId);
+      const move = (e: PointerEvent) =>
+        root?.style.setProperty(
+          '--tlp-sidebar-w',
+          `${Math.round(Math.max(340, Math.min(win.innerWidth * 0.85, win.innerWidth - e.clientX)))}px`
+        );
+      const end = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', end);
+        handle.removeEventListener('pointercancel', end);
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', end);
+      handle.addEventListener('pointercancel', end);
+      event.preventDefault();
+    });
+    root.append(handle);
+    if (win?.ResizeObserver) {
+      const observer = new win.ResizeObserver(() => emitInsets());
+      observer.observe(root);
+      unmountHandlers.push(() => observer.disconnect());
+    }
     trace = createTraceViewController(context);
     unsubscribe = lens.onSelectionChange(() => {
       pendingComparison = undefined;
@@ -848,8 +919,14 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
         !interaction &&
         !doc.querySelector('.tlp-command-backdrop') &&
         !/^(INPUT|SELECT|TEXTAREA)$/.test(doc.activeElement?.tagName ?? '')
-      )
-        refresh();
+      ) {
+        // Comparison, shader and surface views show captured state, not a live
+        // feed. Rebuilding them on a timer only burns the main thread; they
+        // re-render on selection and user actions instead.
+        if (['changes', 'shaders', 'surfaces'].includes(activeTool))
+          refreshHeader();
+        else refresh();
+      }
     }, 750);
     if (!stylesheet && options.csp?.safeMode)
       notify(
@@ -1135,7 +1212,8 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     if (
       !options.viewport ||
       lens.getMode() === 'offline' ||
-      layout === 'overlay'
+      layout === 'overlay' ||
+      layout === 'sidebar'
     )
       viewport.append(placeholder);
     const toolbar = el('div', undefined, 'tlp-viewport-toolbar');
@@ -1417,7 +1495,12 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
   function updateOverlayTools() {
     overlayTools?.remove();
     overlayTools = undefined;
-    if (!dom || !shown || layout !== 'overlay' || activeTool !== 'inspect')
+    if (
+      !dom ||
+      !shown ||
+      (layout !== 'overlay' && layout !== 'sidebar') ||
+      activeTool !== 'inspect'
+    )
       return;
     const bar = dom.el('div', undefined, 'tlp-floating-pickbar');
     const pick = dom.button(picking ? 'Picking…' : 'Pick', beginPick, 'pick');
@@ -1596,6 +1679,7 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     if (launcher) launcher.hidden = true;
     if (hud) hud.hidden = true;
     refresh(true);
+    emitInsets();
   }
   function hide() {
     shown = false;
@@ -1605,6 +1689,7 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
     if (root) root.hidden = true;
     if (hud) hud.hidden = true;
     if (launcher) launcher.hidden = false;
+    emitInsets();
   }
   return {
     show,
@@ -1613,6 +1698,8 @@ export function createInvestigationUI(options: InvestigationUIOptions = {}) {
       if (disposed) return;
       disposed = true;
       shown = false;
+      emitInsets();
+      doc?.documentElement.style.removeProperty('--3lens-inset-right');
       restoreViewport();
       if (timer) clearInterval(timer);
       unsubscribe?.();

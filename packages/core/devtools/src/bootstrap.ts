@@ -7,7 +7,7 @@
  */
 
 import { createLens, type Lens, type LensConfig } from '@3lens/runtime';
-import { createInvestigationUI } from '@3lens/ui-core';
+import { createInvestigationUI, createLensHud, type LensInsets } from '@3lens/ui-core';
 
 /**
  * Bootstrap options
@@ -21,8 +21,14 @@ export interface BootstrapOptions {
   target?: HTMLElement;
   /** Optional application-owned viewport element to place inside the workspace. */
   viewport?: HTMLElement;
-  /** Start with the full workspace or a compact floating inspector. */
-  layout?: 'workspace' | 'overlay' | 'dock';
+  /**
+   * Default `hud`: quiet status pills, an anchored pick card, a drawer and a command palette
+   * above the app, with heavy tools in a separate analysis window. Other layouts use the
+   * classic workspace (`workspace`/`dock` for embedding, `sidebar`/`overlay` floating).
+   */
+  layout?: 'hud' | 'workspace' | 'overlay' | 'dock' | 'sidebar';
+  /** Receive the screen edges covered by the tools, e.g. to offset a camera. */
+  onInsets?: (insets: LensInsets) => void;
   /** Disable live scene mutations while retaining captured-data navigation. */
   readonly?: boolean;
   /** Auto-discover contexts */
@@ -74,6 +80,11 @@ export function bootstrap3Lens(options: BootstrapOptions = {}): Lens {
     return instance;
   }
 
+  // The HUD is the default surface; a host-owned viewport/target or an explicit layout opts into the workspace.
+  const useHud =
+    options.layout === 'hud' ||
+    (options.layout === undefined && !options.viewport && !options.target && (options.ui ?? 'overlay') === 'overlay');
+
   // Create lens config
   const config: LensConfig = {
     enabled: true,
@@ -84,14 +95,17 @@ export function bootstrap3Lens(options: BootstrapOptions = {}): Lens {
     contextNameStrategy: options.contextNameStrategy ?? 'canvasId',
     logLevel: options.logLevel ?? 'warn',
     csp: options.csp,
-    uiAdapter: createInvestigationUI({
-      surface: options.ui ?? 'overlay',
-      target: options.target,
-      viewport: options.viewport,
-      layout: options.layout,
-      readonly: options.readonly,
-      csp: options.csp,
-    }),
+    uiAdapter: useHud
+      ? createLensHud({ onInsets: options.onInsets, readonly: options.readonly, csp: options.csp })
+      : createInvestigationUI({
+          surface: options.ui ?? 'overlay',
+          target: options.target,
+          viewport: options.viewport,
+          layout: options.layout === 'hud' ? undefined : options.layout,
+          onInsets: options.onInsets,
+          readonly: options.readonly,
+          csp: options.csp,
+        }),
   };
 
   // Create lens
