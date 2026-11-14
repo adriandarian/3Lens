@@ -9,6 +9,7 @@
  */
 
 export { threeLens, type ThreeLensActionOptions } from './action';
+export { lensHud, type LensHudActionOptions } from './hud';
 export {
   createThreeLensStore,
   threeLensStore,

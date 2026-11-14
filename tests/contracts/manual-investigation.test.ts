@@ -157,4 +157,26 @@ describe('Manual host investigation contract', () => {
     expect(snapshot.edges).toContainEqual(expect.objectContaining({ from: `main:material:${f.material.uuid}`, to: `main:texture:${texture.uuid}`, type: 'uses', slot: 'map' }));
     f.host.detach();
   });
+
+  it('estimates texture storage only from observable dimensions and format, and labels it ESTIMATED with a reason', () => {
+    const f = fixture();
+    const sized = new Texture({ width: 2048, height: 2048 } as unknown as HTMLImageElement);
+    sized.generateMipmaps = true;
+    sized.minFilter = 1008; // LinearMipmapLinearFilter
+    const undecoded = new Texture({ width: 0, height: 0 } as unknown as HTMLImageElement);
+    f.material.map = sized;
+    f.material.normalMap = undecoded;
+    f.host.attach(f.context);
+    const textures = f.snapshots()[0].nodes.filter((node) => node.type === 'texture') as (Node & Record<string, unknown>)[];
+    const estimated = textures.find((node) => node.id.endsWith(sized.uuid))!;
+    expect(estimated).toMatchObject({ memory_fidelity: 'ESTIMATED', memory_bytes: Math.round(2048 * 2048 * 4 * (4 / 3)) });
+    expect(String(estimated.memory_reason)).toContain('2048x2048');
+    expect(textures.find((node) => node.id.endsWith(undecoded.uuid))).toMatchObject({ memory_fidelity: 'UNAVAILABLE', memory_bytes: 0 });
+    // Resizing the image is an observable change that reaches the graph.
+    (sized.image as { width: number; height: number }).width = 4096;
+    (sized.image as { width: number; height: number }).height = 4096;
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots().at(-1)!.nodes.find((node) => node.id.endsWith(sized.uuid))).toMatchObject({ memory_bytes: Math.round(4096 * 4096 * 4 * (4 / 3)) });
+    f.host.detach();
+  });
 });

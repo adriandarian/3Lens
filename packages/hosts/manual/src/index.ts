@@ -1,5 +1,25 @@
 import type { BufferGeometry, Camera, Material, Object3D, Scene, Texture, WebGLRenderer } from 'three';
 import { Box3, Raycaster, Vector2, Vector3 } from 'three';
+
+/**
+ * Estimated GPU storage for a 2D texture from observable parameters only. Compressed,
+ * cube, 3D and not-yet-decoded images are not estimated. Returns null when unknown.
+ * three.js numeric enums are used directly so the host needs no extra imports.
+ */
+function estimateTextureBytes(value: Texture): { bytes: number; reason: string } | null {
+  const image = value.image as { width?: number; height?: number } | undefined;
+  const width = image?.width ?? 0, height = image?.height ?? 0;
+  if (!width || !height || (value as { isCompressedTexture?: boolean }).isCompressedTexture || Array.isArray(value.image)) return null;
+  const format = value.format as number, type = value.type as number;
+  // Red / RedInteger / Alpha / Luminance = 1 channel, RG = 2, everything else is uploaded as 4 (RGB is padded).
+  const channels = [1028, 1029, 1021, 1024].includes(format) ? 1 : [1030, 1031, 1025].includes(format) ? 2 : 4;
+  // Byte/UnsignedByte = 1, Short/UnsignedShort/HalfFloat = 2, Int/UnsignedInt/Float = 4. Packed types are not estimated.
+  const perChannel = [1009, 1010].includes(type) ? 1 : [1011, 1012, 1016].includes(type) ? 2 : [1013, 1014, 1015].includes(type) ? 4 : 0;
+  if (!perChannel) return null;
+  const mips = value.generateMipmaps && value.minFilter !== 1003 && value.minFilter !== 1006 ? 4 / 3 : 1;
+  const bytes = Math.round(width * height * channels * perChannel * mips);
+  return { bytes, reason: `Estimated from ${width}x${height} image dimensions, ${channels} channel(s) x ${perChannel} byte(s)${mips > 1 ? ' plus a full mip chain' : ''}. Real GPU allocation, driver padding and compression are not observable.` };
+}
 import type { CaptureContext, Edge, Node, ResourceType } from '@3lens/kernel';
 import { createEntityId } from '@3lens/kernel';
 import type { Host, HostConfig } from '@3lens/runtime';
@@ -99,7 +119,7 @@ class ManualHost implements Host {
     renderer.render = wrapped;
     context.emit({
       type: 'warning_event', timestamp: performance.now(), category: 'capability_unavailable',
-      message: 'Application frame boundaries are ESTIMATED from render calls. Per-object GPU time and GPU memory are UNAVAILABLE; geometry memory is an ESTIMATED CPU-buffer proxy.',
+      message: 'Application frame boundaries are ESTIMATED from render calls. Per-object GPU time and real GPU memory are UNAVAILABLE; geometry memory is an ESTIMATED CPU-buffer proxy and texture memory is ESTIMATED from image dimensions and format.',
     });
   }
 
@@ -227,14 +247,14 @@ class ManualHost implements Host {
     mixStr(scene.uuid); mixStr(scene.name); mix(scene.children.length);
     const visitMaterial = (value: Material) => {
       const m = value as Material & { roughness?: number; metalness?: number; color?: { getHex(): number } };
-      mix(value.id); mixStr(value.name); mix(value.transparent ? 1 : 0); mixNum(value.opacity); mix(value.side);
+      mix((value as Material & { id: number }).id); mixStr(value.name); mix(value.transparent ? 1 : 0); mixNum(value.opacity); mix(value.side);
       mix(value.depthTest ? 1 : 0); mix(value.depthWrite ? 1 : 0); mix(value.blending); mix(value.version);
       mixNum(m.roughness); mixNum(m.metalness); if (m.color) mix(m.color.getHex());
       for (const key in value) {
         const candidate = (value as unknown as Record<string, unknown>)[key] as Texture | null | undefined;
         if (candidate && candidate.isTexture) {
           const image = candidate.image as { width?: number; height?: number; currentSrc?: string; src?: string } | undefined;
-          mix(candidate.id); mixStr(key); mix(candidate.version); mix(image?.width ?? 0); mix(image?.height ?? 0);
+          mix(candidate.id); mixStr(key); mix(candidate.version); mix(candidate.format); mix(candidate.type); mix(candidate.minFilter); mix(candidate.generateMipmaps ? 1 : 0); mix(image?.width ?? 0); mix(image?.height ?? 0);
           mixStr(image?.currentSrc ?? image?.src);
         }
       }
@@ -322,8 +342,13 @@ class ManualHost implements Host {
       texture_type: 'texture2d', width: (value.image as { width?: number })?.width ?? 0, height: (value.image as { height?: number })?.height ?? 0,
       format: String(value.format), mag_filter: String(value.magFilter), min_filter: String(value.minFilter),
       wrap_s: String(value.wrapS), wrap_t: String(value.wrapT), anisotropy: value.anisotropy,
-      mipmaps: value.generateMipmaps, memory_bytes: 0, memory_fidelity: 'UNAVAILABLE',
-      memory_reason: 'GPU texture allocation size is not observable through this host.',
+      mipmaps: value.generateMipmaps,
+      ...(() => {
+        const estimate = estimateTextureBytes(value);
+        return estimate
+          ? { memory_bytes: estimate.bytes, memory_fidelity: 'ESTIMATED', memory_reason: estimate.reason }
+          : { memory_bytes: 0, memory_fidelity: 'UNAVAILABLE', memory_reason: 'GPU texture allocation size is not observable through this host, and the image dimensions or format needed to estimate it are unavailable.' };
+      })(),
       source_url: typeof (value.image as { currentSrc?: unknown })?.currentSrc === 'string'
         ? (value.image as { currentSrc: string }).currentSrc
         : typeof (value.image as { src?: unknown })?.src === 'string' ? (value.image as { src: string }).src : undefined,

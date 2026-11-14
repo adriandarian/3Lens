@@ -7,6 +7,7 @@
 import { NgModule, ModuleWithProviders } from '@angular/core';
 import { ThreeLensService } from './threelens.service';
 import { ThreeLensComponent } from './threelens.component';
+import { ThreeLensHudComponent } from './threelens-hud.component';
 import { THREELENS_CONFIG, type ThreeLensConfig } from './tokens';
 
 /**
@@ -26,8 +27,8 @@ import { THREELENS_CONFIG, type ThreeLensConfig } from './tokens';
  * ```
  */
 @NgModule({
-  declarations: [ThreeLensComponent],
-  exports: [ThreeLensComponent],
+  declarations: [ThreeLensComponent, ThreeLensHudComponent],
+  exports: [ThreeLensComponent, ThreeLensHudComponent],
   providers: [ThreeLensService],
 })
 export class ThreeLensModule {

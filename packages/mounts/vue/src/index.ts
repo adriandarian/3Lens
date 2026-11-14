@@ -12,3 +12,4 @@ export { useThreeLens } from './composables/useThreeLens';
 export { useSelection } from './composables/useSelection';
 export { usePanel } from './composables/usePanel';
 export { THREELENS_INJECTION_KEY, type ThreeLensContext } from './types';
+export { ThreeLensHud, useThreeLensHud } from './hud';

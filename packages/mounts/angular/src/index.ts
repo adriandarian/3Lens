@@ -9,5 +9,6 @@
 
 export { ThreeLensModule } from './threelens.module';
 export { ThreeLensService } from './threelens.service';
+export { ThreeLensHudComponent } from './threelens-hud.component';
 export { ThreeLensComponent } from './threelens.component';
 export { THREELENS_CONFIG, type ThreeLensConfig } from './tokens';

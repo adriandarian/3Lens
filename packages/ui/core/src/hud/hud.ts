@@ -42,6 +42,8 @@ export interface HudOptions {
   /** `window` opens a separate browser window (falls back to an in-page panel if blocked). */
   analysis?: 'window' | 'panel';
   onInsets?: (insets: HudInsets) => void;
+  /** Called for F2. Defaults to `lens.toggleUI()`; framework mounts that own the HUD handle override it. */
+  onToggle?: () => void;
   csp?: { styleNonce?: string; cssUrl?: string; safeMode?: boolean };
 }
 
@@ -844,10 +846,10 @@ export function createLensHud(options: HudOptions = {}): LensHud {
     // events
     const onKey = (event: KeyboardEvent) => {
       if (!shown) {
-        if (event.key === 'F2') { event.preventDefault(); lens.toggleUI(); }
+        if (event.key === 'F2') { event.preventDefault(); toggle(); }
         return;
       }
-      if (event.key === 'F2') { event.preventDefault(); lens.toggleUI(); return; }
+      if (event.key === 'F2') { event.preventDefault(); toggle(); return; }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         paletteOpen ? closePalette() : openPalette();
@@ -889,6 +891,11 @@ export function createLensHud(options: HudOptions = {}): LensHud {
       () => doc.removeEventListener('click', onClick, true),
       () => win?.removeEventListener('resize', onResize)
     );
+  }
+
+  function toggle() {
+    if (options.onToggle) options.onToggle();
+    else lens.toggleUI();
   }
 
   function refreshAll() {
@@ -981,3 +988,16 @@ export function createLensHud(options: HudOptions = {}): LensHud {
   };
 }
 
+
+/**
+ * Mount the HUD on an existing Lens without a bootstrap. This is the entry point the
+ * framework mount kits use: they hold the lens, the HUD only needs the public Lens API.
+ */
+export function mountLensHud(lens: Lens, options: HudOptions = {}): { hud: LensHud; unmount(): void } {
+  const hud: LensHud = createLensHud({
+    ...options,
+    onToggle: options.onToggle ?? (() => (hud.isVisible() ? hud.hide() : hud.show(lens))),
+  });
+  hud.show(lens);
+  return { hud, unmount: () => hud.dispose() };
+}
