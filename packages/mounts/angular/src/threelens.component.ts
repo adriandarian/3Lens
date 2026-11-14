@@ -1,107 +1,71 @@
 /**
- * ThreeLens Angular Component
+ * ThreeLens Angular Panel Component
  *
- * A component that renders the 3Lens UI.
+ * Embeds the full workspace (inspect, performance, memory, changes, shaders) in a
+ * container you own. For the quiet HUD above the app, use `<threelens-hud>` or
+ * the service.
  *
  * @packageDocumentation
  */
 
 import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
-  Input,
-  OnInit,
-  OnDestroy,
-  ViewChild,
-  ChangeDetectionStrategy,
-  Output,
   EventEmitter,
+  Input,
+  OnDestroy,
+  Output,
+  ViewChild,
 } from '@angular/core';
-import type { Selection } from '@3lens/runtime';
+import type { Subscription } from 'rxjs';
 import { ThreeLensService } from './threelens.service';
 
 /**
- * Angular component for rendering 3Lens UI
- *
  * @example
  * ```html
- * <threelens-panel
- *   [mode]="'overlay'"
- *   (selectionChange)="onSelection($event)">
- * </threelens-panel>
+ * <threelens-panel style="height: 480px" (selectionChange)="onSelect($event)"></threelens-panel>
  * ```
  */
 @Component({
   selector: 'threelens-panel',
   template: `<div #container class="threelens-container"></div>`,
-  styles: [`
-    .threelens-container {
-      width: 100%;
-      height: 100%;
-      position: relative;
-    }
-  `],
+  styles: [
+    `
+      .threelens-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ThreeLensComponent implements OnInit, OnDestroy {
+export class ThreeLensComponent implements AfterViewInit, OnDestroy {
   @ViewChild('container', { static: true })
   containerRef!: ElementRef<HTMLElement>;
 
-  /** UI mode */
-  @Input() mode: 'overlay' | 'dock' = 'overlay';
+  /** Disable all scene-mutating actions. */
+  @Input() readonly = false;
 
-  /** Initial visibility */
-  @Input() visible = true;
+  /** Emits the selected entity ids whenever selection changes. */
+  @Output() selectionChange = new EventEmitter<string[]>();
 
-  /** Selection change event */
-  @Output() selectionChange = new EventEmitter<Selection>();
-
-  /** Visibility change event */
-  @Output() visibilityChange = new EventEmitter<boolean>();
-
-  private subscription: { unsubscribe: () => void } | null = null;
+  private unmount: (() => void) | undefined;
+  private subscription: Subscription | undefined;
 
   constructor(private readonly threeLens: ThreeLensService) {}
 
-  ngOnInit(): void {
-    // Mount the UI to the container
-    this.threeLens.mount(this.containerRef.nativeElement);
-
-    // Set initial visibility
-    if (!this.visible) {
-      this.threeLens.hide();
-    }
-
-    // Subscribe to selection changes
+  ngAfterViewInit(): void {
+    this.unmount = this.threeLens.mountWorkspace(this.containerRef.nativeElement, { readonly: this.readonly });
     this.subscription = this.threeLens.selection$.subscribe((selection) => {
-      if (selection) {
-        this.selectionChange.emit(selection);
-      }
-    }) as { unsubscribe: () => void };
-
-    // Subscribe to visibility changes
-    this.threeLens.visible$.subscribe((visible) => {
-      this.visibilityChange.emit(visible);
+      if (selection) this.selectionChange.emit([...selection.entity_ids]);
     });
   }
 
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
-    this.threeLens.unmount();
-  }
-
-  /** Show the panel */
-  show(): void {
-    this.threeLens.show();
-  }
-
-  /** Hide the panel */
-  hide(): void {
-    this.threeLens.hide();
-  }
-
-  /** Toggle visibility */
-  toggle(): void {
-    this.threeLens.toggle();
+    this.unmount?.();
   }
 }

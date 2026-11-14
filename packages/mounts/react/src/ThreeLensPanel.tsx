@@ -1,109 +1,39 @@
 /**
  * ThreeLens React Panel Component
  *
+ * Embeds the full workspace (inspect, performance, memory, changes, shaders) in a
+ * container you own, for apps that want a docked panel instead of, or in addition
+ * to, the HUD. The container is yours: 3Lens only renders inside it.
+ *
  * @packageDocumentation
  */
 
-import {
-  useRef,
-  useEffect,
-  forwardRef,
-  useImperativeHandle,
-  type CSSProperties,
-} from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { useThreeLens } from './useThreeLens';
 
-/**
- * Props for ThreeLensPanel
- */
 export interface ThreeLensPanelProps {
-  /** CSS class name */
   className?: string;
-  /** Inline styles */
   style?: CSSProperties;
-  /** Initial visibility */
-  visible?: boolean;
+  /** Disable all scene-mutating actions. */
+  readonly?: boolean;
 }
 
 /**
- * Ref handle for ThreeLensPanel
- */
-export interface ThreeLensPanelRef {
-  /** Show the panel */
-  show: () => void;
-  /** Hide the panel */
-  hide: () => void;
-  /** Toggle visibility */
-  toggle: () => void;
-  /** Check if visible */
-  isVisible: () => boolean;
-}
-
-/**
- * React component for rendering 3Lens UI
- *
  * @example
  * ```tsx
- * function App() {
- *   const panelRef = useRef<ThreeLensPanelRef>(null);
- *
- *   return (
- *     <ThreeLensProvider>
- *       <ThreeLensPanel
- *         ref={panelRef}
- *         className="my-panel"
- *       />
- *       <button onClick={() => panelRef.current?.toggle()}>
- *         Toggle Panel
- *       </button>
- *     </ThreeLensProvider>
- *   );
- * }
+ * <ThreeLensProvider lens={lens} hud={false}>
+ *   <ThreeLensPanel style={{ height: 480 }} />
+ * </ThreeLensProvider>
  * ```
  */
-export const ThreeLensPanel = forwardRef<ThreeLensPanelRef, ThreeLensPanelProps>(
-  function ThreeLensPanel({ className, style, visible = true }, ref) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const { ui, show, hide, toggle, visible: isVisible } = useThreeLens();
-    const mountedRef = useRef(false);
+export function ThreeLensPanel({ className, style, readonly }: ThreeLensPanelProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { controller } = useThreeLens();
 
-    // Mount UI on container
-    useEffect(() => {
-      if (!containerRef.current || !ui || mountedRef.current) return;
+  useEffect(() => {
+    if (!controller || !containerRef.current) return;
+    return controller.mountWorkspace(containerRef.current, { readonly });
+  }, [controller, readonly]);
 
-      ui.mount(containerRef.current);
-      mountedRef.current = true;
-
-      // Set initial visibility
-      if (!visible) {
-        ui.hide();
-      }
-
-      return () => {
-        ui.unmount();
-        mountedRef.current = false;
-      };
-    }, [ui, visible]);
-
-    // Expose imperative handle
-    useImperativeHandle(ref, () => ({
-      show,
-      hide,
-      toggle,
-      isVisible: () => isVisible,
-    }), [show, hide, toggle, isVisible]);
-
-    return (
-      <div
-        ref={containerRef}
-        className={className}
-        style={{
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-          ...style,
-        }}
-      />
-    );
-  }
-);
+  return <div ref={containerRef} className={className} style={{ width: '100%', height: '100%', position: 'relative', ...style }} />;
+}

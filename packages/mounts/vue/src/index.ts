@@ -10,6 +10,6 @@
 export { threeLensPlugin, type ThreeLensPluginOptions } from './plugin';
 export { useThreeLens } from './composables/useThreeLens';
 export { useSelection } from './composables/useSelection';
-export { usePanel } from './composables/usePanel';
+export { ThreeLensPanel } from './ThreeLensPanel';
 export { THREELENS_INJECTION_KEY, type ThreeLensContext } from './types';
 export { ThreeLensHud, useThreeLensHud } from './hud';

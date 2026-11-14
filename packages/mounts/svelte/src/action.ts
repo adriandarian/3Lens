@@ -1,119 +1,62 @@
 /**
  * Svelte Action for 3Lens
  *
- * Provides a Svelte action for mounting the 3Lens UI.
- * Compatible with both Svelte 4 and Svelte 5.
+ * Embeds the full workspace (inspect, performance, memory, changes, shaders) in the
+ * element it is attached to. For the quiet HUD above the app use `lensHud`.
+ * Compatible with Svelte 4 and 5.
  *
  * @packageDocumentation
  */
 
 import type { ActionReturn } from 'svelte/action';
-import type { LensConfig } from '@3lens/runtime';
-import type { UIOverlayConfig, UIDockConfig } from '@3lens/ui-core';
+import type { Lens } from '@3lens/runtime';
 import { createThreeLensStore, type ThreeLensStore } from './store';
 
-/**
- * Options for the threeLens action
- */
 export interface ThreeLensActionOptions {
-  /** Lens configuration */
-  config?: Partial<LensConfig>;
-  /** UI mode */
-  ui?: 'overlay' | 'dock';
-  /** Overlay configuration */
-  overlayConfig?: UIOverlayConfig;
-  /** Dock configuration */
-  dockConfig?: Omit<UIDockConfig, 'target'>;
-  /** Auto-initialize */
-  autoInit?: boolean;
-  /** Callback when store is created */
+  /** Use an existing store (it is not destroyed by the action). */
+  store?: ThreeLensStore;
+  /** Or inspect this lens; the action creates (and destroys) a HUD-less store for it. */
+  lens?: Lens;
+  readonly?: boolean;
+  /** Receives the store in use. */
   onStore?: (store: ThreeLensStore) => void;
 }
 
 /**
- * Svelte action for mounting 3Lens UI
- *
- * @example Svelte 4:
+ * @example
  * ```svelte
- * <script>
- *   import { threeLens } from '@3lens/mount-svelte';
- *
- *   let store;
- *
- *   function handleStore(s) {
- *     store = s;
- *   }
- * </script>
- *
- * <div use:threeLens={{ ui: 'overlay', onStore: handleStore }}>
- *   <!-- 3Lens UI mounts here -->
- * </div>
- *
- * <button on:click={() => store?.toggle()}>Toggle Panel</button>
- * ```
- *
- * @example Svelte 5:
- * ```svelte
- * <script>
- *   import { threeLens } from '@3lens/mount-svelte';
- *
- *   let store = $state(null);
- * </script>
- *
- * <div use:threeLens={{ ui: 'overlay', onStore: (s) => store = s }}>
- *   <!-- 3Lens UI mounts here -->
- * </div>
- *
- * <button onclick={() => store?.toggle()}>Toggle Panel</button>
+ * <div style="height: 480px" use:threeLens={{ lens }} />
  * ```
  */
-export function threeLens(
-  node: HTMLElement,
-  options: ThreeLensActionOptions = {}
-): ActionReturn<ThreeLensActionOptions> {
-  let store: ThreeLensStore | null = null;
+export function threeLens(node: HTMLElement, options: ThreeLensActionOptions = {}): ActionReturn<ThreeLensActionOptions> {
+  let unmount: (() => void) | undefined;
+  let ownedStore: ThreeLensStore | undefined;
+  let key: unknown;
 
-  function init(opts: ThreeLensActionOptions) {
-    // Create store
-    store = createThreeLensStore({
-      config: opts.config,
-      ui: opts.ui,
-      overlayConfig: opts.overlayConfig,
-      dockConfig: opts.dockConfig,
-      autoInit: opts.autoInit,
-    });
-
-    // Mount UI
-    store.mount(node);
-
-    // Callback
-    opts.onStore?.(store);
-  }
-
-  // Initialize
-  init(options);
-
-  return {
-    // Update handler for reactive options (Svelte 4 style)
-    update(newOptions: ThreeLensActionOptions) {
-      // Destroy old store
-      store?.destroy();
-
-      // Reinitialize with new options
-      init(newOptions);
-    },
-
-    // Cleanup
-    destroy() {
-      store?.destroy();
-      store = null;
-    },
+  const teardown = () => {
+    unmount?.();
+    unmount = undefined;
+    ownedStore?.destroy();
+    ownedStore = undefined;
   };
-}
+  const apply = (next: ThreeLensActionOptions) => {
+    const identity = [next.store, next.lens, next.readonly];
+    if (key && identity.every((value, index) => value === (key as unknown[])[index])) return;
+    teardown();
+    key = identity;
+    let store = next.store;
+    if (!store) {
+      if (!next.lens) return;
+      // The lens is the caller's; destroy() never disposes a lens it was given.
+      store = ownedStore = createThreeLensStore({ lens: next.lens, hud: false });
+    }
+    unmount = store.mountWorkspace(node, { readonly: next.readonly });
+    next.onStore?.(store);
+  };
 
-// Type augmentation for Svelte 5 compatibility
-declare module 'svelte/elements' {
-  interface HTMLAttributes<T> {
-    'use:threeLens'?: ThreeLensActionOptions;
-  }
+  apply(options);
+  return {
+    update: apply,
+    destroy: teardown,
+  };
 }

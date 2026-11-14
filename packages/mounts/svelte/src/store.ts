@@ -1,212 +1,89 @@
 /**
- * Svelte Store for 3Lens
+ * Svelte store for 3Lens.
  *
- * Provides reactive state management for 3Lens.
- * Compatible with both Svelte 4 stores and Svelte 5 runes.
+ * Owns (or receives) a `Lens`, mounts the HUD above the application, and exposes
+ * selection and visibility as readable stores.
  *
  * @packageDocumentation
  */
 
-import { writable, derived, get, type Readable, type Writable } from 'svelte/store';
-import type { LensClient, LensConfig, Selection, EntityId } from '@3lens/runtime';
-import { createLens } from '@3lens/runtime';
-import { uiOverlay, uiDock, type UIAdapter, type UIOverlayConfig, type UIDockConfig, type Panel } from '@3lens/ui-core';
-import { setThreeLensContext, type ThreeLensContext } from './context';
+import { get, readable, writable, type Readable, type Writable } from 'svelte/store';
+import { createLens, type Lens, type LensConfig } from '@3lens/runtime';
+import { createLensController, type HudOptions } from '@3lens/ui-core';
+import { setThreeLensContext, getThreeLensContext, type ThreeLensContext } from './context';
 
-/**
- * Options for creating a ThreeLens store
- */
 export interface ThreeLensStoreOptions {
-  /** Lens configuration */
+  /** Inspect this lens. If omitted, the store creates (and disposes) one from `config`. */
+  lens?: Lens;
+  /** Used only when `lens` is omitted. */
   config?: Partial<LensConfig>;
-  /** UI mode */
-  ui?: 'overlay' | 'dock';
-  /** Overlay configuration */
-  overlayConfig?: UIOverlayConfig;
-  /** Dock configuration */
-  dockConfig?: Omit<UIDockConfig, 'target'>;
-  /** Auto-initialize */
-  autoInit?: boolean;
+  /** `false` disables the HUD (embed the workspace with the `threeLens` action instead). */
+  hud?: boolean | HudOptions;
+  /** Called once the lens is ready. Register your hosts/contexts here when the store owns the lens. */
+  onInit?: (lens: Lens) => void;
 }
 
-/**
- * ThreeLens store interface
- */
 export interface ThreeLensStore extends ThreeLensContext {
-  /** Initialize the lens */
-  init: () => Promise<LensClient>;
-  /** Destroy the store */
+  /** Embed the full workspace in a container you own. Returns an unmount function. */
+  mountWorkspace: (container: HTMLElement, options?: { readonly?: boolean }) => () => void;
+  /** Dispose the HUD, any embedded workspaces and, if owned, the lens. */
   destroy: () => void;
 }
 
+/** The most recently created store (cleared on destroy), for `$threeLensStore` access in markup. */
+export const threeLensStore: Writable<ThreeLensStore | null> = writable(null);
+
 /**
- * Create a 3Lens store
- *
  * @example
  * ```svelte
  * <script>
  *   import { createThreeLensStore } from '@3lens/mount-svelte';
- *
- *   const store = createThreeLensStore({
- *     ui: 'overlay',
- *     autoInit: true,
- *   });
- *
- *   const { selection, select, show, hide } = store;
+ *   const store = createThreeLensStore({ lens });
+ *   const { selection } = store;
  * </script>
- *
- * <div use:store.mount>
- *   <!-- 3Lens UI will mount here -->
- * </div>
+ * {$selection?.entity_ids[0]}
  * ```
  */
 export function createThreeLensStore(options: ThreeLensStoreOptions = {}): ThreeLensStore {
-  // Internal state
-  const clientStore = writable<LensClient | null>(null);
-  const uiStore = writable<UIAdapter | null>(null);
-  const initializedStore = writable(false);
-  const selectionStore = writable<Selection | null>(null);
-  const visibleStore = writable(true);
+  const owned = !options.lens;
+  const lens = options.lens ?? createLens({ enabled: true, ...options.config });
+  // The HUD needs a DOM; during SSR only the stores exist.
+  const controller = createLensController(lens, { hud: typeof document === 'undefined' ? false : (options.hud ?? true) });
 
-  let mounted = false;
-  let unsubscribeSelection: (() => void) | null = null;
-
-  // Initialize lens
-  const init = async (): Promise<LensClient> => {
-    const result = await createLens(options.config as LensConfig);
-    clientStore.set(result.client);
-    initializedStore.set(true);
-
-    // Subscribe to selection changes
-    unsubscribeSelection = result.client.onSelectionChange((sel) => {
-      selectionStore.set(sel);
+  const derive = <T>(pick: () => T): Readable<T> =>
+    readable(pick(), (set) => {
+      set(pick());
+      return controller.subscribe(() => set(pick()));
     });
 
-    return result.client;
-  };
-
-  // Create UI adapter
-  const createUI = (target?: HTMLElement): UIAdapter => {
-    const uiMode = options.ui ?? 'overlay';
-
-    if (uiMode === 'overlay') {
-      return uiOverlay(options.overlayConfig);
-    } else if (target) {
-      return uiDock({
-        target,
-        ...options.dockConfig,
-      });
-    }
-
-    return uiOverlay(options.overlayConfig);
-  };
-
-  // Actions
-  const select = (entityIds: EntityId | EntityId[]) => {
-    const client = get(clientStore);
-    client?.select(entityIds);
-  };
-
-  const show = () => {
-    const ui = get(uiStore);
-    ui?.show();
-    visibleStore.set(true);
-  };
-
-  const hide = () => {
-    const ui = get(uiStore);
-    ui?.hide();
-    visibleStore.set(false);
-  };
-
-  const toggle = () => {
-    const ui = get(uiStore);
-    ui?.toggle();
-    visibleStore.set(ui?.isVisible() ?? false);
-  };
-
-  const registerPanel = (panel: Panel) => {
-    const ui = get(uiStore);
-    ui?.registerPanel(panel);
-  };
-
-  const unregisterPanel = (panelId: string) => {
-    const ui = get(uiStore);
-    ui?.unregisterPanel(panelId);
-  };
-
-  const mount = (container: HTMLElement) => {
-    if (mounted) {
-      console.warn('[3Lens] Already mounted');
-      return;
-    }
-
-    const adapter = createUI(container);
-    uiStore.set(adapter);
-    adapter.mount(container);
-    mounted = true;
-  };
-
-  const unmount = () => {
-    const ui = get(uiStore);
-    if (ui && mounted) {
-      ui.unmount();
-      mounted = false;
-    }
-  };
-
-  const destroy = () => {
-    unsubscribeSelection?.();
-    unmount();
-    clientStore.set(null);
-    uiStore.set(null);
-    initializedStore.set(false);
-    selectionStore.set(null);
-  };
-
-  // Create store object
+  const previous = getThreeLensContext();
   const store: ThreeLensStore = {
-    client: { subscribe: clientStore.subscribe } as Readable<LensClient | null>,
-    ui: { subscribe: uiStore.subscribe } as Readable<UIAdapter | null>,
-    initialized: { subscribe: initializedStore.subscribe } as Readable<boolean>,
-    selection: { subscribe: selectionStore.subscribe } as Readable<Selection | null>,
-    visible: visibleStore,
-    select,
-    show,
-    hide,
-    toggle,
-    registerPanel,
-    unregisterPanel,
-    mount,
-    unmount,
-    init,
-    destroy,
+    lens,
+    controller,
+    hud: readable(controller.hud, (set) => {
+      set(controller.hud);
+      return controller.subscribe(() => set(controller.hud));
+    }),
+    initialized: readable(true),
+    selection: derive(() => controller.getState().selection),
+    visible: derive(() => controller.getState().visible),
+    select: (ids) => controller.select(ids),
+    clearSelection: () => controller.clearSelection(),
+    show: () => controller.show(),
+    hide: () => controller.hide(),
+    toggle: () => controller.toggle(),
+    openAnalysis: () => controller.openAnalysis(),
+    openPalette: () => controller.openPalette(),
+    mountWorkspace: (container, workspace) => controller.mountWorkspace(container, workspace),
+    destroy() {
+      controller.dispose();
+      if (owned) lens.dispose();
+      if (getThreeLensContext() === store) setThreeLensContext(previous);
+      if (get(threeLensStore) === store) threeLensStore.set(null);
+    },
   };
-
-  // Set global context
   setThreeLensContext(store);
-
-  // Auto-initialize if requested
-  if (options.autoInit !== false) {
-    init().catch((error) => {
-      console.error('[3Lens] Failed to initialize:', error);
-    });
-  }
-
+  threeLensStore.set(store);
+  options.onInit?.(lens);
   return store;
 }
-
-/**
- * Default global store instance
- *
- * @example
- * ```svelte
- * <script>
- *   import { threeLensStore } from '@3lens/mount-svelte';
- *
- *   // Access store values
- *   $: console.log($threeLensStore.selection);
- * </script>
- * ```
- */
-export const threeLensStore: Writable<ThreeLensStore | null> = writable(null);

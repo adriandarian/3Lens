@@ -1,261 +1,119 @@
 /**
  * ThreeLens Angular Service
  *
- * Manages the 3Lens runtime and UI within Angular's zone.
+ * Owns (or receives) a `Lens`, mounts the HUD above the application, and exposes
+ * selection and visibility as observables that re-enter the Angular zone so
+ * templates update, while 3Lens itself runs outside it.
  *
  * @packageDocumentation
  */
 
-import {
-  Injectable,
-  NgZone,
-  OnDestroy,
-  Optional,
-  Inject,
-} from '@angular/core';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import type { LensClient, Selection, LensConfig, EntityId } from '@3lens/runtime';
-import { createLens } from '@3lens/runtime';
-import { uiOverlay, uiDock, type UIAdapter, type Panel } from '@3lens/ui-core';
+import { Inject, Injectable, NgZone, OnDestroy, Optional } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { createLens, type Lens } from '@3lens/runtime';
+import { createLensController, type HudOptions, type LensController } from '@3lens/ui-core';
 import { THREELENS_CONFIG, type ThreeLensConfig } from './tokens';
 
-/**
- * Angular service for managing 3Lens
- *
- * @example
- * ```typescript
- * @Component({...})
- * export class MyComponent {
- *   constructor(private threeLens: ThreeLensService) {}
- *
- *   ngAfterViewInit() {
- *     this.threeLens.mount(this.container.nativeElement);
- *   }
- * }
- * ```
- */
-@Injectable({
-  providedIn: 'root',
-})
+type Selection = ReturnType<Lens['getSelection']>;
+
+@Injectable({ providedIn: 'root' })
 export class ThreeLensService implements OnDestroy {
-  private readonly destroy$ = new Subject<void>();
-  private client: LensClient | null = null;
-  private ui: UIAdapter | null = null;
-  private mounted = false;
+  private controller: LensController | null = null;
+  private owned = false;
+  private off: (() => void) | undefined;
 
-  /** Selection state as an Observable */
   private readonly _selection$ = new BehaviorSubject<Selection | null>(null);
-  public readonly selection$: Observable<Selection | null> = this._selection$.asObservable();
-
-  /** Visibility state */
-  private readonly _visible$ = new BehaviorSubject<boolean>(true);
-  public readonly visible$: Observable<boolean> = this._visible$.asObservable();
-
-  /** Connection state */
+  readonly selection$: Observable<Selection | null> = this._selection$.asObservable();
+  private readonly _visible$ = new BehaviorSubject<boolean>(false);
+  /** HUD visibility. */
+  readonly visible$: Observable<boolean> = this._visible$.asObservable();
   private readonly _connected$ = new BehaviorSubject<boolean>(false);
-  public readonly connected$: Observable<boolean> = this._connected$.asObservable();
+  readonly connected$: Observable<boolean> = this._connected$.asObservable();
 
   constructor(
-    private readonly ngZone: NgZone,
+    private readonly zone: NgZone,
     @Optional() @Inject(THREELENS_CONFIG) private readonly config?: ThreeLensConfig
   ) {
-    if (this.config?.autoInit) {
-      // Auto-init will be triggered when mount is called
-    }
+    if (this.config?.autoInit) this.init();
   }
 
   /**
-   * Initialize the 3Lens runtime
+   * Start inspecting a lens. With no argument, uses `config.lens` or creates one from
+   * `config.lensConfig` (the service then disposes it). Idempotent.
    */
-  async init(config?: Partial<LensConfig>): Promise<LensClient> {
-    const mergedConfig = { ...this.config?.lens, ...config };
-
-    // Run lens creation outside Angular zone for performance
-    if (this.config?.runOutsideZone !== false) {
-      return this.ngZone.runOutsideAngular(async () => {
-        const result = await createLens(mergedConfig as LensConfig);
-        this.client = result.client;
-        this.setupSubscriptions();
-        return result.client;
-      });
-    }
-
-    const result = await createLens(mergedConfig as LensConfig);
-    this.client = result.client;
-    this.setupSubscriptions();
-    return result.client;
+  init(lens?: Lens, hud?: boolean | HudOptions): Lens {
+    if (this.controller) return this.controller.lens;
+    const run = <T>(fn: () => T) => (this.config?.runOutsideZone === false ? fn() : this.zone.runOutsideAngular(fn));
+    const target = lens ?? this.config?.lens;
+    this.owned = !target;
+    return run(() => {
+      const resolved = target ?? createLens({ enabled: true, ...this.config?.lensConfig });
+      const controller = createLensController(resolved, { hud: hud ?? this.config?.hud });
+      this.controller = controller;
+      const publish = () => {
+        const state = controller.getState();
+        // Re-enter the zone only to notify subscribers.
+        this.zone.run(() => {
+          this._selection$.next(state.selection);
+          this._visible$.next(state.visible);
+        });
+      };
+      this.off = controller.subscribe(publish);
+      publish();
+      this._connected$.next(true);
+      return resolved;
+    });
   }
 
-  /**
-   * Mount the UI to a container element
-   */
-  mount(container: HTMLElement): void {
-    if (this.mounted) {
-      console.warn('[3Lens] Already mounted');
-      return;
-    }
-
-    const uiMode = this.config?.ui ?? 'overlay';
-
-    if (uiMode === 'overlay') {
-      this.ui = uiOverlay(this.config?.overlayConfig);
-    } else {
-      this.ui = uiDock({
-        target: container,
-        ...this.config?.dockConfig,
-      });
-    }
-
-    // Mount outside zone for better performance
-    if (this.config?.runOutsideZone !== false) {
-      this.ngZone.runOutsideAngular(() => {
-        this.ui!.mount(container);
-      });
-    } else {
-      this.ui.mount(container);
-    }
-
-    this.mounted = true;
-    this._visible$.next(true);
+  getLens(): Lens | null {
+    return this.controller?.lens ?? null;
   }
-
-  /**
-   * Unmount the UI
-   */
-  unmount(): void {
-    if (this.ui && this.mounted) {
-      this.ui.unmount();
-      this.mounted = false;
-    }
+  getController(): LensController | null {
+    return this.controller;
   }
-
-  /**
-   * Show the UI
-   */
-  show(): void {
-    if (this.ui) {
-      this.ngZone.runOutsideAngular(() => {
-        this.ui!.show();
-      });
-      this._visible$.next(true);
-    }
-  }
-
-  /**
-   * Hide the UI
-   */
-  hide(): void {
-    if (this.ui) {
-      this.ngZone.runOutsideAngular(() => {
-        this.ui!.hide();
-      });
-      this._visible$.next(false);
-    }
-  }
-
-  /**
-   * Toggle UI visibility
-   */
-  toggle(): void {
-    if (this.ui) {
-      this.ngZone.runOutsideAngular(() => {
-        this.ui!.toggle();
-      });
-      this._visible$.next(this.ui.isVisible());
-    }
-  }
-
-  /**
-   * Select entities
-   */
-  select(entityIds: EntityId | EntityId[]): void {
-    if (this.client) {
-      // Run outside zone to avoid unnecessary change detection
-      this.ngZone.runOutsideAngular(() => {
-        this.client!.select(entityIds);
-      });
-    }
-  }
-
-  /**
-   * Get the current selection
-   */
   getSelection(): Selection | null {
     return this._selection$.getValue();
   }
-
-  /**
-   * Register a panel
-   */
-  registerPanel(panel: Panel): void {
-    if (this.ui) {
-      this.ui.registerPanel(panel);
-    }
-  }
-
-  /**
-   * Unregister a panel
-   */
-  unregisterPanel(panelId: string): void {
-    if (this.ui) {
-      this.ui.unregisterPanel(panelId);
-    }
-  }
-
-  /**
-   * Get the lens client
-   */
-  getClient(): LensClient | null {
-    return this.client;
-  }
-
-  /**
-   * Check if visible
-   */
   isVisible(): boolean {
-    return this.ui?.isVisible() ?? false;
+    return this._visible$.getValue();
   }
 
-  /**
-   * Execute a command (runs inside Angular zone for change detection)
-   */
-  async executeCommand(command: string, args?: Record<string, unknown>): Promise<void> {
-    if (!this.client) {
-      throw new Error('[3Lens] Not initialized');
-    }
-
-    await this.client.executeCommand(command, args);
-
-    // Trigger change detection after command execution
-    this.ngZone.run(() => {
-      // Zone run triggers change detection
-    });
+  select(entityIds: string | string[]): void {
+    this.controller?.select(entityIds);
+  }
+  clearSelection(): void {
+    this.controller?.clearSelection();
+  }
+  show(): void {
+    this.controller?.show();
+  }
+  hide(): void {
+    this.controller?.hide();
+  }
+  toggle(): void {
+    this.controller?.toggle();
+  }
+  openAnalysis(): void {
+    this.controller?.openAnalysis();
+  }
+  openPalette(): void {
+    this.controller?.openPalette();
   }
 
-  private setupSubscriptions(): void {
-    if (!this.client) return;
-
-    // Subscribe to selection changes
-    const unsubscribe = this.client.onSelectionChange((selection) => {
-      // Re-enter Angular zone for change detection
-      this.ngZone.run(() => {
-        this._selection$.next(selection);
-      });
-    });
-
-    // Store unsubscribe for cleanup
-    this.destroy$.subscribe(() => unsubscribe());
-
-    this._connected$.next(this.client.connected);
+  /** Embed the full workspace in a container you own. Returns an unmount function. */
+  mountWorkspace(container: HTMLElement, options?: { readonly?: boolean }): () => void {
+    const controller = this.controller ?? (this.init(undefined, false), this.controller!);
+    return this.zone.runOutsideAngular(() => controller.mountWorkspace(container, options));
   }
 
   ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.unmount();
-    this._selection$.complete();
-    this._visible$.complete();
-    this._connected$.complete();
+    this.off?.();
+    this.off = undefined;
+    const lens = this.controller?.lens;
+    this.controller?.dispose();
+    this.controller = null;
+    if (this.owned) lens?.dispose();
+    this._connected$.next(false);
+    this._visible$.next(false);
   }
 }

@@ -1,44 +1,29 @@
-/**
- * React Context for 3Lens
- *
- * @packageDocumentation
- */
-
 import { createContext } from 'react';
-import type { LensClient, Selection, EntityId } from '@3lens/runtime';
-import type { UIAdapter, Panel } from '@3lens/ui-core';
+import type { Lens } from '@3lens/runtime';
+import type { LensController, LensHud } from '@3lens/ui-core';
 
-/**
- * ThreeLens context value
- */
+type Selection = ReturnType<Lens['getSelection']>;
+
+/** Value provided by `ThreeLensProvider`. */
 export interface ThreeLensContextValue {
-  /** The lens client */
-  client: LensClient | null;
-  /** The UI adapter */
-  ui: UIAdapter | null;
-  /** Whether initialized */
+  /** The lens being inspected (provided or created by the provider); null until mounted. */
+  lens: Lens | null;
+  /** Framework-agnostic controller; null until mounted. */
+  controller: LensController | null;
+  /** The live HUD handle, or null when the HUD is disabled. */
+  hud: LensHud | null;
   initialized: boolean;
-  /** Current selection */
   selection: Selection | null;
-  /** Whether UI is visible */
+  /** HUD visibility. */
   visible: boolean;
-  /** Select entities */
-  select: (entityIds: EntityId | EntityId[]) => void;
-  /** Show the UI */
+  select: (entityIds: string | string[]) => void;
+  clearSelection: () => void;
   show: () => void;
-  /** Hide the UI */
   hide: () => void;
-  /** Toggle visibility */
   toggle: () => void;
-  /** Register a panel */
-  registerPanel: (panel: Panel) => void;
-  /** Unregister a panel */
-  unregisterPanel: (panelId: string) => void;
+  openAnalysis: () => void;
+  openPalette: () => void;
 }
 
-/**
- * React context for 3Lens
- */
 export const ThreeLensContext = createContext<ThreeLensContextValue | null>(null);
-
 ThreeLensContext.displayName = 'ThreeLensContext';

@@ -5,7 +5,10 @@
  */
 
 import { computed, type ComputedRef } from 'vue';
-import type { Selection, EntityId } from '@3lens/runtime';
+import type { Lens } from '@3lens/runtime';
+
+type Selection = ReturnType<Lens['getSelection']>;
+type EntityId = string;
 import { useThreeLens } from './useThreeLens';
 
 /**

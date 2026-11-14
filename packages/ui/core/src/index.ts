@@ -14,3 +14,9 @@ export * from './material-builder';
 
 export * from './investigation';
 export { createLensHud, mountLensHud, type LensHud, type HudOptions, type HudInsets } from './hud/hud';
+export {
+  createLensController,
+  type LensController,
+  type LensControllerOptions,
+  type LensControllerState,
+} from './controller';
