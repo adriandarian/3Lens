@@ -48,10 +48,13 @@ export function renderInspector(
   root.dataset.scrollKey = 'inspector';
   root.setAttribute('aria-label', 'Entity inspector');
   const head = el('div', undefined, 'tlp-inspector-header');
-  head.append(
-    el('strong', 'Inspector'),
-    el('span', 'Shared selection', 'tlp-muted')
+  const shared = el('span', undefined, 'tlp-shared-note');
+  shared.title = 'Selected entity is shared across tools';
+  shared.append(
+    icon('info'),
+    el('span', 'Selected entity is shared across tools')
   );
+  head.append(el('strong', 'Inspector'), shared);
   root.append(head);
   const selected = lens.getSelection().entity_ids;
   const node =
@@ -85,18 +88,34 @@ export function renderInspector(
     value.title = id;
     return value;
   }
-  function section(title: string, symbol?: string) {
+  function section(title: string, symbol?: string, question?: string) {
     const box = el('section', undefined, 'tlp-inspector-section');
     const heading = el('h3');
     if (symbol) heading.append(icon(symbol));
     heading.append(el('span', title));
+    if (question) {
+      // The inspector contract's question stays discoverable behind the short title.
+      heading.title = question;
+      box.setAttribute('aria-label', question);
+    }
     box.append(heading);
     root.append(box);
     return box;
   }
-  const title = section('Identity', 'cube');
+  const title = section('Identity', 'identity', 'What is this?');
   const name = el('div', undefined, 'tlp-identity-name');
-  name.append(icon('cube'), el('span', node.name || node.type));
+  const kind = String(values.object_type ?? node.type);
+  name.append(
+    icon('cube'),
+    el('span', node.name || node.type),
+    el(
+      'span',
+      node.type === 'object3d'
+        ? 'Object3D'
+        : kind.replace(/^./, (c) => c.toUpperCase()),
+      'tlp-kind-pill'
+    )
+  );
   title.append(name);
   const identity = el('dl', undefined, 'tlp-key-value');
   for (const [key, value] of [
@@ -107,7 +126,22 @@ export function renderInspector(
   ]) {
     identity.append(el('dt', key));
     const dd = el('dd');
-    dd.append(key === 'ID' ? el('code', value) : el('span', value));
+    if (key === 'ID') {
+      const chip = el('span', undefined, 'tlp-id-chip');
+      const copy = button(
+        'Copy entity ID',
+        () => {
+          void context.document.defaultView?.navigator.clipboard
+            ?.writeText(value)
+            .catch(() => undefined);
+        },
+        'copy',
+        'tlp-icon-only tlp-copy'
+      );
+      copy.title = 'Copy entity ID';
+      chip.append(el('code', value), copy);
+      dd.append(chip);
+    } else dd.append(el('span', value));
     identity.append(dd);
   }
   title.append(identity);
@@ -157,7 +191,7 @@ export function renderInspector(
     title.append(detail);
   }
   const graph = lens.getGraph();
-  const relations = section('Relationships', 'link');
+  const relations = section('Relationships', 'relations', 'Where is it used?');
   for (const [label, edges] of [
     ['Uses / outgoing', graph.getOutgoingEdges(node.id)],
     ['Used by / incoming', graph.getIncomingEdges(node.id)],
@@ -240,7 +274,7 @@ export function renderInspector(
       source.append(details);
     }
   }
-  const costs = section('What does it cost?', 'performance');
+  const costs = section('Cost', 'cost', 'What does it cost?');
   const resources =
     lens.query<Result<Node[]>>('resources_used_by', { entity_id: node.id })
       ?.data ?? [];
@@ -356,7 +390,7 @@ export function renderInspector(
       )
     );
   }
-  const history = section('What changed?', 'changes');
+  const history = section('Changes', 'changes', 'How did it change over time?');
   const changes =
     lens.query<Result<Change[]>>('entity_changes', { entity_id: node.id })
       ?.data ?? [];
@@ -387,7 +421,7 @@ export function renderInspector(
       );
     history.append(block);
   }
-  const actions = section('What can I do?', 'focus');
+  const actions = section('Actions', 'settings', 'What can I do about it?');
   const buttons = el('div', undefined, 'tlp-actions');
   const focus = button(
     'Focus entity',
