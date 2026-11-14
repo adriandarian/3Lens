@@ -1,82 +1,43 @@
 /**
- * Svelte Context for 3Lens
- *
- * Works with both Svelte 4 (getContext/setContext) and Svelte 5 (context runes).
+ * Svelte context for the 3Lens mount kit.
  *
  * @packageDocumentation
  */
 
-import type { LensClient, Selection, EntityId } from '@3lens/runtime';
-import type { UIAdapter, Panel } from '@3lens/ui-core';
-import type { Readable, Writable } from 'svelte/store';
+import type { Lens } from '@3lens/runtime';
+import type { LensController, LensHud } from '@3lens/ui-core';
+import type { Readable } from 'svelte/store';
 
-/**
- * Context key for 3Lens
- */
+type Selection = ReturnType<Lens['getSelection']>;
+
+/** Stable key if you prefer Svelte's own `setContext` over the module-level context. */
 export const THREELENS_CONTEXT_KEY = Symbol('3lens');
 
-/**
- * ThreeLens context provided to Svelte components
- */
 export interface ThreeLensContext {
-  /** The lens client */
-  client: Readable<LensClient | null>;
-  /** The UI adapter */
-  ui: Readable<UIAdapter | null>;
-  /** Whether initialized */
+  lens: Lens;
+  controller: LensController;
+  /** The live HUD handle, or null when the HUD is disabled. */
+  hud: Readable<LensHud | null>;
   initialized: Readable<boolean>;
-  /** Current selection */
   selection: Readable<Selection | null>;
-  /** Whether UI is visible */
-  visible: Writable<boolean>;
-  /** Select entities */
-  select: (entityIds: EntityId | EntityId[]) => void;
-  /** Show the UI */
+  /** HUD visibility. */
+  visible: Readable<boolean>;
+  select: (entityIds: string | string[]) => void;
+  clearSelection: () => void;
   show: () => void;
-  /** Hide the UI */
   hide: () => void;
-  /** Toggle visibility */
   toggle: () => void;
-  /** Register a panel */
-  registerPanel: (panel: Panel) => void;
-  /** Unregister a panel */
-  unregisterPanel: (panelId: string) => void;
-  /** Mount UI to container */
-  mount: (container: HTMLElement) => void;
-  /** Unmount UI */
-  unmount: () => void;
+  openAnalysis: () => void;
+  openPalette: () => void;
 }
 
-// Context storage (used by both Svelte 4 and 5)
+// Module-level context (works for Svelte 4 and 5 without component initialisation order rules).
 let globalContext: ThreeLensContext | null = null;
 
-/**
- * Get the 3Lens context
- *
- * For Svelte 4, use with getContext:
- * ```svelte
- * <script>
- *   import { getContext } from 'svelte';
- *   import { THREELENS_CONTEXT_KEY } from '@3lens/mount-svelte';
- *   const context = getContext(THREELENS_CONTEXT_KEY);
- * </script>
- * ```
- *
- * Or use this helper which works with both versions:
- * ```svelte
- * <script>
- *   import { getThreeLensContext } from '@3lens/mount-svelte';
- *   const context = getThreeLensContext();
- * </script>
- * ```
- */
 export function getThreeLensContext(): ThreeLensContext | null {
   return globalContext;
 }
 
-/**
- * Set the 3Lens context (called internally by the action/store)
- */
-export function setThreeLensContext(context: ThreeLensContext): void {
+export function setThreeLensContext(context: ThreeLensContext | null): void {
   globalContext = context;
 }

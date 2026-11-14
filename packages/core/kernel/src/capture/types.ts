@@ -48,7 +48,10 @@ export interface CaptureContext {
   /** Stop capture */
   stop(): void;
 
-  /** Get current overhead metrics */
+  /** Attribute capture work done outside `emit` (e.g. a host scanning the scene) to the overhead budget. */
+  recordOverhead(ms: number): void;
+
+  /** Get current overhead metrics (per-frame average over a rolling window) */
   getOverheadMetrics(): OverheadMetrics;
 
   /** Subscribe to events */

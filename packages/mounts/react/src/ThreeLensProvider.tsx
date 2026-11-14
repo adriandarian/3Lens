@@ -1,191 +1,96 @@
 /**
  * ThreeLens React Provider
  *
+ * Owns (or receives) a `Lens`, mounts the HUD above the application, and exposes
+ * selection and visibility to hooks. The HUD is a fixed-position layer on
+ * `document.body`; the provider never wraps or re-renders your scene.
+ *
  * @packageDocumentation
  */
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-  type ReactNode,
-} from 'react';
-import type { LensClient, LensConfig, Selection, EntityId } from '@3lens/runtime';
-import { createLens } from '@3lens/runtime';
-import { uiOverlay, uiDock, type UIAdapter, type UIOverlayConfig, type UIDockConfig, type Panel } from '@3lens/ui-core';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createLens, type Lens, type LensConfig } from '@3lens/runtime';
+import { createLensController, type HudOptions, type LensController, type LensControllerState } from '@3lens/ui-core';
 import { ThreeLensContext, type ThreeLensContextValue } from './context';
 
-/**
- * Props for ThreeLensProvider
- */
 export interface ThreeLensProviderProps {
-  /** Children to render */
-  children: ReactNode;
-  /** Lens configuration */
+  children?: ReactNode;
+  /** Inspect this lens. If omitted, the provider creates (and disposes) one from `config`. */
+  lens?: Lens;
+  /** Used only when `lens` is omitted. */
   config?: Partial<LensConfig>;
-  /** UI mode */
-  ui?: 'overlay' | 'dock';
-  /** Overlay configuration */
-  overlayConfig?: UIOverlayConfig;
-  /** Dock configuration (requires target) */
-  dockConfig?: UIDockConfig;
-  /** Auto-initialize */
-  autoInit?: boolean;
-  /** Called when initialized */
-  onInit?: (client: LensClient) => void;
-  /** Called on selection change */
-  onSelectionChange?: (selection: Selection) => void;
+  /** `false` disables the HUD (use `ThreeLensPanel` or your own UI). Read at mount. */
+  hud?: boolean | HudOptions;
+  /** Called once the lens is ready. Register your hosts/contexts here when the provider owns the lens. */
+  onInit?: (lens: Lens) => void;
+  onSelectionChange?: (selection: NonNullable<LensControllerState['selection']>) => void;
 }
 
+const idle: LensControllerState = { selection: null, visible: false };
+const noopSubscribe = () => () => undefined;
+const idleState = () => idle;
+
 /**
- * React provider for 3Lens context
- *
  * @example
  * ```tsx
- * function App() {
- *   return (
- *     <ThreeLensProvider config={{ debug: true }}>
- *       <Canvas>
- *         <Scene />
- *       </Canvas>
- *       <ThreeLensPanel />
- *     </ThreeLensProvider>
- *   );
- * }
+ * <ThreeLensProvider lens={lens}>
+ *   <Canvas>…</Canvas>
+ * </ThreeLensProvider>
  * ```
  */
-export function ThreeLensProvider({
-  children,
-  config,
-  ui = 'overlay',
-  overlayConfig,
-  dockConfig,
-  autoInit = true,
-  onInit,
-  onSelectionChange,
-}: ThreeLensProviderProps) {
-  const [client, setClient] = useState<LensClient | null>(null);
-  const [uiAdapter, setUiAdapter] = useState<UIAdapter | null>(null);
-  const [initialized, setInitialized] = useState(false);
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const [visible, setVisible] = useState(true);
-  
-  const initRef = useRef(false);
+export function ThreeLensProvider({ children, lens, config, hud = true, onInit, onSelectionChange }: ThreeLensProviderProps) {
+  const [controller, setController] = useState<LensController | null>(null);
+  const latest = useRef({ config, hud, onInit });
+  latest.current = { config, hud, onInit };
 
-  // Initialize lens
+  // Effects (not render) own creation so StrictMode's mount/unmount/mount is clean.
   useEffect(() => {
-    if (!autoInit || initRef.current) return;
-    initRef.current = true;
-
-    const initLens = async () => {
-      try {
-        const result = await createLens(config as LensConfig);
-        setClient(result.client);
-        setInitialized(true);
-        onInit?.(result.client);
-
-        // Subscribe to selection changes
-        const unsubscribe = result.client.onSelectionChange((sel) => {
-          setSelection(sel);
-          onSelectionChange?.(sel);
-        });
-
-        return unsubscribe;
-      } catch (error) {
-        console.error('[3Lens] Failed to initialize:', error);
-      }
-    };
-
-    let unsubscribe: (() => void) | undefined;
-    initLens().then((unsub) => {
-      unsubscribe = unsub;
-    });
-
+    const owned = !lens;
+    const target = lens ?? createLens({ enabled: true, ...latest.current.config });
+    const next = createLensController(target, { hud: latest.current.hud });
+    setController(next);
+    latest.current.onInit?.(target);
     return () => {
-      unsubscribe?.();
+      next.dispose();
+      if (owned) target.dispose();
+      setController(null);
     };
-  }, [autoInit, config, onInit, onSelectionChange]);
+  }, [lens]);
 
-  // Create UI adapter
+  const state = useSyncExternalStore(controller?.subscribe ?? noopSubscribe, controller?.getState ?? idleState, idleState);
+
+  const notified = useRef(state.selection);
   useEffect(() => {
-    let adapter: UIAdapter;
+    if (state.selection && state.selection !== notified.current) onSelectionChange?.(state.selection);
+    notified.current = state.selection;
+  }, [state.selection, onSelectionChange]);
 
-    if (ui === 'overlay') {
-      adapter = uiOverlay(overlayConfig);
-    } else if (dockConfig) {
-      adapter = uiDock(dockConfig);
-    } else {
-      // Default overlay if dock config not provided
-      adapter = uiOverlay(overlayConfig);
-    }
+  const select = useCallback((ids: string | string[]) => controller?.select(ids), [controller]);
+  const clearSelection = useCallback(() => controller?.clearSelection(), [controller]);
+  const show = useCallback(() => controller?.show(), [controller]);
+  const hide = useCallback(() => controller?.hide(), [controller]);
+  const toggle = useCallback(() => controller?.toggle(), [controller]);
+  const openAnalysis = useCallback(() => controller?.openAnalysis(), [controller]);
+  const openPalette = useCallback(() => controller?.openPalette(), [controller]);
 
-    setUiAdapter(adapter);
-
-    return () => {
-      adapter.unmount();
-    };
-  }, [ui, overlayConfig, dockConfig]);
-
-  // Actions
-  const select = useCallback((entityIds: EntityId | EntityId[]) => {
-    client?.select(entityIds);
-  }, [client]);
-
-  const show = useCallback(() => {
-    uiAdapter?.show();
-    setVisible(true);
-  }, [uiAdapter]);
-
-  const hide = useCallback(() => {
-    uiAdapter?.hide();
-    setVisible(false);
-  }, [uiAdapter]);
-
-  const toggle = useCallback(() => {
-    uiAdapter?.toggle();
-    setVisible(uiAdapter?.isVisible() ?? false);
-  }, [uiAdapter]);
-
-  const registerPanel = useCallback((panel: Panel) => {
-    uiAdapter?.registerPanel(panel);
-  }, [uiAdapter]);
-
-  const unregisterPanel = useCallback((panelId: string) => {
-    uiAdapter?.unregisterPanel(panelId);
-  }, [uiAdapter]);
-
-  // Context value
-  const value = useMemo<ThreeLensContextValue>(() => ({
-    client,
-    ui: uiAdapter,
-    initialized,
-    selection,
-    visible,
-    select,
-    show,
-    hide,
-    toggle,
-    registerPanel,
-    unregisterPanel,
-  }), [
-    client,
-    uiAdapter,
-    initialized,
-    selection,
-    visible,
-    select,
-    show,
-    hide,
-    toggle,
-    registerPanel,
-    unregisterPanel,
-  ]);
-
-  return (
-    <ThreeLensContext.Provider value={value}>
-      {children}
-    </ThreeLensContext.Provider>
+  const value = useMemo<ThreeLensContextValue>(
+    () => ({
+      lens: controller?.lens ?? null,
+      controller,
+      hud: controller?.hud ?? null,
+      initialized: !!controller,
+      selection: state.selection,
+      visible: state.visible,
+      select,
+      clearSelection,
+      show,
+      hide,
+      toggle,
+      openAnalysis,
+      openPalette,
+    }),
+    [controller, state, select, clearSelection, show, hide, toggle, openAnalysis, openPalette]
   );
+
+  return <ThreeLensContext.Provider value={value}>{children}</ThreeLensContext.Provider>;
 }

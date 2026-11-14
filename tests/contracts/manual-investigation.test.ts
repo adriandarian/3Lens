@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, Mesh, MeshStandardMaterial, PerspectiveCamera, Scene, Texture, type WebGLRenderer } from 'three';
+import { BoxGeometry, BufferAttribute, Mesh, MeshStandardMaterial, PerspectiveCamera, Scene, Texture, type WebGLRenderer } from 'three';
 import { createCaptureContext, type Event, type Node, type Edge } from '@3lens/kernel';
 import { manualHost } from '@3lens/host-manual';
 
@@ -55,6 +55,68 @@ describe('Manual host investigation contract', () => {
     expect(snapshot.edges).toContainEqual(expect.objectContaining({ from: `main:scene:${f.scene.uuid}`, to: cube.id, type: 'contains' }));
     expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot);
     expect(f.events.every((event, index) => event.seq === index && event.context_id === 'main')).toBe(true);
+    f.host.detach();
+  });
+
+  it('skips the full scene rebuild while nothing observable changed, and reports scan cost to the overhead budget', () => {
+    const f = fixture();
+    const record = vi.spyOn(f.context, 'recordOverhead');
+    f.host.attach(f.context);
+    const baseline = f.snapshots().length;
+    for (let i = 0; i < 50; i++) f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline);
+    expect(record.mock.calls.length).toBeGreaterThanOrEqual(50);
+    // Every kind of observable change still reaches the graph.
+    f.scene.add(new Mesh(f.geometry, f.material));
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 1);
+    f.material.opacity = 0.5;
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 2);
+    f.material.map = new Texture();
+    f.material.needsUpdate = true;
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 3);
+    expect(f.snapshots().at(-1)!.nodes.some((node) => node.type === 'texture')).toBe(true);
+    f.host.detach();
+  });
+
+  it('re-scans when geometry buffers change without changing counts (index type, shared backing buffer)', () => {
+    const f = fixture();
+    const geometry = new BoxGeometry();
+    f.mesh.geometry = geometry;
+    f.host.attach(f.context);
+    const bytes = () => (f.snapshots().at(-1)!.nodes.find((node) => node.id === `main:geometry:${geometry.uuid}`) as Node & { memory_bytes: number }).memory_bytes;
+    const before = bytes();
+    const baseline = f.snapshots().length;
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline);
+    // Same index count, wider element type: storage changes, counts do not.
+    const index = geometry.index!;
+    geometry.setIndex(new BufferAttribute(new Uint32Array(index.array), 1));
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 1);
+    expect(bytes()).toBeGreaterThan(before);
+    // Same attribute names, item sizes and counts, but `normal` now views the position buffer:
+    // the deduplicated backing-buffer total drops although no count changed.
+    const grown = bytes();
+    const normal = geometry.getAttribute('normal');
+    const position = geometry.getAttribute('position');
+    geometry.setAttribute('normal', new BufferAttribute(new Float32Array(position.array.buffer, 0, normal.count * 3), 3));
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 2);
+    expect(bytes()).toBeLessThan(grown);
+    f.host.detach();
+  });
+
+  it('reports capture overhead per frame, including host scan time', () => {
+    const f = fixture();
+    f.host.attach(f.context);
+    f.context.recordOverhead(40);
+    f.renderer.render(f.scene, f.camera);
+    const metrics = f.context.getOverheadMetrics();
+    expect(metrics.captureTimeMs).toBeGreaterThanOrEqual(40 / 2);
+    expect(metrics.captureTimeMs).toBeLessThan(1000);
     f.host.detach();
   });
 
@@ -121,6 +183,28 @@ describe('Manual host investigation contract', () => {
     const snapshot = f.snapshots()[0];
     expect(snapshot.nodes.find((node) => node.type === 'texture')).toMatchObject({ memory_fidelity: 'UNAVAILABLE' });
     expect(snapshot.edges).toContainEqual(expect.objectContaining({ from: `main:material:${f.material.uuid}`, to: `main:texture:${texture.uuid}`, type: 'uses', slot: 'map' }));
+    f.host.detach();
+  });
+
+  it('estimates texture storage only from observable dimensions and format, and labels it ESTIMATED with a reason', () => {
+    const f = fixture();
+    const sized = new Texture({ width: 2048, height: 2048 } as unknown as HTMLImageElement);
+    sized.generateMipmaps = true;
+    sized.minFilter = 1008; // LinearMipmapLinearFilter
+    const undecoded = new Texture({ width: 0, height: 0 } as unknown as HTMLImageElement);
+    f.material.map = sized;
+    f.material.normalMap = undecoded;
+    f.host.attach(f.context);
+    const textures = f.snapshots()[0].nodes.filter((node) => node.type === 'texture') as (Node & Record<string, unknown>)[];
+    const estimated = textures.find((node) => node.id.endsWith(sized.uuid))!;
+    expect(estimated).toMatchObject({ memory_fidelity: 'ESTIMATED', memory_bytes: Math.round(2048 * 2048 * 4 * (4 / 3)) });
+    expect(String(estimated.memory_reason)).toContain('2048x2048');
+    expect(textures.find((node) => node.id.endsWith(undecoded.uuid))).toMatchObject({ memory_fidelity: 'UNAVAILABLE', memory_bytes: 0 });
+    // Resizing the image is an observable change that reaches the graph.
+    (sized.image as { width: number; height: number }).width = 4096;
+    (sized.image as { width: number; height: number }).height = 4096;
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots().at(-1)!.nodes.find((node) => node.id.endsWith(sized.uuid))).toMatchObject({ memory_bytes: Math.round(4096 * 4096 * 4 * (4 / 3)) });
     f.host.detach();
   });
 });

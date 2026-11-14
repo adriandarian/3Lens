@@ -1,32 +1,24 @@
 /**
- * Angular Injection Tokens
+ * ThreeLens Angular injection tokens and configuration.
  *
  * @packageDocumentation
  */
 
 import { InjectionToken } from '@angular/core';
-import type { UIOverlayConfig, UIDockConfig } from '@3lens/ui-core';
-import type { LensConfig } from '@3lens/runtime';
+import type { Lens, LensConfig } from '@3lens/runtime';
+import type { HudOptions } from '@3lens/ui-core';
 
-/**
- * Configuration for the ThreeLens Angular module
- */
 export interface ThreeLensConfig {
-  /** Lens configuration */
-  lens?: Partial<LensConfig>;
-  /** UI mode */
-  ui?: 'overlay' | 'dock';
-  /** Overlay configuration (when ui is 'overlay') */
-  overlayConfig?: UIOverlayConfig;
-  /** Dock configuration (when ui is 'dock') */
-  dockConfig?: Omit<UIDockConfig, 'target'>;
-  /** Auto-initialize on module load */
+  /** Inspect this lens. If omitted, the service creates (and disposes) one from `lensConfig`. */
+  lens?: Lens;
+  /** Used only when `lens` is omitted. */
+  lensConfig?: Partial<LensConfig>;
+  /** `false` disables the HUD (use `<threelens-panel>` or your own UI). */
+  hud?: boolean | HudOptions;
+  /** Initialise when the service is first injected instead of on the first `init()` call. */
   autoInit?: boolean;
-  /** Run outside NgZone for performance */
+  /** Run 3Lens outside the Angular zone so its timers do not trigger change detection (default true). */
   runOutsideZone?: boolean;
 }
 
-/**
- * Injection token for ThreeLens configuration
- */
 export const THREELENS_CONFIG = new InjectionToken<ThreeLensConfig>('THREELENS_CONFIG');

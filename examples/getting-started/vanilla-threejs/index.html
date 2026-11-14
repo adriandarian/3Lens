@@ -9,8 +9,8 @@
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { background: #0a0a0f; overflow: hidden; font-family: system-ui, sans-serif; }
       canvas { display: block; width: 100%; height: 100%; }
-      #app-viewport { position: relative; width: 100%; height: 100%; min-height: 0; }
-      body > #app-viewport { height: 100vh; }
+      /* A product viewer: full-bleed, owned by the app. 3Lens never moves or resizes it. */
+      canvas { position: fixed; inset: 0; }
       #info {
         position: absolute;
         bottom: 64px;
@@ -46,7 +46,6 @@
     </style>
   </head>
   <body>
-    <div id="app-viewport" data-3lens-app-viewport>
     <canvas id="canvas"></canvas>
     <div id="info">
       <strong>3Lens — Devtools development fixture</strong>
@@ -58,7 +57,6 @@
       <button id="pause-motion" type="button">Pause motion</button>
       <button id="toggle-cube" type="button">Hide MainCube</button>
       <p><kbd>F2</kbd> toggles tools · Drag to orbit · Scroll to zoom</p>
-    </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

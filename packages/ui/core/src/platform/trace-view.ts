@@ -135,14 +135,25 @@ export function createTraceViewController(context: PlatformViewContext) {
       `${side}-${++serial}.json`
     );
   }
+  // One render pass asks about the same lens many times. platform_snapshot
+  // replays every retained event, so memoize per pass instead of per call.
+  let passSnapshots: Map<Lens, Snapshot> | undefined;
+  interface Marker {
+    name: string;
+    frame: number | undefined;
+    timestamp: number;
+  }
+  let passMarkers: Map<Lens, Marker[]> | undefined;
   function platform(lens: Lens): Snapshot {
-    return (
-      lens.query<Result<Snapshot>>('platform_snapshot')?.data ?? {
-        frames: [],
-        events: [],
-        dropped_events: 0,
-      }
-    );
+    const cached = passSnapshots?.get(lens);
+    if (cached) return cached;
+    const value = lens.query<Result<Snapshot>>('platform_snapshot')?.data ?? {
+      frames: [],
+      events: [],
+      dropped_events: 0,
+    };
+    passSnapshots?.set(lens, value);
+    return value;
   }
   function diff(): EntityChange[] {
     const candidate = sides.candidate?.lens ?? context.lens;
@@ -208,9 +219,11 @@ export function createTraceViewController(context: PlatformViewContext) {
         ? `${(value / 1024).toFixed(value % 1024 ? 1 : 0)} KB`
         : `${value} B`;
   }
-  function markerNames(lens: Lens) {
+  function markerNames(lens: Lens): Marker[] {
+    const cached = passMarkers?.get(lens);
+    if (cached) return cached;
     const events = platform(lens).events ?? [];
-    return events.flatMap((event) => {
+    const found = events.flatMap((event) => {
       const metadata =
         event.type === 'context_update' ? event.changes.metadata : undefined;
       const name = metadata?.marker;
@@ -225,6 +238,8 @@ export function createTraceViewController(context: PlatformViewContext) {
           ]
         : [];
     });
+    passMarkers?.set(lens, found);
+    return found;
   }
   function markers() {
     const baseline = markerNames(sides.baseline?.lens ?? context.lens);
@@ -310,10 +325,16 @@ export function createTraceViewController(context: PlatformViewContext) {
     const marker = commonMarkers.find((item) => item.name === selectedMarker);
     if (alignment === 'marker' && marker)
       area.append(el('div', marker.name, 'tlp-trace-marker'));
-    const coordinates = (side: Side, frame: CapturedFrame) => {
-      const origin = markerNames(sides[side]?.lens ?? context.lens).find(
+    const origins = {
+      baseline: markerNames(sides.baseline?.lens ?? context.lens).find(
         (item) => item.name === selectedMarker
-      );
+      ),
+      candidate: markerNames(sides.candidate?.lens ?? context.lens).find(
+        (item) => item.name === selectedMarker
+      ),
+    };
+    const coordinates = (side: Side, frame: CapturedFrame) => {
+      const origin = origins[side];
       return alignment === 'marker' && origin
         ? frame.timestamp - origin.timestamp
         : frame.frame;
@@ -761,6 +782,16 @@ export function createTraceViewController(context: PlatformViewContext) {
     return section;
   }
   function render() {
+    passSnapshots = new Map();
+    passMarkers = new Map();
+    try {
+      return renderPass();
+    } finally {
+      passSnapshots = undefined;
+      passMarkers = undefined;
+    }
+  }
+  function renderPass() {
     const root = el('div', undefined, 'tlp-trace-view');
     root.dataset.view = 'changes';
     const controls = el('section', undefined, 'tlp-trace-controls');

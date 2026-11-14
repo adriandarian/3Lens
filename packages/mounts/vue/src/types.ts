@@ -1,46 +1,32 @@
 /**
- * Vue Types for 3Lens
+ * Vue types for the 3Lens mount kit.
  *
  * @packageDocumentation
  */
 
 import type { InjectionKey, Ref, ShallowRef } from 'vue';
-import type { LensClient, Selection, EntityId } from '@3lens/runtime';
-import type { UIAdapter, Panel } from '@3lens/ui-core';
+import type { Lens } from '@3lens/runtime';
+import type { LensController, LensHud } from '@3lens/ui-core';
 
-/**
- * ThreeLens context provided to Vue components
- */
+type Selection = ReturnType<Lens['getSelection']>;
+
+/** Value provided by `threeLensPlugin`. */
 export interface ThreeLensContext {
-  /** The lens client */
-  client: ShallowRef<LensClient | null>;
-  /** The UI adapter */
-  ui: ShallowRef<UIAdapter | null>;
-  /** Whether initialized */
+  lens: Lens;
+  controller: LensController;
+  /** The live HUD handle, or null when the HUD is disabled. */
+  hud: ShallowRef<LensHud | null>;
   initialized: Ref<boolean>;
-  /** Current selection */
-  selection: Ref<Selection | null>;
-  /** Whether UI is visible */
+  selection: ShallowRef<Selection | null>;
+  /** HUD visibility. */
   visible: Ref<boolean>;
-  /** Select entities */
-  select: (entityIds: EntityId | EntityId[]) => void;
-  /** Show the UI */
+  select: (entityIds: string | string[]) => void;
+  clearSelection: () => void;
   show: () => void;
-  /** Hide the UI */
   hide: () => void;
-  /** Toggle visibility */
   toggle: () => void;
-  /** Register a panel */
-  registerPanel: (panel: Panel) => void;
-  /** Unregister a panel */
-  unregisterPanel: (panelId: string) => void;
-  /** Mount UI to a container */
-  mount: (container: HTMLElement) => void;
-  /** Unmount UI */
-  unmount: () => void;
+  openAnalysis: () => void;
+  openPalette: () => void;
 }
 
-/**
- * Vue injection key for 3Lens
- */
 export const THREELENS_INJECTION_KEY: InjectionKey<ThreeLensContext> = Symbol('3lens');

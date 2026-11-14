@@ -28,11 +28,25 @@ export function createCaptureContext(config: CaptureContextConfig): CaptureConte
   const buffer = new RingBuffer<Event>(config.bufferSizeBytes);
 
   // Overhead tracking
+  // Overhead is averaged per frame over a rolling ~1s window so the reported
+  // number matches the contract (`captureTimeMs` = capture cost per frame).
   let captureStartTime = 0;
-  let frameOverheadMs = 0;
-  let eventCount = 0;
-  let lastEventCountReset = performance.now();
+  let windowOverheadMs = 0;
+  let windowFrames = 0;
+  let windowEvents = 0;
+  let windowStart = performance.now();
+  let lastWindow: { captureTimeMs: number; eventRate: number } | null = null;
   let dropCount = 0;
+
+  const rollWindow = (now: number) => {
+    const elapsed = now - windowStart;
+    if (elapsed < 1000) return;
+    lastWindow = {
+      captureTimeMs: windowOverheadMs / Math.max(1, windowFrames),
+      eventRate: windowEvents / (elapsed / 1000),
+    };
+    windowOverheadMs = 0; windowFrames = 0; windowEvents = 0; windowStart = now;
+  };
 
   const context: CaptureContext = {
     get id() {
@@ -87,8 +101,11 @@ export function createCaptureContext(config: CaptureContextConfig): CaptureConte
       }
 
       // Track overhead
-      frameOverheadMs += performance.now() - startTime;
-      eventCount++;
+      const endTime = performance.now();
+      windowOverheadMs += endTime - startTime;
+      windowEvents++;
+      if (event.type === 'frame_end') windowFrames++;
+      rollWindow(endTime);
 
       // Check auto-degrade
       if (config.autoDegrade) {
@@ -105,21 +122,24 @@ export function createCaptureContext(config: CaptureContextConfig): CaptureConte
       active = false;
     },
 
+    recordOverhead(ms: number) {
+      if (Number.isFinite(ms) && ms > 0) windowOverheadMs += ms;
+    },
+
     getOverheadMetrics(): OverheadMetrics {
       const now = performance.now();
-      const elapsed = (now - lastEventCountReset) / 1000;
-      const eventRate = elapsed > 0 ? eventCount / elapsed : 0;
-
-      // Reset counters periodically
-      if (elapsed > 1) {
-        eventCount = 0;
-        frameOverheadMs = 0;
-        lastEventCountReset = now;
-      }
+      rollWindow(now);
+      // Prefer the last full window right after a roll; the partial window is noisy.
+      const elapsed = (now - windowStart) / 1000;
+      const live = {
+        captureTimeMs: windowOverheadMs / Math.max(1, windowFrames),
+        eventRate: elapsed > 0 ? windowEvents / elapsed : 0,
+      };
+      const reported = lastWindow && elapsed < 0.25 ? lastWindow : live;
 
       return {
-        captureTimeMs: frameOverheadMs,
-        eventRate,
+        captureTimeMs: reported.captureTimeMs,
+        eventRate: reported.eventRate,
         bufferUsedBytes: buffer.usedBytes,
         bufferCapacityBytes: buffer.capacityBytes,
         dropCount,
