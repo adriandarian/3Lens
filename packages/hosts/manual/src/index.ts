@@ -60,6 +60,8 @@ class ManualHost implements Host {
   /** Allocation-free structural hash of the last full scan; unchanged => skip the rebuild. */
   private fingerprint = NaN;
   private lastFullScanAt = -Infinity;
+  /** Reused by the fingerprint pass so it does not allocate per frame. */
+  private readonly fingerprintBuffers = new Set<ArrayBufferLike>();
 
   constructor(private config: ManualHostConfig) {
     this.id = config.id ?? 'manual';
@@ -238,6 +240,7 @@ class ManualHost implements Host {
     const mix = (n: number) => { h = Math.imul(h ^ (n | 0), 16777619); };
     const mixStr = (value: string | undefined) => { if (value) for (let i = 0; i < value.length; i++) mix(value.charCodeAt(i)); };
     const mixNum = (n: number | undefined) => { if (n !== undefined) mix(Math.round(n * 1000)); };
+    const buffers = this.fingerprintBuffers;
     const { renderer } = this.config;
     const programs = (renderer.info as { programs?: unknown[] | null }).programs;
     mix(programs?.length ?? 0);
@@ -266,10 +269,19 @@ class ManualHost implements Host {
       const geometry = mesh.geometry;
       if (geometry) {
         mix(geometry.id);
-        const position = geometry.attributes.position;
-        mix(position?.count ?? 0); mix(geometry.index?.count ?? -1);
-        let attributes = 0; for (const _ in geometry.attributes) attributes++;
-        mix(attributes);
+        // Everything geometry() in scanFull() records: per-attribute metadata, index presence/count,
+        // and the deduplicated backing-buffer total (an array swapped for a different size or type,
+        // or attributes starting/stopping to share one buffer, must invalidate).
+        buffers.clear();
+        for (const name in geometry.attributes) {
+          const attribute = geometry.attributes[name];
+          const array = 'data' in attribute ? attribute.data.array : attribute.array;
+          buffers.add(array.buffer);
+          mixStr(name); mix(attribute.itemSize); mix(attribute.count); mix(attribute.normalized ? 1 : 0);
+        }
+        if (geometry.index) { buffers.add(geometry.index.array.buffer); mix(geometry.index.count); } else mix(-1);
+        let bytes = 0; for (const buffer of buffers) bytes += buffer.byteLength;
+        mix(bytes); mix(buffers.size);
       }
       if (mesh.material) {
         if (Array.isArray(mesh.material)) for (const material of mesh.material) visitMaterial(material);

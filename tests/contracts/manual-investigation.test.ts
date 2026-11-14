@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BoxGeometry, Mesh, MeshStandardMaterial, PerspectiveCamera, Scene, Texture, type WebGLRenderer } from 'three';
+import { BoxGeometry, BufferAttribute, Mesh, MeshStandardMaterial, PerspectiveCamera, Scene, Texture, type WebGLRenderer } from 'three';
 import { createCaptureContext, type Event, type Node, type Edge } from '@3lens/kernel';
 import { manualHost } from '@3lens/host-manual';
 
@@ -78,6 +78,34 @@ describe('Manual host investigation contract', () => {
     f.renderer.render(f.scene, f.camera);
     expect(f.snapshots()).toHaveLength(baseline + 3);
     expect(f.snapshots().at(-1)!.nodes.some((node) => node.type === 'texture')).toBe(true);
+    f.host.detach();
+  });
+
+  it('re-scans when geometry buffers change without changing counts (index type, shared backing buffer)', () => {
+    const f = fixture();
+    const geometry = new BoxGeometry();
+    f.mesh.geometry = geometry;
+    f.host.attach(f.context);
+    const bytes = () => (f.snapshots().at(-1)!.nodes.find((node) => node.id === `main:geometry:${geometry.uuid}`) as Node & { memory_bytes: number }).memory_bytes;
+    const before = bytes();
+    const baseline = f.snapshots().length;
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline);
+    // Same index count, wider element type: storage changes, counts do not.
+    const index = geometry.index!;
+    geometry.setIndex(new BufferAttribute(new Uint32Array(index.array), 1));
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 1);
+    expect(bytes()).toBeGreaterThan(before);
+    // Same attribute names, item sizes and counts, but `normal` now views the position buffer:
+    // the deduplicated backing-buffer total drops although no count changed.
+    const grown = bytes();
+    const normal = geometry.getAttribute('normal');
+    const position = geometry.getAttribute('position');
+    geometry.setAttribute('normal', new BufferAttribute(new Float32Array(position.array.buffer, 0, normal.count * 3), 3));
+    f.renderer.render(f.scene, f.camera);
+    expect(f.snapshots()).toHaveLength(baseline + 2);
+    expect(bytes()).toBeLessThan(grown);
     f.host.detach();
   });
 
