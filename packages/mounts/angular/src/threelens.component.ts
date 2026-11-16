@@ -40,6 +40,7 @@ import { ThreeLensService } from './threelens.service';
       }
     `,
   ],
+  standalone: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ThreeLensComponent implements AfterViewInit, OnDestroy {

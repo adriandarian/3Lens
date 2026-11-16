@@ -16,6 +16,7 @@ import { mountLensHud, type HudOptions, type LensHud } from '@3lens/ui-core';
 @Component({
   selector: 'threelens-hud',
   template: '',
+  standalone: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ThreeLensHudComponent implements OnChanges, OnDestroy {
