@@ -41,7 +41,11 @@
     "@3lens/ui-core": "workspace:*"
   },
   "devDependencies": {
+    "@angular/common": "catalog:",
+    "@angular/compiler": "catalog:",
     "@angular/core": "catalog:",
+    "@angular/platform-browser": "catalog:",
+    "reflect-metadata": "^0.2.2",
     "rxjs": "catalog:",
     "zone.js": "catalog:",
     "typescript": "catalog:",

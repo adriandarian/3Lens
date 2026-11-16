@@ -43,9 +43,12 @@ catalog:
   '@vue/test-utils': ^2.4.6
 
   # Angular ecosystem
-  '@angular/core': ^17.0.0
+  '@angular/common': 20.3.35
+  '@angular/compiler': 20.3.35
+  '@angular/core': 20.3.35
+  '@angular/platform-browser': 20.3.35
   rxjs: ^7.8.0
-  zone.js: ^0.14.0
+  zone.js: ~0.15.0
 
   # Svelte ecosystem
   svelte: ^4.0.0

@@ -1,9 +1,29 @@
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 const source = (path: string) => fileURLToPath(new URL(`./packages/${path}/src/index.ts`, import.meta.url));
 
 export default defineConfig({
+  plugins: [{
+    name: 'angular-test-decorator-metadata',
+    enforce: 'pre',
+    transform(code, id) {
+      // Angular's JIT injector needs constructor metadata that esbuild does not emit.
+      if (!id.includes('/packages/mounts/angular/src/') || !id.endsWith('.ts')) return;
+      const { outputText, sourceMapText } = ts.transpileModule(code, {
+        fileName: id,
+        compilerOptions: {
+          target: ts.ScriptTarget.ES2022,
+          module: ts.ModuleKind.ESNext,
+          experimentalDecorators: true,
+          emitDecoratorMetadata: true,
+          sourceMap: true,
+        },
+      });
+      return { code: outputText, map: sourceMapText };
+    },
+  }],
   resolve: {
     alias: {
       '@3lens/kernel': source('core/kernel'),
